@@ -92,7 +92,7 @@ this project most:
 - **Done when:** `bun start` serves it, `bun run build` produces a bundle, and
   the doc system builds a page.
 
-### 1 — the format, upstream
+### 1 — the format + registry, upstream
 
 The format is tosijs-3d's, so this milestone is mostly a **proposal plus a
 migration**. Coordinate with tosijs-3d rather than forking.
@@ -101,6 +101,10 @@ migration**. Coordinate with tosijs-3d rather than forking.
   tosijs-schema — types and validation from one source (SPEC.md §Part 3).
 - `validate()` returning problems, never throwing.
 - `buildAssembly(data, origin)` / `loadAssembly(url, origin)`.
+- **`registerFeature({ name, schema, bind })`** — open for extension, with
+  tosijs-3d shipping registrations for its own components. A consumer's feature
+  must be indistinguishable from a built-in in the format, the editor and the
+  file.
 - **`id` is mandatory** — not defaulted from array index (SPEC.md open question
   3; derived ids mean every insertion renumbers the world).
 - **Done when:** `../manta-recon` deletes `src/prefab.ts` and
@@ -140,6 +144,11 @@ scene).
   `destroyable` *means*, only how to render an editor from a description
   (SPEC.md §Part 3). Widgets: `number`, `boolean`, `string`, `enum`, `mesh`,
   `ref`, `point`, `zone`, `vec3`, `color`.
+- **Features come from the registry, not a hardcoded list.** A host registers
+  `{ name, schema, bind }` and its feature becomes first-class: palette entry,
+  property panel, `ref` participation, save/load. tosijs-3d ships registrations
+  for its own components; Manta registers escort zones, energy conduits and
+  charred wrecks the same way (SPEC.md §"The feature registry").
 - Points and zones as first-class editable objects.
 - Persistence: load / save / import / export, with the **host** owning
   storage — the component calls handlers, it does not choose a backend.

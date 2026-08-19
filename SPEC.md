@@ -348,30 +348,72 @@ they are how an assembly expresses **internal relationships** — this shield is
 fed by that reactor, this launchpad emits at that point — without the author
 typing ids.
 
-### Runtime binding — belongs to tosijs-3d, not the consumer
+### The feature registry — open for extension
 
-The schema describes EDITING. Turning a feature into behaviour is the
-instantiator's job, and it lives with the format in tosijs-3d, because the
-features map onto components tosijs-3d already ships (`b3d-destroyable`,
-`b3d-turret`, `b3d-launcher`, `b3d-radar`, `b3d-spawner`):
+Owner: *"it's going to depend on tosijs-3d no matter what and a consumer should
+be able to bind properties to locally defined behaviors."*
+
+This corrects an earlier draft that said the binding "is not a consumer
+concern." It plainly is. Manta already has features tosijs-3d will never know
+about: escort **zones** that AI reads, spline **energy conduits** that also mean
+"this powers that", **charred wrecks** that char and burn instead of vanishing.
+A closed feature set would mean those either get pushed upstream where they do
+not belong, or the editor cannot author them.
+
+So a feature is a **registration**, not a case in a switch:
 
 ```javascript
-const MANTA_BINDING = {
-  destroyable: (piece, cfg, ctx) => /* attach DestroyableBehavior */,
-  turret:      (piece, cfg, ctx) => /* append a b3d-turret */,
-  radar:       (piece, cfg, ctx) => /* register, and boost nearby turrets */,
-}
+registerFeature({
+  name: 'turret',
+  schema: turretSchema,               // JSON Schema (+ x- UI annotations)
+  bind(piece, cfg, ctx) {             // JSON -> live behaviour
+    const t = b3dTurret({ ...cfg, x: piece.at.x, y: piece.at.y, z: piece.at.z })
+    ctx.scene.appendChild(t)
+    ctx.onDispose(() => t.remove())
+    return { /* optional handle for other features / scenarios */ }
+  },
+})
 ```
 
-A consumer supplies a binding only for features tosijs-3d does not know about.
+**tosijs-3d ships registrations** for the components it already has —
+`destroyable`, `turret`, `launcher`, `radar`, `launchpad`, `blip`, `protector` —
+because those are the common cases and every consumer would otherwise write the
+same glue. **A consumer registers its own** alongside them, with no distinction
+in the format, the editor, or the file.
 
-The editor and the game call the **same** instantiator, so the preview and the
-shipped level are produced by one implementation. That is what makes "what you
-author is what you get" true by construction rather than by discipline — and it
-is the strongest argument for putting the format and loader upstream rather than
-in the editor.
+Since the editor depends on tosijs-3d regardless, the coupling this creates is
+not a cost worth engineering around. The thing worth engineering is that a
+locally-defined feature is a **first-class citizen**: it appears in the palette,
+gets a schema-driven property panel, participates in `ref` pick lists, and is
+saved and loaded like any other.
 
----
+#### What the registry must give a feature
+
+| | |
+|---|---|
+| `name` | the key in `features` |
+| `schema` | JSON Schema; drives both validation and the property panel |
+| `bind(piece, cfg, ctx)` | attach behaviour; return an optional handle |
+| `ctx.scene` | the scene element, for appending components |
+| `ctx.onDispose` | teardown, so rebuilding an assembly in the editor leaks nothing |
+| `ctx.piecesByRole()` / `ctx.handle(id)` | reach other pieces — how `radar` boosts nearby `turret`s, and how a `protector` finds its power source |
+| `ctx.simTime` | the time source, so effects honour pause and time scale |
+
+`ctx.handle(id)` is the important one: it is what lets features **interact**
+without knowing about each other's implementations, which is the property that
+made "a radar improves nearby turrets" expressible at all.
+
+#### Consequences for the editor
+
+- The editor's palette of features is **whatever is registered**, not a hardcoded
+  list. Manta's `zone`-reading escort behaviour shows up beside `turret`.
+- **One implementation, two hosts.** The editor and the game bind through the
+  same registry, so the preview behaves as the shipped level behaves. That is
+  what makes "what you author is what you get" true by construction — and it now
+  holds for consumer features too, which the earlier draft's design would have
+  broken.
+- A feature registered only in the editor (a visualiser, say) is legitimate, but
+  should be marked so, or an author can build something the game cannot load.
 
 ## Part 4 — test scenarios
 

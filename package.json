@@ -1,0 +1,63 @@
+{
+  "name": "tosijs-3d-ensemble",
+  "version": "0.1.0",
+  "description": "The tosijs-3d ensemble format, its instantiator, and a graphical editor for authoring ensembles.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "!dist/iife.js",
+    "!dist/iife.js.map",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tonioloewald/tosijs-3d-ensemble.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "bun format && bun bin/site.ts",
+    "build": "bun bin/site.ts --build",
+    "test": "bun test",
+    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
+    "format": "bun prettier --write .",
+    "tls": "tosijs-dev-certs",
+    "tunnel": "tosijs-tunnel",
+    "deploy": "tosijs-deploy"
+  },
+  "dependencies": {
+    "tosijs-schema": "^1.5.1"
+  },
+  "peerDependencies": {
+    "tosijs": "^1.7.8",
+    "tosijs-3d": ">=0.7.0-beta.6"
+  },
+  "devDependencies": {
+    "@babylonjs/core": "^9.16.2",
+    "@babylonjs/gui": "^9.16.2",
+    "@babylonjs/loaders": "^9.16.2",
+    "@babylonjs/materials": "^9.16.2",
+    "@types/bun": "latest",
+    "chokidar": "^5.0.0",
+    "happy-dom": "^20.11.6",
+    "prettier": "^2.8.8",
+    "tosijs": "^1.7.8",
+    "tosijs-3d": "file:../local-packages/tosijs-3d-0.7.0-beta.6.tgz",
+    "tosijs-ui": "^1.10.0",
+    "typescript": "^5.9.3"
+  }
+}

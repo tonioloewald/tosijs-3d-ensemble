@@ -4,14 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**A graphical editor for tosijs-3d "ensembles"** — reusable, JSON-described
-arrangements of library meshes with declared capabilities and relationships
-(fortifications, rigs, dome facilities, formations of turrets and generators).
+**The tosijs-3d "ensemble" format, its instantiator, and a graphical editor for
+authoring them.** An ensemble is a reusable, JSON-described arrangement of
+library meshes with declared capabilities and relationships — a rig, a dome
+facility, a fortress of shields, platforms, turrets and generators. No code, no
+engine types: plain data a game loads, a tool authors, and a generator can emit.
 
-Status: **greenfield.** `PLAN.md` is the specification and the only substantive
-content so far. Read it fully before writing code — it records decisions already
-made with the owner, and several of them were reached by correcting a wrong
-first answer.
+Status: **scaffolded, building, and verified in a browser.** The format, roles, validation, the feature
+registry and the instantiator are written and tested; the editor is a working
+component on the doc site with a piece list and a position panel — no
+manipulator, because tosijs-3d has none (see `UPSTREAM.md`).
+
+The markdown files carry decisions reached by argument, several of them by
+correcting a wrong first answer. Read them before writing code:
+
+| | |
+|---|---|
+| `SPEC.md` | **the specification** — format, editor affordances, schema system, scenarios, and five design questions answered with recommendations. The primary document |
+| `PLAN.md` | the plan — what to build, in what order, and what "done" means per milestone |
+| `README.md` | the elevator pitch and the package story |
+| `UPSTREAM.md` | gaps in tosijs-3d found while building. **File, don't fix** |
+| `AGENTS.md` | the practices pointer, and this project's divergences |
+
+When SPEC.md and PLAN.md disagree, SPEC.md's later sections usually win —
+"Open questions" reopened and reversed decisions made in its own Part 1. Check
+the git log before treating any statement as settled.
 
 ## Read the shared practices FIRST
 
@@ -24,38 +41,119 @@ over generic model priors.
 
 Non-negotiables from that repo:
 
-- **Assumed stack:** Bun, TypeScript, tosijs (state), tosijs-ui (widgets +
-  build), tosijs-schema (JSON Schema → types + validation).
+- **Assumed stack:** Bun, TypeScript strict, tosijs (state), tosijs-ui (build +
+  doc system), tosijs-schema (JSON Schema → types + validation).
 - **Stay in your repo.** If a fix belongs in `../tosijs-3d` or another sibling,
   **file an issue there, don't fix it** (`practices/cross-project.md`). The
   practices repo itself is the exception — writing lessons back into it needs no
   signoff.
 - **Observant model, not reactive** — read `practices/observant-model.md` before
   building any UI. tosijs is not React and guessing costs time.
-- **`practices/model-priors.md`** — what you will get wrong about
-  web components, bundlers and this stack specifically.
-- **`practices/releasing.md`** — including "Bypassing the publish loop": if a
-  dependency is tagged but unpublished, tarballs go in **`../local-packages/`**
-  with a `PROVENANCE.md`, never in a session scratchpad.
+- **`practices/model-priors.md`** — what you will get wrong about web
+  components, bundlers and this stack specifically.
+- **`practices/releasing.md`** — including "Bypassing the publish loop": an
+  unpublished dependency's tarball goes in **`../local-packages/`** with a
+  `PROVENANCE.md`, never in a session scratchpad. tosijs-3d is currently
+  consumed that way (`tosijs-3d-0.7.0-beta.6.tgz` is there now; manta-recon
+  depends on it by `file:` path).
 
-## Dependencies
+## One package, tree-shakeable — the decision that reversed twice
+
+The format, the instantiator AND the editor ship from here as **one package**,
+`tosijs-3d-ensemble`. A game imports the first two and the editor tree-shakes
+away.
+
+```js
+import { buildEnsemble, validate } from 'tosijs-3d-ensemble' // a game
+import { ensembleEditor } from 'tosijs-3d-ensemble'          // an author
+```
+
+⚠️ **Two earlier answers are still readable in the git history and partly in
+SPEC.md's older paragraphs.** The format was going to live upstream in
+tosijs-3d (`b3d-ensemble`); then it was going to be two packages from one repo.
+Both are superseded. Owner: *"I don't think two packages is right, just the
+editor should be thoroughly tree-shakeable if you just want to consume
+ensembles."*
+
+The property that matters — the editor writes exactly what the runtime reads,
+because it is the same code — is strongest this way: there is no version at
+which the tool and the runtime can disagree. Hosting the format in tosijs-3d
+stays the right end state if it proves universal; the reason it is not there
+yet is **velocity**, not layering.
+
+**The guarantee is now invisible, so something has to check it.**
+`src/tree-shaking.test.ts` bundles exactly what a game imports and fails if any
+editor module survives — plus a companion assertion that those markers DO appear
+when the editor entry is bundled, so the check cannot pass vacuously. If you add
+an import from the format layer to the editor layer, that test is the only thing
+that will notice.
+
+### Dependencies
 
 | | |
 |---|---|
-| `tosijs-3d` | the scene, and (once it lands) the ensemble **format + instantiator** — see PLAN.md §"Where each piece lives" |
-| `tosijs-ui` | widgets, layout, and the **build/doc system**. Do not hand-roll UI |
+| `tosijs-3d` | the scene, **and the SVG UI the editor's chrome is built on** |
+| `tosijs-ui` | the **build/doc system** (`tosijs-ui/site`). Its DOM widgets are not the editor's chrome — see below |
 | `tosijs-schema` | schemas as JSON Schema; tjs predicates later |
-| `tosijs` | state |
+| `tosijs` | state, not ad-hoc module globals |
 
-⚠️ **The format and the instantiator are NOT this project's to own.** They belong
-upstream in tosijs-3d (`b3d-ensemble`). This project is the graphical tool for
-creating ensembles. If that upstream work has not landed yet, prototype against
-a local copy but keep the boundary clean and expect to delete it.
+## The UI stack: tosijs-3d's SVG UI, not DOM widgets
+
+SPEC.md open question 5 is answered: **build the chrome on tosijs-3d's SVG UI**
+(`widgets3d` / `box` / `surface` / `table` / `keyboard` / `popup-surface`),
+which is one implementation rendering both as a DOM overlay and as an in-scene
+texture — so it buys the headset without giving up the browser. Editing a 3D
+arrangement is a spatial task; a tool for arranging things in space that cannot
+be used *in* that space concedes its best affordance. The repo stays separate
+regardless.
+
+Two consequences that change the schedule:
+
+- **Milestone 0a is a falsifiable test, and it comes first.** Build the piece
+  list and ONE property panel in the SVG UI and try them in a headset before the
+  scaffold hardens. Forms are the SVG UI's weakest area (no form layer; a
+  schema-driven property panel *is* a form generator) and that is cheap to
+  discover now, expensive in milestone 3.
+- **No manipulator exists — flat or XR.** `b3d-panel`'s coloured axes are a
+  debug READOUT that looks exactly like Babylon's position gizmo, and has
+  already fooled a reader. Babylon's `GizmoManager` is mouse-shaped, so
+  Manta's `bench-gizmo.ts` lifts cleanly ONLY if the editor stays flat. This is
+  the single largest schedule risk and it is upstream; file the ask early.
+
+Do not hand-roll a bundler, a dev server, a docs page, or a widget. If a widget
+is missing, that is an issue for its owner.
+
+## Design invariants the format depends on
+
+Cheap now, painful to retrofit:
+
+- **`id` is mandatory**, never derived from array index — derived ids mean every
+  insertion renumbers the world. And **namespace ids for nesting from day one**
+  (`rig-a/pump`): the encounter layer inherits whatever identity scheme ships.
+- **`validate()` returns `{severity, code, message, path}[]`, never throws.** An
+  editor shows everything and keeps working; a generator must decide whether to
+  emit. A bare `string[]` forces the generator to parse prose — and it will.
+- **`bind` must be two phases.** `bind(piece, cfg, ctx)` creates and returns a
+  handle touching nothing else; `link(handle, ctx)` runs after every piece has
+  bound and is the ONLY place `ctx.handle` / `ctx.piecesByRole` are legal.
+  Otherwise a `protector` resolving its power source races array order, and
+  reordering pieces in the editor silently changes behaviour.
+- **Rebuilding must be idempotent.** The editor rebuilds on every edit —
+  hundreds of times a session where a game runs it once. The test worth writing
+  is *build → dispose → build*, asserting scene mesh, observer and material
+  counts return to where they started.
+- **Features are a registry**, not a switch. `registerFeature({name, schema,
+  bind})`; a consumer's feature must be indistinguishable from a built-in in the
+  format, the editor and the file.
+- **Regex lives as a source string**, compiled at load — a `RegExp` makes the
+  format unserializable.
+- **`rot` is euler DEGREES**, matching tosijs-3d elements. Say so where a reader
+  will look.
 
 ## Prior art to lift, not reinvent
 
 A working prototype exists in **`../manta-recon`** (a game; the editor grew
-inside it and was extracted for exactly the reasons in PLAN.md):
+inside it and was extracted for exactly the reasons in SPEC.md):
 
 | file | what it is |
 |---|---|
@@ -66,13 +164,37 @@ inside it and was extracted for exactly the reasons in PLAN.md):
 | `src/zones.ts` | live zone registry (escort volumes AI reads) |
 | `src/prefab-editor.ts` | the bench itself |
 | `static/prefab.html` | its page |
-| `EDITOR-SPEC.md` | the same document as PLAN.md here |
+| `EDITOR-SPEC.md` | the ancestor of `SPEC.md` here |
 
-Read these for the traps they encode, listed in PLAN.md §"What Manta contributes
+Read these for the traps they encode, listed in SPEC.md §"What Manta contributes
 back". Several cost hours: attributes captured at attach are not live, library
 materials are shared, the water mesh is `water_nocast`, and an editor that
 renders at a different scale than the game teaches you the wrong thing about
 your own data.
+
+**Milestone 1 is done when manta-recon deletes `prefab.ts` and
+`prefab-runtime.ts`** and loads its four ensembles through this package with no
+behavioural change. That migration is the proof the API is right, and it should
+happen before the editor is built on top of it.
+
+## What "verified" means here, and what it does not
+
+The project's own rule is *verify the OUTPUT, not the mechanism*, so be precise
+about which claims have been checked:
+
+- **Checked in a browser:** the editor mounts, the backdrop renders, all placed
+  pieces appear in their authored arrangement, the camera frames them, both SVG
+  panels draw, and selecting a piece through the component API swaps the
+  property panel.
+- **Checked by test:** validation, role merging, two-phase bind/link ordering,
+  build → dispose → build leaving nothing behind, world-space scaling, and the
+  editor tree-shaking out of a game's bundle.
+- **NOT checked:** anything the built-in features actually do in a scene —
+  turrets firing, chains, protection, terrain shape. `src/runtime/features.ts`
+  is thin bindings written against the element attributes, and a scene test is
+  the next thing it needs. Do not describe those as working.
+- **NOT checked:** the headset. The whole reason the chrome is the SVG UI is
+  that it should run in one, and nobody has put it in one yet.
 
 ## Working style that this project's history argues for
 
@@ -99,8 +221,7 @@ here, because none of them fails loudly.
 
 - **`rx`/`ry`/`rz` are DEGREES on tosijs-3d elements**, and Babylon is radians.
   A bare number is valid in either unit, so getting it wrong produces a
-  different orientation rather than an error. The ensemble format's `rot` is
-  euler degrees — match it, and say so where a reader will look.
+  different orientation rather than an error.
 - **An element that manages a node OWNS its transform.** `AbstractMesh` rewrites
   `mesh.position` from the element's `x`/`y`/`z` every frame, so writing the mesh
   directly is silently undone. Gizmos hit this hard: a drag behaviour moves the
@@ -126,3 +247,22 @@ here, because none of them fails loudly.
   value produced the GLB's baked rotation. If Manta's ensembles were authored
   against that behaviour, their `rot` values were never doing anything, and
   fixing it will MOVE things. Check before assuming a regression.
+
+## Commands
+
+```bash
+bun start           # doc site + dev server on :8032; the editor is /editor.html
+bun run build       # doc site + library build (tsc -p tsconfig.build.json)
+bun test            # everything
+bun test src/format # one directory; `bun test -t "two phases"` for one test
+bun run typecheck   # root tsconfig, noEmit
+```
+
+`bun run build` runs BOTH typechecks and the live-example checker, and fails the
+build on either. It is the gate that catches an example teaching a broken
+contract, and it has already caught real errors here — do not route around it.
+
+The doc site is `tosijs-ui/site` driven by `site.config.ts`; `bin/site.ts` is a
+six-line dispatcher. Do not hand-roll a bundler, a dev server or a docs page.
+Docs are extracted from `/*# … */` blocks in the source plus the root markdown,
+so a doc comment IS the doc page.

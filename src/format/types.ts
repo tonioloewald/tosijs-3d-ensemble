@@ -1,0 +1,196 @@
+/*#
+# The ensemble format
+
+An **ensemble** is a reusable, JSON-described arrangement of library meshes with
+declared capabilities and relationships — a rig, a dome facility, a fortress of
+shields, platforms, turrets and generators.
+
+Plain JSON. **No functions, no code, no engine types.** Everything here has to
+survive a round trip through a file, a fetch, a text editor and a generator,
+because the format is authored three ways: by hand, by the editor, and by a
+mission compiler.
+
+```jsonc
+{
+  "name": "ocean-rig",
+  "kind": "rig",                    // free-form; consumers group by it
+  "scale": 2.5,                     // multiplies every offset and piece scale
+  "values": { "targetValue": 3, "faction": "hostile" },
+  "pieces": [
+    {
+      "id": "pump",                 // MANDATORY and stable — see below
+      "mesh": "Pump Station",       // PUBLIC library name
+      "at": [0, 0, 0],              // ensemble-local metres
+      "rot": [0, 0, 0],             // euler DEGREES
+      "role": "power",
+      "features": { "turret": { "range": 260 } }
+    }
+  ],
+  "links": [{ "from": "pump", "to": "projector", "delay": 0.4, "beam": true }]
+}
+```
+
+## Four rules that are cheap now and painful later
+
+- **`id` is mandatory**, never derived from array position. A derived id
+  renumbers the world on every insertion, so a link authored yesterday points
+  somewhere else today.
+- **`rot` is euler DEGREES**, matching tosijs-3d's `rx`/`ry`/`rz`. Babylon is
+  radians; a bare number is valid in either unit, so the wrong one gives you a
+  different orientation rather than an error.
+- **`mesh` is the PUBLIC library name.** `getNames()` strips `.model`,
+  behaviour suffixes and the glTF loader's `_primitiveN`, so
+  `building_collideCylinder_primitive0` is `building`. Never store what the
+  loader happened to call a node.
+- **`match` is a regex SOURCE STRING**, compiled at load. A `RegExp` does not
+  survive `JSON.stringify`, and the format stops being a format.
+
+Positions are **ensemble-local**, so the same ensemble works at sea level or on
+a plateau.
+*/
+
+/** Ensemble-local offset in metres: `[x, y, z]`. */
+export type Vec3 = [number, number, number]
+
+/** Euler rotation in DEGREES: `[rx, ry, rz]`. Not radians. */
+export type Euler = [number, number, number]
+
+/**
+ * Roles are PRESETS, not categories — each expands to a feature set that
+ * explicit `features` override.
+ *
+ * They exist because a role carries INTENT ("this is the power source") where a
+ * feature carries MECHANISM ("destroyable, 16 hp"). A designer means the first;
+ * the runtime needs the second. Consumers may register their own.
+ */
+export type Role = string
+
+/** A vulnerable part INSIDE a composite mesh, matched by sub-mesh name. */
+export interface Subsystem {
+  /** Regex **source string** (anchored is safer), compiled at load. */
+  match: string
+  hp: number
+  label: string
+}
+
+/**
+ * Capabilities toggled ON a piece — the central idea of the format.
+ *
+ * Components are not separate objects; they are capabilities of an object. A
+ * pump station that shoots back is ONE piece with two features, not two
+ * overlapping entities. That is also what lets features interact: "a radar
+ * improves nearby turrets" is a rule *about features* and has nowhere to live
+ * if every capability is its own object.
+ *
+ * The value type is deliberately open — a feature is whatever its registration
+ * says it is (see `registerFeature`), and a consumer's feature must be
+ * indistinguishable from a built-in one.
+ */
+export type Features = Record<string, Record<string, unknown>>
+
+/** A named place with no geometry: a spawn, a waypoint, a dock, a join point. */
+export interface Point {
+  id: string
+  /** Local to the ensemble, or to its piece when declared inside one. */
+  at: Vec3
+  /** Euler DEGREES — a spawn usually cares which way it faces. */
+  facing?: Euler
+  kind?: 'spawn' | 'waypoint' | 'dock' | 'muzzle' | 'entrance' | 'custom'
+  meta?: Record<string, string | number | boolean>
+}
+
+/**
+ * A volume that AI reads.
+ *
+ * An escort zone plus "idle craft seek escort zones" produces **formations as
+ * an emergent consequence** rather than formation code — and it degrades
+ * correctly, because killing the carrier removes the zone.
+ */
+export interface Zone {
+  id: string
+  at: Vec3
+  /** Sphere for now; box/cylinder can follow when something needs them. */
+  radius: number
+  kind: 'escort' | 'patrol' | 'no-fly' | 'alert' | 'trigger' | 'custom'
+  /** Who it applies to; absent = anyone friendly to the owner. */
+  faction?: string
+  capacity?: number
+  meta?: Record<string, string | number | boolean>
+}
+
+/**
+ * Abstract data with no physical presence, for a rules layer to key on.
+ *
+ * Deliberately open: a closed enum needs revising every time the fiction grows,
+ * and the consumer that cares is a rules layer, not the renderer.
+ */
+export interface Values {
+  targetValue?: number
+  faction?: string
+  [key: string]: string | number | boolean | undefined
+}
+
+export interface Piece {
+  /** Stable handle. MANDATORY — never derived from array position. */
+  id: string
+  /**
+   * PUBLIC library mesh name. Mutually exclusive with `ensemble`.
+   *
+   * Optional, and legitimately absent for an **environment primitive** — a
+   * piece whose `features` ARE its body (terrain, water, clouds, ambient life,
+   * a medium layer). Those stand at `at` and instantiate no library mesh.
+   */
+  mesh?: string
+  /**
+   * Nested ensemble by name, INSTEAD of `mesh`.
+   *
+   * The shape is reserved so that ids, links and the encounter layer are built
+   * for it from day one; **the loader does not flatten yet** and `validate`
+   * reports it. See PLAN.md's non-goals — recursion is the intended end state,
+   * flattening at load is how it arrives without live instances.
+   */
+  ensemble?: string
+  at: Vec3
+  /** Euler DEGREES, optional. */
+  rot?: Euler
+  /** Multiplies the ensemble scale for this piece alone. */
+  scale?: number
+  /** Preset that expands to features; explicit `features` win. */
+  role?: Role
+  features?: Features
+  subsystems?: Subsystem[]
+  /** Points attached to THIS piece, in piece-local space. */
+  points?: Point[]
+  /** Zones attached to THIS piece; they move and die with it. */
+  zones?: Zone[]
+  values?: Values
+}
+
+/**
+ * A directed on-destruction relationship — a chain reaction.
+ *
+ * `beam` renders the same relationship as a visible conduit: one declaration,
+ * two consequences, nothing to keep in sync.
+ */
+export interface Link {
+  from: string
+  to: string
+  /** Seconds after the source dies. */
+  delay?: number
+  /** Damage transferred; large values mean "destroys it". */
+  amount?: number
+  beam?: boolean | { sag?: number; radius?: number; core?: string; edge?: string }
+}
+
+export interface Ensemble {
+  name: string
+  /** Free-form, for consumers to group by: `rig`, `dome-facility`, `fortress`. */
+  kind?: string
+  /** Multiplies every offset and piece scale. */
+  scale?: number
+  pieces: Piece[]
+  links?: Link[]
+  points?: Point[]
+  zones?: Zone[]
+  values?: Values
+}

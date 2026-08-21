@@ -1,6 +1,6 @@
-# tosijs-3d-editor — project plan
+# tosijs-3d-ensemble — project plan
 
-**A graphical editor for tosijs-3d ensembles.**
+**The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
 An *ensemble* is a reusable, JSON-described arrangement of library meshes with
 declared capabilities and relationships — a rig, a dome facility, a floating
@@ -8,7 +8,7 @@ fortress of shields, platforms, lift units, turrets and generators. No code, no
 engine types: plain data a game loads, a tool authors, and a generator can emit.
 
 **`SPEC.md` is the specification.** It is the primary document: format, editor
-affordances, schema system, test scenarios, and four design questions answered
+affordances, schema system, test scenarios, and five design questions answered
 with recommendations. This file is the *plan* — what to build, in what order,
 with what, and what "done" means at each step.
 
@@ -20,9 +20,9 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 
 | | lives in | audience |
 |---|---|---|
-| ensemble **format** (types, defaults, validation) | **`tosijs-3d-ensemble`** — this repo, published separately | every consumer shipping levels |
-| ensemble **instantiator** (JSON → scene) | **`tosijs-3d-ensemble`** | every consumer shipping levels |
-| the **editor** | **`tosijs-3d-editor`** — depends on the above | authors only |
+| ensemble **format** (types, defaults, validation) | `tosijs-3d-ensemble` | every consumer shipping levels |
+| ensemble **instantiator** (JSON → scene) | `tosijs-3d-ensemble` | every consumer shipping levels |
+| the **editor** | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only |
 
 > **Revised — see SPEC.md open question 5.** These first two used to sit in
 > tosijs-3d. The reason to move them is CADENCE, not layering: a format is only
@@ -31,12 +31,15 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 > revision a framework release, gated by a framework's compatibility promises,
 > while the format is still learning what it is.
 >
-> The property that mattered — the editor writes exactly what the runtime reads,
-> because it is the same code — survives, because it is **one implementation in
-> two packages** built from one repo: `tosijs-3d-ensemble` for a game,
-> `tosijs-3d-editor` for an author. The format package must stay free of
-> tosijs-ui and the schema UI, asserted by bundle size in CI rather than by
-> intention — a stray import is exactly how this rots.
+> **ONE package, not two.** Owner: *"I don't think two packages is right, just
+> the editor should be thoroughly tree-shakeable if you just want to consume
+> ensembles."* The property that mattered — the editor writes exactly what the
+> runtime reads, because it is the same code — is strongest this way: there is
+> no version at which the tool and the runtime can disagree. What a game must
+> not pay for is the EDITOR, and the mechanism that guarantees that is a
+> bundler. `src/tree-shaking.test.ts` bundles exactly what a game imports and
+> fails if any editor module survives — a stray import is how this rots, and
+> nothing else would notice.
 >
 > Promotion into tosijs-3d later remains the right end state if the format proves
 > universal; keeping it dependency-free is what keeps that cheap.
@@ -57,8 +60,8 @@ than by discipline.
 
 | | for |
 |---|---|
-| `tosijs-3d` | the scene; the ensemble format + instantiator |
-| `tosijs-ui` | widgets, layout, **and the build/doc system** |
+| `tosijs-3d` | the scene, **and the SVG UI the editor's chrome is built on** |
+| `tosijs-ui` | the **build/doc system** (`tosijs-ui/site`), and DOM widgets where the editor is not |
 | `tosijs-schema` | schemas as JSON Schema → types + validation; tjs predicates later |
 | `tosijs` | state |
 
@@ -78,15 +81,15 @@ this project most:
   library instead of rolling everything by hand."* One UI surface across the
   ecosystem is a stated goal, and an authoring tool that looks foreign to the
   thing it authors for is a failure of that goal.
-- **Which widget set is an OPEN DECISION — see SPEC.md open question 5.** This
-  bullet used to say "use tosijs-ui widgets" flatly, which quietly committed the
-  project to flat-only, browser-only editing. The alternative is tosijs-3d's SVG
-  UI (`widgets3d`/`box`/`surface`/`table`/`keyboard`/`popup-surface`), which is
-  one implementation that renders BOTH as a DOM overlay and as an in-scene
-  texture — so it buys the headset without giving up the browser. Editing a 3D
-  arrangement is a spatial task, and a tool for arranging things in space that
-  cannot be used *in* that space is conceding its best affordance.
-  Recommendation there: **SVG UI for the chrome, separate repo regardless.**
+- **The chrome is tosijs-3d's SVG UI, not DOM widgets — SPEC.md open question 5
+  is answered.** This bullet used to say "use tosijs-ui widgets" flatly, which
+  quietly committed the project to flat-only, browser-only editing. The SVG UI
+  (`widgets3d`/`box`/`surface`/`table`/`keyboard`/`popup-surface`) is one
+  implementation that renders BOTH as a DOM overlay and as an in-scene texture —
+  so it buys the headset without giving up the browser. Editing a 3D arrangement
+  is a spatial task, and a tool for arranging things in space that cannot be used
+  *in* that space is conceding its best affordance. Milestone 0a below is the
+  cheap falsifiable test of that answer; run it before the scaffold hardens.
   Either way: if a widget is missing, that is an issue for its owner, not a
   licence to write one here.
 - **Observant model, not reactive.** Read `practices/observant-model.md` first.
@@ -110,7 +113,18 @@ this project most:
 
 ## Milestones
 
-### 0a — settle the UI question first (a day, not a milestone)
+### 0a — settle the UI question first — **half done**
+
+The piece list and a property panel are BUILT in the SVG UI and verified in a
+browser: selecting a piece through the component's API swaps the property panel
+and its sliders. **The headset half has not been run**, and one thing found
+already argues for running it soon — clicking a `list3d` row highlights it but
+does not fire `onSelect` (see UPSTREAM.md), so selection currently works through
+the API and not through the pointer.
+
+Original framing, kept because the test is still the test:
+
+
 
 Before the scaffold hardens around a widget set, build the **piece list and one
 property panel** in tosijs-3d's SVG UI and **try them in a headset**. That is the
@@ -122,20 +136,31 @@ schema-driven property panel is a form generator.
 If that feels wrong, question 5 answers itself and the scaffold goes to
 tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice.
 
-### 0 — scaffold
+### 0 — scaffold ✅ DONE
 
-- `bun init`, tosijs-ui build/dev/doc system wired, TypeScript strict.
-- Depend on `tosijs-3d`, `tosijs-ui`, `tosijs-schema`, `tosijs`.
-- A page that mounts a `<tosi-b3d>` scene with a library loaded and an orbit
-  camera. Nothing else.
-- **Done when:** `bun start` serves it, `bun run build` produces a bundle, and
-  the doc system builds a page.
+- Bun + TypeScript strict (both typechecks clean), `tosijs-ui/site` wired as the
+  build/dev/doc system — no hand-rolled bundler, dev server or docs page.
+- `site.config.ts` + `bin/site.ts` + `demo/site.ts`, the ecosystem's shape.
+- The editor is a **component** (`<tosi-ensemble-editor>`); the doc site carries
+  it as a full-screen route at `/editor.html`, which is a page that USES the
+  component and has no privileged access to anything.
+- **Done:** `bun start` serves it on :8032, `bun run build` produces the bundle
+  and 12 static pages, `bun test` is green.
 
-### 1 — the format + registry, as its own package
+### 1 — the format + registry — **mostly done**
 
-Built here, published as **`tosijs-3d-ensemble`**, and **importable by a game
-with no editor, no tosijs-ui and no schema machinery**. Assert that with a
-bundle-size check, not an intention.
+Importable by a game with no editor. Asserted by `src/tree-shaking.test.ts`,
+not by intention.
+
+Done: types, roles-as-presets with per-feature merge, `validate` returning
+`{severity, code, message, path}`, the registry with two-phase `bind`/`link`,
+`buildEnsemble`/`loadEnsemble` with dispose, built-in feature registrations, and
+**environment primitives** (`terrain`, `water`, `clouds`, `ambient`, `fog`) as
+features with no mesh — see SPEC.md open question 2.
+
+Not done: JSON Schema via tosijs-schema for the format itself (feature schemas
+are already JSON Schema), nested-ensemble flattening (`validate` reports it
+rather than half-doing it), and the manta-recon migration below.
 
 - JSON Schema for `ensemble`, `piece`, `feature`, `link`, `point`, `zone` via
   tosijs-schema — types and validation from one source (SPEC.md §Part 3).
@@ -152,7 +177,16 @@ bundle-size check, not an intention.
   with no behavioural change. That migration is the proof the API is right, and
   it should happen before the editor is built on top of it.
 
-### 2 — inspect
+### 2 — inspect — **started**
+
+Already in: the backdrop (land/aquatic, pinned to origin), placement, a first
+cut of fit-to-bounds framing, live non-blocking validation in the panel, and
+placeholder cubes when a piece's library is absent so the ARRANGEMENT still
+reads. Still to do: the library palette, camera re-fit as async models load,
+named angles, the ortho toggle, animation transport, and continuous shadow
+registration.
+
+
 
 Read-only, and useful on its own — this is the testbed the ecosystem has been
 missing (cf. tosijs-3d#20, which asked for exactly this kind of reference

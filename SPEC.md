@@ -4,44 +4,70 @@
 manta-recon (`src/prefab*.ts`, `src/bench-*.ts`, `static/prefab.html`) and
 discovering it does not belong there.
 
-**Two deliverables, not one:** an `ensemble` format + instantiator that goes
-**upstream into tosijs-3d**, and a graphical **editor** in its own project that
-depends on tosijs-3d and tosijs-ui.
+**Two concerns, one package:** an `ensemble` format + instantiator, and a
+graphical **editor** for authoring them. They ship together from
+`tosijs-3d-ensemble`, and a game carries only the first two because the editor
+tree-shakes away.
 
 ## Where each piece lives
 
-Three concerns, and they do **not** all belong in the same place.
+Three concerns, and they do **not** all have the same audience.
 
-| | goes in | why |
+| | | audience |
 |---|---|---|
-| **The ensemble FORMAT** (types, defaults, validation) | **tosijs-3d** | every consumer that ships levels needs it; only authors need an editor |
-| **The INSTANTIATOR** (JSON → live scene objects) | **tosijs-3d** | it is a runtime concern. A game loads ensembles with no editor present |
-| **The EDITOR** | **its own project** | authoring UI, schema machinery, file I/O — needed by authors, nobody else |
+| **The ensemble FORMAT** (types, defaults, validation) | `tosijs-3d-ensemble` | every consumer that ships levels |
+| **The INSTANTIATOR** (JSON → live scene objects) | `tosijs-3d-ensemble` | every consumer that ships levels |
+| **The EDITOR** | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only |
+
+> **This decision moved three times; this is where it landed.** An early draft
+> put everything in the editor project. A correction moved the format and the
+> instantiator **into tosijs-3d**. A second correction split them into two
+> published packages from one repo. The owner settled it: *"I don't think two
+> packages is right, just the editor should be thoroughly tree-shakeable if you
+> just want to consume ensembles."*
+>
+> That is the better answer for the reason the two-package version was reaching
+> for anyway. What a game must not pay for is the EDITOR — and the mechanism
+> that guarantees that is a bundler, not a package boundary. Two packages would
+> have bought the same property at the cost of a workspace, a second release, a
+> version-skew surface between format and tool, and no ecosystem precedent
+> (every other tosijs repo is a single package).
+>
+> **What it costs:** the guarantee is now invisible unless something checks it.
+> So `src/tree-shaking.test.ts` bundles exactly what a game imports and fails if
+> any editor module survives — with a companion assertion that the markers it
+> looks for DO appear when the editor entry is bundled, so the check cannot pass
+> vacuously.
+>
+> Hosting the format in tosijs-3d remains the right end state if it proves
+> universal. The reason it is not there yet is **velocity**: the format is still
+> learning what it is, and enriching it should not cost a tosijs-3d minor
+> version each time.
 
 Owner: *"The 'prefab' structure and the tool for instantiating it belong in
-tosijs-3d, the editor is simply a tool for creating those graphically."*
+tosijs-3d, the editor is simply a tool for creating those graphically."* —
+later refined to: *"it could be a lightweight and separable import from the
+editor library. Maybe the latter makes more sense."*
 
-That is the right line and it corrects an earlier draft of this document, which
-argued the whole thing should sit outside tosijs-3d. The mistake was treating
-"format" and "editor" as one deliverable. They have different audiences:
+What survives every revision is the SPLIT OF CONCERNS, not its address:
 
 - A **shipped game** carries the format and the loader and no editor at all.
   That is the common case, and it must not pay for authoring.
 - An **author** additionally wants the editor, which depends on tosijs-3d (for
-  the scene and the loader) and tosijs-ui (for the interface).
+  the scene and the SVG UI) and on the format.
 
-So `tosijs-3d` gains something like `b3d-ensemble` — the schema, `validate()`,
-and `loadEnsemble(url, origin)` / `buildEnsemble(data, origin)` — and the editor
-project depends on it rather than reimplementing it. **The editor writes
-exactly what the runtime reads, because it is the same code**, which is the
-property that makes "what you author is what you get" true by construction
-rather than by discipline.
+**The editor writes exactly what the runtime reads, because it is the same
+code** — the property that makes "what you author is what you get" true by
+construction rather than by discipline. One package is the cheapest way to keep
+that true: there is no version at which the tool and the runtime can disagree.
 
-It also settles the awkward part of the earlier draft: the *runtime binding*
-(feature → behaviour) is not a consumer concern after all. Features like
-`destroyable`, `turret`, `radar` and `launchpad` map onto components tosijs-3d
-already ships, so the binding is the instantiator's own job. What stays
-consumer-supplied is the SCHEMA for anything custom, plus roles and scenarios.
+What stays consumer-supplied is the SCHEMA for anything custom, roles,
+scenarios, **and the runtime binding for a consumer's own features**. An
+earlier draft of this section claimed the binding "is not a consumer concern
+after all", on the grounds that `destroyable`, `turret`, `radar` and
+`launchpad` map onto components tosijs-3d already ships. That is true of those
+features and false in general — see Part 3's feature registry, which corrects
+it.
 
 ### Not in Manta
 
@@ -84,7 +110,7 @@ direction: both make the word mean *build output* rather than *arrangement*.
 
 | | why not |
 |---|---|
-| `prefab` | Unity baggage — there, a serialized scene object **with code** |
+| `prefab` | Unity baggage — there, a serialized scene object **with code**. And **tosijs-3d already exports `prefab`** for something else entirely: a registered `(ctx) => Element[]` factory for wrecks, debris and spawns (`definePrefab`/`spawnPrefab`). Our root term is `ensemble`; `prefab` is Unity's word for the neighbouring idea, and upstream's is a third thing again |
 | `assembly` | primes WebAssembly on npm; ".NET assembly" pulls the same way |
 | `schematic` | closest conceptual fit (components + connections, and Minecraft made it legible) but **tosijs-3d already uses "schematic"** in `MinSimApi` — an in-ecosystem collision is worse than an external one |
 | `blueprint` | collides with tosijs's own blueprint concept |
@@ -602,18 +628,57 @@ nested ensemble.
 > bare id. That is another reason to namespace from day one — the encounter
 > format inherits whatever identity scheme this one ships with.
 
-### 2. Terrain, bridges, tunnels — **a different thing; give them join points**
+### 2. Terrain and environment — **revised: primitives you can author with**
 
-An ensemble sits *on* a world. A bridge *is* the world — you fly through it, it
-occludes, it defines a route. Making terrain an ensemble would drag streaming,
-LOD and collision meshes into a format whose whole virtue is being small JSON.
+The original answer here was "a different thing; give them join points": an
+ensemble sits *on* a world, a bridge *is* the world, and making terrain an
+ensemble would drag streaming, LOD and collision meshes into a format whose
+whole virtue is being small JSON.
 
-**Recommendation:** keep them separate, and let them meet at **points**. The
-format already has typed reference points; `kind: "entrance"` and a `join` kind
-are enough for a tile-set to declare "this end mates with that end". The
-tile-set decomposition MANTA-PLAN wants is then a *sibling* format that
-references ensembles for its furniture, rather than a special case inside this
-one.
+**The owner reversed it, and the reversal is right:**
+
+> *"being able to author using terrain meshes and medium layers / water /
+> clouds / ambient etc as primitives is hugely useful. E.g. just being able to
+> edit a province using a sample terrain and being able to drag it around to see
+> how it interacts would be amazing. This would allow you ultimately to do
+> things like build a province that changes a landform and sticks a procedural
+> city or other tilemap into a location on an arbitrary underlying terrain."*
+
+Two distinct things are named there, and keeping them apart is what makes this
+cheap rather than the LOD-and-streaming swamp the original answer feared.
+
+**1. The backdrop — authoring CONTEXT, never saved.** A sample terrain, a sea,
+a sky, the ambient conditions. It exists so the thing being authored can be
+judged against something, and so the ensemble can be dragged over it to see how
+the two interact. It is an editor affordance (`backdrop` on
+`<tosi-ensemble-editor>`), it generalizes the land/aquatic placement modes the
+plan already had, and it never reaches the file.
+
+**2. Environment primitives — CONTENT, and they are already expressible.** A
+province that *changes* a landform carries that landform. This needs **no format
+change at all**, which is the argument for it: `features` was always an open map
+bound by registrations, so an environment primitive is simply a piece whose
+feature IS its body, with no library mesh to instantiate.
+
+```jsonc
+{ "id": "seabed", "at": [0, -140, 0], "features": { "terrain": { "biome": "ocean", "seed": 4 } } },
+{ "id": "sea",    "at": [0, 0, 0],    "features": { "water": { "waterSize": 4000 } } },
+{ "id": "haze",   "at": [0, 0, 0],    "features": { "fog": { "density": 0.002 } } }
+```
+
+`terrain`, `water`, `clouds`, `ambient` and `fog` ship as built-in
+registrations wrapping the tosijs-3d elements of the same name. The only rule
+this added to the format: a piece with no `mesh` is legal when it has features,
+and `validate` reports a piece with neither as `empty-piece`.
+
+**What stays out of scope for v1**, and now for a sharper reason than "terrain
+is different": a **generator** primitive — "stick a procedural city or tilemap
+at this location" — is a piece whose feature EMITS other pieces. That is
+nested ensembles with a computed child, so it wants the same machinery open
+question 1 defers (id namespacing, cycle detection, transform composition) and
+should land on top of it rather than beside it. Bridges and tunnels still meet
+the world at **points** (`kind: "entrance"`), which the original answer got
+right.
 
 ### 3. Multiplayer / authority — **out of scope, but the format is already safe**
 
@@ -769,27 +834,28 @@ because it is the same code"* — is preserved either way. It comes from **one
 implementation with two importers**, not from which repo hosts it:
 
 ```jsonc
-// a game: format + instantiator, no editor, no UI, no schema machinery
-import { buildEnsemble, validate } from 'tosijs-3d-editor/ensemble'
+// a game: format + instantiator; the editor tree-shakes away
+import { buildEnsemble, validate } from 'tosijs-3d-ensemble'
 
-// an author: the whole tool
-import { ensembleEditor } from 'tosijs-3d-editor'
+// an author: the whole tool, same package
+import { ensembleEditor } from 'tosijs-3d-ensemble'
 ```
 
 Conditions that make this honest rather than convenient, all of which are things
 to check rather than assert:
 
-- **The `/ensemble` entry must not pull the editor in.** No tosijs-ui, no schema
-  UI, no widgets — a game importing it should get types, `validate` and
-  `buildEnsemble`. Verify with a bundle-size assertion in CI, not by intention;
-  a stray import is exactly how this rots.
-- **It needs `exports` map subpaths**, which tosijs-3d currently does NOT have
-  (its `exports` is the string form, which is why its own headless surface is
-  unreachable — see that repo's UPSTREAM notes). Get this right on day one here.
-- **The name is now wrong.** A game depending on `tosijs-3d-editor` to load a
-  level reads as a mistake even when it isn't. Either the package is named for
-  the format (`tosijs-3d-ensemble`, with the editor as a subpath) or the split is
-  two published packages from one repo. Worth deciding before anything publishes,
+- **A game's import must not reach the editor.** No SVG UI chrome, no property
+  panel — a game importing `buildEnsemble` should get the format and the
+  instantiator. Verified by `src/tree-shaking.test.ts`, which bundles exactly
+  what a game imports and fails on any surviving editor module. A stray import
+  is exactly how this rots, and a bundler will not warn you.
+- **`exports` is a map, not the string form**, so subpaths stay available.
+  tosijs-3d's is the string form, which is why its own headless surface is
+  unreachable — see that repo's UPSTREAM notes. Got right on day one here.
+- **The name is `tosijs-3d-ensemble`, one package.** A game depending on
+  something called `-editor` to load a level reads as a mistake even when it
+  isn't; naming the package for the FORMAT removes that, and the editor rides
+  along as an export a bundler drops. Settled before anything published,
   because it is the kind of thing that never gets renamed afterwards.
 - **Moving it INTO tosijs-3d later must stay cheap.** If the format proves stable
   and universal, promotion is the right end state. Keeping it dependency-free and
@@ -807,11 +873,15 @@ expensive to discover in milestone 3.
 
 ## Suggested sequence
 
-1. **`b3d-ensemble` upstream** — format types (JSON Schema via tosijs-schema),
-   `validate()`, `buildEnsemble()`. Manta switches to it and deletes its copies;
-   that migration is the proof the API is right.
-2. **Editor project** — depends on tosijs-3d + tosijs-ui. Lift the prototype's
-   gizmo, placement, framing and scenario harness.
+1. **`tosijs-3d-ensemble`, here** — format types (JSON Schema via
+   tosijs-schema), `validate()`, `buildEnsemble()`, the feature registry. Manta
+   switches to it and deletes its copies; that migration is the proof the API is
+   right.
+2. **`tosijs-3d-editor`** — depends on the above, on tosijs-3d's SVG UI, and on
+   tosijs-ui's build/doc system. Lift the prototype's placement, framing and
+   scenario harness; the **gizmo does not lift** — `bench-gizmo.ts` binds
+   Babylon's mouse-shaped `GizmoManager`, which the SVG UI decision above
+   supersedes.
 3. **Manta deletes its bench** and depends on the editor.
 4. **Encounter layer**, once there are enough ensembles for the distinction to
    bite.

@@ -1,0 +1,42 @@
+# Based on github/gitignore Node.gitignore, trimmed to what this repo can hit.
+
+# Logs
+logs
+*.log
+
+# Dependency directories
+node_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Output of 'npm pack'
+*.tgz
+
+# dotenv / secrets — never commit
+.env
+.env.*
+*.key
+
+# Finder (macOS)
+.DS_Store
+
+# bun is the canonical package manager: bun.lock is the tracked source of truth.
+bun.lockb
+package-lock.json
+
+# Generated doc corpus
+demo/docs.json
+
+# TLS dev certs (bunx tosijs-dev-certs regenerates them)
+tls/*.pem
+tls/*.csr
+.haltija/
+
+# Library build output. Published from a clean build, never tracked.
+dist/
+
+# Doc-site output. Track this only once a Pages deploy points at it — until
+# then it is a 10 MB rebuild artifact that would land in every commit.
+docs/
+llms.txt

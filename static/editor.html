@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ensemble editor</title>
+    <link rel="icon" href="/favicon.svg" />
+    <!--
+      The full-screen route is a PAGE THAT USES THE COMPONENT, not an app.
+
+      It carries no logic and no bespoke stylesheet: it loads the same bundle
+      every doc page loads (which is what registers <tosi-ensemble-editor>) and
+      the same generated theme stylesheet, then gives the component the window.
+      If this file ever needs to know something the component doesn't expose,
+      that is a missing prop on the component, not a script to add here.
+    -->
+    <link rel="stylesheet" href="/doc-system.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--background, #101418);
+      }
+      tosi-ensemble-editor {
+        display: block;
+        height: 100dvh;
+      }
+    </style>
+  </head>
+  <body>
+    <tosi-ensemble-editor
+      backdrop="aquatic"
+      src="/ensembles/ocean-rig.json"
+    ></tosi-ensemble-editor>
+    <script src="/iife.js"></script>
+  </body>
+</html>

@@ -11,10 +11,15 @@ import type { Ensemble } from '../format/types'
 */
 const fakeScene = () => ({ appendChild: () => {}, remove: () => {} }) as unknown as SceneElement
 
+/*
+  Features are stated EXPLICITLY here rather than via roles, because the format
+  ships no roles — a role is a domain vocabulary and these tests describe the
+  format, which has no domain.
+*/
 const two: Ensemble = {
   name: 'pair',
   pieces: [
-    { id: 'reactor', mesh: 'R', at: [0, 0, 0], role: 'power' },
+    { id: 'reactor', mesh: 'R', at: [0, 0, 0], features: { destroyable: { hp: 16 } } },
     { id: 'field', mesh: 'F', at: [0, 10, 0], features: { protector: { source: 'reactor' } } },
   ],
   links: [{ from: 'reactor', to: 'field' }],
@@ -75,7 +80,7 @@ describe('buildEnsemble', () => {
     const reversed: Ensemble = { ...two, pieces: [two.pieces[1]!, two.pieces[0]!] }
     const built = buildEnsemble(reversed, {
       scene: fakeScene(),
-      placePiece: (piece) => ({ id: piece.id }) as unknown as SceneElement,
+      placePiece: (piece) => ({ node: { id: piece.id } }),
     })
     expect(built.pieces.size).toBe(2)
     expect(seen).toEqual({ id: 'reactor' } as never)
@@ -152,5 +157,69 @@ describe('buildEnsemble', () => {
     })
     expect(built.problems.map((p) => p.code)).toContain('no-name')
     expect(built.pieces.size).toBe(1)
+  })
+
+  it('gives a plain piece a body without any feature being involved', () => {
+    // The point of the format: most things are not combatants, and a piece with
+    // no features at all still has to exist in the scene.
+    const placed: string[] = []
+    buildEnsemble(
+      { name: 'plain', pieces: [{ id: 'rock', mesh: 'Rock', at: [0, 0, 0] }] },
+      {
+        scene: fakeScene(),
+        placePiece: (piece) => {
+          placed.push(piece.id)
+          return { node: {} }
+        },
+      }
+    )
+    expect(placed).toEqual(['rock'])
+  })
+
+  it('lets a BODY feature claim the piece, and does not place it twice', () => {
+    let placements = 0
+    register({
+      name: 'destroyable',
+      schema: {},
+      body: true,
+      bind: () => ({ appendChild: () => {}, remove: () => {} }) as unknown as SceneElement,
+    })
+    const built = buildEnsemble(two, {
+      scene: fakeScene(),
+      placePiece: () => {
+        placements++
+        return { node: {} }
+      },
+    })
+    // 'reactor' declares destroyable, so its body came from the feature.
+    // 'field' does not, so it was placed.
+    expect(placements).toBe(1)
+    expect(built.pieces.get('reactor')!.element).not.toBeNull()
+    expect(built.pieces.get('field')!.node).not.toBeNull()
+  })
+
+  it('shows a decorator the body a body-feature created, whatever the key order', () => {
+    // The decorator is bound after the body feature, and its context reads the
+    // body through a getter — a snapshot taken at bind time would be null.
+    let seen: unknown = 'not run'
+    const body = { appendChild: () => {}, remove: () => {} } as unknown as SceneElement
+    register({ name: 'destroyable', schema: {}, body: true, bind: () => body })
+    register({
+      name: 'blip',
+      schema: {},
+      bind: (_p, _c, ctx) => {
+        seen = ctx.element
+        return null
+      },
+    })
+    buildEnsemble(
+      {
+        name: 'one',
+        // `blip` first in the object, so only the body-first ordering saves this.
+        pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], features: { blip: {}, destroyable: {} } }],
+      },
+      { scene: fakeScene() }
+    )
+    expect(seen).toBe(body)
   })
 })

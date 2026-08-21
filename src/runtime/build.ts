@@ -61,11 +61,28 @@ export interface BuildOptions {
    */
   simTime?: () => number
   /**
-   * Place the piece's mesh. Defaults to `placeMesh` from `./place-mesh`, which
-   * is the only part of this module that knows about tosijs-3d — swap it in a
-   * test, or to render pieces some other way.
+   * Give the piece a body. Defaults to `placeMesh` from `./place-mesh`, the
+   * only part of this module that knows about tosijs-3d — swap it in a test, or
+   * to render pieces some other way.
+   *
+   * Not called when a **body feature** already claimed the piece (see
+   * `FeatureRegistration.body`).
    */
-  placePiece?: (piece: Piece, at: Vec3, scale: number, ctx: PlaceContext) => SceneElement | null
+  placePiece?: (piece: Piece, at: Vec3, scale: number, ctx: PlaceContext) => Placement | null
+}
+
+/**
+ * What placing a piece produced.
+ *
+ * Either an ELEMENT (a tosijs-3d component that manages its own transform) or a
+ * NODE (a plain library instance that nothing manages). Most pieces are the
+ * second: a rock does not need a component, and giving it one would make it a
+ * participant in systems it has no business in.
+ */
+export interface Placement {
+  element?: SceneElement | null
+  node?: unknown
+  dispose?: () => void
 }
 
 export interface PlaceContext {
@@ -81,8 +98,10 @@ export interface BuiltPiece {
   at: Vec3
   /** Ensemble scale × piece scale. */
   scale: number
-  /** The element carrying this piece's mesh, if one was placed. */
+  /** The element carrying this piece's body, if its body is an element. */
   element: SceneElement | null
+  /** The Babylon node carrying this piece's body, if it is not an element. */
+  node: unknown
   /** Handles returned by each feature's `bind`, keyed by feature name. */
   handles: Map<string, unknown>
 }
@@ -130,23 +149,58 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       origin[2] + piece.at[2] * ensembleScale,
     ]
     const features = featuresOf(piece)
-    const element = placePiece
-      ? placePiece(piece, at, scale, { scene, library, features })
-      : null
-    if (element) onDispose(() => element.remove())
-
-    const built: BuiltPiece = { piece, at, scale, element, handles: new Map() }
+    const built: BuiltPiece = {
+      piece,
+      at,
+      scale,
+      element: null,
+      node: null,
+      handles: new Map(),
+    }
     pieces.set(piece.id, built)
 
-    for (const [name, cfg] of Object.entries(features)) {
+    /*
+      A BODY feature creates the piece's body; every other feature decorates one.
+      Body features therefore bind FIRST, and the rest see the result as
+      `ctx.element` / `ctx.node`.
+
+      The ordering matters for exactly one built-in — `destroyable` — and only
+      because `b3d-destroyable` creates the mesh it owns. Destruction is a
+      decorator conceptually; this is an upstream constraint, not a claim that
+      being destroyable is how things exist.
+    */
+    const entries = Object.entries(features)
+    const isBody = (name: string) => featureRegistration(name)?.body === true
+    const ordered = [...entries.filter(([n]) => isBody(n)), ...entries.filter(([n]) => !isBody(n))]
+
+    for (const [name, cfg] of ordered) {
       const reg = featureRegistration(name)
       if (!reg?.bind) continue
-      const ctx = makeContext({ scene, element, ensemble, piece, at, scale, onDispose, simTime, pieces })
+
+      // Once the body features have run, a plain piece still needs a body.
+      if (!isBody(name) && !built.element && !built.node) {
+        applyPlacement(built, placePiece?.(piece, at, scale, { scene, library, features }), onDispose)
+      }
+
+      const ctx = makeContext({
+        scene,
+        built,
+        ensemble,
+        piece,
+        at,
+        scale,
+        library,
+        onDispose,
+        simTime,
+        pieces,
+      })
       // A feature that throws must not take the rest of the ensemble with it —
       // in the editor the author is mid-edit, and a half-built scene they can
       // see beats an empty one they cannot diagnose.
       try {
-        built.handles.set(name, reg.bind(piece, cfg, ctx))
+        const handle = reg.bind(piece, cfg, ctx)
+        built.handles.set(name, handle)
+        if (isBody(name) && isElement(handle)) built.element = handle
         bound.push({ built, feature: name, ctx })
       } catch (err) {
         problems.push({
@@ -156,6 +210,11 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
           path: `/pieces/${ensemble.pieces.indexOf(piece)}/features/${name}`,
         })
       }
+    }
+
+    // A piece with no features at all, or only unregistered ones, still has a body.
+    if (!built.element && !built.node) {
+      applyPlacement(built, placePiece?.(piece, at, scale, { scene, library, features }), onDispose)
     }
   }
 
@@ -198,32 +257,57 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
   }
 }
 
+/** A body feature returns its element; anything else it returns is not a body. */
+function isElement(value: unknown): value is SceneElement {
+  return typeof value === 'object' && value !== null && 'appendChild' in value
+}
+
+function applyPlacement(
+  built: BuiltPiece,
+  placement: Placement | null | undefined,
+  onDispose: (fn: () => void) => void
+): void {
+  if (!placement) return
+  built.element = placement.element ?? null
+  built.node = placement.node ?? null
+  if (placement.dispose) onDispose(placement.dispose)
+}
+
 function makeContext(a: {
   scene: SceneElement
-  element: SceneElement | null
+  built: BuiltPiece
   ensemble: Ensemble
   piece: Piece
   at: Vec3
   scale: number
+  library: string
   onDispose: (fn: () => void) => void
   simTime: () => number
   pieces: Map<string, BuiltPiece>
 }): FeatureContext {
   return {
     scene: a.scene,
-    element: a.element,
+    get element() {
+      // A getter, not a snapshot: a body feature may set this AFTER a decorator
+      // has already been handed its context.
+      return a.built.element
+    },
+    get node() {
+      return a.built.node
+    },
     ensemble: a.ensemble,
     piece: a.piece,
     at: a.at,
     scale: a.scale,
+    library: a.library,
     onDispose: a.onDispose,
     simTime: a.simTime,
     handle: (id: string) => {
       const built = a.pieces.get(id)
       if (!built) return undefined
-      // The piece's own element is the useful default; a named feature handle
-      // is reachable through `pieces` for anything finer.
-      return built.element ?? built
+      // The piece's own body is the useful default; a named feature handle is
+      // reachable through `pieces` for anything finer.
+      return built.element ?? built.node ?? built
     },
     piecesByRole: (role: string) =>
       a.ensemble.pieces.filter((p) => p.role === role),

@@ -9,8 +9,10 @@ the power source" is a thing a level designer means; "destroyable with 16 hp" is
 a thing a level designer types. The editor offers the first and writes the
 second.
 
-Consumers register their own roles the same way they register features — a
-role defined by a game is indistinguishable from a shipped one.
+**The format ships no roles at all.** A role is a domain's vocabulary, and the
+format has no domain — so a consumer registers the set its world needs. The
+fortification vocabulary that used to be built in (`power`, `shield`,
+`critical`, …) is one import away in `presets/combat`.
 
 ```js
 import { registerRole, featuresOf } from 'tosijs-3d-ensemble'
@@ -26,43 +28,23 @@ featuresOf({ id: 'r1', at: [0, 0, 0], role: 'reactor', features: { destroyable: 
 */
 import type { Features, Piece, Role } from './types'
 
-/**
- * The roles shipped with the format.
- *
- * These are the vocabulary a fortification puzzle is built from: something
- * feeds something, something projects a field, and something is the objective.
- */
-const BUILT_IN: Record<string, Features> = {
-  /** Armoured scenery you cannot kill. */
-  structure: {},
-  /** An ordinary destroyable. */
-  target: {
-    destroyable: { hp: 12, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  },
-  /** Kill this to drop a shield. */
-  power: {
-    destroyable: { hp: 16, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  },
-  /** A shield projector; dies with its power. */
-  generator: {
-    destroyable: { hp: 14, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  },
-  /** The field itself: shooting it directly is possible and a bad plan. */
-  shield: {
-    destroyable: { hp: 120, armor: 25 },
-    protector: { protection: 12 },
-  },
-  /** The objective, protected while its power stands. */
-  critical: {
-    destroyable: { hp: 20, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  },
-}
+/*
+  NO ROLES SHIP WITH THE FORMAT.
 
-const roles = new Map<string, Features>(Object.entries(BUILT_IN))
+  Roles are a DOMAIN's vocabulary, not the format's. `power`, `shield` and
+  `critical` describe a fortification puzzle; a botanical garden, an
+  architectural walkthrough and tosijs-3d's own standard scene each want a
+  different set, and none of them should have to ignore a combat vocabulary
+  baked into the core.
+
+  An earlier version shipped the fortification set as built-ins. That quietly
+  made the format a combat format — the thing it must not be, because "describe
+  an arrangement and consume it anywhere" is the whole win.
+
+  The fortification vocabulary is still one import away: see
+  `registerCombatPreset()` in `presets/combat`.
+*/
+const roles = new Map<string, Features>()
 
 /** Register a consumer-defined role. Overwrites a role of the same name. */
 export function registerRole(name: string, features: Features): void {

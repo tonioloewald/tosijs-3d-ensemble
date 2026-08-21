@@ -44,6 +44,37 @@ export interface Problem {
   path: string
 }
 
+type Check = (ensemble: Ensemble) => Problem[]
+
+const checks = new Set<Check>()
+
+/**
+ * Register a DOMAIN rule.
+ *
+ * The format validates structure — ids, references, positions, whether a link
+ * points at a piece that exists. It knows nothing about what an ensemble MEANS,
+ * and it must not: "a field with no incoming link is unsolvable" is a rule about
+ * a combat puzzle, and an architectural walkthrough would be baffled by it.
+ *
+ * So domain rules are registered, the same way features are. `presets/combat`
+ * registers the shield-reachability rule that used to live in this file.
+ *
+ * ```js
+ * registerCheck((ensemble) =>
+ *   ensemble.pieces.filter((p) => p.features?.door && !p.points?.length).map((p) => ({
+ *     severity: 'warning',
+ *     code: 'door-without-hinge-point',
+ *     message: `"${p.id}" is a door with nowhere to hinge`,
+ *     path: `/pieces/${ensemble.pieces.indexOf(p)}`,
+ *   }))
+ * )
+ * ```
+ */
+export function registerCheck(check: Check): () => void {
+  checks.add(check)
+  return () => checks.delete(check)
+}
+
 export interface ValidateOptions {
   /**
    * Public library mesh names, when a library is loaded. Omit while it is
@@ -150,20 +181,15 @@ export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Proble
     }
   })
 
-  // The unsolvable-objective check. Keyed on the protector FEATURE rather than
-  // the `shield` role, so a consumer's own role for a field is covered too.
-  ensemble.pieces.forEach((p, i) => {
-    if (!featuresOf(p).protector) return
-    const reachable = (ensemble.links ?? []).some((l) => l.to === p.id)
-    if (!reachable) {
-      add(
-        'error',
-        'unreachable-shield',
-        `"${p.id}" projects a field and has no incoming link — nothing can bring it down`,
-        `/pieces/${i}`
-      )
+  // Domain rules registered by a consumer (or by a preset). The format itself
+  // knows nothing about shields, occupancy or fire lanes — see `registerCheck`.
+  for (const check of checks) {
+    try {
+      problems.push(...check(ensemble))
+    } catch {
+      /* a broken rule must not take the whole report with it */
     }
-  })
+  }
 
   return problems
 }

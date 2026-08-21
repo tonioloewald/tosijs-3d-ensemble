@@ -2,8 +2,17 @@ import { describe, expect, it } from 'bun:test'
 import { featuresOf, registerRole, roleFeatures, roleNames } from './roles'
 
 describe('roles', () => {
-  it('expands a role into its feature preset', () => {
-    expect(featuresOf({ id: 'a', at: [0, 0, 0], role: 'power' }).destroyable).toEqual({
+  it('ships NO roles — a role is a domain vocabulary, and the format has no domain', () => {
+    // The fortification set (`power`, `shield`, `critical`) used to be built in,
+    // which quietly made every consumer's scene format a combat format.
+    for (const combat of ['structure', 'target', 'power', 'generator', 'shield', 'critical']) {
+      expect(roleFeatures(combat)).toBeUndefined()
+    }
+  })
+
+  it('expands a registered role into its feature preset', () => {
+    registerRole('reactor', { destroyable: { hp: 16, explode: true } })
+    expect(featuresOf({ id: 'a', at: [0, 0, 0], role: 'reactor' }).destroyable).toEqual({
       hp: 16,
       explode: true,
     })
@@ -12,26 +21,26 @@ describe('roles', () => {
   it('merges explicit features over the preset PER FEATURE', () => {
     // Overriding one number must not drop the rest of a feature the author
     // never mentioned.
+    registerRole('lamp', { light: { intensity: 0.8, range: 20 }, glow: { color: '#fff' } })
     const f = featuresOf({
       id: 'a',
       at: [0, 0, 0],
-      role: 'power',
-      features: { destroyable: { hp: 80 } },
+      role: 'lamp',
+      features: { light: { intensity: 2 } },
     })
-    expect(f.destroyable).toEqual({ hp: 80, explode: true })
-    expect(f.blip).toEqual({ faction: 'hostile', profile: 1 })
+    expect(f.light).toEqual({ intensity: 2, range: 20 })
+    expect(f.glow).toEqual({ color: '#fff' })
   })
 
   it('hands out copies, so an edit cannot corrupt the preset', () => {
-    const first = roleFeatures('power')!
-    ;(first.destroyable as { hp: number }).hp = 999
-    expect((roleFeatures('power')!.destroyable as { hp: number }).hp).toBe(16)
+    registerRole('bench', { seat: { slots: 3 } })
+    ;(roleFeatures('bench')!.seat as { slots: number }).slots = 999
+    expect((roleFeatures('bench')!.seat as { slots: number }).slots).toBe(3)
   })
 
-  it('lets a consumer register its own role', () => {
-    registerRole('reactor', { destroyable: { hp: 40 } })
-    expect(roleNames()).toContain('reactor')
-    expect(featuresOf({ id: 'a', at: [0, 0, 0], role: 'reactor' }).destroyable).toEqual({ hp: 40 })
+  it('lists what a consumer registered, for the editor role picker', () => {
+    registerRole('planter', {})
+    expect(roleNames()).toContain('planter')
   })
 
   it('leaves an unknown role with no features rather than throwing', () => {

@@ -127,6 +127,56 @@ The rest of this document uses **ensemble**.
 
 ---
 
+## An ensemble is not for anything in particular
+
+**The format has no domain, and must not acquire one.** This document was
+written from a fortification brief, so an early implementation shipped the
+fortification vocabulary as built-ins: `power`/`shield`/`critical` roles, a
+`destroyable` feature, and a shield-reachability rule inside `validate` itself.
+That quietly turned a scene format into a combat format.
+
+Owner: *"This thing shouldn't be assuming combat use. Just being able to
+describe an ensemble and consume it anywhere is a huge win. E.g. the standard
+demo scene in tosijs-3d could easily be an ensemble (sun, shadow system, ground
+plane, camera setup, etc.) and it can be embedded with a single line of code."*
+
+And the goal that follows: *"almost any tosijs-3d setup would be very easy to
+understand because it would just be loading some ensembles and then maybe wiring
+in special case stuff unique to that scene, versus tediously building out
+boilerplate for everything and making it hard to see what makes this setup
+special."*
+
+So the split is:
+
+| | |
+|---|---|
+| **the format** | ids, references, positions, features, links — no domain |
+| **scene features** | sun, sky, ground, terrain, water, clouds, ambient, fog |
+| **`presets/combat`** | destroyable, turret, launcher, protector, blip, the roles, and the one rule about unreachable shields |
+
+Three consequences worth stating, because each was a mistake first:
+
+1. **`destroyable` is a DECORATOR, not how things exist.** Most of an ensemble
+   can never be shot. The first instantiator placed every piece through
+   `b3d-destroyable` with `armor: 100_000` to mean "scenery", which buys
+   "cannot be killed" by making everything a combatant — and terrain that
+   accumulates damage and vanishes at 100 000 is a genuinely bad outcome, not a
+   harmless default. A plain piece is now instantiated straight off the library
+   as a node: no element, no combat record, nothing to damage.
+2. **Destroyable routes through collision, defaulting to on.** If you cannot hit
+   a thing you cannot destroy it, so "destroyable but not collidable" is almost
+   always an authoring mistake. `collidable: false` opts out for the case that
+   wants it — a field you shoot through that still dies with its generator.
+3. **Roles ship empty and validation ships domainless.** A role is a domain's
+   vocabulary; a rule like "a field with no incoming link is unsolvable" is a
+   domain's rule. Both are registered — `registerRole`, `registerCheck` — so a
+   botanical garden never sees `shield` in a role picker.
+
+The tree-shaking test enforces the boundary in both directions: a scene-only
+import carries no combat vocabulary, and the combat preset demonstrably does.
+
+---
+
 ## Part 1 — the ensemble format
 
 Plain JSON. **No functions, no code, no engine types.** Everything must survive

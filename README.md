@@ -2,10 +2,32 @@
 
 **The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
-An *ensemble* is a reusable, JSON-described arrangement of library meshes with
-declared capabilities and relationships — a rig, a dome facility, a floating
-fortress of shields, platforms, turrets and generators. No code, no engine
-types: plain data a game loads, a tool authors, and a generator can emit.
+An *ensemble* is a reusable, JSON-described arrangement with declared
+capabilities and relationships. No code, no engine types: plain data a game
+loads, a tool authors, and a generator can emit.
+
+**It is not a combat format, and that is the whole win.** An ensemble can be a
+floating fortress of shields and turrets — or tosijs-3d's own standard scene:
+sun, shadow rig, sky, ground plane, fog. Load that stack as data and a scene
+reads as *"the standard setup, plus the thing I am actually showing you"*,
+instead of burying the two interesting lines in boilerplate.
+
+```html
+<tosi-b3d>
+  <tosi-ensemble src="/ensembles/standard-scene.json"></tosi-ensemble>
+  <tosi-b3d-box size="1.5" y="0.75" color="#2f9e8f"></tosi-b3d-box>
+</tosi-b3d>
+```
+
+Hit points, turrets and shields are an **opt-in preset**, because most things in
+most scenes can never be shot — and terrain that quietly accumulates damage and
+disappears at 100 000 is a worse outcome than terrain that was never a
+combatant:
+
+```js
+import { registerSceneFeatures } from 'tosijs-3d-ensemble'            // sun, sky, ground, terrain, water…
+import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat' // …only if you want it
+```
 
 **Status:** the format, validation, the registry and the instantiator are built and
 tested; the editor is a working scaffold on the doc site. See `PLAN.md` for what

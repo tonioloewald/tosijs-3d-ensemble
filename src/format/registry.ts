@@ -69,11 +69,21 @@ export interface FeatureContext {
   /** The `<tosi-b3d>` element to append components to. */
   scene: SceneElement
   /**
-   * The element carrying this piece's mesh, or `null` when the piece has no
-   * mesh — which is the normal case for an environment primitive (terrain,
-   * water, a medium layer), where the feature IS the body.
+   * The ELEMENT carrying this piece's body, when its body is an element.
+   *
+   * `null` for the two common cases that are not: a piece with no mesh (an
+   * environment primitive, where the feature IS the body), and a plain piece
+   * instantiated straight off the library as a node — see `node`.
    */
   element: SceneElement | null
+  /**
+   * The Babylon NODE carrying this piece's body, when there is no element.
+   *
+   * A plain piece is not an element, because it does not need to be: nothing
+   * manages its transform and nothing can shoot it. Typed loosely so the format
+   * layer stays free of the engine.
+   */
+  node: unknown
   /** The ensemble being built, as authored. */
   ensemble: Ensemble
   /** The piece this feature is bound to. */
@@ -82,6 +92,8 @@ export interface FeatureContext {
   at: Vec3
   /** Effective scale for this piece: ensemble scale × piece scale. */
   scale: number
+  /** Library the ensemble instantiates meshes from; `''` when there is none. */
+  library: string
   /** Register teardown. Runs on dispose, in reverse order of registration. */
   onDispose(fn: () => void): void
   /**
@@ -110,6 +122,17 @@ export interface FeatureRegistration<Handle = unknown> {
   bind?(piece: Piece, cfg: Record<string, unknown>, ctx: FeatureContext): Handle
   /** Reach for neighbours. Runs after every piece has bound. */
   link?(handle: Handle, ctx: FeatureContext): void
+  /**
+   * This feature CREATES the piece's body, instead of decorating one.
+   *
+   * Body features bind first, and their element becomes the piece's element for
+   * everything that follows. `destroyable` is one, not because destruction is
+   * fundamental — it is a decorator, and most things never have it — but
+   * because `b3d-destroyable` creates the mesh it owns, so it cannot decorate a
+   * body that already exists. When tosijs-3d can place a library mesh without a
+   * combatant (UPSTREAM.md #2), this flag stops being needed for it.
+   */
+  body?: boolean
   /**
    * A visualiser the editor shows but the runtime has no binding for.
    *

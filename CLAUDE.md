@@ -123,6 +123,31 @@ Two consequences that change the schedule:
 Do not hand-roll a bundler, a dev server, a docs page, or a widget. If a widget
 is missing, that is an issue for its owner.
 
+## The format has NO domain — this is the easiest thing to break
+
+An ensemble describes an arrangement. It is **not** a combat format, even though
+`SPEC.md` was written from a fortification brief and reads that way in places.
+tosijs-3d's standard demo scene — sun, shadow rig, sky, ground, fog — is an
+ensemble, and loading it in one line is the point of the project.
+
+The boundary, and the mistakes that produced it:
+
+- **`destroyable` is a decorator, not how things exist.** A plain piece is
+  instantiated straight off the library as a Babylon NODE: no element, no combat
+  record. The first version placed everything through `b3d-destroyable` with
+  `armor: 100_000` to mean "scenery" — which makes terrain a combatant that
+  vanishes at 100 000 damage. Don't reintroduce it.
+- **Destroyable routes through collision**, defaulting to on: if you cannot hit
+  it you cannot destroy it. `collidable: false` opts out.
+- **Roles ship EMPTY** (`registerRole`), and `validate` knows no domain rules
+  (`registerCheck`). `presets/combat` registers the fortification vocabulary and
+  the unreachable-shield rule.
+- **`src/tree-shaking.test.ts` enforces both boundaries** — the editor out of a
+  game's bundle, and the combat preset out of a scene-only import — each with a
+  companion assertion that the markers DO appear when the relevant entry is
+  bundled, so neither can pass vacuously. If you add an import across a layer,
+  that test is the only thing that will notice.
+
 ## Design invariants the format depends on
 
 Cheap now, painful to retrofit:

@@ -39,7 +39,7 @@ export default defineSiteConfig({
   // build-time checker needs the same context demo/site.ts seeds at runtime.
   // (Disabling the checker instead is how a page ships teaching its own core
   // contract with a SyntaxError in the example — tosijs-ui#71.)
-  checkExamples: { contextKeys: ['tosijs', 'tosijs-ui', 'tosijs-3d', PROJECT] },
+  checkExamples: { contextKeys: ['tosijs', 'tosijs-ui', 'tosijs-3d', PROJECT, `${PROJECT}/presets/combat`] },
 
   // The library build: per-file `.js` + `.d.ts` with comments kept, so the
   // published package ships browseable source with the doc blocks intact.

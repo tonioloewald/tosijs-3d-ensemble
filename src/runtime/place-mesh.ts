@@ -1,74 +1,95 @@
 /*#
-# Placing a piece's mesh
+# Placing a piece's body
 
-The instantiator places the piece's body; features then attach behaviour to it.
-This is the only module that knows how a mesh reaches a tosijs-3d scene, which
-is why `buildEnsemble` takes it as an option — a test swaps it for a stub, and a
-consumer rendering pieces some other way can too.
+The instantiator gives a piece its body; features then decorate it. This is the
+only module that knows how a mesh reaches a tosijs-3d scene, which is why
+`buildEnsemble` takes it as an option — a test swaps it for a stub.
 
-## Why a destroyable places even an indestructible thing
+## A plain piece is not a combatant
 
-`b3dDestroyable` is currently the only element that instantiates a LIBRARY mesh
-by name (`library` + `meshName`, added in 0.7.0 for exactly this). `b3d-loader`
-takes a `url` and loses the canonical frame; `b3d-aircraft` gets the frame right
-and flies away. So a piece with no `destroyable` feature is placed as a
-destroyable with enormous armour — the same trick Manta's `structure` role used.
+**`destroyable` is a DECORATOR, not the way things exist.** Most of what an
+ensemble describes — a lamp post, a rock, a ground plane, a whole standard demo
+scene — can never be shot, and giving it hit points is not a harmless default:
+terrain that quietly accumulates damage and vanishes at 100 000 is a worse
+outcome than terrain that was never a combatant.
 
-That is a workaround, and it is recorded as one: a "place a library mesh, no
-combat" element belongs upstream, not here.
+So a plain piece is instantiated straight off the library as a Babylon node:
+no element, no combat record, nothing to damage. A piece that DECLARES
+`destroyable` is placed by that feature instead (it is registered `body: true`),
+because in tosijs-3d today `b3d-destroyable` creates the mesh it owns.
+
+An earlier version placed everything through `b3d-destroyable` with
+`armor: 100_000`. That is the bad design named above, and it is gone.
+
+## Nothing to instantiate from? Draw a box.
+
+Without a library — or with a mesh name the library does not have — the piece
+becomes a `b3d-box` at the same spot. The ARRANGEMENT is most of what an author
+is judging, so cubes in the right places beat an empty scene, and a box is a
+primitive with no combat behaviour either.
 */
-import { b3dDestroyable, b3dRadarBlip } from 'tosijs-3d'
+import { b3dBox, b3dRadarBlip } from 'tosijs-3d'
 import type { SceneElement } from '../format/registry'
 import type { Piece, Vec3 } from '../format/types'
-import type { PlaceContext } from './build'
+import type { PlaceContext, Placement } from './build'
 
-/** Armour that means "scenery": shooting it is possible and pointless. Stopgap — see above. */
-const INDESTRUCTIBLE = 100_000
+interface LibraryElement {
+  ready?: Promise<void>
+  getNames?: () => string[]
+  instantiate?: (name: string, options?: Record<string, unknown>) => unknown
+}
+
+interface SceneWithLibraries {
+  getLibrary?: (type: string) => LibraryElement | null
+}
 
 export function placeMesh(
   piece: Piece,
   at: Vec3,
   scale: number,
   ctx: PlaceContext
-): SceneElement | null {
-  // A piece with no mesh is legitimate: environment primitives (terrain, water,
-  // clouds, a medium layer) ARE their feature, and there is no library mesh to
-  // instantiate. Those pieces bind their feature and place nothing here.
+): Placement | null {
+  // No mesh is legitimate: an environment primitive (terrain, sun, sky, water)
+  // IS its feature, and there is nothing to instantiate.
   if (!piece.mesh) return null
 
-  const destroyable = ctx.features.destroyable as
-    | { hp?: number; armor?: number; explode?: boolean }
-    | undefined
+  const library = ctx.library
+    ? (ctx.scene as unknown as SceneWithLibraries).getLibrary?.(ctx.library)
+    : null
 
-  const el = b3dDestroyable({
-    /*
-      `library` is passed ONLY when there is one. b3d-destroyable draws a
-      placeholder cube when the attribute is absent, but with a library NAME it
-      waits for a `<tosi-b3d-library>` that never arrives and logs after five
-      seconds — so an ensemble opened without its library rendered as nothing at
-      all. Cubes in the right places are the useful failure: the ARRANGEMENT is
-      most of what an author is judging.
-    */
-    ...(ctx.library ? { library: ctx.library } : {}),
-    meshName: piece.mesh,
+  const node = library?.instantiate?.(piece.mesh, {
     x: at[0],
     y: at[1],
     z: at[2],
-    // DEGREES. tosijs-3d elements take euler degrees; Babylon is radians, and a
-    // bare number is valid in either, so this is a silent-wrong-orientation trap.
+    // DEGREES. tosijs-3d takes euler degrees; Babylon is radians, and a bare
+    // number is valid in either — so the wrong one silently reorients a piece.
     rx: piece.rot?.[0] ?? 0,
     ry: piece.rot?.[1] ?? 0,
     rz: piece.rot?.[2] ?? 0,
+    canonical: true,
+  }) as { scaling?: { setAll: (n: number) => void }; dispose?: () => void } | null
+
+  if (node) {
+    node.scaling?.setAll(scale)
+    return { node, dispose: () => node.dispose?.() }
+  }
+
+  const box = b3dBox({
     size: scale,
-    capacity: destroyable?.hp ?? 1,
-    armor: destroyable?.armor ?? (destroyable ? 0 : INDESTRUCTIBLE),
-    explode: destroyable?.explode ? 'on' : 'off',
+    x: at[0],
+    y: at[1],
+    z: at[2],
+    rx: piece.rot?.[0] ?? 0,
+    ry: piece.rot?.[1] ?? 0,
+    rz: piece.rot?.[2] ?? 0,
+    color: '#8a6a52',
   }) as unknown as SceneElement
 
-  // Creating an element does not add it. This is the step whose absence
-  // produces no errors, no pieces, and nothing in the console.
-  ctx.scene.appendChild(el)
-  return el
+  // Creating an element does not add it. The declarative `b3d(...)` form
+  // appends implicitly; building at runtime is where forgetting it costs you an
+  // afternoon, because there is no error and no piece.
+  ctx.scene.appendChild(box)
+  return { element: box, dispose: () => box.remove() }
 }
 
 /** `b3dRadarBlip` as a child of the piece — it travels with what it marks. */

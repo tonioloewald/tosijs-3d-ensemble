@@ -69,7 +69,7 @@ import {
 } from 'tosijs-3d'
 import { buildEnsemble } from '../runtime/build'
 import { placeMesh } from '../runtime/place-mesh'
-import { registerBuiltInFeatures } from '../runtime/features'
+import { registerSceneFeatures } from '../runtime/features-scene'
 import { validate } from '../format/validate'
 import type { BuiltEnsemble } from '../runtime/build'
 import type { Ensemble, Piece } from '../format/types'
@@ -170,7 +170,9 @@ export class EnsembleEditor extends Component {
 
   override connectedCallback(): void {
     super.connectedCallback()
-    registerBuiltInFeatures()
+    // Scene primitives only. The editor does not assume a domain — a host that
+    // wants hit points registers the combat preset itself.
+    registerSceneFeatures()
     this._mountScene()
     // Draw the chrome even with nothing loaded. `rebuild` is otherwise the only
     // caller, so an empty editor came up with no panel at all — which reads as
@@ -267,7 +269,7 @@ export class EnsembleEditor extends Component {
       | undefined
     if (!camera?.target || !this._built) return
 
-    const placed = [...this._built.pieces.values()].filter((p) => p.element)
+    const placed = [...this._built.pieces.values()].filter((p) => p.element || p.node)
     if (!placed.length) return
 
     const axes = [0, 1, 2].map((i) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { validate } from './validate'
 import { registerFeature, unregisterFeature } from './registry'
+import { registerCheck } from './validate'
 import type { Ensemble } from './types'
 
 const minimal = (over: Partial<Ensemble> = {}): Ensemble => ({
@@ -47,17 +48,30 @@ describe('validate', () => {
     expect(codes(e, { checkRegistry: false })).toEqual(['unknown-link-target'])
   })
 
-  it('reports a field nothing can bring down', () => {
+  it('does NOT know about shields — that rule belongs to a domain', () => {
+    // A piece that projects a field with no incoming link is an unsolvable
+    // objective, and the format has no opinion about that. `presets/combat`
+    // registers the rule; an architectural walkthrough would be baffled by it.
     const e = minimal({
       pieces: [
         { id: 'reactor', mesh: 'X', at: [0, 0, 0] },
         { id: 'field', mesh: 'Y', at: [0, 4, 0], features: { protector: { protection: 12 } } },
       ],
     })
-    expect(codes(e, { checkRegistry: false })).toEqual(['unreachable-shield'])
+    expect(codes(e, { checkRegistry: false })).toEqual([])
+  })
 
-    const linked = { ...e, links: [{ from: 'reactor', to: 'field' }] }
-    expect(codes(linked, { checkRegistry: false })).toEqual([])
+  it('runs registered domain checks and survives one that throws', () => {
+    const stop = registerCheck(() => [
+      { severity: 'warning' as const, code: 'too-square', message: 'very square', path: '/pieces/0' },
+    ])
+    const stopBroken = registerCheck(() => {
+      throw new Error('bad rule')
+    })
+    expect(codes(minimal(), { checkRegistry: false })).toEqual(['too-square'])
+    stop()
+    stopBroken()
+    expect(codes(minimal(), { checkRegistry: false })).toEqual([])
   })
 
   it('puts a JSON Pointer on the problem so the editor can place it', () => {

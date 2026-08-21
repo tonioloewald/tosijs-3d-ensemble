@@ -20,13 +20,31 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 
 | | lives in | audience |
 |---|---|---|
-| assembly **format** (types, defaults, validation) | **tosijs-3d** (`b3d-assembly`) | every consumer shipping levels |
-| assembly **instantiator** (JSON → scene) | **tosijs-3d** | every consumer shipping levels |
+| assembly **format** (types, defaults, validation) | **this project, as a separable entry point** | every consumer shipping levels |
+| assembly **instantiator** (JSON → scene) | **this project, same entry point** | every consumer shipping levels |
 | the **editor** | **this project** | authors only |
+
+> **Revised — see SPEC.md open question 5.** These first two used to sit in
+> tosijs-3d. The reason to move them is CADENCE, not layering: a format is only
+> finished once something has generated content with it, and the thing that will
+> shake it out is the editor. Hosting it in the framework makes every format
+> revision a framework release, gated by a framework's compatibility promises,
+> while the format is still learning what it is.
+>
+> The property that mattered — the editor writes exactly what the runtime reads,
+> because it is the same code — survives, because it comes from **one
+> implementation with two importers**: `…/assembly` for a game, the package root
+> for an author. The `/assembly` entry must stay free of tosijs-ui and the schema
+> UI, asserted by bundle size in CI rather than by intention.
+>
+> Promotion into tosijs-3d later remains the right end state if the format proves
+> universal; keeping it dependency-free is what keeps that cheap.
 
 The line, from the owner: *"The 'prefab' structure and the tool for instantiating
 it belong in tosijs-3d, the editor is simply a tool for creating those
-graphically."*
+graphically."* — later refined to: *"it could be a lightweight and separable
+import from the editor library. Maybe the latter makes more sense."* The split
+between format and editor is unchanged; only its address moved.
 
 A shipped game carries the format and the loader and **no editor at all** — the
 common case, and it must not pay for authoring. This project depends on
@@ -112,10 +130,11 @@ tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice
 - **Done when:** `bun start` serves it, `bun run build` produces a bundle, and
   the doc system builds a page.
 
-### 1 — the format + registry, upstream
+### 1 — the format + registry, as a separable entry point
 
-The format is tosijs-3d's, so this milestone is mostly a **proposal plus a
-migration**. Coordinate with tosijs-3d rather than forking.
+Built here, published as `…/assembly`, and **importable by a game with no editor,
+no tosijs-ui and no schema machinery**. Assert that with a bundle-size check, not
+an intention.
 
 - JSON Schema for `assembly`, `piece`, `feature`, `link`, `point`, `zone` via
   tosijs-schema — types and validation from one source (SPEC.md §Part 3).

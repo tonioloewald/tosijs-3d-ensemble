@@ -623,6 +623,39 @@ panels, modals), `gamepad-focus` (traversal without a pointer), `xr-frames` +
   does not have a form layer, and building one is a chunk of work that tosijs-ui
   already did.
 
+#### The editor is the SVG UI's hardest customer, and that is a REASON
+
+Owner: *"As a complex consumer of the SVG 3d ui system it would generate a lot
+of battle testing that a game won't."*
+
+This is the argument that settles it, and it runs the opposite way to the usual
+one. Normally you ask what a dependency gives the project; here the project
+gives something back that nothing else can.
+
+A game's UI is a handful of panels: a HUD, a pause menu, a settings list. It
+exercises the SVG UI shallowly and in one shape. **An editor is a dense forms
+application** — property panels regenerated from schemas, long virtualised lists,
+pick lists that filter on other fields, text entry, modal dialogs, tear-off
+inspectors, and all of it rebuilt on every selection change. That is precisely
+the load that finds the bugs a game never will: focus traversal across
+regenerated widgets, pointer capture during a drag that crosses a panel, layout
+under content that changes size, whether a control still works after its parent
+has been rebuilt three hundred times.
+
+tosijs-3d 0.7.0 is evidence for the claim. Its worst UI bugs were all found by a
+human driving demos, and every one was a COMBINATION rather than a wrong value —
+a close button whose hit region drifted from its glyph on portrait panels only, a
+drag that died because two observers registered in an order that varied per
+popup, a modal that blocked the camera along with the UI. Those took a person
+looking. An editor would have hit all three in the first hour, because it uses
+those affordances constantly rather than occasionally.
+
+So the dependency is worth taking even where it is currently weaker than
+tosijs-ui's DOM widgets: **the weakness is the point.** Forms are the SVG UI's
+thinnest area, and the editor is what would justify and shape a form layer —
+built once, in the right repo, by the consumer with the strongest opinion about
+it.
+
 #### Recommendation
 
 **Build the editor's chrome on the SVG UI (B), and keep the project separate
@@ -639,6 +672,52 @@ bundled together, and only the first one has a strong answer:
   authoring tool, which is precisely the "a shipped game must not pay for
   authoring" argument this document already makes for the format/editor split.
   The SVG UI is exported; depending on it is enough.
+
+#### Where the FORMAT lives — reopened, and the answer changed
+
+This document's Part 1 puts the format and instantiator in tosijs-3d. The owner's
+refinement: *"The 'assembly' format could make sense as a core piece of tosijs-3d
+OR it could be a lightweight and separable import from the editor library. Maybe
+the latter makes more sense."*
+
+The latter does make more sense, and the reason is release cadence rather than
+layering. **A format is only finished when something has generated content with
+it** — and the thing that will shake it out is the editor, not the framework. Put
+it in tosijs-3d and every format revision is a tosijs-3d release, reviewed and
+gated against a framework's compatibility promises, while the format is still
+learning what it is. Put it in the editor package as a **separable entry point**
+and it iterates at the speed of the tool discovering what it needs, then settles.
+
+The property that mattered — *"the editor writes exactly what the runtime reads,
+because it is the same code"* — is preserved either way. It comes from **one
+implementation with two importers**, not from which repo hosts it:
+
+```jsonc
+// a game: format + instantiator, no editor, no UI, no schema machinery
+import { buildAssembly, validate } from 'tosijs-3d-editor/assembly'
+
+// an author: the whole tool
+import { assemblyEditor } from 'tosijs-3d-editor'
+```
+
+Conditions that make this honest rather than convenient, all of which are things
+to check rather than assert:
+
+- **The `/assembly` entry must not pull the editor in.** No tosijs-ui, no schema
+  UI, no widgets — a game importing it should get types, `validate` and
+  `buildAssembly`. Verify with a bundle-size assertion in CI, not by intention;
+  a stray import is exactly how this rots.
+- **It needs `exports` map subpaths**, which tosijs-3d currently does NOT have
+  (its `exports` is the string form, which is why its own headless surface is
+  unreachable — see that repo's UPSTREAM notes). Get this right on day one here.
+- **The name is now wrong.** A game depending on `tosijs-3d-editor` to load a
+  level reads as a mistake even when it isn't. Either the package is named for
+  the format (`tosijs-3d-assembly`, with the editor as a subpath) or the split is
+  two published packages from one repo. Worth deciding before anything publishes,
+  because it is the kind of thing that never gets renamed afterwards.
+- **Moving it INTO tosijs-3d later must stay cheap.** If the format proves stable
+  and universal, promotion is the right end state. Keeping it dependency-free and
+  separately entry-pointed is what keeps that door open.
 
 If that is right, two consequences ripple back through PLAN.md: milestone 0's
 scaffold targets the SVG UI rather than DOM widgets, and **a manipulator becomes

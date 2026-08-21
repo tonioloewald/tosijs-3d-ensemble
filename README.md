@@ -16,12 +16,22 @@ types: plain data a game loads, a tool authors, and a generator can emit.
 
 ## The split
 
-The assembly **format** and **instantiator** belong upstream in `tosijs-3d`
-(`b3d-assembly`); this project is the graphical tool for creating them. A shipped
-game carries the format and the loader and no editor at all.
+**One implementation, two importers.** The assembly **format** and
+**instantiator** ship from this repo as a separable entry point that pulls in no
+UI at all; the editor is the tool for creating them.
 
-That means the editor and the game call the *same* instantiator — so "what you
-author is what you get" holds by construction rather than by discipline.
+```js
+import { buildAssembly, validate } from 'tosijs-3d-editor/assembly'  // a game
+import { assemblyEditor } from 'tosijs-3d-editor'                    // an author
+```
+
+So a shipped game carries the format and the loader and no editor — and the
+editor and the game call the *same* instantiator, which is what makes "what you
+author is what you get" true by construction rather than by discipline.
+
+The editor's UI is built on **tosijs-3d's SVG UI**, not DOM widgets, so it runs
+in a headset as well as a browser: editing a 3D arrangement is a spatial task.
+See `SPEC.md` open question 5 for the argument and its costs.
 
 ## Prior art
 

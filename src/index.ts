@@ -9,7 +9,7 @@ because it is the same code.
 botanical garden, or tosijs-3d's own standard scene (sun, sky, shadows, ground)
 — and a consumer loads it in one line:
 
-```js
+```typescript
 import { registerSceneFeatures, loadEnsemble } from 'tosijs-3d-ensemble'
 
 registerSceneFeatures()
@@ -19,13 +19,13 @@ await loadEnsemble('/ensembles/standard-scene.json', { scene })
 Hit points, turrets and shields live in an opt-in preset, because most things
 in most scenes can never be shot:
 
-```js
+```typescript
 import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat'
 ```
 
 An author imports the tool as well:
 
-```js
+```typescript
 import { ensembleEditor } from 'tosijs-3d-ensemble'
 ```
 

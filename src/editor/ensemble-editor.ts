@@ -14,16 +14,16 @@ such page and has no privileged access to anything.
 ></tosi-ensemble-editor>
 ```
 
-```js
-import { ensembleEditor, registerBuiltInFeatures } from 'tosijs-3d-ensemble'
+```typescript
+import { ensembleEditor, registerSceneFeatures } from 'tosijs-3d-ensemble'
 
-registerBuiltInFeatures()
+registerSceneFeatures()
 document.body.append(
   ensembleEditor({
     library: 'enemies',
     libraryUrl: '/enemies.glb',
     backdrop: 'aquatic',
-    onSave: async (ensemble) => localStorage.setItem('draft', JSON.stringify(ensemble)),
+    handleSave: async (data) => localStorage.setItem('draft', JSON.stringify(data)),
   })
 )
 ```

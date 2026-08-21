@@ -9,7 +9,7 @@ A bare `string[]` forces the generator to either reject on cosmetic warnings or
 parse prose to tell them apart — and it will parse prose. So a problem is
 structured:
 
-```js
+```typescript
 import { validate } from 'tosijs-3d-ensemble'
 
 const problems = validate(ensemble, { meshes: new Set(library.getNames()) })
@@ -59,7 +59,7 @@ const checks = new Set<Check>()
  * So domain rules are registered, the same way features are. `presets/combat`
  * registers the shield-reachability rule that used to live in this file.
  *
- * ```js
+ * ```typescript
  * registerCheck((ensemble) =>
  *   ensemble.pieces.filter((p) => p.features?.door && !p.points?.length).map((p) => ({
  *     severity: 'warning',

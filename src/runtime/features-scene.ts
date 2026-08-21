@@ -5,7 +5,7 @@ The primitives a tosijs-3d scene is made of, registered as ensemble features so
 that a whole scene — sun, sky, shadows, ground, weather — is **data you load**
 rather than boilerplate you retype.
 
-```js
+```typescript
 import { registerSceneFeatures, loadEnsemble } from 'tosijs-3d-ensemble'
 
 registerSceneFeatures()
@@ -64,6 +64,60 @@ export function add(ctx: FeatureContext, el: unknown): SceneElement {
   ctx.scene.appendChild(element)
   ctx.onDispose(() => element.remove())
   return element
+}
+
+interface ArcCamera {
+  radius: number
+  alpha: number
+  beta: number
+  target: { x: number; y: number; z: number }
+  lowerRadiusLimit?: number | null
+  upperRadiusLimit?: number | null
+  lowerBetaLimit?: number | null
+  upperBetaLimit?: number | null
+}
+
+/**
+ * Run `apply` once the scene has a camera, and return a canceller.
+ *
+ * The camera arrives with the scene, which may not have happened when a feature
+ * binds — an ensemble can be appended before `<tosi-b3d>` is ready. Polls on
+ * animation frames with a deadline rather than an interval that outlives the
+ * page, and swallows nothing silently: if the camera never appears, the feature
+ * simply did not apply, and the scene keeps its own.
+ */
+function whenCamera(
+  ctx: { scene: SceneElement },
+  apply: (camera: ArcCamera) => void
+): () => void {
+  const scene = ctx.scene as unknown as { camera?: ArcCamera }
+  if (scene.camera?.target) {
+    apply(scene.camera)
+    return () => {}
+  }
+  let cancelled = false
+  const deadline = 120 // frames — about two seconds, then give up quietly
+  let frames = 0
+  const tick = () => {
+    if (cancelled) return
+    if (scene.camera?.target) {
+      // A throw here would land inside a rAF callback, not the render loop, but
+      // guard anyway: the editor rebuilds constantly and one bad frame should
+      // not take the session.
+      try {
+        apply(scene.camera)
+      } catch {
+        /* the scene keeps its own camera */
+      }
+      return
+    }
+    if (++frames > deadline) return
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+  return () => {
+    cancelled = true
+  }
 }
 
 let registered = false
@@ -142,6 +196,75 @@ export function registerSceneFeatures(): void {
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dGround({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
+  })
+
+  registerFeature({
+    name: 'camera',
+    schema: {
+      type: 'object',
+      title: 'Camera',
+      properties: {
+        distance: num(0.1, 20000, 12, 'm'),
+        heading: num(-360, 360, -60, '°'),
+        elevation: num(-89, 89, 20, '°'),
+        minDistance: num(0.1, 20000),
+        maxDistance: num(0.1, 20000),
+        minElevation: num(-89, 89),
+        maxElevation: num(-89, 89),
+      },
+    },
+    /*
+      The camera is the scene's, not ours — so this feature CONFIGURES it and
+      puts it back on dispose, rather than creating one. The editor rebuilds on
+      every edit; a feature that left the camera where it moved it would walk
+      the view across the world one keystroke at a time.
+
+      The piece's `at` is the LOOK-AT point, which is the useful meaning of a
+      position for a camera. `distance`/`heading`/`elevation` are the orbit
+      around it, in degrees — matching the format's rule that angles are degrees
+      everywhere, while Babylon's arc camera is radians.
+
+      Without this, a scene comes up wherever the default camera happens to sit:
+      8 m from the origin, pointing at the ground, which renders as a featureless
+      grey rectangle that looks exactly like a broken scene.
+    */
+    bind: (_piece, cfg, ctx) => {
+      const deg = (n: number) => (n * Math.PI) / 180
+      const stop = whenCamera(ctx, (camera) => {
+        const before = {
+          radius: camera.radius,
+          alpha: camera.alpha,
+          beta: camera.beta,
+          target: { x: camera.target.x, y: camera.target.y, z: camera.target.z },
+        }
+        camera.radius = (cfg.distance as number) ?? 12
+        camera.alpha = deg((cfg.heading as number) ?? -60)
+        // Babylon's beta is measured from straight DOWN, so an elevation of 0°
+        // (level with the target) is beta = 90°, not 0.
+        camera.beta = deg(90 - ((cfg.elevation as number) ?? 20))
+        camera.target.x = ctx.at[0]
+        camera.target.y = ctx.at[1]
+        camera.target.z = ctx.at[2]
+        if (cfg.minDistance !== undefined) camera.lowerRadiusLimit = cfg.minDistance as number
+        if (cfg.maxDistance !== undefined) camera.upperRadiusLimit = cfg.maxDistance as number
+        if (cfg.maxElevation !== undefined) {
+          camera.lowerBetaLimit = deg(90 - (cfg.maxElevation as number))
+        }
+        if (cfg.minElevation !== undefined) {
+          camera.upperBetaLimit = deg(90 - (cfg.minElevation as number))
+        }
+        ctx.onDispose(() => {
+          camera.radius = before.radius
+          camera.alpha = before.alpha
+          camera.beta = before.beta
+          camera.target.x = before.target.x
+          camera.target.y = before.target.y
+          camera.target.z = before.target.z
+        })
+      })
+      ctx.onDispose(stop)
+      return null
+    },
   })
 
   registerFeature({

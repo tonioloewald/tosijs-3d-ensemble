@@ -5,7 +5,7 @@
 the game call this same function** — which is what makes "what you author is
 what you get" true by construction rather than by discipline.
 
-```js
+```typescript
 import { buildEnsemble, loadEnsemble } from 'tosijs-3d-ensemble'
 
 const built = buildEnsemble(ensemble, {

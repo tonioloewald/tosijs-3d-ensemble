@@ -34,6 +34,11 @@ export default defineSiteConfig({
   bundleEntry: './demo/site.ts',
   staticDirs: ['static'],
   port: 8032,
+  // `staticDirs` is copied into the output at BUILD time, so without this the
+  // dev server serves a stale copy: editing a sample ensemble does nothing and
+  // reports nothing, which reads as "my change had no effect" rather than
+  // "nobody rebuilt".
+  watchPaths: ['static'],
 
   // Live examples in the doc comments import THIS package by name, so the
   // build-time checker needs the same context demo/site.ts seeds at runtime.

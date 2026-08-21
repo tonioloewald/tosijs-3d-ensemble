@@ -5,7 +5,7 @@ A feature is a **registration**, not a case in a switch. That is what makes the
 format open: a consumer's feature is indistinguishable from a shipped one in the
 file, in the editor's palette, in `ref` pick lists, and in save/load.
 
-```js
+```typescript
 import { registerFeature } from 'tosijs-3d-ensemble'
 
 registerFeature({

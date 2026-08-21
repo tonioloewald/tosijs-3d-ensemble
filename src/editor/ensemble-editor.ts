@@ -80,6 +80,9 @@ export type Backdrop = 'none' | 'land' | 'aquatic'
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
 
+/** Backdrop grid: 4 cells per tile, with a heavier line on the tile boundary. */
+const GRID_TEXTURE = '/grid-4.svg'
+
 export class EnsembleEditor extends Component {
   static override preferredTagName = 'tosi-ensemble-editor'
 
@@ -224,7 +227,17 @@ export class EnsembleEditor extends Component {
         ? []
         : aquatic
           ? [b3dWater({ waterSize: 4000 }), b3dGround({ width: 4000, height: 4000, y: -140 })]
-          : [b3dGround({ width: 4000, height: 4000, texture: 'checker', textureTiles: 40 })])
+          : [
+              b3dGround({
+                width: 4000,
+                height: 4000,
+                // A neutral grid, not a checker: a checker reads as "missing
+                // texture", and the heavier line every fourth cell gives the eye
+                // a scale reference while judging an arrangement.
+                texture: GRID_TEXTURE,
+                textureTiles: 400,
+              }),
+            ])
     ) as unknown as SceneElement
     this._root.append(scene)
     this._scene = scene

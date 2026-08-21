@@ -22,7 +22,7 @@ import type { SceneElement } from '../format/registry'
 import type { Piece, Vec3 } from '../format/types'
 import type { PlaceContext } from './build'
 
-/** Armour that means "scenery": shooting it is possible and pointless. */
+/** Armour that means "scenery": shooting it is possible and pointless. Stopgap — see above. */
 const INDESTRUCTIBLE = 100_000
 
 export function placeMesh(

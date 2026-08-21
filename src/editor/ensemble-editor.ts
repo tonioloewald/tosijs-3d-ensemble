@@ -80,8 +80,19 @@ export type Backdrop = 'none' | 'land' | 'aquatic'
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
 
-/** Backdrop grid: 4 cells per tile, with a heavier line on the tile boundary. */
-const GRID_TEXTURE = '/grid-4.svg'
+/*
+  Backdrop grid: 10 cells per tile, every 5th line heavier and every 10th
+  heaviest. Tiled so ONE TILE IS TEN METRES, which makes the grid metric —
+  1 m cells, emphasis at 5 m and 10 m — rather than decorative. An author
+  judging whether a gap is flyable can count it.
+
+  `/grid-4.svg` is the coarser alternative (4 cells, one weight of emphasis);
+  it reads better at a distance where 1 m lines alias into mush.
+*/
+const GRID_TEXTURE = '/grid-10.svg'
+/** Metres per tile. Keep this and the scene ensembles agreeing, or a cell
+ *  means one thing in the editor and another in the scene it authors. */
+const GRID_METRES = 10
 
 export class EnsembleEditor extends Component {
   static override preferredTagName = 'tosi-ensemble-editor'
@@ -232,10 +243,10 @@ export class EnsembleEditor extends Component {
                 width: 4000,
                 height: 4000,
                 // A neutral grid, not a checker: a checker reads as "missing
-                // texture", and the heavier line every fourth cell gives the eye
-                // a scale reference while judging an arrangement.
+                // texture", where a metric grid gives the eye a scale reference
+                // while judging an arrangement.
                 texture: GRID_TEXTURE,
-                textureTiles: 400,
+                textureTiles: 4000 / GRID_METRES,
               }),
             ])
     ) as unknown as SceneElement

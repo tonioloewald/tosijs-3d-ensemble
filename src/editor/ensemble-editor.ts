@@ -81,13 +81,21 @@ export type Backdrop = 'none' | 'land' | 'aquatic'
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
 
 /*
-  Backdrop grid: 10 cells per tile, every 5th line heavier and every 10th
-  heaviest. Tiled so ONE TILE IS TEN METRES, which makes the grid metric —
-  1 m cells, emphasis at 5 m and 10 m — rather than decorative. An author
-  judging whether a gap is flyable can count it.
+  Backdrop grid, tiled so ONE TILE IS TEN METRES. That makes it metric rather
+  than decorative — 1 m cells with emphasis at 5 m and the tile boundary at
+  10 m — so an author judging whether a gap is flyable can count it.
 
-  `/grid-4.svg` is the coarser alternative (4 cells, one weight of emphasis);
-  it reads better at a distance where 1 m lines alias into mush.
+  Two assets, and the difference is which numbers are round:
+
+  - `/grid-10.svg` — 10 cells, 5th heavier, boundary heaviest. Decimal, so it
+    suits a metric world and is the default here.
+  - `/grid-4.svg` — 16 faint subdivisions, every 4th normal, 8th heavier,
+    boundary heaviest. Binary; at a SIXTEEN-metre tile it also lands on 1 m
+    cells, with emphasis at 4 m, 8 m and 16 m.
+
+  Both put their lines on exact values and straddle the tile boundary, so the
+  heaviest line is where it claims to be — worth keeping if either is redrawn,
+  because that line is the one an author aligns against.
 */
 const GRID_TEXTURE = '/grid-10.svg'
 /** Metres per tile. Keep this and the scene ensembles agreeing, or a cell

@@ -1,8 +1,8 @@
 # tosijs-3d-editor
 
-**A graphical editor for tosijs-3d assemblies.**
+**A graphical editor for tosijs-3d ensembles.**
 
-An *assembly* is a reusable, JSON-described arrangement of library meshes with
+An *ensemble* is a reusable, JSON-described arrangement of library meshes with
 declared capabilities and relationships — a rig, a dome facility, a floating
 fortress of shields, platforms, turrets and generators. No code, no engine
 types: plain data a game loads, a tool authors, and a generator can emit.
@@ -16,14 +16,19 @@ types: plain data a game loads, a tool authors, and a generator can emit.
 
 ## The split
 
-**One implementation, two importers.** The assembly **format** and
+**One implementation, two importers.** The ensemble **format** and
 **instantiator** ship from this repo as a separable entry point that pulls in no
 UI at all; the editor is the tool for creating them.
 
 ```js
-import { buildAssembly, validate } from 'tosijs-3d-editor/assembly'  // a game
-import { assemblyEditor } from 'tosijs-3d-editor'                    // an author
+import { buildEnsemble, validate } from 'tosijs-3d-ensemble' // a game
+import { ensembleEditor } from 'tosijs-3d-editor'            // an author
 ```
+
+Two packages, one repo. `tosijs-3d-ensemble` is the format and the instantiator
+— small, no UI, no schema machinery — and `tosijs-3d-editor` is the tool that
+depends on it. A game names the one it actually wants, which a subpath of
+something called `-editor` never quite manages.
 
 So a shipped game carries the format and the loader and no editor — and the
 editor and the game call the *same* instantiator, which is what makes "what you

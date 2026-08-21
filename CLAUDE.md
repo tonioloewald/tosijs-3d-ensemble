@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**A graphical editor for tosijs-3d "assemblies"** — reusable, JSON-described
+**A graphical editor for tosijs-3d "ensembles"** — reusable, JSON-described
 arrangements of library meshes with declared capabilities and relationships
 (fortifications, rigs, dome facilities, formations of turrets and generators).
 
@@ -42,14 +42,14 @@ Non-negotiables from that repo:
 
 | | |
 |---|---|
-| `tosijs-3d` | the scene, and (once it lands) the assembly **format + instantiator** — see PLAN.md §"Where each piece lives" |
+| `tosijs-3d` | the scene, and (once it lands) the ensemble **format + instantiator** — see PLAN.md §"Where each piece lives" |
 | `tosijs-ui` | widgets, layout, and the **build/doc system**. Do not hand-roll UI |
 | `tosijs-schema` | schemas as JSON Schema; tjs predicates later |
 | `tosijs` | state |
 
 ⚠️ **The format and the instantiator are NOT this project's to own.** They belong
-upstream in tosijs-3d (`b3d-assembly`). This project is the graphical tool for
-creating assemblies. If that upstream work has not landed yet, prototype against
+upstream in tosijs-3d (`b3d-ensemble`). This project is the graphical tool for
+creating ensembles. If that upstream work has not landed yet, prototype against
 a local copy but keep the boundary clean and expect to delete it.
 
 ## Prior art to lift, not reinvent
@@ -99,7 +99,7 @@ here, because none of them fails loudly.
 
 - **`rx`/`ry`/`rz` are DEGREES on tosijs-3d elements**, and Babylon is radians.
   A bare number is valid in either unit, so getting it wrong produces a
-  different orientation rather than an error. The assembly format's `rot` is
+  different orientation rather than an error. The ensemble format's `rot` is
   euler degrees — match it, and say so where a reader will look.
 - **An element that manages a node OWNS its transform.** `AbstractMesh` rewrites
   `mesh.position` from the element's `x`/`y`/`z` every frame, so writing the mesh
@@ -123,6 +123,6 @@ here, because none of them fails loudly.
   loader happened to call a node.
 - **Library rotation was inert before 0.7.0** — `instantiate()` wrote euler onto
   a node whose `rotationQuaternion` the glTF loader had already set, so every
-  value produced the GLB's baked rotation. If Manta's assemblies were authored
+  value produced the GLB's baked rotation. If Manta's ensembles were authored
   against that behaviour, their `rot` values were never doing anything, and
   fixing it will MOVE things. Check before assuming a regression.

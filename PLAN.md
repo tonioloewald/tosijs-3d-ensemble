@@ -1,8 +1,8 @@
 # tosijs-3d-editor — project plan
 
-**A graphical editor for tosijs-3d assemblies.**
+**A graphical editor for tosijs-3d ensembles.**
 
-An *assembly* is a reusable, JSON-described arrangement of library meshes with
+An *ensemble* is a reusable, JSON-described arrangement of library meshes with
 declared capabilities and relationships — a rig, a dome facility, a floating
 fortress of shields, platforms, lift units, turrets and generators. No code, no
 engine types: plain data a game loads, a tool authors, and a generator can emit.
@@ -20,9 +20,9 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 
 | | lives in | audience |
 |---|---|---|
-| assembly **format** (types, defaults, validation) | **this project, as a separable entry point** | every consumer shipping levels |
-| assembly **instantiator** (JSON → scene) | **this project, same entry point** | every consumer shipping levels |
-| the **editor** | **this project** | authors only |
+| ensemble **format** (types, defaults, validation) | **`tosijs-3d-ensemble`** — this repo, published separately | every consumer shipping levels |
+| ensemble **instantiator** (JSON → scene) | **`tosijs-3d-ensemble`** | every consumer shipping levels |
+| the **editor** | **`tosijs-3d-editor`** — depends on the above | authors only |
 
 > **Revised — see SPEC.md open question 5.** These first two used to sit in
 > tosijs-3d. The reason to move them is CADENCE, not layering: a format is only
@@ -32,10 +32,11 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 > while the format is still learning what it is.
 >
 > The property that mattered — the editor writes exactly what the runtime reads,
-> because it is the same code — survives, because it comes from **one
-> implementation with two importers**: `…/assembly` for a game, the package root
-> for an author. The `/assembly` entry must stay free of tosijs-ui and the schema
-> UI, asserted by bundle size in CI rather than by intention.
+> because it is the same code — survives, because it is **one implementation in
+> two packages** built from one repo: `tosijs-3d-ensemble` for a game,
+> `tosijs-3d-editor` for an author. The format package must stay free of
+> tosijs-ui and the schema UI, asserted by bundle size in CI rather than by
+> intention — a stray import is exactly how this rots.
 >
 > Promotion into tosijs-3d later remains the right end state if the format proves
 > universal; keeping it dependency-free is what keeps that cheap.
@@ -56,7 +57,7 @@ than by discipline.
 
 | | for |
 |---|---|
-| `tosijs-3d` | the scene; the assembly format + instantiator |
+| `tosijs-3d` | the scene; the ensemble format + instantiator |
 | `tosijs-ui` | widgets, layout, **and the build/doc system** |
 | `tosijs-schema` | schemas as JSON Schema → types + validation; tjs predicates later |
 | `tosijs` | state |
@@ -130,16 +131,16 @@ tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice
 - **Done when:** `bun start` serves it, `bun run build` produces a bundle, and
   the doc system builds a page.
 
-### 1 — the format + registry, as a separable entry point
+### 1 — the format + registry, as its own package
 
-Built here, published as `…/assembly`, and **importable by a game with no editor,
-no tosijs-ui and no schema machinery**. Assert that with a bundle-size check, not
-an intention.
+Built here, published as **`tosijs-3d-ensemble`**, and **importable by a game
+with no editor, no tosijs-ui and no schema machinery**. Assert that with a
+bundle-size check, not an intention.
 
-- JSON Schema for `assembly`, `piece`, `feature`, `link`, `point`, `zone` via
+- JSON Schema for `ensemble`, `piece`, `feature`, `link`, `point`, `zone` via
   tosijs-schema — types and validation from one source (SPEC.md §Part 3).
 - `validate()` returning problems, never throwing.
-- `buildAssembly(data, origin)` / `loadAssembly(url, origin)`.
+- `buildEnsemble(data, origin)` / `loadEnsemble(url, origin)`.
 - **`registerFeature({ name, schema, bind })`** — open for extension, with
   tosijs-3d shipping registrations for its own components. A consumer's feature
   must be indistinguishable from a built-in in the format, the editor and the
@@ -147,7 +148,7 @@ an intention.
 - **`id` is mandatory** — not defaulted from array index (SPEC.md open question
   3; derived ids mean every insertion renumbers the world).
 - **Done when:** `../manta-recon` deletes `src/prefab.ts` and
-  `src/prefab-runtime.ts` and loads its four assemblies through the upstream API
+  `src/prefab-runtime.ts` and loads its four ensembles through the upstream API
   with no behavioural change. That migration is the proof the API is right, and
   it should happen before the editor is built on top of it.
 
@@ -157,7 +158,7 @@ Read-only, and useful on its own — this is the testbed the ecosystem has been
 missing (cf. tosijs-3d#20, which asked for exactly this kind of reference
 scene).
 
-- Library palette from `getNames()`; load an assembly and render it.
+- Library palette from `getNames()`; load an ensemble and render it.
 - Placement: **land** (ground at 0) and **aquatic** (water at 0, seabed at a
   variable depth). Both planes **pinned to the origin** — a bench looks at one
   thing from many angles, so the world holds still and the camera moves.
@@ -168,7 +169,7 @@ scene).
 - Shadows: ground receives, pieces cast, registered **continuously** because
   runtime-added meshes never join a one-time list.
 - Live, non-blocking validation display.
-- **Done when:** every assembly in manta-recon renders identically to the game,
+- **Done when:** every ensemble in manta-recon renders identically to the game,
   at the same scale. Different scale = the tool teaches you the wrong thing.
 
 ### 3 — edit
@@ -176,7 +177,7 @@ scene).
 - Select: viewport click **or** list; picking walks **up** to the owning piece
   (clicking a turret barrel selects the turret).
 - Gizmos: move / rotate / scale, writing back to the JSON **on drag release**,
-  in assembly-local coordinates.
+  in ensemble-local coordinates.
   > ⚠️ **This is the schedule risk, and it is upstream.** tosijs-3d has NO
   > manipulator — `b3d-panel`'s coloured axes are a debug readout that looks
   > exactly like one, which has already fooled a reader. Babylon's
@@ -199,12 +200,12 @@ scene).
 - Points and zones as first-class editable objects.
 - Persistence: load / save / import / export, with the **host** owning
   storage — the component calls handlers, it does not choose a backend.
-- **Done when:** an assembly can be authored from scratch, saved, reloaded, and
+- **Done when:** an ensemble can be authored from scratch, saved, reloaded, and
   is byte-comparable to a hand-written equivalent.
 
 ### 4 — test
 
-An assembly is a puzzle; a static render says nothing about whether it is
+An ensemble is a puzzle; a static render says nothing about whether it is
 solvable or fair.
 
 - Host-supplied scenarios with a context offering `spawn`, `damage`/`damageRole`,
@@ -221,7 +222,7 @@ solvable or fair.
 
 ### 5 — ship it as a component
 
-- `assemblyEditor({ libraries, schema, scenarios, onSave, load })` — configurable,
+- `ensembleEditor({ libraries, schema, scenarios, onSave, load })` — configurable,
   embeddable, not an application.
 - Doc site with a live example.
 - **Done when:** `../manta-recon` deletes its bench and depends on this.
@@ -231,11 +232,11 @@ solvable or fair.
 ## Deliberate non-goals for v1
 
 Named so they are decisions rather than omissions: undo/redo, multi-select,
-snapping and alignment guides, terrain painting, **nested assemblies** (reserve
-the shape — allow `"assembly": "name"` on a piece and flatten at load — but do
+snapping and alignment guides, terrain painting, **nested ensembles** (reserve
+the shape — allow `"ensemble": "name"` on a piece and flatten at load — but do
 not build live instances), and the **encounter layer** (SPEC.md open question 4:
-`assembly` = what a thing IS, `encounter` = what it is DOING HERE; build it once
-there are enough assemblies for the distinction to bite).
+`ensemble` = what a thing IS, `encounter` = what it is DOING HERE; build it once
+there are enough ensembles for the distinction to bite).
 
 ---
 

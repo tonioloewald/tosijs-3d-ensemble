@@ -1,10 +1,10 @@
-# Assembly Editor — specification
+# Ensemble Editor — specification
 
 **Status:** proposal. Written after building a working prototype inside
 manta-recon (`src/prefab*.ts`, `src/bench-*.ts`, `static/prefab.html`) and
 discovering it does not belong there.
 
-**Two deliverables, not one:** an `assembly` format + instantiator that goes
+**Two deliverables, not one:** an `ensemble` format + instantiator that goes
 **upstream into tosijs-3d**, and a graphical **editor** in its own project that
 depends on tosijs-3d and tosijs-ui.
 
@@ -14,8 +14,8 @@ Three concerns, and they do **not** all belong in the same place.
 
 | | goes in | why |
 |---|---|---|
-| **The assembly FORMAT** (types, defaults, validation) | **tosijs-3d** | every consumer that ships levels needs it; only authors need an editor |
-| **The INSTANTIATOR** (JSON → live scene objects) | **tosijs-3d** | it is a runtime concern. A game loads assemblies with no editor present |
+| **The ensemble FORMAT** (types, defaults, validation) | **tosijs-3d** | every consumer that ships levels needs it; only authors need an editor |
+| **The INSTANTIATOR** (JSON → live scene objects) | **tosijs-3d** | it is a runtime concern. A game loads ensembles with no editor present |
 | **The EDITOR** | **its own project** | authoring UI, schema machinery, file I/O — needed by authors, nobody else |
 
 Owner: *"The 'prefab' structure and the tool for instantiating it belong in
@@ -30,8 +30,8 @@ argued the whole thing should sit outside tosijs-3d. The mistake was treating
 - An **author** additionally wants the editor, which depends on tosijs-3d (for
   the scene and the loader) and tosijs-ui (for the interface).
 
-So `tosijs-3d` gains something like `b3d-assembly` — the schema, `validate()`,
-and `loadAssembly(url, origin)` / `buildAssembly(data, origin)` — and the editor
+So `tosijs-3d` gains something like `b3d-ensemble` — the schema, `validate()`,
+and `loadEnsemble(url, origin)` / `buildEnsemble(data, origin)` — and the editor
 project depends on it rather than reimplementing it. **The editor writes
 exactly what the runtime reads, because it is the same code**, which is the
 property that makes "what you author is what you get" true by construction
@@ -45,7 +45,7 @@ consumer-supplied is the SCHEMA for anything custom, plus roles and scenarios.
 
 ### Not in Manta
 
-Manta keeps: its assemblies (`static/assemblies/*.json`), its roles, its
+Manta keeps: its ensembles (`static/ensembles/*.json`), its roles, its
 scenarios, and any Manta-specific features. It deletes the format, the
 instantiator and the bench.
 
@@ -56,17 +56,52 @@ with components and code*). What we have is smaller and stricter: **data
 describing an arrangement of library meshes, with declared capabilities and
 relationships, and no code**.
 
-**Recommendation: `assembly`.** Accurate, unclaimed, and reads correctly in
-every position — "an assembly", "assembly editor", "assemblies/ocean-rig.json".
-Alternatives considered: `composition` (vague), `fixture` (test connotation),
-`construct` (overloaded), `set-piece` (theatrical, hyphenated), `kit` (implies
-the parts, not the arrangement).
+**Decision: `ensemble`.** Reads correctly in every position — "an ensemble",
+"ensemble editor", "ensembles/ocean-rig.json", `buildEnsemble()`,
+`tosijs-3d-ensemble` — and it says something true that the alternatives do not.
 
-The rest of this document uses **assembly**.
+Owner: *"ensemble is great for a bunch of reasons. It suggests a theater troupe
+or similar and it's really an assembly targeting a performance."*
+
+That is the argument. A rig is not inert scenery: its turrets fire, its
+launchpads spawn, its zones steer AI, and its reactor takes down a shield when it
+dies. The thing is **staged to be encountered** — so a word carrying "a group
+that performs together" is describing the format accurately rather than
+decorating it. It also anticipates the `encounter` layer (open question 4): an
+ensemble is a troupe, an encounter is a performance of it.
+
+### Why not `assembly`
+
+It was the working name through most of this document's life, and it is accurate
+— but on **npm, "assembly" primes WebAssembly**, not "assembled from parts".
+`assemblyscript` is *"a TypeScript-like language for WebAssembly"*, and a
+package called `tosijs-3d-assembly` sitting in a JavaScript registry invites
+exactly that misread. The `tosijs-3d-` prefix mitigates it; it does not remove
+it. ".NET assembly" (a compiled binary) is a second, weaker collision in the same
+direction: both make the word mean *build output* rather than *arrangement*.
+
+### Alternatives considered
+
+| | why not |
+|---|---|
+| `prefab` | Unity baggage — there, a serialized scene object **with code** |
+| `assembly` | primes WebAssembly on npm; ".NET assembly" pulls the same way |
+| `schematic` | closest conceptual fit (components + connections, and Minecraft made it legible) but **tosijs-3d already uses "schematic"** in `MinSimApi` — an in-ecosystem collision is worse than an external one |
+| `blueprint` | collides with tosijs's own blueprint concept |
+| `site` / `emplacement` | both imply PLACEMENT, which is precisely what open question 4 says the format must not — an ensemble is what a thing IS, an encounter is where it is |
+| `rig` | "rigging" already means a skeleton in 3D, and `rig` is one of our own `kind` values |
+| `composition` | vague |
+| `fixture` | test connotation |
+| `construct` | overloaded |
+| `set-piece` | theatrical (right idea) but hyphenated and awkward in code |
+| `kit` | implies the parts, not the arrangement |
+| `assemblage` | precise, and fussy to type and to say |
+
+The rest of this document uses **ensemble**.
 
 ---
 
-## Part 1 — the assembly format
+## Part 1 — the ensemble format
 
 Plain JSON. **No functions, no code, no engine types.** Everything must survive
 a round trip through a file, a fetch, a text editor and a generator. This is
@@ -92,9 +127,9 @@ mission compiler.
 {
   "id": "rig",                      // stable handle; defaults to `${mesh}#${i}`
   "mesh": "Pump Station",           // PUBLIC library name
-  "at": [0, 0, 0],                  // assembly-local metres
+  "at": [0, 0, 0],                  // ensemble-local metres
   "rot": [0, 0, 0],                 // euler degrees, optional
-  "scale": 1,                       // multiplies the assembly scale
+  "scale": 1,                       // multiplies the ensemble scale
   "role": "structure",              // preset (see below)
   "features": { /* … */ },          // explicit capabilities; override the preset
   "subsystems": [                   // vulnerable parts INSIDE a composite mesh
@@ -104,7 +139,7 @@ mission compiler.
 }
 ```
 
-Positions are **assembly-local**, so the same assembly works at sea level or on
+Positions are **ensemble-local**, so the same ensemble works at sea level or on
 a plateau. `match` is a regex **source string**, compiled at load — not a
 `RegExp`, or the format stops being serializable.
 
@@ -171,7 +206,7 @@ Shipped roles: `structure` · `target` · `power` · `generator` · `shield` ·
 
 ### Validation
 
-`validate(assembly, knownMeshes?) → Problem[]` — returns problems, never throws
+`validate(ensemble, knownMeshes?) → Problem[]` — returns problems, never throws
 (a builder shows them; a generator rejects without dying).
 
 **Return severity, not strings.** The two consumers want different things from
@@ -198,11 +233,11 @@ Must include:
 Ships as a configurable component, not an application:
 
 ```javascript
-assemblyEditor({
+ensembleEditor({
   libraries: [{ url: '/enemies.glb', type: 'enemies' }],
   schema: MANTA_SCHEMA,        // see Part 3
   scenarios: MANTA_SCENARIOS,  // see Part 4
-  onSave: async (assembly) => { /* consumer owns persistence */ },
+  onSave: async (ensemble) => { /* consumer owns persistence */ },
   load: async (name) => { /* consumer owns loading */ },
 })
 ```
@@ -213,19 +248,19 @@ assemblyEditor({
 |---|---|
 | **Library palette** | every mesh the loaded libraries expose, by public name |
 | **Select** | click in viewport *or* list; picking walks UP to the owning piece, so clicking a turret barrel selects the turret |
-| **Manipulate** | move / rotate / scale gizmos, writing back to the JSON **on drag release** (not per frame) in assembly-local coordinates |
+| **Manipulate** | move / rotate / scale gizmos, writing back to the JSON **on drag release** (not per frame) in ensemble-local coordinates |
 | **Bounding box + wireframe** | toggles; wireframe is how you read a fortress's interior |
 | **Placement** | `land` (ground at 0) and `aquatic` (water at 0, seabed at a variable depth). Both planes **pinned to the origin** — a bench looks at one thing from many angles, so the world holds still and the camera moves |
 | **Camera** | fit-to-bounds (re-fitting as async models load), named angles, and **orthographic as a toggle independent of angle** — ortho for judging alignment, perspective for judging how it reads |
 | **Animation** | play / pause / scrub / speed. Library animation groups arrive **stopped**; an editor that does not start them hides what it exists to show |
-| **Shadows** | the ground receives; assembly pieces cast. Runtime-added meshes must be registered as casters continuously, not once |
+| **Shadows** | the ground receives; ensemble pieces cast. Runtime-added meshes must be registered as casters continuously, not once |
 | **Validation** | live, non-blocking, visible |
 | **Persistence** | load, save, import file, export file. The component owns none of it — it calls the consumer's handlers |
 
 ### Explicitly out of scope for v1
 
 Undo/redo, multi-select, snapping/alignment guides, terrain painting, nested
-assemblies. All defensible later; none required to be useful.
+ensembles. All defensible later; none required to be useful.
 
 ---
 
@@ -250,12 +285,12 @@ wants:
    to an LLM writing a mission generator. Hand-written field descriptors would
    have to be kept in sync with hand-written types and hand-written validation —
    three chances to drift.
-2. **The format is describable to tools that are not ours.** An assembly is
+2. **The format is describable to tools that are not ours.** An ensemble is
    content, and content gets generated. JSON Schema is what a generator, a
    linter or a language server already speaks.
 3. **`tjs` predicates extend it later without a rewrite.** Constraints that JSON
    Schema cannot express — "a `shield` piece must have an incoming link", "a
-   `ref` must point at a piece that exists in THIS assembly" — become predicates
+   `ref` must point at a piece that exists in THIS ensemble" — become predicates
    layered on the same schema, rather than a second validation system. The
    shield-reachability check in Part 1 is precisely this shape and is currently
    hand-rolled.
@@ -348,13 +383,13 @@ const MANTA_SCHEMA = {
 | `string` | text field | |
 | `enum` | pick list | `options: [{value,label}]` |
 | `mesh` | pick list of library meshes | scoped by `library` |
-| `ref` | pick list of **pieces in this assembly** | filtered by `roles` or `features` |
-| `point` / `zone` | pick list of this assembly's points/zones | for "launch from here" |
+| `ref` | pick list of **pieces in this ensemble** | filtered by `roles` or `features` |
+| `point` / `zone` | pick list of this ensemble's points/zones | for "launch from here" |
 | `vec3` | three numeric fields | positions, rotations |
 | `color` | colour input | |
 
 `ref`, `point` and `zone` are the ones that make this more than a property grid:
-they are how an assembly expresses **internal relationships** — this shield is
+they are how an ensemble expresses **internal relationships** — this shield is
 fed by that reactor, this launchpad emits at that point — without the author
 typing ids.
 
@@ -405,7 +440,7 @@ saved and loaded like any other.
 | `schema` | JSON Schema; drives both validation and the property panel |
 | `bind(piece, cfg, ctx)` | attach behaviour; return an optional handle |
 | `ctx.scene` | the scene element, for appending components |
-| `ctx.onDispose` | teardown, so rebuilding an assembly in the editor leaks nothing |
+| `ctx.onDispose` | teardown, so rebuilding an ensemble in the editor leaks nothing |
 | `ctx.piecesByRole()` / `ctx.handle(id)` | reach other pieces — how `radar` boosts nearby `turret`s, and how a `protector` finds its power source |
 | `ctx.simTime` | the time source, so effects honour pause and time scale |
 
@@ -415,7 +450,7 @@ made "a radar improves nearby turrets" expressible at all.
 
 > ⚠️ **`bind` must be TWO PHASES, or `ctx.handle(id)` is a race against array
 > order.** A `protector` that resolves its power source during `bind` works only
-> if the reactor happened to bind first — so the same assembly behaves
+> if the reactor happened to bind first — so the same ensemble behaves
 > differently depending on the order pieces appear in the file, and reordering in
 > the editor silently changes behaviour. That is a nasty class of bug: it looks
 > like an intermittent content problem, not a lifecycle one.
@@ -426,7 +461,7 @@ made "a radar improves nearby turrets" expressible at all.
 > scene-listener contract in tosijs-3d, and for the same reason — a thing that
 > reaches for its neighbours cannot run while the neighbours are still arriving.
 
-> **Rebuilding must be idempotent.** The editor rebuilds an assembly on every
+> **Rebuilding must be idempotent.** The editor rebuilds an ensemble on every
 > edit, so `bind`/`link`/`onDispose` runs hundreds of times per session where a
 > game runs it once. `onDispose` is necessary and not sufficient: the test worth
 > writing is *build → dispose → build*, asserting the scene's mesh, observer and
@@ -448,7 +483,7 @@ made "a radar improves nearby turrets" expressible at all.
 ## Part 4 — test scenarios
 
 The editor must be able to **run situations**, not just render arrangements. An
-assembly is a puzzle; a static render tells you nothing about whether it is
+ensemble is a puzzle; a static render tells you nothing about whether it is
 solvable or fair.
 
 Consumer-supplied:
@@ -511,7 +546,7 @@ Working code to lift, and lessons that cost real time:
 Answered rather than left hanging, since each affects the format and the format
 is what goes upstream first.
 
-### 1. Nested assemblies — **not in v1, but do not foreclose them**
+### 1. Nested ensembles — **not in v1, but do not foreclose them**
 
 A fortress made of rigs is obviously desirable and is a large jump: transform
 composition, id namespacing, cyclic-reference detection, and an editing story
@@ -519,24 +554,65 @@ for "edit this instance vs. edit the definition" that Unity has never made
 comfortable.
 
 **Recommendation:** ship flat, but reserve the shape. Allow a piece to carry
-`"assembly": "ocean-rig"` instead of `"mesh"`, and have v1 loaders **flatten it
+`"ensemble": "ocean-rig"` instead of `"mesh"`, and have v1 loaders **flatten it
 at load time** — splice the child's pieces in with prefixed ids and composed
 transforms. That gets composition for authoring and generation with none of the
 runtime complexity, and leaves room to make instances live later. Ids must be
 namespaced from the start (`rig-a/pump`) or nothing later can reference into a
-nested assembly.
+nested ensemble.
+
+> **Owner: *"I assume ensembles are recursive — so you can assemble an ensemble
+> out of ensembles etc."*** Yes, and the name makes it read correctly: a troupe
+> of troupes. Recursion is the intended end state; **flattening at load is how
+> v1 delivers it without live instances**, not a substitute for it.
+>
+> What flattening does and does not buy, stated plainly so nobody is surprised:
+>
+> - **Edits to a child DO propagate.** Flattening happens at LOAD, not at author
+>   time, so every load re-reads `ocean-rig.json`. Fix the rig and every fortress
+>   containing one is fixed. This is the property people expect from nesting and
+>   assume they are giving up.
+> - **What you give up is per-instance override and live identity** — "this
+>   fortress's rig, but with the pump moved" and "highlight instance 3". Both are
+>   real, both are v2, and neither is needed to make composition useful.
+>
+> Five things the loader must get right, all of which are cheap now and
+> expensive later:
+>
+> 1. **Namespace the child's ids on splice** (`rig-a/pump`), and **rewrite the
+>    child's OWN internal refs and links to match**. This is the trap: a child's
+>    `link` from `reactor` to `projector` must become `rig-a/reactor` →
+>    `rig-a/projector`. Miss it and the link either dangles or — far worse —
+>    resolves against a same-named piece in the PARENT, wiring one troupe's
+>    reactor to another's shield. That is a bug that looks like a design mistake.
+> 2. **Detect cycles.** A contains B contains A is a hang at load, in a tool
+>    where authors will absolutely try it. Track the chain and report it as a
+>    validation error naming the loop, not a stack overflow.
+> 3. **Cap depth**, for the same reason, and because a deep tree flattens into a
+>    surprising number of pieces.
+> 4. **Compose transforms in the documented order** — child `at`/`rot`/`scale`
+>    under the parent piece's, with the parent's `scale` multiplying through.
+>    Write a test with a non-trivial rotation AND offset AND scale together;
+>    each pair works under several wrong orders and only the triple discriminates.
+> 5. **Resolve `ref`s after the whole tree is flat**, for the same reason `bind`
+>    must be two-phase: a ref that resolves mid-splice sees half a world.
+>
+> And it lands on the `encounter` layer (open question 4): once ensembles nest,
+> "which piece is the objective" is necessarily a PATH (`rig-a/pump`), not a
+> bare id. That is another reason to namespace from day one — the encounter
+> format inherits whatever identity scheme this one ships with.
 
 ### 2. Terrain, bridges, tunnels — **a different thing; give them join points**
 
-An assembly sits *on* a world. A bridge *is* the world — you fly through it, it
-occludes, it defines a route. Making terrain an assembly would drag streaming,
+An ensemble sits *on* a world. A bridge *is* the world — you fly through it, it
+occludes, it defines a route. Making terrain an ensemble would drag streaming,
 LOD and collision meshes into a format whose whole virtue is being small JSON.
 
 **Recommendation:** keep them separate, and let them meet at **points**. The
 format already has typed reference points; `kind: "entrance"` and a `join` kind
 are enough for a tile-set to declare "this end mates with that end". The
 tile-set decomposition MANTA-PLAN wants is then a *sibling* format that
-references assemblies for its furniture, rather than a special case inside this
+references ensembles for its furniture, rather than a special case inside this
 one.
 
 ### 3. Multiplayer / authority — **out of scope, but the format is already safe**
@@ -550,28 +626,28 @@ identity depends on its array index, every insertion renumbers the world.
 `${mesh}#${index}` as the prototype does. The default is convenient and is the
 one decision here that would be genuinely expensive to reverse.
 
-### 4. Missions consume assemblies — **via an encounter, not directly**
+### 4. Missions consume ensembles — **via an encounter, not directly**
 
 This is the one I feel most strongly about. A mission should not say "place
 `ocean-rig` at (140, 2, 520)". It should say "there is a rig here, it is
 hostile, it is worth 3, and its pump is the objective".
 
-**Recommendation:** an **encounter** layer that references an assembly by name
+**Recommendation:** an **encounter** layer that references an ensemble by name
 and overlays situation-specific data — position, faction, `values`, difficulty
 scaling, which pieces are objectives, which zones are active. Three reasons:
 
-- **Assemblies stay reusable.** The same rig appears in six missions at six
+- **Ensembles stay reusable.** The same rig appears in six missions at six
   difficulties without six near-identical files.
 - **The generator gets a small surface.** An LLM composing missions picks
-  assemblies and sets values; it does not author geometry, which is the part it
+  ensembles and sets values; it does not author geometry, which is the part it
   would get subtly wrong.
 - **It is where Ariosto binds.** Mission facts ("the refinery was destroyed
-  before the treaty") attach to the encounter, not to the assembly — the
-  assembly is a *kind of place*, the encounter is *this place, in this story*.
+  before the treaty") attach to the encounter, not to the ensemble — the
+  ensemble is a *kind of place*, the encounter is *this place, in this story*.
 
-Concretely: `assembly` = what a thing IS, `encounter` = what it is DOING HERE.
+Concretely: `ensemble` = what a thing IS, `encounter` = what it is DOING HERE.
 That line also settles Part 1's `values`: `targetValue` and `faction` are
-encounter-level, and their presence on an assembly is a **default**, overridable
+encounter-level, and their presence on an ensemble is a **default**, overridable
 per encounter.
 
 ### 5. Which UI stack — **the decision this document was making implicitly**
@@ -595,7 +671,7 @@ be an argued decision, because the two options lead to different projects.
 **The case for B is stronger than "VR would be nice", and it is worth stating
 plainly: editing a 3D arrangement is a spatial task performed at arm's length.**
 Judging whether a fortress reads, whether a turret covers the approach, whether a
-gap is flyable — those are the questions an assembly editor exists to answer, and
+gap is flyable — those are the questions an ensemble editor exists to answer, and
 they are exactly the questions a flat viewport answers badly. A tool for
 arranging things in space that cannot be used *in* that space is conceding its
 best affordance.
@@ -676,7 +752,7 @@ bundled together, and only the first one has a strong answer:
 #### Where the FORMAT lives — reopened, and the answer changed
 
 This document's Part 1 puts the format and instantiator in tosijs-3d. The owner's
-refinement: *"The 'assembly' format could make sense as a core piece of tosijs-3d
+refinement: *"The 'ensemble' format could make sense as a core piece of tosijs-3d
 OR it could be a lightweight and separable import from the editor library. Maybe
 the latter makes more sense."*
 
@@ -694,25 +770,25 @@ implementation with two importers**, not from which repo hosts it:
 
 ```jsonc
 // a game: format + instantiator, no editor, no UI, no schema machinery
-import { buildAssembly, validate } from 'tosijs-3d-editor/assembly'
+import { buildEnsemble, validate } from 'tosijs-3d-editor/ensemble'
 
 // an author: the whole tool
-import { assemblyEditor } from 'tosijs-3d-editor'
+import { ensembleEditor } from 'tosijs-3d-editor'
 ```
 
 Conditions that make this honest rather than convenient, all of which are things
 to check rather than assert:
 
-- **The `/assembly` entry must not pull the editor in.** No tosijs-ui, no schema
+- **The `/ensemble` entry must not pull the editor in.** No tosijs-ui, no schema
   UI, no widgets — a game importing it should get types, `validate` and
-  `buildAssembly`. Verify with a bundle-size assertion in CI, not by intention;
+  `buildEnsemble`. Verify with a bundle-size assertion in CI, not by intention;
   a stray import is exactly how this rots.
 - **It needs `exports` map subpaths**, which tosijs-3d currently does NOT have
   (its `exports` is the string form, which is why its own headless surface is
   unreachable — see that repo's UPSTREAM notes). Get this right on day one here.
 - **The name is now wrong.** A game depending on `tosijs-3d-editor` to load a
   level reads as a mistake even when it isn't. Either the package is named for
-  the format (`tosijs-3d-assembly`, with the editor as a subpath) or the split is
+  the format (`tosijs-3d-ensemble`, with the editor as a subpath) or the split is
   two published packages from one repo. Worth deciding before anything publishes,
   because it is the kind of thing that never gets renamed afterwards.
 - **Moving it INTO tosijs-3d later must stay cheap.** If the format proves stable
@@ -731,11 +807,11 @@ expensive to discover in milestone 3.
 
 ## Suggested sequence
 
-1. **`b3d-assembly` upstream** — format types (JSON Schema via tosijs-schema),
-   `validate()`, `buildAssembly()`. Manta switches to it and deletes its copies;
+1. **`b3d-ensemble` upstream** — format types (JSON Schema via tosijs-schema),
+   `validate()`, `buildEnsemble()`. Manta switches to it and deletes its copies;
    that migration is the proof the API is right.
 2. **Editor project** — depends on tosijs-3d + tosijs-ui. Lift the prototype's
    gizmo, placement, framing and scenario harness.
 3. **Manta deletes its bench** and depends on the editor.
-4. **Encounter layer**, once there are enough assemblies for the distinction to
+4. **Encounter layer**, once there are enough ensembles for the distinction to
    bite.

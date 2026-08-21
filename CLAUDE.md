@@ -91,3 +91,38 @@ failures**. Recorded here because they will recur:
 - **List what is actually there rather than guessing names.** Two separate
   hours went to `getMeshByName('water')` and `Drone` vs
   `Drone_collideBox.model`.
+
+## Traps this project will hit, from the tosijs-3d side (2026-08-21)
+
+Found while building 0.7.0. Each cost real time there and would cost it again
+here, because none of them fails loudly.
+
+- **`rx`/`ry`/`rz` are DEGREES on tosijs-3d elements**, and Babylon is radians.
+  A bare number is valid in either unit, so getting it wrong produces a
+  different orientation rather than an error. The assembly format's `rot` is
+  euler degrees — match it, and say so where a reader will look.
+- **An element that manages a node OWNS its transform.** `AbstractMesh` rewrites
+  `mesh.position` from the element's `x`/`y`/`z` every frame, so writing the mesh
+  directly is silently undone. Gizmos hit this hard: a drag behaviour moves the
+  MESH, and the element overwrites it next frame unless you sync back. Whatever
+  the gizmo ends up being, its writes must land on the element.
+- **A mesh positioned but never RENDERED has no world matrix**, so a ray cast in
+  the same frame finds it at the ORIGIN and answers confidently and wrongly. It
+  bit picking in tosijs-3d's own tests. Anything that places a piece and then
+  picks against it in the same tick needs `computeWorldMatrix(true)` — `el.make.*`
+  does this for you.
+- **A throw inside a render observer kills the render loop permanently.**
+  Babylon's `notifyObservers` has no isolation, and the loop does not re-queue —
+  so the page goes black with no error where anyone would look. A feature's
+  `bind`/`link` running per-frame work should guard itself; the editor
+  re-instantiating constantly makes this much more likely to be hit than a game
+  does.
+- **`getNames()` returns PUBLIC names.** `.model`, behaviour suffixes AND the
+  glTF loader's `_primitiveN` all come off, so `building_collideCylinder_primitive0`
+  lists as `building`. The format stores public names; never store what the
+  loader happened to call a node.
+- **Library rotation was inert before 0.7.0** — `instantiate()` wrote euler onto
+  a node whose `rotationQuaternion` the glTF loader had already set, so every
+  value produced the GLB's baked rotation. If Manta's assemblies were authored
+  against that behaviour, their `rot` values were never doing anything, and
+  fixing it will MOVE things. Check before assuming a regression.

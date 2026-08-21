@@ -59,9 +59,17 @@ this project most:
   library instead of rolling everything by hand."* One UI surface across the
   ecosystem is a stated goal, and an authoring tool that looks foreign to the
   thing it authors for is a failure of that goal.
-- **Use tosijs-ui widgets.** `tosiRow`/`tosiColumn`/`tosiGrid`, `tosiSelect`,
-  `tosiField`/`tosiForm`, `tosiDialog`, `data-table`, `code-editor`. If a widget
-  is missing, that is an issue for tosijs-ui, not a licence to write one here.
+- **Which widget set is an OPEN DECISION — see SPEC.md open question 5.** This
+  bullet used to say "use tosijs-ui widgets" flatly, which quietly committed the
+  project to flat-only, browser-only editing. The alternative is tosijs-3d's SVG
+  UI (`widgets3d`/`box`/`surface`/`table`/`keyboard`/`popup-surface`), which is
+  one implementation that renders BOTH as a DOM overlay and as an in-scene
+  texture — so it buys the headset without giving up the browser. Editing a 3D
+  arrangement is a spatial task, and a tool for arranging things in space that
+  cannot be used *in* that space is conceding its best affordance.
+  Recommendation there: **SVG UI for the chrome, separate repo regardless.**
+  Either way: if a widget is missing, that is an issue for its owner, not a
+  licence to write one here.
 - **Observant model, not reactive.** Read `practices/observant-model.md` first.
   DOM is static by default with pin-point updates; guessing React semantics here
   costs time.
@@ -82,6 +90,18 @@ this project most:
 ---
 
 ## Milestones
+
+### 0a — settle the UI question first (a day, not a milestone)
+
+Before the scaffold hardens around a widget set, build the **piece list and one
+property panel** in tosijs-3d's SVG UI and **try them in a headset**. That is the
+cheapest possible test of open question 5, and it probes the SVG UI's weakest
+area: it has label/slider/toggle/select/button/list, but no FORM layer, and a
+schema-driven property panel is a form generator.
+
+**Done when:** you can select a piece from a list and change one number, in VR.
+If that feels wrong, question 5 answers itself and the scaffold goes to
+tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice.
 
 ### 0 — scaffold
 
@@ -138,6 +158,14 @@ scene).
   (clicking a turret barrel selects the turret).
 - Gizmos: move / rotate / scale, writing back to the JSON **on drag release**,
   in assembly-local coordinates.
+  > ⚠️ **This is the schedule risk, and it is upstream.** tosijs-3d has NO
+  > manipulator — `b3d-panel`'s coloured axes are a debug readout that looks
+  > exactly like one, which has already fooled a reader. Babylon's
+  > `GizmoManager` exists and is mouse-shaped, so `bench-gizmo.ts` lifts cleanly
+  > ONLY if the editor stays flat. If open question 5 lands on the SVG UI, an XR
+  > manipulator is a real build and the editor's single most important
+  > interaction. Settle question 5 before scheduling this, and file the upstream
+  > ask early: it is on tosijs-3d's TODO but nobody owns it.
 - Bounding box and wireframe toggles.
 - Add / delete / duplicate pieces from the palette.
 - **Schema-driven property panel** — the editor must not know what

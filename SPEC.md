@@ -171,8 +171,18 @@ Shipped roles: `structure` · `target` · `power` · `generator` · `shield` ·
 
 ### Validation
 
-`validate(assembly, knownMeshes?) → string[]` — returns problems, never throws
-(a builder shows them; a generator rejects without dying). Must include:
+`validate(assembly, knownMeshes?) → Problem[]` — returns problems, never throws
+(a builder shows them; a generator rejects without dying).
+
+**Return severity, not strings.** The two consumers want different things from
+the same call: an editor shows everything and keeps working, a generator must
+decide whether to emit. A bare `string[]` forces the generator to either reject
+on cosmetic warnings or parse prose to tell them apart — and it will parse prose.
+`{ severity: 'error' | 'warning', code, message, path }` costs nothing now and is
+painful to retrofit once anyone matches on the text. `path` is what lets the
+editor put the message on the field rather than in a list.
+
+Must include:
 
 - unknown mesh names (only when the library is loaded — a validation error that
   is really a loading race is worse than none, because it accuses good content)
@@ -403,6 +413,26 @@ saved and loaded like any other.
 without knowing about each other's implementations, which is the property that
 made "a radar improves nearby turrets" expressible at all.
 
+> ⚠️ **`bind` must be TWO PHASES, or `ctx.handle(id)` is a race against array
+> order.** A `protector` that resolves its power source during `bind` works only
+> if the reactor happened to bind first — so the same assembly behaves
+> differently depending on the order pieces appear in the file, and reordering in
+> the editor silently changes behaviour. That is a nasty class of bug: it looks
+> like an intermittent content problem, not a lifecycle one.
+>
+> Split it: **`bind`** creates and returns a handle, touching nothing else;
+> **`link(handle, ctx)`** runs after every piece has bound, and is the only place
+> `ctx.handle`, `ctx.piecesByRole` and zone lookups are legal. Same shape as the
+> scene-listener contract in tosijs-3d, and for the same reason — a thing that
+> reaches for its neighbours cannot run while the neighbours are still arriving.
+
+> **Rebuilding must be idempotent.** The editor rebuilds an assembly on every
+> edit, so `bind`/`link`/`onDispose` runs hundreds of times per session where a
+> game runs it once. `onDispose` is necessary and not sufficient: the test worth
+> writing is *build → dispose → build*, asserting the scene's mesh, observer and
+> material counts return to where they started. A leak that a game never notices
+> will eat an editing session.
+
 #### Consequences for the editor
 
 - The editor's palette of features is **whatever is registered**, not a hardcoded
@@ -436,10 +466,22 @@ The context object needs, at minimum: `spawn`, `damage`/`damageRole`,
 
 **Time control caveat, and it is load-bearing:** effect timing can be scaled by
 a consumer-side sim clock, but craft motion cannot — velocity comes from
-`b3d-aircraft` integrating against the engine delta. Real slow-motion needs
-`owner.simTime` / `simDt` upstream (tosijs-3d#30). Until then, a speed control
-should be labelled for what it actually scales, and this project is now the
-**second** consumer asking for that API.
+`b3d-aircraft` integrating against the engine delta. Until a shared clock exists,
+a speed control should be labelled for what it actually scales, and this project
+is the **second** consumer asking for one.
+
+> **Update (2026-08-21): the seam now exists, and the ask is smaller than this
+> paragraph assumes.** tosijs-3d#30 (which this cited) was "pause doesn't pause",
+> and fixing it introduced exactly the missing plumbing: `<tosi-b3d>` publishes a
+> frame delta on the scene and **everything that simulates reads it through
+> `sceneDelta`** — a paused scene publishes zero and the world genuinely stops.
+> `B3dControllable` halts separately, because it runs its own `Date.now` clock.
+>
+> So a time SCALE is now "publish `delta * scale`" plus the same explicit halt in
+> the controllable, not a new subsystem. Worth re-scoping the upstream ask before
+> filing it: **ask for `timeScale`, not for `simTime`.** And check the current
+> state rather than trusting this document — the pause fix landed in 0.7.0 and
+> the shape may have moved again.
 
 ---
 
@@ -531,6 +573,82 @@ Concretely: `assembly` = what a thing IS, `encounter` = what it is DOING HERE.
 That line also settles Part 1's `values`: `targetValue` and `faction` are
 encounter-level, and their presence on an assembly is a **default**, overridable
 per encounter.
+
+### 5. Which UI stack — **the decision this document was making implicitly**
+
+Owner, mid-review: *"It could make sense as a tosijs-3d project if it leveraged
+our svg ui work (which would allow scene editing in VR...)"*
+
+PLAN.md currently says "use tosijs-ui widgets", which is a reasonable default and
+also a **silent commitment to flat-only, browser-only editing**. It deserves to
+be an argued decision, because the two options lead to different projects.
+
+| | **A — tosijs-ui DOM widgets** | **B — tosijs-3d SVG UI** |
+|---|---|---|
+| where it can live | its own project (as planned) | plausibly **inside tosijs-3d** |
+| where it runs | a browser page | a browser page **and a headset** |
+| forms | mature: `tosiForm`, `data-table`, `code-editor` | `widgets3d` + `box`/`surface`/`table`; no code editor |
+| text entry | the OS keyboard | `keyboard.ts` (built for exactly this) |
+| file I/O | native dialogs | **unsolved in a session** |
+| gizmos | Babylon `GizmoManager` (mouse-shaped) | **does not exist yet, either flat or in XR** |
+
+**The case for B is stronger than "VR would be nice", and it is worth stating
+plainly: editing a 3D arrangement is a spatial task performed at arm's length.**
+Judging whether a fortress reads, whether a turret covers the approach, whether a
+gap is flyable — those are the questions an assembly editor exists to answer, and
+they are exactly the questions a flat viewport answers badly. A tool for
+arranging things in space that cannot be used *in* that space is conceding its
+best affordance.
+
+The reason B is now practical rather than aspirational is that tosijs-3d's SVG UI
+is **one UI with two presentations** already — the same widget list renders as a
+DOM overlay and as an in-scene texture. So B does not mean "VR instead of flat";
+it means **both, from one implementation**. And the pieces an editor chrome needs
+mostly exist: `surface` (menus + draggable panels), `table` (virtualised lists —
+a piece list), `keyboard` (typing without an OS), `popup-surface` (tear-off
+panels, modals), `gamepad-focus` (traversal without a pointer), `xr-frames` +
+`frame-panel` (pinning a panel where your hand is).
+
+#### What B costs, honestly
+
+- **No gizmo exists.** `b3d-panel`'s coloured axes are a debug READOUT, not a
+  manipulator — a real trap, because they look exactly like Babylon's position
+  gizmo. Babylon ships `GizmoManager`, but it is mouse-shaped; an XR manipulator
+  is a genuine build, and it is the editor's single most important interaction.
+  **This is the item that decides the schedule**, and it is an upstream ask
+  either way (tosijs-3d has it on its TODO).
+- **No code editor and no file dialogs.** Both are real gaps in a headset.
+- **Forms are the SVG UI's weakest area**, and a schema-driven property panel is
+  a form generator. `widgets3d` has label/slider/toggle/select/button/list; it
+  does not have a form layer, and building one is a chunk of work that tosijs-ui
+  already did.
+
+#### Recommendation
+
+**Build the editor's chrome on the SVG UI (B), and keep the project separate
+anyway.**
+
+Splitting the two questions is the point. "Which widgets" and "which repo" got
+bundled together, and only the first one has a strong answer:
+
+- **Widgets: B.** It buys the headset, it buys flat for free, and a tool that
+  looks foreign to the thing it authors for is the failure PLAN.md already names.
+- **Repo: still separate.** tosijs-3d is a *framework*; an editor is an
+  application-shaped thing with file I/O, schema machinery and its own release
+  cadence. Putting it inside would make every consumer's dependency tree carry an
+  authoring tool, which is precisely the "a shipped game must not pay for
+  authoring" argument this document already makes for the format/editor split.
+  The SVG UI is exported; depending on it is enough.
+
+If that is right, two consequences ripple back through PLAN.md: milestone 0's
+scaffold targets the SVG UI rather than DOM widgets, and **a manipulator becomes
+a milestone-2 upstream dependency rather than a milestone-3 lift** — because
+`bench-gizmo.ts` binds `GizmoManager`, which will not survive the move.
+
+The falsifiable version: **build the piece list and one property panel in the SVG
+UI first, and try them in a headset before building anything else.** If forms in
+`widgets3d` turn out to be the wrong shape, that is cheap to discover there and
+expensive to discover in milestone 3.
 
 ## Suggested sequence
 

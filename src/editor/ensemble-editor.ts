@@ -62,12 +62,27 @@ import {
   b3dLight,
   b3dSkybox,
   b3dWater,
+  button3d,
   label3d,
   list3d,
   panel3d,
   slider3d,
 } from 'tosijs-3d'
+import { Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
+import { FlatPointer } from './input/flat-pointer'
+import { PointerHub } from './input/pointer'
+import { bodyIndex, pickPiece } from './selection'
+import {
+  defaultOptions,
+  getTool,
+  registeredCommands,
+  registeredTools,
+} from './tools/tool-registry'
+import { registerEditorTools } from './tools/built-in'
+import { schemaWidgets } from './schema-panel'
+import type { EditorRay } from './input/pointer'
+import type { ToolContext } from './tools/tool-registry'
 import { placeMesh } from '../runtime/place-mesh'
 import { registerSceneFeatures } from '../runtime/features-scene'
 import { validate } from '../format/validate'
@@ -156,6 +171,13 @@ export class EnsembleEditor extends Component {
   handleSave: ((ensemble: Ensemble) => void | Promise<void>) | null = null
 
   private _built: BuiltEnsemble | null = null
+  private _hub = new PointerHub()
+  private _pointer: FlatPointer | null = null
+  /** Node → piece id, rebuilt with the ensemble. A stale one selects nothing. */
+  private _index = new Map<unknown, string>()
+  private _tool = 'select'
+  private _toolOptions: Record<string, unknown> = {}
+  private _stopFrames: (() => void) | null = null
   private _selected: string | null = null
   private _scene: SceneElement | null = null
   private _panels: SVGSVGElement[] = []
@@ -174,7 +196,6 @@ export class EnsembleEditor extends Component {
     'tosi-b3d': { display: 'block', width: '100%', height: '100%' },
     'svg.ensemble-editor-chrome': {
       position: 'absolute',
-      left: '8px',
       pointerEvents: 'auto',
     },
   }
@@ -195,7 +216,9 @@ export class EnsembleEditor extends Component {
     // Scene primitives only. The editor does not assume a domain — a host that
     // wants hit points registers the combat preset itself.
     registerSceneFeatures()
+    registerEditorTools()
     this._mountScene()
+    this.setTool(this._tool)
     // Draw the chrome even with nothing loaded. `rebuild` is otherwise the only
     // caller, so an empty editor came up with no panel at all — which reads as
     // a broken tool rather than an empty one.
@@ -203,11 +226,145 @@ export class EnsembleEditor extends Component {
     if (this.src) void this.load(this.src)
   }
 
+  /** The active tool's name. */
+  get tool(): string {
+    return this._tool
+  }
+
+  /**
+   * Switch tools.
+   *
+   * Options are re-derived from the incoming tool's SCHEMA rather than carried
+   * over, so a stale `snap` from the last tool cannot quietly apply to this one.
+   */
+  setTool(name: string): void {
+    const previous = getTool(this._tool)
+    previous?.deactivate?.(this._toolContext())
+    this._tool = name
+    const tool = getTool(name)
+    this._toolOptions = defaultOptions(tool?.optionsSchema)
+    tool?.activate?.(this._toolContext())
+    this._hub.setHandlers({
+      onStart: (g) => tool?.onGesture?.start?.(g, this._toolContext()),
+      onMove: (g) => tool?.onGesture?.move?.(g, this._toolContext()),
+      onEnd: (g) => tool?.onGesture?.end?.(g, this._toolContext()),
+    })
+    this._renderChrome()
+  }
+
+  /** Set one option on the current tool. */
+  setToolOption(key: string, value: unknown): void {
+    this._toolOptions = { ...this._toolOptions, [key]: value }
+    this._renderChrome()
+  }
+
+  /**
+   * Ray-pick a piece. Exposed so a tool can ask "what is under this hand?"
+   * without knowing the engine or how bodies are indexed.
+   */
+  pick(ray: EditorRay): string | null {
+    const scene = (this._scene as unknown as { scene?: unknown }).scene
+    if (!scene) return null
+    /*
+      Index at PICK time, not at build time.
+
+      An element's Babylon mesh is created when the element joins the scene, not
+      when `buildEnsemble` returns — so an index taken straight after a build is
+      empty for every element-backed piece, and picking silently finds nothing.
+      Rebuilding per pick is a walk over the pieces; that is cheap next to the
+      raycast it precedes.
+    */
+    this._index = bodyIndex(this._built)
+    return pickPiece(
+      scene as never,
+      this._index,
+      ray,
+      (r) =>
+        new Ray(
+          new Vector3(r.origin[0], r.origin[1], r.origin[2]),
+          new Vector3(r.direction[0], r.direction[1], r.direction[2])
+        )
+    )
+  }
+
+  private _toolContext(): ToolContext {
+    return {
+      ensemble: this._ensemble,
+      selection: this.selection,
+      select: (id) => (id === null ? this._clearSelection() : this.select(id)),
+      scene: this._scene as SceneElement,
+      edit: (describe, mutate) => this.edit(describe, mutate),
+      options: this._toolOptions,
+      pick: (ray) => this.pick(ray),
+    } as ToolContext
+  }
+
+  /**
+   * THE mutation path. Every edit goes through here.
+   *
+   * Undo is still a v1 non-goal, but one path is what makes adding it a single
+   * change rather than an archaeology exercise across the editor.
+   */
+  edit(_describe: string, mutate: (ensemble: Ensemble) => void): void {
+    mutate(this._ensemble)
+    this.rebuild()
+  }
+
+  private _clearSelection(): void {
+    this._selected = null
+    this._renderChrome()
+  }
+
+  /*
+    Pointers are polled per frame, not driven by DOM events, because that is the
+    only shape both sources can honestly take: a flat pointer has events, an XR
+    trigger is a float you read. Unify at the lower common denominator and the
+    tool layer never learns which one it is talking to.
+  */
+  private _attachPointers(): void {
+    const scene = (
+      this._scene as unknown as {
+        scene?: { getEngine?: () => { getRenderingCanvas?: () => HTMLCanvasElement | null } }
+      }
+    ).scene
+    const canvas = scene?.getEngine?.()?.getRenderingCanvas?.()
+    if (!scene || !canvas) return
+    this._pointer = new FlatPointer(canvas, scene as never)
+    this._hub.add(this._pointer)
+
+    /*
+      THE INPUT LOOP IS NOT THE RENDER LOOP.
+
+      The obvious wiring is `scene.registerBeforeRender`, and it is wrong here:
+      `<tosi-b3d>` pauses rendering when the page is hidden, and an editor pauses
+      the scene deliberately all the time. Both leave input dead while the UI
+      still looks alive — you click, nothing happens, and nothing errors.
+
+      An editor must stay selectable while the world is stopped, so it gets its
+      own clock. (Measured, not assumed: with the render loop as the clock, a
+      probe on the scene counted ZERO frames while the viewport looked normal.)
+    */
+    let running = true
+    const tick = () => {
+      if (!running) return
+      this._hub.update()
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+    this._stopFrames = () => {
+      running = false
+    }
+  }
+
   override disconnectedCallback(): void {
     // The editor rebuilds constantly; leaving one build behind per session is
     // how an editing session ends up eating a machine.
     this._built?.dispose()
     this._built = null
+    this._stopFrames?.()
+    this._stopFrames = null
+    this._pointer?.dispose()
+    this._pointer = null
     super.disconnectedCallback?.()
   }
 
@@ -237,7 +394,17 @@ export class EnsembleEditor extends Component {
   private _mountScene(): void {
     const aquatic = this.backdrop === 'aquatic'
     const scene = b3d(
-      {},
+      {
+        /*
+          Pointers attach HERE, not in `connectedCallback`.
+
+          `<tosi-b3d>` builds its Babylon scene asynchronously, so at connect
+          time there is no scene, no engine and no canvas — an earlier version
+          attached there, found nothing, returned quietly, and left the viewport
+          unclickable with no error anywhere. "Created" is not "ready".
+        */
+        sceneCreated: () => this._attachPointers(),
+      },
       b3dLight({ y: 1, intensity: 0.9 }),
       b3dSkybox({ timeOfDay: 11 }),
       ...(this.libraryUrl ? [b3dLibrary({ url: this.libraryUrl, type: this.library })] : []),
@@ -258,8 +425,14 @@ export class EnsembleEditor extends Component {
               }),
             ])
     ) as unknown as SceneElement
-    this._root.append(scene)
+    /*
+      ASSIGN BEFORE APPENDING. Appending connects the element, which creates the
+      scene, which fires `sceneCreated` SYNCHRONOUSLY — so an assignment after
+      the append runs too late and the callback finds `this._scene` undefined.
+      It then returned quietly and left the viewport unclickable.
+    */
     this._scene = scene
+    this._root.append(scene)
   }
 
   /**
@@ -351,23 +524,95 @@ export class EnsembleEditor extends Component {
     panel with no visible scroll affordance. A control that does nothing is
     worse than no control: it invites trust in a reading it never produced.
   */
+  /*
+    FOUR PANELS IN TWO COLUMNS, which is how graphics apps have settled:
+
+      left   tool palette      right  tool options
+             piece list               piece properties
+
+    In a headset these become wrist-pinned surfaces (`frame: 'left-hand'` /
+    `'right-hand'` via frame-panel), which is why they are grouped by HAND
+    rather than laid out as one sidebar. Same content, two presentations — the
+    SVG UI's whole argument.
+
+    Each is its own `panel3d` because a panel clips at its height: stacking
+    everything into one made selecting a piece appear to do nothing, since its
+    fields rendered below the fold with no visible scroll affordance.
+  */
   private _renderChrome(): void {
     for (const panel of this._panels) panel.remove()
     this._panels = []
     if (this.hideChrome) return
 
-    const problems = this.problems
-    const errors = problems.filter((p) => p.severity === 'error').length
+    this._renderPalette()
+    this._renderToolOptions()
+    this._renderPieceList()
+    this._renderProperties()
+  }
 
+  private _renderPalette(): void {
+    const tools = registeredTools()
+    const commands = registeredCommands()
+    const ctx = this._toolContext()
     this._addPanel(
+      'left',
       8,
       panel3d(
-        { width: 260, height: 340, padding: 10, gap: 6 },
+        // 34 per row, not 30: a button3d is taller than its label and the last
+        // entry was rendering below the fold, where a panel silently clips.
+        { width: 150, height: 52 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
+        label3d({ text: 'Tools', bold: true }),
+        ...(tools.map((tool) =>
+          button3d({
+            // The current tool is marked in its label rather than by colour
+            // alone — a headset at low resolution loses a subtle tint.
+            label: tool.name === this._tool ? `▸ ${tool.label}` : tool.label,
+            onClick: () => this.setTool(tool.name),
+          })
+        ) as never[]),
+        ...(commands.map((command) =>
+          button3d({
+            label: command.enabled?.(ctx) === false ? `${command.label} —` : command.label,
+            onClick: () => {
+              if (command.enabled?.(ctx) === false) return
+              command.run(this._toolContext())
+            },
+          })
+        ) as never[])
+      )
+    )
+  }
+
+  private _renderToolOptions(): void {
+    const tool = getTool(this._tool)
+    if (!tool?.optionsSchema) return
+    const widgets = schemaWidgets({
+      schema: tool.optionsSchema,
+      values: this._toolOptions,
+      onChange: (key, value) => this.setToolOption(key, value),
+    })
+    this._addPanel(
+      'right',
+      8,
+      panel3d(
+        { width: 240, height: 44 + widgets.length * 34, padding: 10, gap: 6 },
+        label3d({ text: tool.label, bold: true }),
+        ...(widgets as never[])
+      )
+    )
+  }
+
+  private _renderPieceList(): void {
+    const problems = this.problems
+    const errors = problems.filter((p) => p.severity === 'error').length
+    this._addPanel(
+      'left',
+      210,
+      panel3d(
+        { width: 150, height: 340, padding: 8, gap: 4 },
         label3d({ text: this._ensemble.name || 'untitled', bold: true }),
         label3d({
-          text: `${this._ensemble.pieces.length} pieces · ${errors}✕ · ${
-            problems.length - errors
-          }⚠`,
+          text: `${this._ensemble.pieces.length} · ${errors}✕ · ${problems.length - errors}⚠`,
           muted: true,
         }),
         list3d<{ label: string; id: string }>({
@@ -376,20 +621,24 @@ export class EnsembleEditor extends Component {
         })
       )
     )
+  }
 
+  private _renderProperties(): void {
     const selected = this.selection
     if (!selected) return
     this._addPanel(
-      356,
+      'right',
+      260,
       panel3d(
-        { width: 260, height: 250, padding: 10, gap: 6 },
+        { width: 240, height: 250, padding: 10, gap: 6 },
         label3d({ text: selected.id, bold: true }),
         label3d({
           text: selected.mesh ?? `${Object.keys(selected.features ?? {}).join(', ') || 'no body'}`,
           muted: true,
         }),
-        // Position only, for now. The schema-driven property panel that renders
-        // any feature from its JSON Schema is milestone 3.
+        // Position only, for now. Rendering a piece's FEATURES from their
+        // schemas is the same `schemaWidgets` call the tool panel already
+        // makes — it lands with the property panel proper.
         ...(['x', 'y', 'z'] as const).map((axis, i) =>
           slider3d({
             label: axis,
@@ -408,9 +657,10 @@ export class EnsembleEditor extends Component {
     )
   }
 
-  private _addPanel(top: number, panel: SVGSVGElement): void {
+  private _addPanel(side: 'left' | 'right', top: number, panel: SVGSVGElement): void {
     panel.classList.add('ensemble-editor-chrome')
     panel.style.top = `${top}px`
+    panel.style[side] = '8px'
     this._root.append(panel)
     this._panels.push(panel)
   }

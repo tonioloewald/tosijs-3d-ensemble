@@ -13,6 +13,14 @@ it looked, not a reason to inherit its answers.
 
 Status: **recorded here, not yet filed as issues.**
 
+> **One entry was withdrawn.** A previous #5 claimed `list3d`'s `onSelect` did
+> not fire from a click. It does. `panel3d` wires its own pointer listeners and
+> exposes `handlePointer`, and driving either path selects correctly — verified
+> by dispatching at each row (`110→seabed, 145→platform, 180→reactor`). The
+> original observation was a misread screenshot taken after a dev rebuild had
+> reset the selection. Withdrawn rather than left standing: a false ask spends
+> someone else's afternoon.
+
 ---
 
 ## 1. No manipulator (the schedule risk)
@@ -80,20 +88,7 @@ the editor rather than at ship time.
 **The ask:** a place-anchored spawn mode (`x`/`y`/`z` + `facing`), or a
 documented recipe for anchoring a spawner to an element.
 
-## 5. `list3d`'s `onSelect` does not fire from a real click (needs isolating)
-
-Observed in the editor's piece list: clicking a row **highlights it** — so the
-widget is receiving the pointer event — but `onSelect` never runs. Selecting the
-same piece through the component's own API (`editor.select(id)`) works and
-re-renders both panels, so the editor side is sound.
-
-tosijs-3d's own test drives this through `panel.handlePointer('down'|'up', x, y)`
-rather than real DOM events, so a gap between the two paths would not show up
-there. **Not yet isolated** — it may equally be this project holding `panel3d`
-wrong (as a DOM overlay, inside a shadow root). Reproduce before filing: the
-honest version of this entry is a question, not a bug report.
-
-## 6. `simTime` / `simDt` on the scene (tosijs-3d#30)
+## 5. `simTime` / `simDt` on the scene (tosijs-3d#30)
 
 Effect timing can be scaled by a consumer-side clock, but **craft motion cannot**
 — velocity comes from `b3d-aircraft` integrating against the engine delta. Real
@@ -105,14 +100,14 @@ owning the clock rather than each consumer building one.
 `FeatureContext.simTime` is the seam on this side: it defaults to wall-clock and
 switches to the scene's clock the day there is one.
 
-## 7. `exports` is the string form
+## 6. `exports` is the string form
 
 `tosijs-3d`'s `package.json` has `"exports": "./dist/index.js"`, so no subpath
 is reachable — including its own headless surface. Known in that repo's UPSTREAM
 notes; repeated here because this project got the map form right on day one and
 the contrast is the argument.
 
-## 8. Naming note — `prefab` upstream
+## 7. Naming note — `prefab` upstream
 
 tosijs-3d exports `prefab` for a **registered `(ctx) => Element[]` factory**
 (`definePrefab` / `spawnPrefab` / `prefabNames`) used for wrecks, debris and

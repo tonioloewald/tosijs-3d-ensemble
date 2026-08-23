@@ -206,12 +206,28 @@ scene).
 - **Done when:** every ensemble in manta-recon renders identically to the game,
   at the same scale. Different scale = the tool teaches you the wrong thing.
 
-### 3 — edit
+### 3 — edit — **in progress**
 
-- Select: viewport click **or** list; picking walks **up** to the owning piece
+- **A tool palette and a tool-options panel**, added to this milestone after the
+  fact: the palette picks the current tool and runs direct commands, and the
+  options panel configures whatever tool is current. Tools and commands are a
+  REGISTRY, the same shape as features, so a consumer can add one.
+  - In flat these are floating draggable panels, palette left, options right.
+  - In XR they pin to the wrists (`frame-panel`'s `left-hand`/`right-hand` +
+    `anchor: 'wrist'`), which is why they are grouped by hand rather than laid
+    out as one sidebar.
+- **The manipulator is XR-capable from the start**, so Babylon's `GizmoManager`
+  is NOT the foundation — it is mouse-shaped, and adopting it would mean
+  building the real thing twice. Grab is near-or-far: a hand inside a handle
+  grabs it, anything out of reach is grabbed by pointing.
+- **Hands are symmetric until they aren't.** Whichever pointer starts a gesture
+  is primary for it, and the other becomes its helper — not a fixed left/right
+  assignment, so two-handed actions stay expressible.
+- ✅ Select: viewport click **or** list; picking walks **up** to the owning piece
   (clicking a turret barrel selects the turret).
 - Gizmos: move / rotate / scale, writing back to the JSON **on drag release**,
-  in ensemble-local coordinates.
+  in ensemble-local coordinates. **Snapping** (grid and angle) moved OUT of the
+  non-goals: it is a tool option, and the options panel exists to hold it.
   > ⚠️ **This is the schedule risk, and it is upstream.** tosijs-3d has NO
   > manipulator — `b3d-panel`'s coloured axes are a debug readout that looks
   > exactly like one, which has already fooled a reader. Babylon's
@@ -265,8 +281,9 @@ solvable or fair.
 
 ## Deliberate non-goals for v1
 
-Named so they are decisions rather than omissions: undo/redo, multi-select,
-snapping and alignment guides, terrain painting, **nested ensembles** (reserve
+Named so they are decisions rather than omissions: undo/redo, **multi-select**
+(still out — the manipulator lands on a single selection first), alignment
+guides, terrain painting, **nested ensembles** (reserve
 the shape — allow `"ensemble": "name"` on a piece and flatten at load — but do
 not build live instances), and the **encounter layer** (SPEC.md open question 4:
 `ensemble` = what a thing IS, `encounter` = what it is DOING HERE; build it once

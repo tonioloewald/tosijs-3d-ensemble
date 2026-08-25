@@ -32,7 +32,7 @@ written — the same renderer the piece property panel uses. A tool with a
 bespoke panel would drift from the rest of the editor within a week.
 */
 import type { EditorRay, Gesture } from '../input/pointer'
-import type { Ensemble, Piece } from '../../format/types'
+import type { Ensemble, Piece, Vec3 } from '../../format/types'
 import type { FeatureSchema, SceneElement } from '../../format/registry'
 
 /** What a tool or command is given to work with. */
@@ -58,6 +58,16 @@ export interface ToolContext {
    * indexed, which is what lets the same tool run from a mouse or a hand.
    */
   pick(ray: EditorRay): string | null
+  /**
+   * Where a ray meets the scene — ground, terrain, anything — as a world point.
+   *
+   * Distinct from `pick`, which answers "which PIECE", because placing needs a
+   * PLACE and the useful answer is usually the ground the author is aiming at
+   * rather than the piece they are not.
+   */
+  pickPoint(ray: EditorRay): Vec3 | null
+  /** Mesh names the mounted libraries expose, for a palette to offer. */
+  meshNames(): string[]
 }
 
 export interface ToolRegistration {

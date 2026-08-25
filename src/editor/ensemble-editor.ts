@@ -91,7 +91,7 @@ import { placeMesh } from '../runtime/place-mesh'
 import { registerSceneFeatures } from '../runtime/features-scene'
 import { validate } from '../format/validate'
 import type { BuiltEnsemble } from '../runtime/build'
-import type { Ensemble, Piece } from '../format/types'
+import type { Ensemble, Piece, Vec3 } from '../format/types'
 import type { SceneElement } from '../format/registry'
 
 /** A sample world to author against. Never saved with the ensemble. */
@@ -331,6 +331,34 @@ export class EnsembleEditor extends Component {
     )
   }
 
+  /**
+   * Where a ray meets the scene, in world space.
+   *
+   * Excludes the manipulator's own handles: they draw on top of everything, so
+   * without this an insert would land ON the gizmo rather than the ground under
+   * it — and the handles are exactly where the author is most likely aiming.
+   */
+  pickPoint(ray: EditorRay): Vec3 | null {
+    const scene = (this._scene as unknown as { scene?: unknown }).scene as
+      | {
+          pickWithRay: (
+            r: unknown,
+            p?: (m: unknown) => boolean
+          ) => { hit?: boolean; pickedPoint?: { x: number; y: number; z: number } | null } | null
+        }
+      | undefined
+    if (!scene) return null
+    const hit = scene.pickWithRay(
+      new Ray(
+        new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
+        new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
+      ),
+      (mesh) => this._handles?.axisOf(mesh) == null
+    )
+    const point = hit?.pickedPoint
+    return point ? [point.x, point.y, point.z] : null
+  }
+
   private _toolContext(): ToolContext {
     return {
       ensemble: this._ensemble,
@@ -340,6 +368,8 @@ export class EnsembleEditor extends Component {
       edit: (describe, mutate) => this.edit(describe, mutate),
       options: this._toolOptions,
       pick: (ray) => this.pick(ray),
+      pickPoint: (ray) => this.pickPoint(ray),
+      meshNames: () => [...(this._meshNames() ?? [])],
     } as ToolContext
   }
 
@@ -365,6 +395,33 @@ export class EnsembleEditor extends Component {
     trigger is a float you read. Unify at the lower common denominator and the
     tool layer never learns which one it is talking to.
   */
+  /*
+    A LIBRARY IS NOT LOADED WHEN IT IS MOUNTED.
+
+    `buildEnsemble` runs as soon as an ensemble is set, which is normally before
+    a multi-megabyte `.glb` has arrived — so `library.instantiate()` returns null
+    and every piece falls back to a placeholder box. Nothing errors; the scene
+    just looks like an ensemble whose meshes are all missing.
+
+    `<tosi-b3d-library>` exposes a `ready` promise, so wait on it and rebuild.
+    The first build still happens immediately, which is the point: boxes in the
+    right places beat an empty viewport while a library downloads.
+  */
+  private async _rebuildWhenLibraryReady(): Promise<void> {
+    const library = this._root.querySelector?.('tosi-b3d-library') as
+      | (Element & { ready?: Promise<void> })
+      | null
+    const ready = library?.ready
+    if (!ready) return
+    try {
+      await ready
+    } catch {
+      return // a library that failed to load leaves the boxes in place
+    }
+    if (!this.isConnected) return
+    this.rebuild()
+  }
+
   private _attachPointers(): void {
     const scene = (
       this._scene as unknown as {
@@ -449,7 +506,10 @@ export class EnsembleEditor extends Component {
           attached there, found nothing, returned quietly, and left the viewport
           unclickable with no error anywhere. "Created" is not "ready".
         */
-        sceneCreated: () => this._attachPointers(),
+        sceneCreated: () => {
+          this._attachPointers()
+          void this._rebuildWhenLibraryReady()
+        },
       },
       b3dLight({ y: 1, intensity: 0.9 }),
       b3dSkybox({ timeOfDay: 11 }),
@@ -612,11 +672,13 @@ export class EnsembleEditor extends Component {
   private _renderChrome(): void {
     for (const panel of this._panels) panel.remove()
     this._panels = []
+    this._stackTop = { left: 8, right: 8 }
     if (this.hideChrome) return
 
     this._renderPalette()
     this._renderToolOptions()
     this._renderPieceList()
+    this._renderLibraryPalette()
     this._renderProperties()
   }
 
@@ -626,7 +688,6 @@ export class EnsembleEditor extends Component {
     const ctx = this._toolContext()
     this._addPanel(
       'left',
-      8,
       panel3d(
         // 34 per row, not 30: a button3d is taller than its label and the last
         // entry was rendering below the fold, where a panel silently clips.
@@ -663,11 +724,41 @@ export class EnsembleEditor extends Component {
     })
     this._addPanel(
       'right',
-      8,
       panel3d(
-        { width: 240, height: 44 + widgets.length * 34, padding: 10, gap: 6 },
+        { width: 240, height: 60 + widgets.length * 38, padding: 10, gap: 6 },
         label3d({ text: tool.label, bold: true }),
         ...(widgets as never[])
+      )
+    )
+  }
+
+  /**
+   * The library palette.
+   *
+   * Picking a mesh switches to the insert tool AND sets its `mesh` option, so
+   * the next press in the world places that model. A palette that only selected
+   * a mesh, leaving the author to also find the tool, would be two steps for
+   * what reads as one.
+   */
+  private _renderLibraryPalette(): void {
+    const names = this._meshNames()
+    if (!names?.size) return
+    const chosen = this._tool === 'insert' ? (this._toolOptions.mesh as string) : null
+    this._addPanel(
+      'left',
+      panel3d(
+        { width: 150, height: 260, padding: 8, gap: 4 },
+        label3d({ text: `Library (${names.size})`, bold: true }),
+        list3d<{ label: string; name: string }>({
+          items: [...names].map((name) => ({
+            label: name === chosen ? `▸ ${name}` : name,
+            name,
+          })),
+          onSelect: (item) => {
+            if (this._tool !== 'insert') this.setTool('insert')
+            this.setToolOption('mesh', item.name)
+          },
+        })
       )
     )
   }
@@ -677,7 +768,6 @@ export class EnsembleEditor extends Component {
     const errors = problems.filter((p) => p.severity === 'error').length
     this._addPanel(
       'left',
-      210,
       panel3d(
         { width: 150, height: 340, padding: 8, gap: 4 },
         label3d({ text: this._ensemble.name || 'untitled', bold: true }),
@@ -698,7 +788,6 @@ export class EnsembleEditor extends Component {
     if (!selected) return
     this._addPanel(
       'right',
-      260,
       panel3d(
         { width: 240, height: 250, padding: 10, gap: 6 },
         label3d({ text: selected.id, bold: true }),
@@ -727,13 +816,26 @@ export class EnsembleEditor extends Component {
     )
   }
 
-  private _addPanel(side: 'left' | 'right', top: number, panel: SVGSVGElement): void {
+  /*
+    Panels STACK down their side, each below the last.
+
+    They used to carry hand-picked `top` values, which silently overlapped the
+    moment a panel's contents changed size: adding a command to the palette put
+    the piece list on top of it, and the newest entry — the one you just added —
+    was the one that disappeared. A running offset cannot drift out of sync with
+    the heights it is stacking.
+  */
+  private _addPanel(side: 'left' | 'right', panel: SVGSVGElement): void {
     panel.classList.add('ensemble-editor-chrome')
-    panel.style.top = `${top}px`
+    panel.style.top = `${this._stackTop[side]}px`
     panel.style[side] = '8px'
+    const height = Number(panel.getAttribute('height') ?? 0)
+    this._stackTop[side] += height + 10
     this._root.append(panel)
     this._panels.push(panel)
   }
+
+  private _stackTop: { left: number; right: number } = { left: 8, right: 8 }
 }
 
 export const ensembleEditor = EnsembleEditor.elementCreator() as (

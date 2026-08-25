@@ -14,6 +14,7 @@ It selects on gesture **end**, not start, so that a press which turns into a
 camera orbit does not also change the selection — the two gestures begin
 identically and only diverge when you move.
 */
+import { snapVec3 } from '../handles'
 import { registerCommand, registerTool } from './tool-registry'
 import type { ToolContext } from './tool-registry'
 import type { Gesture } from '../input/pointer'
@@ -34,6 +35,51 @@ export function registerEditorTools(): void {
         const ray = gesture.primary.ray()
         if (!ray) return
         ctx.select(ctx.pick(ray))
+      },
+    },
+  })
+
+  registerTool({
+    name: 'insert',
+    label: 'Insert',
+    icon: 'plus',
+    optionsSchema: {
+      type: 'object',
+      title: 'Insert',
+      properties: {
+        // Set by the library palette rather than typed. It is `x-widget: mesh`
+        // so that when the property panel renders schemas properly it offers a
+        // pick list from the library instead of a text field.
+        mesh: { type: 'string', title: 'Mesh', 'x-widget': 'mesh' },
+        gridSnap: { type: 'number', title: 'Grid snap', minimum: 0, maximum: 10, default: 1, 'x-unit': 'm' },
+      },
+    },
+    onGesture: {
+      /*
+        Place on RELEASE, at the point the ray meets the scene.
+
+        Placing where the author is AIMING rather than at the origin is the
+        whole affordance: an ensemble is built by putting things where they go,
+        and a palette that drops everything at 0,0,0 makes you move each piece
+        immediately afterwards.
+      */
+      end(gesture, ctx) {
+        const mesh = ctx.options.mesh as string | undefined
+        if (!mesh) return
+        const ray = gesture.primary.ray()
+        if (!ray) return
+        const point = ctx.pickPoint(ray)
+        if (!point) return
+        const step = Number(ctx.options.gridSnap ?? 0)
+        const at = snapVec3(point, step)
+        const id = uniqueId(
+          slugify(mesh),
+          ctx.ensemble.pieces.map((p) => p.id)
+        )
+        ctx.edit(`insert ${mesh}`, (ensemble) => {
+          ensemble.pieces.push({ id, mesh, at })
+        })
+        ctx.select(id)
       },
     },
   })
@@ -81,6 +127,22 @@ export function registerEditorTools(): void {
 }
 
 /**
+ * An id stem from a mesh name.
+ *
+ * Library names are display names — `Pump Station`, `tree.001` — and an id is a
+ * handle that goes into links, refs and eventually an encounter PATH. Spaces
+ * and dots there are a quoting problem waiting to happen.
+ */
+export function slugify(meshName: string): string {
+  return (
+    meshName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'piece'
+  )
+}
+
+/**
  * A fresh id derived from an existing one.
  *
  * Ids are MANDATORY and never derived from array position, so a duplicate needs
@@ -89,6 +151,10 @@ export function registerEditorTools(): void {
  */
 export function uniqueId(base: string, taken: string[]): string {
   const used = new Set(taken)
+  // The plain name when it is free — the FIRST building should be `building`,
+  // not `building-2`. Counting up unconditionally reads as though something was
+  // already there, and leaves every id in a fresh ensemble looking like a copy.
+  if (!used.has(base)) return base
   const match = /^(.*?)(\d+)$/.exec(base)
   const stem = match ? match[1]! : `${base}-`
   let n = match ? Number(match[2]) + 1 : 2

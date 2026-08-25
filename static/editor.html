@@ -30,9 +30,28 @@
     </style>
   </head>
   <body>
+    <!--
+      SAMPLE CONTENT, and a temporary address for it.
+
+      `test-3.glb` is tosijs-3d's own demo library (24 models — buildings,
+      trees, pillars, stairs), served from its doc site. That is a sibling
+      project's asset and a fragile thing to depend on; the right home is
+      cdn.tosijs.net, whose mirror is the static-assets repo. Kenney's ~4,800
+      models are already on that CDN but ship ONE MODEL PER FILE, so they are
+      not library-shaped — a combined glb is what this wants.
+
+      The sample ensemble uses THIS library's mesh names. `ocean-rig.json` is
+      still here and is the fortification example, but it names Manta-style
+      meshes — pointing the editor at it with this library loaded is a good way
+      to see validation do its job: seven "unknown-mesh" errors, and every piece
+      still placed as a box, because the arrangement is most of what an author
+      is judging.
+    -->
     <tosi-ensemble-editor
-      backdrop="aquatic"
-      src="/ensembles/ocean-rig.json"
+      backdrop="land"
+      library="sample"
+      library-url="https://3d.tosijs.net/test-3.glb"
+      src="/ensembles/outpost.json"
     ></tosi-ensemble-editor>
     <script src="/iife.js"></script>
   </body>

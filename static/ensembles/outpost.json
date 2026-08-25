@@ -1,0 +1,25 @@
+{
+  "name": "outpost",
+  "kind": "settlement",
+  "scale": 1,
+  "values": { "faction": "neutral" },
+  "pieces": [
+    { "id": "sun", "at": [-0.4, 1, 0.3], "features": { "sun": { "intensity": 1, "shadowDarkness": 0.4 } } },
+    { "id": "sky", "at": [0, 0, 0], "features": { "skybox": { "timeOfDay": 9 } } },
+    { "id": "view", "at": [0, 2, 0], "features": { "camera": { "distance": 26, "heading": -50, "elevation": 24 } } },
+
+    { "id": "hall", "mesh": "building", "at": [0, 0, 0] },
+    { "id": "watch-tower", "mesh": "pillar", "at": [8, 0, -6] },
+    { "id": "gate-post", "mesh": "pillar", "at": [-8, 0, -6] },
+    { "id": "steps", "mesh": "stairs", "at": [0, 0, 5], "rot": [0, 180, 0] },
+    { "id": "oak", "mesh": "tree", "at": [11, 0, 6] },
+    { "id": "willow", "mesh": "Willow", "at": [-11, 0, 7] },
+    { "id": "scrub", "mesh": "bush", "at": [5, 0, 9] }
+  ],
+  "points": [
+    { "id": "gate", "at": [0, 0, 7], "kind": "entrance", "facing": [0, 180, 0] }
+  ],
+  "zones": [
+    { "id": "commons", "at": [0, 0, 3], "radius": 14, "kind": "patrol" }
+  ]
+}

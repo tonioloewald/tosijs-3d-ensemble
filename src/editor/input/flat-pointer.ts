@@ -54,6 +54,12 @@ export class FlatPointer implements EditorPointer {
       // Button 0 only. A right-drag is the camera's, and stealing it makes the
       // scene un-navigable the moment a tool is active.
       if (e.button !== 0) return
+      /*
+        Ctrl/⌘ + left-drag is the camera's PAN gesture. Claiming it too meant a
+        pan both moved the view and dragged whatever was under the pointer —
+        two things happening for one gesture, with no way to ask for either.
+      */
+      if (e.ctrlKey || e.metaKey) return
       this.down = true
       this.latched = true
       this.alt = e.shiftKey || e.altKey

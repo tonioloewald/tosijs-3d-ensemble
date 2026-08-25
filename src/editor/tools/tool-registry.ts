@@ -68,6 +68,14 @@ export interface ToolContext {
   pickPoint(ray: EditorRay): Vec3 | null
   /** Mesh names the mounted libraries expose, for a palette to offer. */
   meshNames(): string[]
+  /**
+   * Take the camera out of the way for the duration of a drag.
+   *
+   * Without this a drag does BOTH — the piece moves and the view orbits under
+   * it, so the thing you are aiming at keeps sliding away from the pointer.
+   * Babylon's own gizmos detach camera control for exactly this reason.
+   */
+  captureCamera(capture: boolean): void
 }
 
 export interface ToolRegistration {

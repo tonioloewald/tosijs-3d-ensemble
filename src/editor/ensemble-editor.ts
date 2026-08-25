@@ -68,7 +68,7 @@ import {
   panel3d,
   slider3d,
 } from 'tosijs-3d'
-import { Ray, Vector3 } from '@babylonjs/core'
+import { Color3, HighlightLayer, Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
 import { libraryNames, meshesByLibrary, mountLibraries } from '../runtime/libraries'
 import { FlatPointer } from './input/flat-pointer'
@@ -85,7 +85,8 @@ import { registerManipulateTool } from './tools/manipulate'
 import { createHandles } from './handles-view'
 import type { HandlesView } from './handles-view'
 import type { Axis, TransformMode } from './handles'
-import { schemaWidgets } from './schema-panel'
+import type { NumberField } from './schema-panel'
+import { numberField, schemaWidgets } from './schema-panel'
 import type { EditorRay } from './input/pointer'
 import type { ToolContext } from './tools/tool-registry'
 import { placeMesh } from '../runtime/place-mesh'
@@ -97,6 +98,37 @@ import type { SceneElement } from '../format/registry'
 
 /** A sample world to author against. Never saved with the ensemble. */
 export type Backdrop = 'none' | 'land' | 'aquatic'
+
+interface SceneWithCamera {
+  activeCamera?: {
+    detachControl?: () => void
+    attachControl?: (element: HTMLCanvasElement, preventDefault?: boolean) => void
+  }
+  getEngine?: () => { getRenderingCanvas?: () => HTMLCanvasElement | null }
+}
+
+/** Trim trailing zeros so a coordinate reads as a number, not a measurement. */
+const format = (n: number): string =>
+  Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)))
+
+/** Outline colour for the selected piece. */
+const SELECTION_COLOR = new Color3(0.18, 0.62, 0.56)
+
+/**
+ * The meshes that make up a piece's body.
+ *
+ * An element body exposes one `mesh`; a library instance is a NODE whose meshes
+ * are its children — a highlight layer takes meshes, not transform nodes, so a
+ * piece made of five parts has to contribute all five or it outlines nothing.
+ */
+function selectableMeshes(built: { element?: unknown; node?: unknown }): unknown[] {
+  const element = built.element as { mesh?: unknown } | null
+  if (element?.mesh) return [element.mesh]
+  const node = built.node as { getChildMeshes?: (direct?: boolean) => unknown[] } | null
+  if (!node) return []
+  const children = node.getChildMeshes?.(false) ?? []
+  return children.length ? children : [node]
+}
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
 
@@ -360,6 +392,25 @@ export class EnsembleEditor extends Component {
     return point ? [point.x, point.y, point.z] : null
   }
 
+  /**
+   * Detach or reattach the camera's own input.
+   *
+   * Reattaching uses the canvas the scene is actually rendering into rather
+   * than a remembered one — the editor can be moved in the DOM, and a camera
+   * reattached to a stale canvas stops responding entirely.
+   */
+  captureCamera(capture: boolean): void {
+    const scene = (this._scene as unknown as { scene?: SceneWithCamera }).scene
+    const camera = scene?.activeCamera
+    if (!camera) return
+    if (capture) {
+      camera.detachControl?.()
+      return
+    }
+    const canvas = scene?.getEngine?.()?.getRenderingCanvas?.()
+    if (canvas) camera.attachControl?.(canvas, false)
+  }
+
   private _toolContext(): ToolContext {
     return {
       ensemble: this._ensemble,
@@ -370,6 +421,7 @@ export class EnsembleEditor extends Component {
       options: this._toolOptions,
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
+      captureCamera: (capture) => this.captureCamera(capture),
       meshNames: () => [...(this._meshNames() ?? [])],
     } as ToolContext
   }
@@ -505,51 +557,89 @@ export class EnsembleEditor extends Component {
   }
 
   private _mountScene(): void {
-    const aquatic = this.backdrop === 'aquatic'
-    const scene = b3d(
-      {
-        /*
-          Pointers attach HERE, not in `connectedCallback`.
+    const scene = b3d({
+      /*
+        Pointers attach HERE, not in `connectedCallback`.
 
-          `<tosi-b3d>` builds its Babylon scene asynchronously, so at connect
-          time there is no scene, no engine and no canvas — an earlier version
-          attached there, found nothing, returned quietly, and left the viewport
-          unclickable with no error anywhere. "Created" is not "ready".
-        */
-        sceneCreated: () => {
-          this._attachPointers()
-          void this._rebuildWhenLibraryReady()
-        },
+        `<tosi-b3d>` builds its Babylon scene asynchronously, so at connect
+        time there is no scene, no engine and no canvas — an earlier version
+        attached there, found nothing, returned quietly, and left the viewport
+        unclickable with no error anywhere. "Created" is not "ready".
+      */
+      sceneCreated: () => {
+        this._attachPointers()
+        void this._rebuildWhenLibraryReady()
       },
-      b3dLight({ y: 1, intensity: 0.9 }),
-      b3dSkybox({ timeOfDay: 11 }),
-      ...(this.libraryUrl ? [b3dLibrary({ url: this.libraryUrl, type: this.library })] : []),
-      // The backdrop. Pinned to the origin: the world holds still, the camera moves.
-      ...(this.backdrop === 'none'
-        ? []
-        : aquatic
-          ? [b3dWater({ waterSize: 4000 }), b3dGround({ width: 4000, height: 4000, y: -140 })]
-          : [
-              b3dGround({
-                width: 4000,
-                height: 4000,
-                // A neutral grid, not a checker: a checker reads as "missing
-                // texture", where a metric grid gives the eye a scale reference
-                // while judging an arrangement.
-                texture: GRID_TEXTURE,
-                textureTiles: 4000 / GRID_METRES,
-              }),
-            ])
-    ) as unknown as SceneElement
-    /*
-      ASSIGN BEFORE APPENDING. Appending connects the element, which creates the
-      scene, which fires `sceneCreated` SYNCHRONOUSLY — so an assignment after
-      the append runs too late and the callback finds `this._scene` undefined.
-      It then returned quietly and left the viewport unclickable.
-    */
+    }) as unknown as SceneElement
     this._scene = scene
     this._root.append(scene)
+    this._syncBackdrop()
   }
+
+  /*
+    THE BACKDROP FILLS IN WHAT THE ENSEMBLE LACKS.
+
+    It is authoring context — a sky and a ground so the thing being authored has
+    somewhere to be — and the moment an ensemble carries its OWN sky, the two
+    are coincident and the whole view z-fights. That is what "everything is
+    flickering like crazy" turned out to be: two skyboxes at the same radius,
+    each winning half the pixels.
+
+    So every backdrop part is conditional on the ensemble not providing the same
+    thing. Reconciled on every rebuild, because which features an ensemble has
+    changes as it is edited: delete its `skybox` piece and the backdrop's sky
+    should come back rather than leaving the author under a black dome.
+  */
+  private _syncBackdrop(): void {
+    if (!this._scene) return
+    const used = new Set(
+      this._ensemble.pieces.flatMap((piece) => Object.keys(piece.features ?? {}))
+    )
+    const aquatic = this.backdrop === 'aquatic'
+    const on = this.backdrop !== 'none'
+
+    this._backdropPart('light', on && !used.has('light') && !used.has('sun'), () =>
+      b3dLight({ y: 1, intensity: 0.9 })
+    )
+    this._backdropPart('skybox', on && !used.has('skybox'), () => b3dSkybox({ timeOfDay: 11 }))
+    this._backdropPart(
+      'water',
+      on && aquatic && !used.has('water'),
+      () => b3dWater({ waterSize: 4000 })
+    )
+    this._backdropPart(
+      'ground',
+      on && !used.has('ground') && !used.has('terrain'),
+      () =>
+        b3dGround({
+          width: 4000,
+          height: 4000,
+          y: aquatic ? -140 : 0,
+          // A neutral grid, not a checker: a checker reads as "missing
+          // texture", where a metric grid gives the eye a scale reference
+          // while judging an arrangement.
+          texture: GRID_TEXTURE,
+          textureTiles: 4000 / GRID_METRES,
+        })
+    )
+  }
+
+  /** Add or remove one backdrop element, idempotently. */
+  private _backdropPart(name: string, wanted: boolean, make: () => unknown): void {
+    const existing = this._backdrop.get(name)
+    if (wanted && !existing) {
+      const element = make() as SceneElement
+      this._scene?.appendChild(element)
+      this._backdrop.set(name, element)
+      return
+    }
+    if (!wanted && existing) {
+      existing.remove()
+      this._backdrop.delete(name)
+    }
+  }
+
+  private _backdrop = new Map<string, SceneElement>()
 
   /**
    * Rebuild the scene from the ensemble.
@@ -567,6 +657,8 @@ export class EnsembleEditor extends Component {
       placePiece: placeMesh,
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     })
+    this._syncBackdrop()
+    this._syncSelection()
     this._syncHandles()
     this._renderChrome()
     this.frame()
@@ -614,9 +706,45 @@ export class EnsembleEditor extends Component {
 
   select(id: string): void {
     this._selected = id
+    this._syncSelection()
     this._syncHandles()
     this._renderChrome()
   }
+
+  /*
+    SELECTION HAS TO BE VISIBLE IN THE VIEWPORT, not only in a panel.
+
+    The manipulator's handles appear only under the Move tool, so with Select
+    active there was NO indication in the scene at all — you clicked a building
+    and the only thing that changed was a title in a side panel you were not
+    looking at.
+
+    An outline rather than a bounding box: a box around a tree is mostly empty
+    air and reads as "this region", where an outline reads as "this thing".
+  */
+  private _syncSelection(): void {
+    const scene = (this._scene as unknown as { scene?: unknown }).scene
+    if (!scene) return
+    if (!this._highlight) {
+      this._highlight = new HighlightLayer('ensemble-editor-selection', scene as never)
+      // Otherwise the outline is hidden by anything drawn in front of it —
+      // including the piece itself, which is the usual case for a mesh with
+      // interior geometry.
+      this._highlight.innerGlow = false
+    }
+    this._highlight.removeAllMeshes()
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    if (!built) return
+    for (const mesh of selectableMeshes(built)) {
+      try {
+        this._highlight.addMesh(mesh as never, SELECTION_COLOR)
+      } catch {
+        /* a mesh the layer cannot outline is not worth losing the selection over */
+      }
+    }
+  }
+
+  private _highlight: HighlightLayer | null = null
 
   /**
    * Put the handles on the selection, or take them away.
@@ -701,8 +829,12 @@ export class EnsembleEditor extends Component {
       panel3d(
         // 34 per row, not 30: a button3d is taller than its label and the last
         // entry was rendering below the fold, where a panel silently clips.
-        { width: 150, height: 52 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
+        { width: 150, height: 74 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
         label3d({ text: 'Tools', bold: true }),
+        // Navigation is discoverable nowhere else: the camera's gestures are
+        // Babylon's defaults, and an editor that does not say so leaves you
+        // unable to move the view at all.
+        label3d({ text: 'drag orbit · ⌃drag pan · wheel zoom', muted: true, compact: true }),
         ...(tools.map((tool) =>
           button3d({
             // The current tool is marked in its label rather than by colour
@@ -796,47 +928,84 @@ export class EnsembleEditor extends Component {
   private _renderProperties(): void {
     const selected = this.selection
     if (!selected) return
+    /*
+      TYPED COORDINATES, not sliders. A slider is bounded, imprecise, and ours
+      showed no number at all — you could not see where a piece WAS, let alone
+      put it somewhere exact. Dragging belongs on the handles in the viewport;
+      the panel's job is the number.
+    */
+    const rows = (['x', 'y', 'z'] as const).flatMap((axis, i) => [
+      label3d({ text: `${axis}  ${format(selected.at[i] ?? 0)}`, muted: true }),
+      numberField({
+        label: axis,
+        value: selected.at[i] ?? 0,
+        onFocus: (field) => {
+          // Exclusive: two lit fields both claiming the keyboard is worse than
+          // none, because the caret is somewhere you are not looking.
+          this._activeField?.setActive(false)
+          this._activeField = field
+        },
+        onCommit: (value) => {
+          const at = [...selected.at] as [number, number, number]
+          at[i] = value
+          this.update(selected.id, { at })
+        },
+      }),
+    ])
     this._addPanel(
       'right',
       panel3d(
-        { width: 240, height: 250, padding: 10, gap: 6 },
+        { width: 240, height: 96 + rows.length * 32, padding: 10, gap: 4 },
         label3d({ text: selected.id, bold: true }),
         label3d({
           text: selected.mesh ?? `${Object.keys(selected.features ?? {}).join(', ') || 'no body'}`,
           muted: true,
         }),
-        // Position only, for now. Rendering a piece's FEATURES from their
-        // schemas is the same `schemaWidgets` call the tool panel already
-        // makes — it lands with the property panel proper.
-        ...(['x', 'y', 'z'] as const).map((axis, i) =>
-          slider3d({
-            label: axis,
-            value: selected.at[i] ?? 0,
-            min: -200,
-            max: 200,
-            step: 1,
-            onChange: (v: number) => {
-              const at = [...selected.at] as [number, number, number]
-              at[i] = v
-              this.update(selected.id, { at })
-            },
-          })
-        )
+        ...(rows as never[])
       )
     )
   }
 
   /*
-    Panels STACK down their side, each below the last.
+    ROUTE KEYSTROKES INTO THE SVG FIELDS.
 
-    They used to carry hand-picked `top` values, which silently overlapped the
-    moment a panel's contents changed size: adding a command to the palette put
-    the piece list on top of it, and the newest entry — the one you just added —
-    was the one that disappeared. A running offset cannot drift out of sync with
-    the heights it is stacking.
+    `inputField` is a Widget3d that exposes `insert`/`action` and listens to
+    NOTHING — by design, because in a headset the keys come from an SVG
+    keyboard rather than from the DOM. Flat, that means the host has to carry
+    real key events across, or a field you can click into silently refuses to
+    accept a single character.
+
+    This is the form layer SPEC predicted we would have to build: forms are the
+    SVG UI's thinnest area, and the editor is the consumer that needs one.
   */
+  private _routeKeys(panel: SVGSVGElement): void {
+    panel.setAttribute('tabindex', '0')
+    const onKey = (event: KeyboardEvent) => {
+      const field = this._activeField
+      if (!field) return
+      if (event.key === 'Enter') {
+        ;(field as unknown as { action: (a: string) => void }).action('enter')
+      } else if (event.key === 'Backspace') {
+        ;(field as unknown as { action: (a: string) => void }).action('backspace')
+      } else if (event.key.length === 1) {
+        field.insert(event.key)
+      } else {
+        return
+      }
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    panel.addEventListener('keydown', onKey)
+    // Clicking a field must also give the panel DOM focus, or the keydown
+    // never arrives however correctly it is routed.
+    panel.addEventListener('pointerdown', () => panel.focus({ preventScroll: true }))
+  }
+
+  private _activeField: NumberField | null = null
+
   private _addPanel(side: 'left' | 'right', panel: SVGSVGElement): void {
     panel.classList.add('ensemble-editor-chrome')
+    this._routeKeys(panel)
     panel.style.top = `${this._stackTop[side]}px`
     panel.style[side] = '8px'
     const height = Number(panel.getAttribute('height') ?? 0)

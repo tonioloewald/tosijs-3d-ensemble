@@ -33,6 +33,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
     options,
     pick: () => null,
+    captureCamera: () => {},
     pickPoint: () => groundPoint,
     meshNames: () => ['building', 'tree'],
   }) as ToolContext

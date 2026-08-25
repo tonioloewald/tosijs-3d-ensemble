@@ -38,6 +38,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
     options: { mode: 'translate', gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
     pick: () => null,
+    captureCamera: () => {},
   }) as ToolContext
 
 beforeEach(() => {

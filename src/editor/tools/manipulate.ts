@@ -161,6 +161,9 @@ export function registerManipulateTool(hooks: ManipulateHooks): void {
         const origin = hooks.worldOrigin()
         const start = measure(mode, axis, origin, ray)
         if (start === null) return // parallel or behind — not a usable drag
+        // The camera must stop listening the moment a handle is grabbed, or
+        // the drag moves the piece AND orbits the view under it.
+        ctx.captureCamera(true)
         drag = {
           axis,
           mode,
@@ -190,6 +193,9 @@ export function registerManipulateTool(hooks: ManipulateHooks): void {
       end(_gesture, ctx) {
         const finished = drag
         drag = null
+        // Always give the camera back, even on a drag that grabbed nothing —
+        // otherwise a mis-click leaves the view frozen with no way to recover.
+        ctx.captureCamera(false)
         if (!finished) return
         // Snap the VALUE, not the accumulated delta — see handles.ts.
         const grid = Number(ctx.options.gridSnap ?? 0)

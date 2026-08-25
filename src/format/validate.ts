@@ -79,8 +79,12 @@ export interface ValidateOptions {
   /**
    * Public library mesh names, when a library is loaded. Omit while it is
    * still loading — see the note above about accusing good content.
+   *
+   * Pass a Set for a single library, or a map of library name → names when
+   * several are mounted, which is what lets a piece's `library` be checked
+   * against the mesh it claims.
    */
-  meshes?: Set<string>
+  meshes?: Set<string> | Map<string, Set<string>>
   /**
    * Also check roles and features against the live registries. Default true.
    * These are warnings, not errors: a host may register its own after load.
@@ -106,6 +110,32 @@ export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Proble
   if (!Array.isArray(ensemble.pieces) || ensemble.pieces.length === 0) {
     add('error', 'no-pieces', 'ensemble has no pieces', '/pieces')
     return problems
+  }
+
+  // Declared libraries: names must be unique, or a piece's `library` is
+  // ambiguous in exactly the situation the field exists to disambiguate.
+  const libraries = new Set<string>()
+  ;(ensemble.libraries ?? []).forEach((library, i) => {
+    if (!library.name) {
+      add('error', 'no-library-name', `library ${i} has no name`, `/libraries/${i}/name`)
+    } else if (libraries.has(library.name)) {
+      add('error', 'duplicate-library', `duplicate library "${library.name}"`, `/libraries/${i}/name`)
+    } else {
+      libraries.add(library.name)
+    }
+    if (!library.url) {
+      add('error', 'no-library-url', `library "${library.name}" has no url`, `/libraries/${i}/url`)
+    }
+  })
+
+  const knownMeshes = (library?: string): Set<string> | undefined => {
+    if (!meshes) return undefined
+    if (meshes instanceof Set) return meshes
+    if (library) return meshes.get(library)
+    // No qualifier: the mesh may come from any mounted library.
+    const all = new Set<string>()
+    for (const names of meshes.values()) for (const n of names) all.add(n)
+    return all
   }
 
   const ids = new Set<string>()
@@ -136,8 +166,24 @@ export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Proble
       if (!Object.keys(p.features ?? {}).length && !p.role) {
         add('error', 'empty-piece', `piece "${p.id}" has no mesh and no features`, at)
       }
-    } else if (meshes && !meshes.has(p.mesh)) {
-      add('error', 'unknown-mesh', `"${p.mesh}" is not in the library`, `${at}/mesh`)
+    } else {
+      if (p.library && ensemble.libraries && !libraries.has(p.library)) {
+        add(
+          'error',
+          'undeclared-library',
+          `piece "${p.id}" names library "${p.library}", which the ensemble does not declare`,
+          `${at}/library`
+        )
+      }
+      const known = knownMeshes(p.library)
+      if (known && !known.has(p.mesh)) {
+        add(
+          'error',
+          'unknown-mesh',
+          `"${p.mesh}" is not in ${p.library ? `library "${p.library}"` : 'any mounted library'}`,
+          `${at}/mesh`
+        )
+      }
     }
     if (p.mesh && p.ensemble) {
       add('error', 'mesh-and-ensemble', `piece "${p.id}" has both mesh and ensemble`, `${at}/mesh`)

@@ -70,6 +70,7 @@ import {
 } from 'tosijs-3d'
 import { Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
+import { libraryNames, meshesByLibrary, mountLibraries } from '../runtime/libraries'
 import { FlatPointer } from './input/flat-pointer'
 import { PointerHub } from './input/pointer'
 import { bodyIndex, pickPiece } from './selection'
@@ -408,16 +409,16 @@ export class EnsembleEditor extends Component {
     right places beat an empty viewport while a library downloads.
   */
   private async _rebuildWhenLibraryReady(): Promise<void> {
-    const library = this._root.querySelector?.('tosi-b3d-library') as
-      | (Element & { ready?: Promise<void> })
-      | null
-    const ready = library?.ready
-    if (!ready) return
-    try {
-      await ready
-    } catch {
-      return // a library that failed to load leaves the boxes in place
-    }
+    const libraries = [
+      ...((this._scene?.querySelectorAll?.('tosi-b3d-library') ?? []) as unknown as Iterable<
+        Element & { ready?: Promise<void> }
+      >),
+    ]
+    const pending = libraries.map((l) => l.ready).filter(Boolean) as Array<Promise<void>>
+    if (!pending.length) return
+    // A library that fails to load leaves its pieces as boxes rather than
+    // stranding the ones that DID load.
+    await Promise.all(pending.map((p) => p.catch(() => undefined)))
     if (!this.isConnected) return
     this.rebuild()
   }
@@ -474,6 +475,9 @@ export class EnsembleEditor extends Component {
   /** Fetch and edit an ensemble. */
   async load(url: string): Promise<void> {
     const data = (await (await fetch(url)).json()) as Ensemble
+    // The ensemble declares its own libraries; mount them before building so
+    // pieces resolve to real meshes on the first pass rather than boxes.
+    if (this._scene) await mountLibraries(data, this._scene)
     this.ensemble = data
   }
 
@@ -487,11 +491,17 @@ export class EnsembleEditor extends Component {
     return validate(this._ensemble, this._meshNames() ? { meshes: this._meshNames()! } : {})
   }
 
+  /** Every mesh name reachable, across the ensemble's libraries and any the
+   *  page forced via the `library` attribute. */
   private _meshNames(): Set<string> | null {
-    const lib = (this._scene as unknown as { getLibrary?: (t: string) => { getNames?: () => string[] } | null })
-      ?.getLibrary?.(this.library)
-    const names = lib?.getNames?.()
-    return names?.length ? new Set(names) : null
+    if (!this._scene) return null
+    const byLibrary = meshesByLibrary(
+      this._scene,
+      libraryNames(this._ensemble, this.library || undefined)
+    )
+    const all = new Set<string>()
+    for (const names of byLibrary.values()) for (const name of names) all.add(name)
+    return all.size ? all : null
   }
 
   private _mountScene(): void {

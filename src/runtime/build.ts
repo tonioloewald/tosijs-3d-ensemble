@@ -41,6 +41,7 @@ console. Every element this module creates is appended explicitly.
 import { featuresOf } from '../format/roles'
 import { featureRegistration } from '../format/registry'
 import { validate } from '../format/validate'
+import { libraryNames, meshesByLibrary, mountLibraries, resolveLibrary } from './libraries'
 import type { FeatureContext, SceneElement } from '../format/registry'
 import type { Problem } from '../format/validate'
 import type { Ensemble, Piece, Vec3 } from '../format/types'
@@ -50,10 +51,17 @@ export interface BuildOptions {
   scene: SceneElement
   /** Where the ensemble's local origin sits in the world. Default `[0,0,0]`. */
   origin?: Vec3
-  /** Library to instantiate meshes from. Default `'enemies'`. */
+  /**
+   * Extra library to resolve meshes against, beyond the ones the ensemble
+   * declares. A host forcing its own content; usually unnecessary now that an
+   * ensemble says what it needs.
+   */
   library?: string
-  /** Mesh names, when known, so validation can check them. */
-  meshes?: Set<string>
+  /**
+   * Mesh names, when known, so validation can check them. Derived from the
+   * mounted libraries when omitted.
+   */
+  meshes?: Set<string> | Map<string, Set<string>>
   /**
    * Time source for features that animate. Defaults to `performance.now()/1000`.
    * See the caveat on `FeatureContext.simTime`: this scales EFFECT timing, not
@@ -87,6 +95,7 @@ export interface Placement {
 
 export interface PlaceContext {
   scene: SceneElement
+  /** The library this piece resolves to, or `''` when there is none. */
   library: string
   /** Effective features, role preset already merged in. */
   features: Record<string, Record<string, unknown>>
@@ -125,13 +134,15 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
   const {
     scene,
     origin = [0, 0, 0] as Vec3,
-    library = 'enemies',
+    library = '',
     meshes,
     simTime = () => performance.now() / 1000,
     placePiece,
   } = opts
 
-  const problems = validate(ensemble, meshes ? { meshes } : {})
+  const libraries = libraryNames(ensemble, library || undefined)
+  const known = meshes ?? (libraries.length ? meshesByLibrary(scene, libraries) : undefined)
+  const problems = validate(ensemble, known && (known as Map<string, Set<string>>).size !== 0 ? { meshes: known } : {})
   const ensembleScale = ensemble.scale ?? 1
   const pieces = new Map<string, BuiltPiece>()
   const disposers: Array<() => void> = []
@@ -149,6 +160,9 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       origin[2] + piece.at[2] * ensembleScale,
     ]
     const features = featuresOf(piece)
+    // Resolved PER PIECE: a piece may name its own library, and otherwise the
+    // first mounted one that actually has the mesh wins.
+    const pieceLibrary = resolveLibrary(scene, libraries, piece) ?? ''
     const built: BuiltPiece = {
       piece,
       at,
@@ -179,7 +193,11 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
 
       // Once the body features have run, a plain piece still needs a body.
       if (!isBody(name) && !built.element && !built.node) {
-        applyPlacement(built, placePiece?.(piece, at, scale, { scene, library, features }), onDispose)
+        applyPlacement(
+          built,
+          placePiece?.(piece, at, scale, { scene, library: pieceLibrary, features }),
+          onDispose
+        )
       }
 
       const ctx = makeContext({
@@ -189,7 +207,7 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
         piece,
         at,
         scale,
-        library,
+        library: pieceLibrary,
         onDispose,
         simTime,
         pieces,
@@ -214,7 +232,11 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
 
     // A piece with no features at all, or only unregistered ones, still has a body.
     if (!built.element && !built.node) {
-      applyPlacement(built, placePiece?.(piece, at, scale, { scene, library, features }), onDispose)
+      applyPlacement(
+        built,
+        placePiece?.(piece, at, scale, { scene, library: pieceLibrary, features }),
+        onDispose
+      )
     }
   }
 
@@ -323,5 +345,13 @@ export async function loadEnsemble(
   if (!response.ok) {
     throw new Error(`ensemble "${url}": ${response.status} ${response.statusText}`)
   }
-  return buildEnsemble((await response.json()) as Ensemble, opts)
+  const ensemble = (await response.json()) as Ensemble
+  /*
+    MOUNT WHAT THE FILE ASKS FOR, then build. This is what makes an ensemble
+    loadable anywhere: the consumer supplies a scene, and the content declares
+    its own dependencies rather than relying on the caller to have mounted the
+    right libraries first.
+  */
+  await mountLibraries(ensemble, opts.scene)
+  return buildEnsemble(ensemble, opts)
 }

@@ -58,6 +58,7 @@ and — more to the point — never sees `shield` in a property panel.
 import { Component } from 'tosijs'
 import { buildEnsemble } from './build'
 import { placeMesh } from './place-mesh'
+import { mountLibraries } from './libraries'
 import type { BuiltEnsemble } from './build'
 import type { Ensemble as EnsembleData, Vec3 } from '../format/types'
 import type { SceneElement } from '../format/registry'
@@ -108,7 +109,12 @@ export class TosiEnsemble extends Component {
   async load(url: string): Promise<void> {
     const response = await fetch(url)
     if (!response.ok) throw new Error(`ensemble "${url}": ${response.status}`)
-    this.ensemble = (await response.json()) as EnsembleData
+    const data = (await response.json()) as EnsembleData
+    // Mount what the FILE declares before building, so a page needs to know
+    // nothing about the content it is showing beyond its address.
+    const scene = this.closest('tosi-b3d') as SceneElement | null
+    if (scene) await mountLibraries(data, scene)
+    this.ensemble = data
   }
 
   private _rebuild(): void {

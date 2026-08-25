@@ -1,5 +1,6 @@
 {
   "name": "ocean-rig",
+  "libraries": [{ "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }],
   "kind": "fortification",
   "scale": 1,
   "values": { "targetValue": 3, "faction": "hostile" },

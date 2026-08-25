@@ -49,6 +49,22 @@ Positions are **ensemble-local**, so the same ensemble works at sea level or on
 a plateau.
 */
 
+/**
+ * A library of meshes the ensemble draws from.
+ *
+ * **An ensemble declares its own content.** Without this a file names meshes
+ * like `building` and `tree` and says nothing about where they come from, so it
+ * only loads somewhere that already knows — which is not "describe an
+ * arrangement and consume it anywhere", it is an arrangement plus a spoken
+ * instruction.
+ */
+export interface LibraryRef {
+  /** How pieces refer to it, and the `type` of the mounted library element. */
+  name: string
+  /** Where to fetch the `.glb`. */
+  url: string
+}
+
 /** Ensemble-local offset in metres: `[x, y, z]`. */
 export type Vec3 = [number, number, number]
 
@@ -157,6 +173,15 @@ export interface Piece {
   /** Stable handle. MANDATORY — never derived from array position. */
   id: string
   /**
+   * Which declared library this piece's `mesh` comes from.
+   *
+   * Optional: with one library, or with unambiguous names, it is noise. It
+   * earns its place the moment two libraries both export `cube` — and a piece
+   * that cannot say which one it meant is a piece that renders differently
+   * depending on load order.
+   */
+  library?: string
+  /**
    * PUBLIC library mesh name. Mutually exclusive with `ensemble`.
    *
    * Optional, and legitimately absent for an **environment primitive** — a
@@ -212,6 +237,8 @@ export interface Link {
 
 export interface Ensemble {
   name: string
+  /** Libraries this ensemble's meshes come from. */
+  libraries?: LibraryRef[]
   /** Free-form, for consumers to group by: `rig`, `dome-facility`, `fortress`. */
   kind?: string
   /** Multiplies every offset and piece scale. */

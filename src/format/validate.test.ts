@@ -43,6 +43,54 @@ describe('validate', () => {
     expect(codes(e, { checkRegistry: false, meshes: new Set(['Pump Station']) })).toEqual([])
   })
 
+  it('checks a piece against the library it NAMES, not just any', () => {
+    const e: Ensemble = {
+      name: 't',
+      libraries: [
+        { name: 'props', url: '/props.glb' },
+        { name: 'vehicles', url: '/vehicles.glb' },
+      ],
+      pieces: [{ id: 'a', mesh: 'car', library: 'props', at: [0, 0, 0] }],
+    }
+    const meshes = new Map([
+      ['props', new Set(['bench'])],
+      ['vehicles', new Set(['car'])],
+    ])
+    // `car` exists — in the other library. Checking against "any mounted
+    // library" would pass this and then render the wrong thing.
+    expect(codes(e, { checkRegistry: false, meshes })).toEqual(['unknown-mesh'])
+  })
+
+  it('rejects a piece naming a library the ensemble never declared', () => {
+    const e: Ensemble = {
+      name: 't',
+      libraries: [{ name: 'props', url: '/props.glb' }],
+      pieces: [{ id: 'a', mesh: 'bench', library: 'ghost', at: [0, 0, 0] }],
+    }
+    expect(codes(e, { checkRegistry: false })).toContain('undeclared-library')
+  })
+
+  it('rejects duplicate library names, which make a qualifier meaningless', () => {
+    const e: Ensemble = {
+      name: 't',
+      libraries: [
+        { name: 'props', url: '/a.glb' },
+        { name: 'props', url: '/b.glb' },
+      ],
+      pieces: [{ id: 'a', mesh: 'bench', at: [0, 0, 0] }],
+    }
+    expect(codes(e, { checkRegistry: false })).toContain('duplicate-library')
+  })
+
+  it('requires a url for every declared library', () => {
+    const e: Ensemble = {
+      name: 't',
+      libraries: [{ name: 'props', url: '' }],
+      pieces: [{ id: 'a', mesh: 'bench', at: [0, 0, 0] }],
+    }
+    expect(codes(e, { checkRegistry: false })).toContain('no-library-url')
+  })
+
   it('reports links to pieces that do not exist', () => {
     const e = minimal({ links: [{ from: 'a', to: 'ghost' }] })
     expect(codes(e, { checkRegistry: false })).toEqual(['unknown-link-target'])

@@ -37,6 +37,7 @@ the editor is exactly how this rots, and nothing else would notice.
 // ── The format: pure, no engine, no UI ──────────────────────────────────────
 export type {
   Ensemble,
+  LibraryRef,
   Piece,
   Link,
   Point,
@@ -74,6 +75,7 @@ export type {
   Placement,
 } from './runtime/build'
 export { placeMesh, attachBlip } from './runtime/place-mesh'
+export { mountLibraries, libraryNames, resolveLibrary, meshesByLibrary } from './runtime/libraries'
 export { registerSceneFeatures } from './runtime/features-scene'
 // The one-line embed. A RUNTIME affordance, not an editor one: a game that
 // loads a scene as data wants this and nothing else in this file's last section.

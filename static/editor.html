@@ -31,7 +31,11 @@
   </head>
   <body>
     <!--
-      SAMPLE CONTENT, and a temporary address for it.
+      SAMPLE CONTENT — and note the page does NOT name a library.
+
+      Each ensemble DECLARES the libraries it needs, so this page only supplies
+      an address. That is what "consume it anywhere" has to mean: content that
+      cannot say what it depends on is an arrangement plus a spoken instruction.
 
       `test-3.glb` is tosijs-3d's own demo library (24 models — buildings,
       trees, pillars, stairs), served from its doc site. That is a sibling
@@ -51,8 +55,6 @@
     -->
     <tosi-ensemble-editor
       backdrop="land"
-      library="sample"
-      library-url="https://3d.tosijs.net/test-3.glb"
       src="/ensembles/outpost.json"
     ></tosi-ensemble-editor>
     <script src="/iife.js"></script>

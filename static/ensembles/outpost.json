@@ -1,5 +1,6 @@
 {
   "name": "outpost",
+  "libraries": [{ "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }],
   "kind": "settlement",
   "scale": 1,
   "values": { "faction": "neutral" },

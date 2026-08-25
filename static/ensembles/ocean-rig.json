@@ -14,13 +14,13 @@
     { "id": "objective", "mesh": "Pump Station", "at": [0, 10, 0], "role": "critical" }
   ],
   "links": [
-    { "from": "reactor", "to": "projector", "delay": 0.3, "beam": true },
-    { "from": "projector", "to": "field", "delay": 0.2 }
+    { "from": "reactor", "to": "projector", "kind": "power", "values": { "delay": 0.3, "beam": true } },
+    { "from": "projector", "to": "field", "kind": "power", "values": { "delay": 0.2 } }
   ],
   "points": [
     { "id": "pad", "at": [0, 4, 24], "kind": "spawn", "facing": [0, 180, 0], "meta": { "craft": "Light Fighter" } }
   ],
   "zones": [
-    { "id": "escort", "at": [0, 40, 0], "radius": 70, "kind": "escort", "capacity": 3 }
+    { "id": "escort", "at": [0, 40, 0], "radius": 70, "kind": "escort", "values": { "capacity": 3 } }
   ]
 }

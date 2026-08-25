@@ -15,7 +15,7 @@ mission compiler.
   "name": "ocean-rig",
   "kind": "rig",                    // free-form; consumers group by it
   "scale": 2.5,                     // multiplies every offset and piece scale
-  "values": { "targetValue": 3, "faction": "hostile" },
+  "values": { "targetValue": 3, "faction": "hostile" },   // open map; the format has no opinion
   "pieces": [
     {
       "id": "pump",                 // MANDATORY and stable — see below
@@ -26,7 +26,7 @@ mission compiler.
       "features": { "turret": { "range": 260 } }
     }
   ],
-  "links": [{ "from": "pump", "to": "projector", "delay": 0.4, "beam": true }]
+  "links": [{ "from": "pump", "to": "projector", "kind": "power", "values": { "delay": 0.4 } }]
 }
 ```
 
@@ -65,12 +65,21 @@ export type Euler = [number, number, number]
  */
 export type Role = string
 
-/** A vulnerable part INSIDE a composite mesh, matched by sub-mesh name. */
+/**
+ * A named part INSIDE a composite mesh, matched by sub-mesh name.
+ *
+ * A part carries **features**, exactly as a piece does — it does not carry hit
+ * points. `hp` was a field here, inherited from a fortification brief, and it
+ * made the core format assume a combat game: a museum's composite model has
+ * openable doors and lit cabinets, not vulnerable subsystems.
+ */
 export interface Subsystem {
   /** Regex **source string** (anchored is safer), compiled at load. */
   match: string
-  hp: number
   label: string
+  /** Capabilities of this part. `{ destroyable: { hp: 18 } }` in a combat game. */
+  features?: Features
+  values?: Values
 }
 
 /**
@@ -95,7 +104,15 @@ export interface Point {
   at: Vec3
   /** Euler DEGREES — a spawn usually cares which way it faces. */
   facing?: Euler
-  kind?: 'spawn' | 'waypoint' | 'dock' | 'muzzle' | 'entrance' | 'custom'
+  /**
+   * What this place IS, as a free string.
+   *
+   * `spawn`, `waypoint`, `dock`, `entrance` and `join` are the conventions, not
+   * the constraints. It was a closed union including `muzzle`, which both baked
+   * a gun into the core format and meant a consumer's own kind was a type error
+   * — the same mistake as shipping roles.
+   */
+  kind?: string
   meta?: Record<string, string | number | boolean>
 }
 
@@ -111,10 +128,18 @@ export interface Zone {
   at: Vec3
   /** Sphere for now; box/cylinder can follow when something needs them. */
   radius: number
-  kind: 'escort' | 'patrol' | 'no-fly' | 'alert' | 'trigger' | 'custom'
-  /** Who it applies to; absent = anyone friendly to the owner. */
-  faction?: string
-  capacity?: number
+  /**
+   * What the volume MEANS, as a free string — `escort`, `patrol`, `no-fly`,
+   * `quiet`, `wifi`. Conventions, not a closed union.
+   */
+  kind?: string
+  /**
+   * Whatever the consuming rules layer needs: `faction`, `capacity`, `dwell`.
+   *
+   * These were named fields, which is how "who may enter" ended up meaning
+   * FACTION in a format that also has to describe a garden.
+   */
+  values?: Values
   meta?: Record<string, string | number | boolean>
 }
 
@@ -125,8 +150,6 @@ export interface Zone {
  * and the consumer that cares is a rules layer, not the renderer.
  */
 export interface Values {
-  targetValue?: number
-  faction?: string
   [key: string]: string | number | boolean | undefined
 }
 
@@ -167,19 +190,24 @@ export interface Piece {
 }
 
 /**
- * A directed on-destruction relationship — a chain reaction.
+ * A directed relationship between two pieces: A → B, of some kind.
  *
- * `beam` renders the same relationship as a visible conduit: one declaration,
- * two consequences, nothing to keep in sync.
+ * The core says only that the relationship EXISTS and what it is called. What
+ * it does is the consuming domain's business — a combat game reads `power` as
+ * "destroying A destroys B", a building reads `feeds` as plumbing, and neither
+ * needs the other's vocabulary in the format.
+ *
+ * It used to be defined as an "on-destruction chain reaction" with `amount`
+ * (damage) and `beam` (a rendering flag). That is a game rule and a view
+ * concern, both wearing the costume of a data structure.
  */
 export interface Link {
   from: string
   to: string
-  /** Seconds after the source dies. */
-  delay?: number
-  /** Damage transferred; large values mean "destroys it". */
-  amount?: number
-  beam?: boolean | { sag?: number; radius?: number; core?: string; edge?: string }
+  /** What kind of relationship — `power`, `feeds`, `controls`. Free string. */
+  kind?: string
+  /** Whatever the domain needs: `delay`, `amount`, `beam`. */
+  values?: Values
 }
 
 export interface Ensemble {

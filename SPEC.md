@@ -208,8 +208,8 @@ mission compiler.
   "scale": 1,                       // multiplies the ensemble scale
   "role": "structure",              // preset (see below)
   "features": { /* … */ },          // explicit capabilities; override the preset
-  "subsystems": [                   // vulnerable parts INSIDE a composite mesh
-    { "match": "Pump$", "hp": 18, "label": "pump" }
+  "subsystems": [                   // named parts INSIDE a composite mesh
+    { "match": "Pump$", "label": "pump", "features": { "destroyable": { "hp": 18 } } }
   ],
   "points": [], "zones": [], "values": {}
 }
@@ -259,16 +259,31 @@ Shipped roles: `structure` · `target` · `power` · `generator` · `shield` ·
 ### Links, points, zones, values
 
 ```jsonc
-"links":  [{ "from": "reactor", "to": "projector", "delay": 0.4, "beam": true }],
+"links":  [{ "from": "reactor", "to": "projector", "kind": "power",
+             "values": { "delay": 0.4, "beam": true } }],
 "points": [{ "id": "pad", "at": [0,6,8], "kind": "spawn", "facing": [0,180,0],
              "meta": { "craft": "Light Fighter" } }],
 "zones":  [{ "id": "cap", "at": [0,40,0], "radius": 70, "kind": "escort",
-             "capacity": 3 }]
+             "values": { "capacity": 3 } }]
 ```
 
-- **Links** are directed on-destruction relationships (chain reactions). `beam`
-  renders the same relationship as a visible conduit — one declaration, two
-  consequences, nothing to keep in sync.
+> **Everything domain-specific rides in `kind` and `values`.** An earlier version
+> of this format named those fields directly — `hp` on a subsystem, `amount` and
+> `beam` on a link, `targetValue` and `faction` in values — and closed the point
+> and zone `kind`s into unions that included `muzzle` and `escort`. That is a
+> fortification brief wearing the costume of a data structure, and it made a
+> consumer's own vocabulary a TYPE ERROR.
+>
+> The core now says only that a relationship exists, that a volume is here with
+> this radius, and what each is called. `src/format/domain-free.test.ts` pins it
+> with a botanic garden: benches, irrigation, a quiet area and a wifi zone, and
+> not one combat field anywhere.
+
+- **Links** are directed relationships: A → B, of some `kind`. What the kind
+  MEANS belongs to the consuming domain — a combat game reads `power` as
+  "destroying A destroys B" and renders it as a conduit; a building reads
+  `feeds` as plumbing. One declaration, two consequences, nothing to keep in
+  sync — but the consequences are the domain's, not the format's.
 - **Points** are named places with no geometry: spawns, waypoints, docks,
   entrances, join points for tile-sets. They exist so a mission can say "launch
   from the rig's pad" without restating world coordinates.

@@ -91,7 +91,7 @@ describe('validate', () => {
 
   it('rejects an invalid subsystem regex rather than throwing at load', () => {
     const e = minimal({
-      pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], subsystems: [{ match: '([', hp: 1, label: 'p' }] }],
+      pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], subsystems: [{ match: '([', label: 'pump' }] }],
     })
     expect(codes(e, { checkRegistry: false })).toEqual(['bad-subsystem-match'])
   })

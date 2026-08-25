@@ -80,6 +80,10 @@ import {
   registeredTools,
 } from './tools/tool-registry'
 import { registerEditorTools } from './tools/built-in'
+import { registerManipulateTool } from './tools/manipulate'
+import { createHandles } from './handles-view'
+import type { HandlesView } from './handles-view'
+import type { Axis, TransformMode } from './handles'
 import { schemaWidgets } from './schema-panel'
 import type { EditorRay } from './input/pointer'
 import type { ToolContext } from './tools/tool-registry'
@@ -178,6 +182,7 @@ export class EnsembleEditor extends Component {
   private _tool = 'select'
   private _toolOptions: Record<string, unknown> = {}
   private _stopFrames: (() => void) | null = null
+  private _handles: HandlesView | null = null
   private _selected: string | null = null
   private _scene: SceneElement | null = null
   private _panels: SVGSVGElement[] = []
@@ -217,6 +222,7 @@ export class EnsembleEditor extends Component {
     // wants hit points registers the combat preset itself.
     registerSceneFeatures()
     registerEditorTools()
+    this._registerManipulate()
     this._mountScene()
     this.setTool(this._tool)
     // Draw the chrome even with nothing loaded. `rebuild` is otherwise the only
@@ -224,6 +230,40 @@ export class EnsembleEditor extends Component {
     // a broken tool rather than an empty one.
     this.rebuild()
     if (this.src) void this.load(this.src)
+  }
+
+  /*
+    The manipulator is registered with HOOKS rather than given the editor, so
+    the tool never learns what a scene, an element or a Babylon node is. That is
+    also what let its drag maths be tested without a browser.
+  */
+  private _registerManipulate(): void {
+    registerManipulateTool({
+      nearAxis: (grip) => this._handles?.nearestAxis(grip) ?? null,
+      farAxis: (ray) => {
+        const scene = (this._scene as unknown as { scene?: unknown }).scene as
+          | { pickWithRay: (r: unknown, p?: (m: unknown) => boolean) => { pickedMesh?: unknown } | null }
+          | undefined
+        if (!scene || !this._handles) return null
+        const hit = scene.pickWithRay(
+          new Ray(
+            new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
+            new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
+          ),
+          (mesh) => this._handles?.axisOf(mesh) !== null
+        )
+        return (this._handles.axisOf(hit?.pickedMesh) as Axis | null) ?? null
+      },
+      bodyOf: (id) => {
+        const built = this._built?.pieces.get(id)
+        if (!built) return null
+        return { element: built.element as never, node: built.node }
+      },
+      worldOrigin: () => {
+        const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+        return built?.at ?? [0, 0, 0]
+      },
+    })
   }
 
   /** The active tool's name. */
@@ -244,6 +284,7 @@ export class EnsembleEditor extends Component {
     const tool = getTool(name)
     this._toolOptions = defaultOptions(tool?.optionsSchema)
     tool?.activate?.(this._toolContext())
+    this._syncHandles()
     this._hub.setHandlers({
       onStart: (g) => tool?.onGesture?.start?.(g, this._toolContext()),
       onMove: (g) => tool?.onGesture?.move?.(g, this._toolContext()),
@@ -255,6 +296,9 @@ export class EnsembleEditor extends Component {
   /** Set one option on the current tool. */
   setToolOption(key: string, value: unknown): void {
     this._toolOptions = { ...this._toolOptions, [key]: value }
+    // The mode option changes which handles exist, so they are rebuilt here
+    // rather than only when the selection changes.
+    this._syncHandles()
     this._renderChrome()
   }
 
@@ -363,6 +407,8 @@ export class EnsembleEditor extends Component {
     this._built = null
     this._stopFrames?.()
     this._stopFrames = null
+    this._handles?.dispose()
+    this._handles = null
     this._pointer?.dispose()
     this._pointer = null
     super.disconnectedCallback?.()
@@ -451,6 +497,7 @@ export class EnsembleEditor extends Component {
       placePiece: placeMesh,
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     })
+    this._syncHandles()
     this._renderChrome()
     this.frame()
   }
@@ -497,7 +544,30 @@ export class EnsembleEditor extends Component {
 
   select(id: string): void {
     this._selected = id
+    this._syncHandles()
     this._renderChrome()
+  }
+
+  /**
+   * Put the handles on the selection, or take them away.
+   *
+   * Handles exist only while a piece is selected AND the manipulate tool is
+   * current — a manipulator floating over nothing is a control that does
+   * nothing, which invites trust in a reading it never produced.
+   */
+  private _syncHandles(): void {
+    const scene = (this._scene as unknown as { scene?: unknown }).scene
+    if (!scene) return
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    const wanted = this._tool === 'manipulate' && built
+    if (!wanted) {
+      this._handles?.dispose()
+      this._handles = null
+      return
+    }
+    if (!this._handles) this._handles = createHandles(scene)
+    this._handles.setMode((this._toolOptions.mode as TransformMode) ?? 'translate')
+    this._handles.moveTo(built.at)
   }
 
   /**

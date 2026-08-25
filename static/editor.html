@@ -40,12 +40,14 @@
       models are already on that CDN but ship ONE MODEL PER FILE, so they are
       not library-shaped — a combined glb is what this wants.
 
-      The sample ensemble uses THIS library's mesh names. `ocean-rig.json` is
-      still here and is the fortification example, but it names Manta-style
-      meshes — pointing the editor at it with this library loaded is a good way
-      to see validation do its job: seven "unknown-mesh" errors, and every piece
-      still placed as a box, because the arrangement is most of what an author
-      is judging.
+      Both samples use THIS library's mesh names, so both open clean.
+      `outpost.json` is scene features only; `ocean-rig.json` is the
+      fortification example and needs the COMBAT PRESET registered — without it
+      the editor reports its roles and features as unregistered, which is the
+      format telling the truth: a domain it was not given.
+
+      Without any library the editor still works. Pieces render as placeholder
+      boxes, because the arrangement is most of what an author is judging.
     -->
     <tosi-ensemble-editor
       backdrop="land"

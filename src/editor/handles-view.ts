@@ -2,7 +2,7 @@
 # Manipulator handles
 
 The visible part: three axis handles a pointer can grab, in whichever mode the
-tool is in. tosijs-3d has no manipulator (UPSTREAM.md #1) and Babylon's
+tool is in. tosijs-3d has no manipulator (UPSTREAM.md #3) and Babylon's
 `GizmoManager` is mouse-shaped, so this is built here — and built so a **hand**
 can grab it, not only a ray.
 

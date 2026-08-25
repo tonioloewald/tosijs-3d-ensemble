@@ -23,7 +23,7 @@ Status: **recorded here, not yet filed as issues.**
 
 ---
 
-## 0. Basic world behaviour, prototyped here FOR PROMOTION
+## 1. Basic world behaviour, prototyped here FOR PROMOTION
 
 This entry is different from the rest: it is not a request, it is a **standing
 offer**. tosijs-3d has almost nothing for building a PLACE, as opposed to a
@@ -63,7 +63,55 @@ be able to compose on other features ON THE SAME PIECE. A door consults
 whether it may open. Without that, either every behaviour reimplements the
 others or one god-feature knows about all of them. Here it is `ctx.feature()`.
 
-## 1. No manipulator (the schedule risk)
+## 2. A form layer for the SVG UI — and this is the predicted bill
+
+`SPEC.md` open question 5 chose the SVG UI over DOM widgets and said plainly
+what it would cost: *"Forms are the SVG UI's weakest area, and a schema-driven
+property panel is a form generator."* It also argued the editor is the SVG UI's
+**hardest customer, and that this is a reason** — a game shows a HUD and a pause
+menu; an editor is a dense forms application, so it finds what a game never
+will. This entry is that bill arriving, itemised. It is evidence FOR the
+decision, not against it.
+
+Everything below was hit building one property panel and one tool-options panel.
+
+- **`inputField` listens to nothing.** By design — in a headset the keys come
+  from the SVG keyboard, not the DOM — so a flat host must carry real
+  `keydown` across to `insert`/`action` itself. Without that a field you can
+  click into silently refuses every character. Every flat consumer will write
+  this same routing, and ours is in `ensemble-editor.ts` (`_routeKeys`).
+- **There is no number field.** We built one: parse, format, commit on Enter,
+  and reject gibberish by restoring the last good value rather than writing
+  `NaN` into the document. A number is the single most common thing a property
+  panel edits.
+- **`slider3d` shows no value.** That is why coordinates in this editor were
+  unreadable before we replaced them: an author could see a handle position but
+  not the number under it.
+- **`select3d` is a CYCLER, not a select.** `‹ value ›` is right for three
+  options and unusable for twenty-four — picking a mesh from a library would
+  mean tapping twenty-three times. The pieces for a real one exist
+  (`surface.openPopup`, `openMenu`) but they need a **`Surface`**, and
+  `panel3d` returns a bare `SVGSVGElement` — so a popup is not reachable from
+  inside a panel, which is exactly where a property panel needs one.
+- **No row layout.** `panel3d` stacks vertically, so a label-and-field pair is
+  two rows. A property panel of eight fields is sixteen rows of mostly
+  whitespace.
+- **No content measurement.** A panel clips at its height and there is no way
+  to ask how tall its content is, so every height is a hand-tuned constant.
+  Ours were wrong three separate times — a command hidden behind another panel,
+  an option cut in half, a list showing five of eight rows — and each time the
+  failure was silent, because clipping looks like "that feature isn't there".
+- **No focus exclusivity across fields.** Which field owns the keyboard is the
+  host's bookkeeping; two lit fields both claiming it is worse than none,
+  because the caret is somewhere you are not looking.
+
+**The ask:** a form layer — a text field that can be driven from either input
+source, a number field, a real popup select, rows, and either measurement or
+self-sizing panels. The owner notes this is already on the roadmap; this entry
+is the consumer's evidence for what it needs to include, and what we built
+locally is available as a starting point rather than a competing design.
+
+## 3. No manipulator (the schedule risk)
 
 There is no gizmo — flat or XR. `b3d-panel`'s coloured axes are a debug
 READOUT that looks exactly like Babylon's position gizmo, which has already
@@ -79,7 +127,7 @@ transform**, rewriting `mesh.position` from `x`/`y`/`z` every frame. A drag
 behaviour that moves the MESH is silently undone next frame — a gizmo's writes
 must land on the ELEMENT.
 
-## 2. Placing a library mesh always enrols it in combat
+## 4. Placing a library mesh always enrols it in combat
 
 An ensemble is mostly scenery. The format's `structure` role means "you cannot
 kill this", and a `terrain` or `water` piece is not a combatant at all — but
@@ -101,7 +149,7 @@ already has it. The second is the same knob in two places and looks cheaper.
 a combatant — and the day either fix lands it should be deleted rather than
 entrenched. Recorded as a stopgap, not a pattern.
 
-## 3. `b3d-turret` and `b3d-launcher` take no `library`
+## 5. `b3d-turret` and `b3d-launcher` take no `library`
 
 Neither has a `library` attribute, so neither can draw a library mesh — only
 `meshName`, which without a library has nothing to resolve against.
@@ -114,7 +162,7 @@ look like one.
 **The ask:** the same `library` + `meshName` pair `b3d-destroyable` grew in
 0.7.0, on the two other elements that also place a mesh.
 
-## 4. `b3d-spawner` cannot spawn at an authored place
+## 6. `b3d-spawner` cannot spawn at an authored place
 
 `b3d-spawner` spawns encounters relative to the PLAYER
 (`minDistance`/`maxDistance`, no `x`/`z`), and takes a `prefab` NAME rather than
@@ -128,7 +176,7 @@ the editor rather than at ship time.
 **The ask:** a place-anchored spawn mode (`x`/`y`/`z` + `facing`), or a
 documented recipe for anchoring a spawner to an element.
 
-## 5. `simTime` / `simDt` on the scene (tosijs-3d#30)
+## 7. `simTime` / `simDt` on the scene (tosijs-3d#30)
 
 Effect timing can be scaled by a consumer-side clock, but **craft motion cannot**
 — velocity comes from `b3d-aircraft` integrating against the engine delta. Real
@@ -140,14 +188,14 @@ owning the clock rather than each consumer building one.
 `FeatureContext.simTime` is the seam on this side: it defaults to wall-clock and
 switches to the scene's clock the day there is one.
 
-## 6. `exports` is the string form
+## 8. `exports` is the string form
 
 `tosijs-3d`'s `package.json` has `"exports": "./dist/index.js"`, so no subpath
 is reachable — including its own headless surface. Known in that repo's UPSTREAM
 notes; repeated here because this project got the map form right on day one and
 the contrast is the argument.
 
-## 7. Naming note — `prefab` upstream
+## 9. Naming note — `prefab` upstream
 
 tosijs-3d exports `prefab` for a **registered `(ctx) => Element[]` factory**
 (`definePrefab` / `spawnPrefab` / `prefabNames`) used for wrecks, debris and

@@ -144,7 +144,7 @@ export interface FeatureRegistration<Handle = unknown> {
    * fundamental — it is a decorator, and most things never have it — but
    * because `b3d-destroyable` creates the mesh it owns, so it cannot decorate a
    * body that already exists. When tosijs-3d can place a library mesh without a
-   * combatant (UPSTREAM.md #2), this flag stops being needed for it.
+   * combatant (UPSTREAM.md #4), this flag stops being needed for it.
    */
   body?: boolean
   /**

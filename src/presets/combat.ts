@@ -32,7 +32,7 @@ moved behind a call the consumer makes.
   an unsolvable objective, which looks entirely normal until a player spends
   five minutes failing to kill something. That rule is meaningful only here.
 */
-import { b3dCollisions, b3dDestroyable, b3dLauncher, b3dTurret } from 'tosijs-3d'
+import { b3dCollisions, b3dLauncher, b3dTurret } from 'tosijs-3d'
 import { registerFeature } from '../format/registry'
 import { registerRole } from '../format/roles'
 import { featuresOf } from '../format/roles'
@@ -109,9 +109,6 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: 'destroyable',
-    // Creates the piece's body: `b3d-destroyable` instantiates the mesh it owns,
-    // so it cannot decorate one that already exists. See registry `body`.
-    body: true,
     schema: {
       type: 'object',
       title: 'Destroyable',
@@ -126,25 +123,22 @@ export function registerCombatPreset(): void {
         },
       },
     },
-    bind: (piece, cfg, ctx) => {
-      const el = add(
-        ctx,
-        b3dDestroyable({
-          ...(ctx.library ? { library: ctx.library } : {}),
-          meshName: piece.mesh ?? '',
-          x: ctx.at[0],
-          y: ctx.at[1],
-          z: ctx.at[2],
-          // DEGREES — tosijs-3d elements are euler degrees, Babylon is radians.
-          rx: piece.rot?.[0] ?? 0,
-          ry: piece.rot?.[1] ?? 0,
-          rz: piece.rot?.[2] ?? 0,
-          size: ctx.scale,
-          capacity: (cfg.hp as number) ?? 12,
-          armor: (cfg.armor as number) ?? 0,
-          explode: cfg.explode === false ? 'off' : 'on',
-        })
-      )
+    /*
+      A DECORATOR, and now genuinely one.
+
+      It used to register `body: true` and create the piece's element, because
+      `b3d-destroyable` was the only way to place a library mesh and had no way
+      out of the combat system. tosijs-3d 0.7.2 added `destroyable="off"`
+      (tosijs-3d#39, our ask), so placement is uniform and this feature no
+      longer creates anything.
+
+      The combat spec still has to be applied at CREATION — the behaviour
+      captures its spec when it attaches, so a later write is inert — which is
+      why `placeMesh` reads this feature's config rather than the other way
+      round. This binding contributes the collision that destruction implies,
+      and hands back the body as its handle.
+    */
+    bind: (_piece, cfg, ctx) => {
       /*
         DESTROYABLE ROUTES THROUGH COLLISION, defaulting to on.
 
@@ -155,7 +149,7 @@ export function registerCombatPreset(): void {
         that wants it.
       */
       if (cfg.collidable !== false) ensureCollisions(ctx, false)
-      return el
+      return ctx.element
     },
   })
 

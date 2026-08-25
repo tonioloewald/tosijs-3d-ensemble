@@ -16,21 +16,21 @@ when it lands, and close the issue.
 | 1 | No way to touch a mesh — doors, knobs, switches and locks have no substrate. Our `presets/world` is offered for promotion | [#36](https://github.com/tonioloewald/tosijs-3d/issues/36) |
 | 2 | The SVG UI needs a form layer: number fields, a real popup select, rows, panel measurement | [#37](https://github.com/tonioloewald/tosijs-3d/issues/37) |
 | 3 | No manipulator, and `b3d-panel`'s coloured axes look exactly like one | [#38](https://github.com/tonioloewald/tosijs-3d/issues/38) |
-| 4 | Placing a library mesh always enrols it in combat — no `destroyable="off"` | [#39](https://github.com/tonioloewald/tosijs-3d/issues/39) |
+| 4 | ✅ **RESOLVED** (tosijs-3d@0.7.2) — `destroyable="off"` landed, credited to this project | [#39](https://github.com/tonioloewald/tosijs-3d/issues/39) |
 | 5 | `b3d-turret`/`b3d-launcher` take no `library`, so a turret cannot have its own mesh | [#34](https://github.com/tonioloewald/tosijs-3d/issues/34) |
 | 6 | `b3d-spawner` is player-relative — no way to spawn at an authored place | [#40](https://github.com/tonioloewald/tosijs-3d/issues/40) |
 | 7 | A scene-owned clock: effect timing can be scaled, craft motion cannot | [#41](https://github.com/tonioloewald/tosijs-3d/issues/41) |
-| 8 | `exports` is the string form, so no subpath is reachable | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
+| 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them
 
 Each of these is local complexity we carry **because** of a row above. When the
 issue lands, the workaround goes — a stopgap that outlives its reason is a fork
-nobody declared.
+nobody declared. One has already been collected: see the struck-through row.
 
 | Ours | Retired by |
 |---|---|
-| `destroyable` registers `body: true`, because `b3d-destroyable` creates the mesh it owns rather than decorating one | #39 |
+| ~~`destroyable` registers `body: true`~~ — **gone in 0.7.2.** Placement is uniform and destruction decorates a body it no longer has to create | ✅ #39 |
 | `launchpad` is registered `editorOnly` — authorable, and honestly marked as something the runtime will not build | #40 |
 | `numberField` + DOM key routing into `inputField`, and our own active-field tracking | #37 |
 | `handles-view.ts`, and the drag maths in `handles.ts` | #38 |

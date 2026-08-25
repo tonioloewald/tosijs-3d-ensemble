@@ -140,11 +140,17 @@ export interface FeatureRegistration<Handle = unknown> {
    * This feature CREATES the piece's body, instead of decorating one.
    *
    * Body features bind first, and their element becomes the piece's element for
-   * everything that follows. `destroyable` is one, not because destruction is
-   * fundamental — it is a decorator, and most things never have it — but
-   * because `b3d-destroyable` creates the mesh it owns, so it cannot decorate a
-   * body that already exists. When tosijs-3d can place a library mesh without a
-   * combatant (UPSTREAM.md #4), this flag stops being needed for it.
+   * everything that follows.
+   *
+   * **No built-in uses this any more.** `destroyable` did, because
+   * `b3d-destroyable` was the only way to place a library mesh and could not
+   * opt out of combat — so destruction had to CREATE the body rather than
+   * decorate one. tosijs-3d 0.7.2's `destroyable="off"` ended that, and
+   * placement is now uniform.
+   *
+   * It stays in the contract for the case it was always right for: a feature
+   * whose body is genuinely its own — a procedural mesh, a particle system, a
+   * consumer's own geometry — rather than a decoration on a placed one.
    */
   body?: boolean
   /**

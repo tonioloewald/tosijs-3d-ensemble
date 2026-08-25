@@ -176,6 +176,23 @@ describe('buildEnsemble', () => {
     expect(placed).toEqual(['rock'])
   })
 
+  it('places every mesh piece the same way — destroyable decorates, it does not create', () => {
+    // Until tosijs-3d 0.7.2 destruction had to CREATE the body, because
+    // b3d-destroyable was the only way to place a library mesh and could not
+    // opt out of combat. `destroyable="off"` ended that.
+    let placements = 0
+    register({ name: 'destroyable', schema: {}, bind: (_p, _c, ctx) => ctx.element })
+    const built = buildEnsemble(two, {
+      scene: fakeScene(),
+      placePiece: () => {
+        placements++
+        return { node: {} }
+      },
+    })
+    expect(placements).toBe(2) // BOTH pieces placed, including the destroyable one
+    expect(built.pieces.get('reactor')!.node).not.toBeNull()
+  })
+
   it('lets a BODY feature claim the piece, and does not place it twice', () => {
     let placements = 0
     register({

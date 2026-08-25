@@ -53,9 +53,14 @@ Non-negotiables from that repo:
   components, bundlers and this stack specifically.
 - **`practices/releasing.md`** — including "Bypassing the publish loop": an
   unpublished dependency's tarball goes in **`../local-packages/`** with a
-  `PROVENANCE.md`, never in a session scratchpad. tosijs-3d is currently
-  consumed that way (`tosijs-3d-0.7.0-beta.6.tgz` is there now; manta-recon
-  depends on it by `file:` path).
+  `PROVENANCE.md`, never in a session scratchpad. This project used that route
+  for tosijs-3d and **no longer does** — 0.7.0 is on npm and the `file:` dep is
+  gone, which is the required end of a stopgap rather than an optional tidy-up.
+
+  ⚠️ **Never pin a tosijs-3d PRERELEASE range.** `0.7.0-rc.1` was published
+  before the betas, and semver sorts beta below rc — so `^0.7.0-beta.6`
+  resolved *backwards* to rc.1, silently, with `bun update` reporting the
+  downgrade as an upgrade. `^0.7.0` is above every prerelease and is what to use.
 
 ## One package, tree-shakeable — the decision that reversed twice
 

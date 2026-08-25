@@ -23,7 +23,11 @@ closed upstream are in [`UPSTREAM.md`](UPSTREAM.md).
   One implementation renders as a DOM overlay AND as an in-scene texture, so the tool
   runs in a headset. tosijs-ui is still the build/doc system and the widget library
   everywhere else. The argument, and what it costs, is `SPEC.md` open question 5.
-- **`tosijs-3d` is consumed as a `file:` tarball** from `../local-packages/` until
-  0.7.0 reaches npm (`practices/releasing.md`, "Bypassing the publish loop"). Delete
-  the `file:` dep the moment it publishes — a stopgap that outlives its reason is a
-  fork nobody declared.
+- **`tosijs-3d` comes from npm** (`^0.7.0`). It was a `file:` tarball out of
+  `../local-packages/` while 0.7.0 was unpublished; that stopgap is gone, as
+  `practices/releasing.md` requires — one that outlives its reason is a fork
+  nobody declared.
+
+  **Pin `^0.7.0`, never a prerelease range.** `0.7.0-rc.1` was cut before the
+  betas, and semver sorts beta BELOW rc, so `^0.7.0-beta.6` resolved BACKWARDS to
+  rc.1 — silently, with `bun update` reporting the downgrade as an upgrade.

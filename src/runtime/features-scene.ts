@@ -43,6 +43,7 @@ import {
   b3dLight,
   b3dReflections,
   b3dSkybox,
+  b3dSound,
   b3dSun,
   b3dTerrain,
   b3dWater,
@@ -265,6 +266,31 @@ export function registerSceneFeatures(): void {
       ctx.onDispose(stop)
       return null
     },
+  })
+
+  registerFeature({
+    name: 'sound',
+    schema: {
+      type: 'object',
+      title: 'Sound',
+      properties: {
+        url: { type: 'string', title: 'Audio file' },
+        loop: { type: 'boolean', default: true },
+        autoplay: { type: 'boolean', default: true },
+        volume: num(0, 1, 1),
+        spatialSound: { type: 'boolean', default: true },
+        refDistance: num(0.1, 100, 1, 'm'),
+        maxDistance: num(1, 2000, 60, 'm'),
+        rolloffFactor: num(0, 10, 1),
+      },
+    },
+    /*
+      A placed sound is a thing at a POSITION, which is why it belongs to a
+      piece rather than to the scene: "the fountain burbles" is a fact about
+      where the fountain is, and moving the fountain should move the burble.
+    */
+    bind: (_piece, cfg, ctx) =>
+      add(ctx, b3dSound({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
   })
 
   registerFeature({

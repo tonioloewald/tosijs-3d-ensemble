@@ -331,8 +331,8 @@ function makeContext(a: {
       // reachable through `pieces` for anything finer.
       return built.element ?? built.node ?? built
     },
-    piecesByRole: (role: string) =>
-      a.ensemble.pieces.filter((p) => p.role === role),
+    piecesByRole: (role: string) => a.ensemble.pieces.filter((p) => p.role === role),
+    feature: (name: string) => a.built.handles.get(name),
   }
 }
 

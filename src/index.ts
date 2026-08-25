@@ -81,9 +81,11 @@ export { registerSceneFeatures } from './runtime/features-scene'
 // loads a scene as data wants this and nothing else in this file's last section.
 export { TosiEnsemble, ensemble } from './runtime/ensemble-element'
 
-// The fortification vocabulary is NOT re-exported here. It is a domain, and the
-// format has none — `import { registerCombatPreset } from
-// 'tosijs-3d-ensemble/presets/combat'` when a consumer wants it.
+// Neither vocabulary is re-exported here. Both are domains and the format has
+// none, so a consumer names the one it wants:
+//
+//   import { registerWorldPreset } from 'tosijs-3d-ensemble/presets/world'
+//   import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat'
 
 // ── The editor: an author's tool ────────────────────────────────────────────
 export { EnsembleEditor, ensembleEditor } from './editor/ensemble-editor'

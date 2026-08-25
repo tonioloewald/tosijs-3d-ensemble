@@ -23,6 +23,46 @@ Status: **recorded here, not yet filed as issues.**
 
 ---
 
+## 0. Basic world behaviour, prototyped here FOR PROMOTION
+
+This entry is different from the rest: it is not a request, it is a **standing
+offer**. tosijs-3d has almost nothing for building a PLACE, as opposed to a
+battle, and this project needs those behaviours — so they are being written
+here against real content, with the intent that they go upstream before this
+ships.
+
+What exists upstream today:
+
+| | |
+|---|---|
+| `b3d-trigger` | a spherical proximity volume with enter/exit, `once`, `debug` |
+| `b3d-sound` | spatial audio: url, loop, volume, distance model, rolloff |
+| `b3d-light` | a point light: position, intensity, diffuse, specular |
+
+What does not exist at all — and the gap that matters most is the first:
+
+- **A way to touch a mesh.** `b3d-button` is a floating Babylon GUI widget, not
+  world geometry you can reach out to, so there is no substrate for doors,
+  knobs, switches, levers or consoles. Everything below stands on this.
+- **Doors** — swing, slide, iris; a knob you must touch rather than the door.
+- **Locks and keys.**
+- **Lamps** as authorable objects: type, colour, switching, flicker, shadow
+  cast/receive, and free geometry (a can, a glowing ball, a surface).
+- **Mirrors.** `b3d-reflections` is a probe, not a reflective surface.
+- **Detection volumes** — a security camera's cone, as opposed to a sphere.
+- **Spin in place**, which is trivial and conspicuously missing.
+
+Prototyped in `src/presets/world/`, with the rules as pure functions in
+`world/logic.ts` so the behaviour is testable without a scene — which is also
+what makes it portable upstream: the maths moves as-is and only the bindings
+are rewritten.
+
+**One contract change came out of it and is worth carrying up**: features must
+be able to compose on other features ON THE SAME PIECE. A door consults
+`interactive` to know it was used; `interactive` consults `lockable` to know
+whether it may open. Without that, either every behaviour reimplements the
+others or one god-feature knows about all of them. Here it is `ctx.feature()`.
+
 ## 1. No manipulator (the schedule risk)
 
 There is no gizmo — flat or XR. `b3d-panel`'s coloured axes are a debug

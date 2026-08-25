@@ -104,6 +104,20 @@ export interface FeatureContext {
   /** Pieces carrying a role. **`link` phase only.** */
   piecesByRole(role: string): Piece[]
   /**
+   * Another feature's handle on **this same piece**.
+   *
+   * Features compose: a `door` consults `interactive` to know when it was
+   * used, and `interactive` consults `lockable` to know whether it may open.
+   * Without this each of them would have to reimplement the others, or the
+   * format would need one god-feature that knew about all of them.
+   *
+   * **`link` phase only** — during `bind` a piece's own siblings are still
+   * arriving, which is the same reason reaching for another PIECE is illegal
+   * then. Returns `undefined` when the feature is not on this piece, which is
+   * the normal case: a door without a lock is just a door.
+   */
+  feature(name: string): unknown
+  /**
    * The time source, so effects honour pause and time scale.
    *
    * ⚠️ This scales EFFECT timing only. Craft motion cannot be scaled from here —

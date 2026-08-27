@@ -66,6 +66,7 @@ import {
   label3d,
   list3d,
   panel3d,
+  select3d,
   slider3d,
 } from 'tosijs-3d'
 import { Color3, HighlightLayer, Ray, Vector3 } from '@babylonjs/core'
@@ -88,7 +89,7 @@ import type { Axis, TransformMode } from './handles'
 import type { NumberField } from './schema-panel'
 import { numberField, schemaWidgets } from './schema-panel'
 import type { EditorRay } from './input/pointer'
-import type { ToolContext } from './tools/tool-registry'
+import type { CatalogEntry, ToolContext } from './tools/tool-registry'
 import { placeMesh } from '../runtime/place-mesh'
 import { registerSceneFeatures } from '../runtime/features-scene'
 import { validate } from '../format/validate'
@@ -423,6 +424,7 @@ export class EnsembleEditor extends Component {
       pickPoint: (ray) => this.pickPoint(ray),
       captureCamera: (capture) => this.captureCamera(capture),
       meshNames: () => [...(this._meshNames() ?? [])],
+      meshCatalog: () => this.meshCatalog(),
     } as ToolContext
   }
 
@@ -541,6 +543,29 @@ export class EnsembleEditor extends Component {
   /** Problems with the ensemble as it currently stands. */
   get problems() {
     return validate(this._ensemble, this._meshNames() ? { meshes: this._meshNames()! } : {})
+  }
+
+  /**
+   * Every mesh across every mounted library, tagged with its library and family.
+   *
+   * A palette of 561 undifferentiated names is not a palette, it is a haystack —
+   * which is what two Kenney collections turn the flat list into. The category
+   * is the leading word of the name, which in these sets is a real taxonomy
+   * (`commercial_*`, `car_debris-*`) rather than a hopeful guess.
+   */
+  meshCatalog(): CatalogEntry[] {
+    if (!this._scene) return []
+    const byLibrary = meshesByLibrary(
+      this._scene,
+      libraryNames(this._ensemble, this.library || undefined)
+    )
+    const out: CatalogEntry[] = []
+    for (const [library, names] of byLibrary) {
+      for (const mesh of names) {
+        out.push({ library, mesh, category: mesh.split(/[_-]/)[0] || mesh })
+      }
+    }
+    return out
   }
 
   /** Every mesh name reachable, across the ensemble's libraries and any the
@@ -882,23 +907,59 @@ export class EnsembleEditor extends Component {
    * a mesh, leaving the author to also find the tool, would be two steps for
    * what reads as one.
    */
+  /**
+   * The library palette, in two levels: family, then mesh.
+   *
+   * A flat list stopped being a palette the moment two Kenney collections
+   * arrived — 561 entries is a haystack you scroll rather than a set you choose
+   * from. The families come from the names themselves (`commercial_*`,
+   * `car_debris-*`), so this is the content's own taxonomy rather than one we
+   * imposed on it.
+   *
+   * Picking a mesh records its LIBRARY along with its name. Two libraries can
+   * export the same name, and a piece that cannot say which one it meant
+   * resolves to whichever loaded first — a bug that reproduces on one machine
+   * and not another.
+   */
   private _renderLibraryPalette(): void {
-    const names = this._meshNames()
-    if (!names?.size) return
+    const catalog = this.meshCatalog()
+    if (!catalog.length) return
+
+    // `library · category`, because two libraries can name a family the same
+    // thing and "commercial" alone would silently merge them.
+    const families = [...new Set(catalog.map((entry) => `${entry.library} · ${entry.category}`))].sort()
+    const current = (this._toolOptions.family as string) ?? families[0]!
+    const items = catalog.filter((entry) => `${entry.library} · ${entry.category}` === current)
     const chosen = this._tool === 'insert' ? (this._toolOptions.mesh as string) : null
+
     this._addPanel(
       'left',
       panel3d(
-        { width: 150, height: 260, padding: 8, gap: 4 },
-        label3d({ text: `Library (${names.size})`, bold: true }),
-        list3d<{ label: string; name: string }>({
-          items: [...names].map((name) => ({
-            label: name === chosen ? `▸ ${name}` : name,
-            name,
+        { width: 200, height: 320, padding: 8, gap: 4 },
+        label3d({ text: `Library (${catalog.length})`, bold: true }),
+        select3d({
+          label: '',
+          value: current,
+          options: families,
+          onChange: (value: string | number) => {
+            this.setToolOption('family', String(value))
+          },
+        }),
+        label3d({ text: `${items.length} in family`, muted: true, compact: true }),
+        list3d<{ label: string; entry: CatalogEntry }>({
+          items: items.map((entry) => ({
+            // Drop the family prefix: every row in the list repeats it, which
+            // costs the width that would otherwise show what differs.
+            label: (entry.mesh.slice(entry.category.length).replace(/^[_-]/, '') || entry.mesh) ===
+              chosen?.slice(entry.category.length).replace(/^[_-]/, '')
+              ? `▸ ${entry.mesh}`
+              : entry.mesh.slice(entry.category.length).replace(/^[_-]/, '') || entry.mesh,
+            entry,
           })),
           onSelect: (item) => {
             if (this._tool !== 'insert') this.setTool('insert')
-            this.setToolOption('mesh', item.name)
+            this.setToolOption('mesh', item.entry.mesh)
+            this.setToolOption('library', item.entry.library)
           },
         })
       )

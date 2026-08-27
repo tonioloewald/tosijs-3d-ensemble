@@ -40,3 +40,11 @@ dist/
 # then it is a 10 MB rebuild artifact that would land in every commit.
 docs/
 llms.txt
+
+# Asset collections live on the CDN, NOT in this repo.
+#
+# Two Kenney glbs (20 MB) went in by accident on one `git add -A` — a repo that
+# carries its sample content grows without bound and every clone pays for it.
+# Keep them in static/ locally so the dev server serves them; the deployed site
+# and the ensembles point at cdn.tosijs.net.
+static/*.glb

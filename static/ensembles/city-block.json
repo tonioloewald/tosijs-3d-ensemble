@@ -1,0 +1,28 @@
+{
+  "name": "city-block",
+  "libraries": [
+    { "name": "city", "url": "/kenney-city.glb" },
+    { "name": "vehicles", "url": "/kenney-vehicles.glb" }
+  ],
+  "kind": "settlement",
+  "values": { "district": "riverside" },
+  "pieces": [
+    { "id": "sun", "at": [-0.4, 1, 0.3], "features": { "sun": { "intensity": 1, "shadowDarkness": 0.4, "activeDistance": 200 } } },
+    { "id": "sky", "at": [0, 0, 0], "features": { "skybox": { "timeOfDay": 16 } } },
+    { "id": "view", "at": [0, 2, 0], "features": { "camera": { "distance": 30, "heading": -50, "elevation": 26 } } },
+
+    { "id": "road-main", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, 0] },
+    { "id": "road-north", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, 4] },
+    { "id": "road-south", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, -4] },
+
+    { "id": "shop", "library": "city", "mesh": "commercial_building-a", "at": [-6, 0, 2] },
+    { "id": "office", "library": "city", "mesh": "commercial_building-d", "at": [-6, 0, -3] },
+    { "id": "house", "library": "city", "mesh": "suburban_building-type-a", "at": [6, 0, 2] },
+    { "id": "works", "library": "city", "mesh": "industrial_building-a", "at": [6, 0, -4] },
+
+    { "id": "parked", "library": "vehicles", "mesh": "car_sedan", "at": [2, 0, 1], "rot": [0, 90, 0] }
+  ],
+  "points": [
+    { "id": "junction", "at": [0, 0, 0], "kind": "waypoint" }
+  ]
+}

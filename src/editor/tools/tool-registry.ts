@@ -69,6 +69,14 @@ export interface ToolContext {
   /** Mesh names the mounted libraries expose, for a palette to offer. */
   meshNames(): string[]
   /**
+   * Every mesh, with the library it came from.
+   *
+   * Two libraries can export the same name, so a palette that offers bare
+   * strings cannot record which one the author picked — and the piece then
+   * resolves to whichever library loaded first.
+   */
+  meshCatalog(): CatalogEntry[]
+  /**
    * Take the camera out of the way for the duration of a drag.
    *
    * Without this a drag does BOTH — the piece moves and the view orbits under
@@ -76,6 +84,15 @@ export interface ToolContext {
    * Babylon's own gizmos detach camera control for exactly this reason.
    */
   captureCamera(capture: boolean): void
+}
+
+/** One offerable mesh: which library, what it is called, and its family. */
+export interface CatalogEntry {
+  library: string
+  mesh: string
+  /** Leading `word` of the name — Kenney's sets are `commercial_building-a`,
+   *  `car_debris-bolt`, so the prefix is a real category and not a guess. */
+  category: string
 }
 
 export interface ToolRegistration {

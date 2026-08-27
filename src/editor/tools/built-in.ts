@@ -51,6 +51,7 @@ export function registerEditorTools(): void {
         // so that when the property panel renders schemas properly it offers a
         // pick list from the library instead of a text field.
         mesh: { type: 'string', title: 'Mesh', 'x-widget': 'mesh' },
+        library: { type: 'string', title: 'Library' },
         gridSnap: { type: 'number', title: 'Grid snap', minimum: 0, maximum: 10, default: 1, 'x-unit': 'm' },
       },
     },
@@ -76,8 +77,13 @@ export function registerEditorTools(): void {
           slugify(mesh),
           ctx.ensemble.pieces.map((p) => p.id)
         )
+        const library = ctx.options.library as string | undefined
         ctx.edit(`insert ${mesh}`, (ensemble) => {
-          ensemble.pieces.push({ id, mesh, at })
+          // Record WHICH library, when the ensemble declares more than one.
+          // With a single library it is noise, so it is omitted.
+          const declared = ensemble.libraries ?? []
+          const qualify = library && declared.length > 1
+          ensemble.pieces.push(qualify ? { id, mesh, library, at } : { id, mesh, at })
         })
         ctx.select(id)
       },

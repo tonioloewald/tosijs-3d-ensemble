@@ -632,9 +632,16 @@ export class EnsembleEditor extends Component {
       on && aquatic && !used.has('water'),
       () => b3dWater({ waterSize: 4000 })
     )
+    /*
+      WATER COUNTS AS GROUND. The backdrop's ground is scenery of last resort,
+      so it must yield to ANY surface the ensemble lays at the same level — not
+      just one called `ground`. A cove that supplies its own sea got the grid
+      plane as well, both at y=0, which is the coincident-surface flicker all
+      over again in a costume.
+    */
     this._backdropPart(
       'ground',
-      on && !used.has('ground') && !used.has('terrain'),
+      on && !used.has('ground') && !used.has('terrain') && !used.has('water'),
       () =>
         b3dGround({
           width: 4000,

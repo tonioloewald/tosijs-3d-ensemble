@@ -1,0 +1,320 @@
+{
+  "name": "pirate-cove",
+  "libraries": [
+    {
+      "name": "pirate",
+      "url": "/kenney-vehicles.glb"
+    }
+  ],
+  "kind": "location",
+  "values": {
+    "theme": "pirate",
+    "tide": "high"
+  },
+  "pieces": [
+    {
+      "id": "sun",
+      "at": [
+        -0.5,
+        1,
+        0.4
+      ],
+      "features": {
+        "sun": {
+          "intensity": 1.1,
+          "shadowDarkness": 0.35,
+          "activeDistance": 120
+        }
+      }
+    },
+    {
+      "id": "fill",
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "features": {
+        "light": {
+          "intensity": 0.55,
+          "diffuse": "#bcd4e6"
+        }
+      }
+    },
+    {
+      "id": "sky",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "features": {
+        "skybox": {
+          "timeOfDay": 10,
+          "turbidity": 6
+        }
+      }
+    },
+    {
+      "id": "sea",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "features": {
+        "water": {
+          "waterSize": 600,
+          "waveHeight": 0.15,
+          "windForce": 4
+        }
+      }
+    },
+    {
+      "id": "view",
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "features": {
+        "camera": {
+          "distance": 26,
+          "heading": -55,
+          "elevation": 18
+        }
+      }
+    },
+    {
+      "id": "island",
+      "mesh": "pirate_patch-sand",
+      "at": [
+        -6,
+        0.02,
+        0
+      ]
+    },
+    {
+      "id": "island-north",
+      "mesh": "pirate_patch-sand-foliage",
+      "at": [
+        -6,
+        0.02,
+        4
+      ]
+    },
+    {
+      "id": "island-south",
+      "mesh": "pirate_patch-grass",
+      "at": [
+        -9,
+        0.02,
+        -3
+      ]
+    },
+    {
+      "id": "dock",
+      "mesh": "pirate_structure-platform-dock",
+      "at": [
+        -2,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dock-end",
+      "mesh": "pirate_structure-platform-dock-small",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flagship",
+      "mesh": "pirate_ship-pirate-large",
+      "at": [
+        5,
+        0,
+        1
+      ],
+      "rot": [
+        0,
+        -90,
+        0
+      ]
+    },
+    {
+      "id": "tender",
+      "mesh": "pirate_boat-row-small",
+      "at": [
+        1,
+        0,
+        -3
+      ],
+      "rot": [
+        0,
+        30,
+        0
+      ]
+    },
+    {
+      "id": "wreck",
+      "mesh": "pirate_ship-wreck",
+      "at": [
+        10,
+        0,
+        -9
+      ],
+      "rot": [
+        0,
+        140,
+        0
+      ]
+    },
+    {
+      "id": "watchtower",
+      "mesh": "pirate_tower-complete-large",
+      "at": [
+        -10,
+        0,
+        2
+      ]
+    },
+    {
+      "id": "gate",
+      "mesh": "pirate_castle-gate",
+      "at": [
+        -8,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": "wall-west",
+      "mesh": "pirate_castle-wall",
+      "at": [
+        -11,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": "palm-a",
+      "mesh": "pirate_palm-detailed-bend",
+      "at": [
+        -5,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "palm-b",
+      "mesh": "pirate_palm-straight",
+      "at": [
+        -8,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "rocks",
+      "mesh": "pirate_rocks-sand-a",
+      "at": [
+        -3,
+        0,
+        -4
+      ]
+    },
+    {
+      "id": "cargo",
+      "mesh": "pirate_crate",
+      "at": [
+        -2,
+        0.4,
+        1
+      ]
+    },
+    {
+      "id": "grog",
+      "mesh": "pirate_barrel",
+      "at": [
+        -1,
+        0.4,
+        -1
+      ]
+    },
+    {
+      "id": "spoils",
+      "mesh": "pirate_chest",
+      "at": [
+        -6,
+        0.3,
+        1
+      ]
+    },
+    {
+      "id": "gun",
+      "mesh": "pirate_cannon-mobile",
+      "at": [
+        -9,
+        0,
+        1
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "colours",
+      "mesh": "pirate_flag-pirate-high",
+      "at": [
+        -2,
+        0,
+        2
+      ]
+    }
+  ],
+  "points": [
+    {
+      "id": "mooring",
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "kind": "dock",
+      "facing": [
+        0,
+        -90,
+        0
+      ]
+    },
+    {
+      "id": "landing",
+      "at": [
+        -4,
+        0,
+        0
+      ],
+      "kind": "entrance"
+    }
+  ],
+  "zones": [
+    {
+      "id": "anchorage",
+      "at": [
+        5,
+        0,
+        0
+      ],
+      "radius": 12,
+      "kind": "harbour",
+      "values": {
+        "capacity": 3
+      }
+    }
+  ]
+}

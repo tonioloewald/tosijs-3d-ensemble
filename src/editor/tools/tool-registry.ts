@@ -90,9 +90,15 @@ export interface ToolContext {
 export interface CatalogEntry {
   library: string
   mesh: string
-  /** Leading `word` of the name — Kenney's sets are `commercial_building-a`,
-   *  `car_debris-bolt`, so the prefix is a real category and not a guess. */
+  /**
+   * The library's own category when it declares one, else the leading word of
+   * the name. A packed kit annotates each model, and that beats any inference.
+   */
   category: string
+  /** Free tags from the library, for filtering. */
+  tags?: string[]
+  /** Animation clips this model has — known WITHOUT instantiating it. */
+  clips?: string[]
 }
 
 export interface ToolRegistration {

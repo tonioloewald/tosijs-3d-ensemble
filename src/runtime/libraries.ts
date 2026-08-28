@@ -115,6 +115,65 @@ export function resolveLibrary(
   return libraries[0] ?? null
 }
 
+/** What a library says about one of its models. */
+export interface CatalogueItem {
+  name: string
+  category?: string
+  tags?: string[]
+  clips?: string[]
+}
+
+interface SourceNode {
+  name?: string
+  metadata?: { gltf?: { extras?: { category?: string; tags?: string[]; clips?: string[] } } }
+}
+
+interface LibraryWithContainer {
+  container?: { transformNodes?: SourceNode[]; meshes?: SourceNode[] }
+}
+
+/**
+ * A library's own description of its models — category, tags, clips.
+ *
+ * The packing pipeline writes these as glTF `extras` on each exported node, and
+ * Babylon parses them onto the SOURCE nodes as `metadata.gltf.extras`. What
+ * `library.instantiate()` hands back is a CLONE, and the clone does not carry
+ * them — which is why this reads the container rather than an instance.
+ *
+ * ⚠️ **Stopgap.** `container` is not part of tosijs-3d's public surface; we are
+ * reaching past the API because the metadata has no other route out
+ * (tosijs-3d#45). It costs nothing at runtime — no second fetch, the data is
+ * already parsed — but it will break if that field is renamed, and it should be
+ * deleted the day `getInfo()` or its equivalent exists.
+ *
+ * Returns an empty array for a library that declares nothing, which is the
+ * honest answer for the older un-annotated packs.
+ */
+export function libraryCatalogue(scene: SceneElement, library: string): CatalogueItem[] {
+  const host = scene as unknown as SceneWithLibraries
+  const element = host.getLibrary?.(library) as unknown as LibraryWithContainer | null
+  const container = element?.container
+  if (!container) return []
+  const seen = new Set<string>()
+  const items: CatalogueItem[] = []
+  for (const node of [...(container.transformNodes ?? []), ...(container.meshes ?? [])]) {
+    const extras = node.metadata?.gltf?.extras
+    const name = node.name
+    // Only nodes the pipeline ANNOTATED are exports. That is what separates a
+    // model from a sub-part: `getNames()` lists a chest's `lid` and a ship's
+    // `sail-a` alongside the chest and the ship, and a palette should not.
+    if (!name || !extras?.category || seen.has(name)) continue
+    seen.add(name)
+    items.push({
+      name,
+      category: extras.category,
+      ...(extras.tags ? { tags: extras.tags } : {}),
+      ...(extras.clips ? { clips: extras.clips } : {}),
+    })
+  }
+  return items
+}
+
 /** Every mesh name each mounted library exposes — for validation and palettes. */
 export function meshesByLibrary(
   scene: SceneElement,

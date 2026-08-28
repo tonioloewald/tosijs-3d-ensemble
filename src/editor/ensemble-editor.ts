@@ -71,7 +71,12 @@ import {
 } from 'tosijs-3d'
 import { Color3, HighlightLayer, Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
-import { libraryNames, meshesByLibrary, mountLibraries } from '../runtime/libraries'
+import {
+  libraryCatalogue,
+  libraryNames,
+  meshesByLibrary,
+  mountLibraries,
+} from '../runtime/libraries'
 import { FlatPointer } from './input/flat-pointer'
 import { PointerHub } from './input/pointer'
 import { bodyIndex, pickPiece } from './selection'
@@ -555,13 +560,36 @@ export class EnsembleEditor extends Component {
    */
   meshCatalog(): CatalogEntry[] {
     if (!this._scene) return []
-    const byLibrary = meshesByLibrary(
-      this._scene,
-      libraryNames(this._ensemble, this.library || undefined)
-    )
+    const libraries = libraryNames(this._ensemble, this.library || undefined)
     const out: CatalogEntry[] = []
-    for (const [library, names] of byLibrary) {
-      for (const mesh of names) {
+    for (const library of libraries) {
+      /*
+        THE LIBRARY'S OWN TAXONOMY, when it has one.
+
+        A packed kit declares `{ category, tags }` per model, which is a real
+        taxonomy — `city-kit-roads` sorts into bridge / construction / light /
+        road / sign / tile, and no amount of splitting names on punctuation
+        reproduces that. It also tells us which nodes are EXPORTS: `getNames()`
+        lists a chest's `lid` and a ship's `sail-a` beside the chest and ship.
+
+        Falling back to the leading word of the name keeps older un-annotated
+        libraries working rather than showing them as one undifferentiated heap.
+      */
+      const declared = libraryCatalogue(this._scene, library)
+      if (declared.length) {
+        for (const item of declared) {
+          out.push({
+            library,
+            mesh: item.name,
+            category: item.category ?? item.name,
+            ...(item.tags ? { tags: item.tags } : {}),
+            ...(item.clips ? { clips: item.clips } : {}),
+          })
+        }
+        continue
+      }
+      const names = meshesByLibrary(this._scene, [library]).get(library)
+      for (const mesh of names ?? []) {
         out.push({ library, mesh, category: mesh.split(/[_-]/)[0] || mesh })
       }
     }

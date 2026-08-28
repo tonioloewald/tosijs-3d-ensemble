@@ -3,7 +3,7 @@
   "libraries": [
     {
       "name": "pirate",
-      "url": "/kenney-vehicles.glb"
+      "url": "/pirate-kit.glb"
     }
   ],
   "kind": "location",
@@ -87,7 +87,7 @@
     },
     {
       "id": "island",
-      "mesh": "pirate_patch-sand",
+      "mesh": "patch-sand",
       "at": [
         -6,
         0.02,
@@ -96,7 +96,7 @@
     },
     {
       "id": "island-north",
-      "mesh": "pirate_patch-sand-foliage",
+      "mesh": "patch-sand-foliage",
       "at": [
         -6,
         0.02,
@@ -105,7 +105,7 @@
     },
     {
       "id": "island-south",
-      "mesh": "pirate_patch-grass",
+      "mesh": "patch-grass",
       "at": [
         -9,
         0.02,
@@ -114,7 +114,7 @@
     },
     {
       "id": "dock",
-      "mesh": "pirate_structure-platform-dock",
+      "mesh": "structure-platform-dock",
       "at": [
         -2,
         0,
@@ -123,7 +123,7 @@
     },
     {
       "id": "dock-end",
-      "mesh": "pirate_structure-platform-dock-small",
+      "mesh": "structure-platform-dock-small",
       "at": [
         0,
         0,
@@ -132,7 +132,7 @@
     },
     {
       "id": "flagship",
-      "mesh": "pirate_ship-pirate-large",
+      "mesh": "ship-pirate-large",
       "at": [
         5,
         0,
@@ -146,7 +146,7 @@
     },
     {
       "id": "tender",
-      "mesh": "pirate_boat-row-small",
+      "mesh": "boat-row-small",
       "at": [
         1,
         0,
@@ -160,7 +160,7 @@
     },
     {
       "id": "wreck",
-      "mesh": "pirate_ship-wreck",
+      "mesh": "ship-wreck",
       "at": [
         10,
         0,
@@ -174,7 +174,7 @@
     },
     {
       "id": "watchtower",
-      "mesh": "pirate_tower-complete-large",
+      "mesh": "tower-complete-large",
       "at": [
         -10,
         0,
@@ -183,7 +183,7 @@
     },
     {
       "id": "gate",
-      "mesh": "pirate_castle-gate",
+      "mesh": "castle-gate",
       "at": [
         -8,
         0,
@@ -192,7 +192,7 @@
     },
     {
       "id": "wall-west",
-      "mesh": "pirate_castle-wall",
+      "mesh": "castle-wall",
       "at": [
         -11,
         0,
@@ -201,7 +201,7 @@
     },
     {
       "id": "palm-a",
-      "mesh": "pirate_palm-detailed-bend",
+      "mesh": "palm-detailed-bend",
       "at": [
         -5,
         0,
@@ -210,7 +210,7 @@
     },
     {
       "id": "palm-b",
-      "mesh": "pirate_palm-straight",
+      "mesh": "palm-straight",
       "at": [
         -8,
         0,
@@ -219,7 +219,7 @@
     },
     {
       "id": "rocks",
-      "mesh": "pirate_rocks-sand-a",
+      "mesh": "rocks-sand-a",
       "at": [
         -3,
         0,
@@ -228,7 +228,7 @@
     },
     {
       "id": "cargo",
-      "mesh": "pirate_crate",
+      "mesh": "crate",
       "at": [
         -2,
         0.4,
@@ -237,7 +237,7 @@
     },
     {
       "id": "grog",
-      "mesh": "pirate_barrel",
+      "mesh": "barrel",
       "at": [
         -1,
         0.4,
@@ -246,7 +246,7 @@
     },
     {
       "id": "spoils",
-      "mesh": "pirate_chest",
+      "mesh": "chest",
       "at": [
         -6,
         0.3,
@@ -255,7 +255,7 @@
     },
     {
       "id": "gun",
-      "mesh": "pirate_cannon-mobile",
+      "mesh": "cannon-mobile",
       "at": [
         -9,
         0,
@@ -269,7 +269,7 @@
     },
     {
       "id": "colours",
-      "mesh": "pirate_flag-pirate-high",
+      "mesh": "flag-pirate-high",
       "at": [
         -2,
         0,

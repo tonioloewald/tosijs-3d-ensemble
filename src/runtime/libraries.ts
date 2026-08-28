@@ -52,6 +52,23 @@ export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): P
   for (const { name, url } of declared) {
     if (!name || !url) continue
     let element = host.getLibrary?.(name) ?? null
+    /*
+      IDEMPOTENT BY NAME **AND URL**.
+
+      Reusing purely by name means a library whose URL has changed — a page
+      loading a second ensemble, or content moving from a mega-library to a
+      per-kit one — silently keeps the OLD file under the new name. Every mesh
+      then reports unknown while a library that answers to that name is sitting
+      right there, which reads as bad content rather than a stale mount.
+
+      Measured: switching the pirate sample from the mega-library to
+      `pirate-kit.glb` left all 19 meshes unknown and the palette showing the
+      previous library's 383 entries.
+    */
+    if (element && element.getAttribute('url') !== url) {
+      element.remove()
+      element = null
+    }
     if (!element) {
       const doc = host.ownerDocument ?? (typeof document === 'undefined' ? null : document)
       if (!doc) continue

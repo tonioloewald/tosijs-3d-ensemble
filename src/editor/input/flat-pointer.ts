@@ -69,15 +69,34 @@ export class FlatPointer implements EditorPointer {
       this.down = false
       this.alt = false
     }
+    /*
+      POINTERCANCEL IS NOT OPTIONAL ON TOUCH.
+
+      The browser fires it when it takes a gesture over — a scroll, a pinch, a
+      swipe from the edge — and no `pointerup` ever follows. Without this the
+      pointer stays stuck DOWN forever, so the next tap continues a drag the
+      finger abandoned, and the one after that behaves as though the button is
+      welded on. A mouse almost never produces it, which is why this survived
+      until someone used a touchscreen.
+    */
+    const cancel = () => {
+      this.down = false
+      this.alt = false
+    }
     canvas.addEventListener('pointermove', move)
     canvas.addEventListener('pointerdown', down)
     // `up` goes on the window: releasing outside the canvas still ends the drag,
     // otherwise the tool keeps dragging with the button already released.
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    // Without this the browser claims touch gestures for panning and zooming
+    // the PAGE, and the canvas never sees a coherent drag at all.
+    canvas.style.touchAction = 'none'
     this.detach = () => {
       canvas.removeEventListener('pointermove', move)
       canvas.removeEventListener('pointerdown', down)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
     }
   }
 

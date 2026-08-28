@@ -53,4 +53,29 @@ export default defineSiteConfig({
 
   // Agent eyes/hands on the running dev page (localhost-gated, never bundled).
   haltijaDev: true,
+
+  /*
+    Remote access — `bun run tunnel` publishes THIS dev server, not a static
+    copy, so the live editor, its live examples and "save local" all work from
+    a phone or a hotel.
+
+    The `.edit.` label is signage that MEANS something: `<project>.dev` is a
+    shareable read-only snapshot, `<project>.edit.dev` is a writable mirror of
+    an uncommitted tree, and this is the latter. `requireToken` stays at its
+    default of true — the hostname is not a secret, since Let's Encrypt
+    publishes every certificate to public CT logs.
+
+    `remotePort` MUST be unique per project on the box: sshd's `GatewayPorts no`
+    binds it to loopback, so two projects sharing a port means whichever ssh
+    connected first wins while the other silently forwards nothing. tosijs-ui
+    holds 9787 and tosijs-3d 9788, so this takes 9789.
+
+    The HOST comes from the environment, never the repo — a committed `user@ip`
+    means any fork running `bun run tunnel` opens outbound SSH to a stranger's
+    box.
+  */
+  preview: {
+    host: process.env.PREVIEW_HOST ?? '',
+    tunnel: { remotePort: 9789, url: 'https://ensemble.edit.dev.tosijs.net' },
+  },
 })

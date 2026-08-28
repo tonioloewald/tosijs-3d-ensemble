@@ -34,6 +34,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     options,
     pick: () => null,
     captureCamera: () => {},
+    meshCatalog: () => [],
     pickPoint: () => groundPoint,
     meshNames: () => ['building', 'tree'],
   }) as ToolContext

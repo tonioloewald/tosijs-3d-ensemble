@@ -30,6 +30,7 @@ interface HandleMesh {
     position: { x: number; y: number; z: number }
     rotation: { x: number; y: number; z: number }
     isVisible: boolean
+    visibility: number
     metadata: unknown
     dispose: () => void
     computeWorldMatrix: (force: boolean) => void
@@ -47,6 +48,21 @@ const AXIS_COLOR: Record<Axis, [number, number, number]> = {
 
 /** How close a HAND has to be, in metres, to grab a handle directly. */
 export const NEAR_RADIUS = 0.18
+
+/**
+ * How much fatter the INVISIBLE pick target is than the handle you see.
+ *
+ * A translate handle is a 7.5 cm stick. That is the right thing to LOOK at —
+ * a fat arrow hides the model you are positioning — and hopeless to HIT with a
+ * fingertip, which covers roughly a centimetre of screen wherever it lands.
+ * Reported from a phone as "I couldn't move a selection", which is exactly what
+ * a handle you cannot touch feels like.
+ *
+ * So every handle carries a second, invisible mesh that is only there to be
+ * picked. Mouse users benefit too: aiming at a 3 px cylinder was never good,
+ * it was merely possible.
+ */
+const PICK_FATNESS = 5
 
 export interface HandlesView {
   setMode(mode: TransformMode): void
@@ -106,9 +122,47 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       ) as unknown as HandleMesh['mesh']
       mesh.material = material(axis)
       mesh.renderingGroupId = 1
-      mesh.isPickable = true
+      // The visible handle is NOT the pick target — the fat one below is.
+      mesh.isPickable = false
       mesh.metadata = { [HANDLE_TAG]: axis }
       handles.push({ axis, mesh })
+
+      const target = (
+        mode === 'rotate'
+          ? MeshBuilder.CreateTorus(
+              `${HANDLE_TAG}-${axis}-pick`,
+              {
+                diameter: 1.6 * scale,
+                thickness: 0.09 * PICK_FATNESS * scale,
+                tessellation: 24,
+              },
+              s
+            )
+          : mode === 'scale'
+            ? MeshBuilder.CreateBox(
+                `${HANDLE_TAG}-${axis}-pick`,
+                { size: 0.22 * 2.2 * scale },
+                s
+              )
+            : MeshBuilder.CreateCylinder(
+                `${HANDLE_TAG}-${axis}-pick`,
+                {
+                  height: 1.1 * scale,
+                  diameter: 0.075 * PICK_FATNESS * scale,
+                  tessellation: 8,
+                },
+                s
+              )
+      ) as unknown as HandleMesh['mesh']
+      /*
+        `visibility = 0`, not `isVisible = false`: Babylon's picking skips
+        meshes that are not visible, so hiding it the obvious way would make the
+        pick target unpickable — which is the only thing it exists for.
+      */
+      target.visibility = 0
+      target.isPickable = true
+      target.metadata = { [HANDLE_TAG]: axis }
+      handles.push({ axis, mesh: target })
     }
     place()
   }
@@ -158,7 +212,10 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       place()
     },
     setVisible(visible) {
-      for (const { mesh } of handles) mesh.isVisible = visible
+      // Pick targets stay at visibility 0 either way; only the drawn ones toggle.
+      for (const { mesh } of handles) {
+        if (mesh.visibility !== 0) mesh.isVisible = visible
+      }
     },
     nearestAxis(grip) {
       let best: Axis | null = null

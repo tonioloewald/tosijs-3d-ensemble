@@ -76,11 +76,14 @@ describe('PointerHub', () => {
     const right = new FakePointer('right')
     hub.add(left)
     hub.add(right)
-    let primary: EditorPointer | null = null
-    hub.setHandlers({ onStart: (g) => (primary = g.primary) })
+    // Collected rather than assigned: TypeScript narrows a `let` written only
+    // inside a callback to its initialiser, so `expect(primary).toBe(left)`
+    // fails to compile against `null` even though it passes at runtime.
+    const started: EditorPointer[] = []
+    hub.setHandlers({ onStart: (g) => started.push(g.primary) })
     left.active = true
     hub.update()
-    expect(primary).toBe(left)
+    expect(started[0]).toBe(left)
   })
 
   it('captures the start pose, so a drag cannot follow the wrong hand', () => {

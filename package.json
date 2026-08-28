@@ -59,7 +59,7 @@
     "prettier": "^2.8.8",
     "tosijs": "^1.7.8",
     "tosijs-3d": "^0.7.2",
-    "tosijs-ui": "^1.10.0",
+    "tosijs-ui": "^1.12.4",
     "typescript": "^5.9.3"
   }
 }

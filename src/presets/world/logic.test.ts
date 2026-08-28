@@ -5,6 +5,7 @@ import {
   doorAmount,
   ease,
   flicker,
+  selectClip,
   spinAngle,
   stepDoor,
   unlocks,
@@ -142,5 +143,31 @@ describe('spin', () => {
 
   it('wraps negative rates too', () => {
     expect(spinAngle(-90, 1)).toBe(270)
+  })
+})
+
+describe('selectClip', () => {
+  const clips = ['Idle', 'Open', 'Close']
+
+  it('matches exactly', () => {
+    expect(selectClip(clips, 'Open')).toBe('Open')
+  })
+
+  it('falls back to case-insensitive', () => {
+    expect(selectClip(clips, 'open')).toBe('Open')
+  })
+
+  it('returns null for a clip that is not there — it never guesses', () => {
+    // Falling back to "the first clip" would make a door play its IDLE when
+    // asked to open, which reads as a physics bug rather than a typo.
+    expect(selectClip(clips, 'Opne')).toBeNull()
+  })
+
+  it('takes the first clip when none is requested', () => {
+    expect(selectClip(clips)).toBe('Idle')
+  })
+
+  it('has nothing to choose from an unanimated model', () => {
+    expect(selectClip([], 'Open')).toBeNull()
   })
 })

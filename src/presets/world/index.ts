@@ -47,7 +47,16 @@ a `RegExp` does not survive `JSON.stringify`.
 */
 import { b3dTrigger } from 'tosijs-3d'
 import { registerFeature } from '../../format/registry'
-import { canUse, closedDoor, doorAmount, flicker, spinAngle, stepDoor, unlocks } from './logic'
+import {
+  canUse,
+  closedDoor,
+  doorAmount,
+  flicker,
+  selectClip,
+  spinAngle,
+  stepDoor,
+  unlocks,
+} from './logic'
 import type { DoorState, LockState } from './logic'
 import type { FeatureContext, SceneElement } from '../../format/registry'
 import type { Piece } from '../../format/types'
@@ -209,10 +218,123 @@ export function registerWorldPreset(): void {
     },
   })
 
+  registerAnimation()
   registerDoor()
   registerLamp()
   registerSpin()
   registerTrigger()
+}
+
+/** A Babylon AnimationGroup, structurally — the engine stays out of the contract. */
+interface Clip {
+  name: string
+  play: (loop?: boolean) => void
+  stop: () => void
+  pause: () => void
+  speedRatio?: number
+}
+
+interface AnimatedNode {
+  metadata?: { animationGroups?: Clip[] }
+}
+
+export interface AnimationHandle {
+  /** Clip names this model actually has. Empty until the library has loaded. */
+  readonly clips: string[]
+  /** Play a clip by name, or the configured one. False if there is no such clip. */
+  play(clip?: string): boolean
+  stop(): void
+  pause(): void
+  setSpeed(speed: number): void
+}
+
+function registerAnimation(): void {
+  registerFeature<AnimationHandle>({
+    name: 'animation',
+    schema: {
+      type: 'object',
+      title: 'Animation',
+      properties: {
+        clip: {
+          type: 'string',
+          title: 'Clip',
+          description: 'name of the animation in the model; blank plays the first',
+        },
+        autoplay: { type: 'boolean', default: true },
+        loop: { type: 'boolean', default: true },
+        speed: num(-4, 4, 1, '×'),
+      },
+    },
+    /*
+      THE CLIPS ARRIVE WITH THE LIBRARY, NOT WITH THE FEATURE.
+
+      `library.instantiate()` clones the model's AnimationGroups onto the
+      instance (`metadata.animationGroups`) — but a feature binds long before a
+      multi-megabyte glb has arrived, so reading them at bind time finds nothing.
+      Everything here resolves lazily against the body, which is also why
+      `clips` is a getter rather than a captured array.
+    */
+    bind(_piece, cfg, ctx) {
+      const wanted = cfg.clip as string | undefined
+      const loop = cfg.loop !== false
+      const speed = Number(cfg.speed ?? 1)
+      let started = false
+
+      const groups = (): Clip[] => {
+        const node = (ctx.element as unknown as { mesh?: AnimatedNode } | null)?.mesh ??
+          (ctx.node as AnimatedNode | null)
+        return node?.metadata?.animationGroups ?? []
+      }
+
+      const handle: AnimationHandle = {
+        get clips() {
+          return groups().map((g) => g.name)
+        },
+        play(clip?: string) {
+          const available = groups()
+          const name = selectClip(
+            available.map((g) => g.name),
+            clip ?? wanted
+          )
+          if (!name) return false
+          for (const group of available) {
+            if (group.name === name) {
+              if (group.speedRatio !== undefined) group.speedRatio = speed
+              group.play(loop)
+            } else {
+              group.stop()
+            }
+          }
+          return true
+        },
+        stop() {
+          for (const group of groups()) group.stop()
+        },
+        pause() {
+          for (const group of groups()) group.pause()
+        },
+        setSpeed(next: number) {
+          for (const group of groups()) {
+            if (group.speedRatio !== undefined) group.speedRatio = next
+          }
+        },
+      }
+
+      if (cfg.autoplay !== false) {
+        // Keep trying until the model is there, then stop. Bounded, so a model
+        // that never loads costs a couple of seconds of polling rather than a
+        // callback that runs for the life of the page.
+        let frames = 0
+        everyFrame(ctx, () => {
+          if (started || frames++ > 240) return
+          if (handle.play()) started = true
+        })
+      }
+
+      ctx.onDispose(() => handle.stop())
+      return handle
+    },
+  })
 }
 
 function registerDoor(): void {

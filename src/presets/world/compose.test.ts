@@ -4,7 +4,7 @@ import { registerWorldPreset } from './index'
 import { unregisterFeature } from '../../format/registry'
 import type { SceneElement } from '../../format/registry'
 import type { Ensemble } from '../../format/types'
-import type { InteractiveHandle, LockHandle } from './index'
+import type { AnimationHandle, InteractiveHandle, LockHandle } from './index'
 
 /*
   Features composing on features is the substrate claim: a door is not
@@ -131,5 +131,104 @@ describe('feature registry supports feature-to-feature lookup', () => {
     expect(use.use()).toBe(true)
     built.dispose()
     unregisterFeature('nothing') // no-op; keeps the import honest
+  })
+})
+
+describe('animation', () => {
+  const clipStub = (name: string) => {
+    const state = { name, playing: false, looped: false, speedRatio: 1, stopped: 0 }
+    return {
+      state,
+      group: {
+        name,
+        play: (loop?: boolean) => {
+          state.playing = true
+          state.looped = loop === true
+        },
+        stop: () => {
+          state.playing = false
+          state.stopped++
+        },
+        pause: () => (state.playing = false),
+        get speedRatio() {
+          return state.speedRatio
+        },
+        set speedRatio(v: number) {
+          state.speedRatio = v
+        },
+      },
+    }
+  }
+
+  /** A body whose clips appear LATER, as they do when a glb is still loading. */
+  const bodyWithClips = (clips: ReturnType<typeof clipStub>[]) => ({
+    appendChild: () => {},
+    remove: () => {},
+    mesh: { metadata: { animationGroups: clips.map((c) => c.group) } },
+  })
+
+  const buildWith = (features: Record<string, Record<string, unknown>>, body: unknown) => {
+    registerWorldPreset()
+    return buildEnsemble(
+      { name: 't', pieces: [{ id: 'mill', mesh: 'Mill', at: [0, 0, 0], features }] },
+      {
+        scene: scene(),
+        placePiece: () => ({ element: body as never, dispose: () => {} }),
+      }
+    )
+  }
+
+  it('lists the clips the model actually has', () => {
+    const idle = clipStub('Idle')
+    const spin = clipStub('Spin')
+    const built = buildWith({ animation: { autoplay: false } }, bodyWithClips([idle, spin]))
+    const anim = built.pieces.get('mill')!.handles.get('animation') as AnimationHandle
+    expect(anim.clips).toEqual(['Idle', 'Spin'])
+    built.dispose()
+  })
+
+  it('plays the named clip and stops the others', () => {
+    const idle = clipStub('Idle')
+    const spin = clipStub('Spin')
+    const built = buildWith(
+      { animation: { clip: 'Spin', autoplay: false, loop: true, speed: 2 } },
+      bodyWithClips([idle, spin])
+    )
+    const anim = built.pieces.get('mill')!.handles.get('animation') as AnimationHandle
+    expect(anim.play()).toBe(true)
+    expect(spin.state.playing).toBe(true)
+    expect(spin.state.looped).toBe(true)
+    expect(spin.state.speedRatio).toBe(2)
+    expect(idle.state.playing).toBe(false)
+    built.dispose()
+  })
+
+  it('refuses a clip the model does not have rather than playing another', () => {
+    // Playing "the first clip" for a typo makes a windmill run its idle when
+    // asked to spin, which reads as a broken model rather than a bad name.
+    const idle = clipStub('Idle')
+    const built = buildWith({ animation: { clip: 'Spinn', autoplay: false } }, bodyWithClips([idle]))
+    const anim = built.pieces.get('mill')!.handles.get('animation') as AnimationHandle
+    expect(anim.play()).toBe(false)
+    expect(idle.state.playing).toBe(false)
+    built.dispose()
+  })
+
+  it('reports no clips for an unanimated model instead of throwing', () => {
+    const built = buildWith({ animation: {} }, { appendChild: () => {}, remove: () => {}, mesh: {} })
+    const anim = built.pieces.get('mill')!.handles.get('animation') as AnimationHandle
+    expect(anim.clips).toEqual([])
+    expect(anim.play()).toBe(false)
+    built.dispose()
+  })
+
+  it('stops everything on dispose — the editor rebuilds constantly', () => {
+    const spin = clipStub('Spin')
+    const built = buildWith({ animation: { autoplay: false } }, bodyWithClips([spin]))
+    const anim = built.pieces.get('mill')!.handles.get('animation') as AnimationHandle
+    anim.play()
+    expect(spin.state.playing).toBe(true)
+    built.dispose()
+    expect(spin.state.playing).toBe(false)
   })
 })

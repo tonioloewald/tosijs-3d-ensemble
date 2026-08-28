@@ -141,6 +141,24 @@ export function flicker(base: number, amount: number, time: number, seed = 1): n
   return Math.max(0, base * (1 + n * amount))
 }
 
+/**
+ * Choose an animation clip by name.
+ *
+ * Exact match, then case-insensitive, then **nothing**. It deliberately never
+ * falls back to "the first clip": a model with `Open`, `Close` and `Idle` would
+ * silently play the wrong one for a typo, and a door that plays its idle
+ * animation when asked to open looks like a physics bug rather than a spelling
+ * mistake. Returning null lets the caller say so.
+ */
+export function selectClip(available: string[], requested?: string): string | null {
+  if (!available.length) return null
+  if (!requested) return available[0] ?? null
+  const exact = available.find((name) => name === requested)
+  if (exact) return exact
+  const lower = requested.toLowerCase()
+  return available.find((name) => name.toLowerCase() === lower) ?? null
+}
+
 /** Degrees turned after `elapsed` seconds, wrapped to a single turn. */
 export function spinAngle(degreesPerSecond: number, elapsed: number): number {
   // Wrapped so a scene left running for days does not accumulate a float big

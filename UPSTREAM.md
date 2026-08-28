@@ -20,6 +20,7 @@ when it lands, and close the issue.
 | 5 | `b3d-turret`/`b3d-launcher` take no `library`, so a turret cannot have its own mesh | [#34](https://github.com/tonioloewald/tosijs-3d/issues/34) |
 | 6 | `b3d-spawner` is player-relative — no way to spawn at an authored place | [#40](https://github.com/tonioloewald/tosijs-3d/issues/40) |
 | 7 | A scene-owned clock: effect timing can be scaled, craft motion cannot | [#41](https://github.com/tonioloewald/tosijs-3d/issues/41) |
+| 9 | `b3d-library` ignores a glb's own catalogue: `getNames()` over-reports sub-parts (80 vs 72 declared), and per-item `extras` — category, tags, **clips** — are unreachable | [#45](https://github.com/tonioloewald/tosijs-3d/issues/45) |
 | 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them
@@ -37,6 +38,7 @@ nobody declared. One has already been collected: see the struck-through row.
 | `ctx.simTime()` defaulting to wall-clock | #41 |
 | `presets/world`'s own `interactive` (reach, activation, refusal) | 🔜 #36 in 0.7.3 |
 | The family-cycler + separate list standing in for a hierarchical palette | #37 |
+| Deriving palette categories from NAME PREFIXES, when the library now declares real ones | #45 |
 
 ### Not filed, deliberately
 

@@ -1,28 +1,325 @@
 {
   "name": "city-block",
   "libraries": [
-    { "name": "city", "url": "/kenney-city.glb" },
-    { "name": "vehicles", "url": "/kenney-vehicles.glb" }
+    {
+      "name": "roads",
+      "url": "https://cdn.tosijs.net/kenney/libraries/city-kit-roads.glb"
+    },
+    {
+      "name": "commercial",
+      "url": "https://cdn.tosijs.net/kenney/libraries/city-kit-commercial.glb"
+    },
+    {
+      "name": "suburban",
+      "url": "https://cdn.tosijs.net/kenney/libraries/city-kit-suburban.glb"
+    },
+    {
+      "name": "industrial",
+      "url": "https://cdn.tosijs.net/kenney/libraries/city-kit-industrial.glb"
+    }
   ],
   "kind": "settlement",
-  "values": { "district": "riverside" },
+  "values": {
+    "district": "riverside"
+  },
   "pieces": [
-    { "id": "sun", "at": [-0.4, 1, 0.3], "features": { "sun": { "intensity": 1, "shadowDarkness": 0.4, "activeDistance": 200 } } },
-    { "id": "sky", "at": [0, 0, 0], "features": { "skybox": { "timeOfDay": 16 } } },
-    { "id": "view", "at": [0, 2, 0], "features": { "camera": { "distance": 30, "heading": -50, "elevation": 26 } } },
-
-    { "id": "road-main", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, 0] },
-    { "id": "road-north", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, 4] },
-    { "id": "road-south", "library": "city", "mesh": "roads_road-straight", "at": [0, 0, -4] },
-
-    { "id": "shop", "library": "city", "mesh": "commercial_building-a", "at": [-6, 0, 2] },
-    { "id": "office", "library": "city", "mesh": "commercial_building-d", "at": [-6, 0, -3] },
-    { "id": "house", "library": "city", "mesh": "suburban_building-type-a", "at": [6, 0, 2] },
-    { "id": "works", "library": "city", "mesh": "industrial_building-a", "at": [6, 0, -4] },
-
-    { "id": "parked", "library": "vehicles", "mesh": "car_sedan", "at": [2, 0, 1], "rot": [0, 90, 0] }
+    {
+      "id": "sun",
+      "at": [
+        -0.4,
+        1,
+        0.3
+      ],
+      "features": {
+        "sun": {
+          "intensity": 1,
+          "shadowDarkness": 0.4,
+          "activeDistance": 200
+        }
+      }
+    },
+    {
+      "id": "fill",
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "features": {
+        "light": {
+          "intensity": 0.55,
+          "diffuse": "#cfe0ee"
+        }
+      }
+    },
+    {
+      "id": "sky",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "features": {
+        "skybox": {
+          "timeOfDay": 15
+        }
+      }
+    },
+    {
+      "id": "view",
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "features": {
+        "camera": {
+          "distance": 16,
+          "heading": -50,
+          "elevation": 26
+        }
+      }
+    },
+    {
+      "id": "road-x-3",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        -3,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z-3",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        -3
+      ]
+    },
+    {
+      "id": "road-x-2",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        -2,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z-2",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "road-x-1",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z-1",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": "road-x1",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z1",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "road-x2",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z2",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        2
+      ]
+    },
+    {
+      "id": "road-x3",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        90,
+        0
+      ]
+    },
+    {
+      "id": "road-z3",
+      "library": "roads",
+      "mesh": "road-straight",
+      "at": [
+        0,
+        0,
+        3
+      ]
+    },
+    {
+      "id": "road-c",
+      "library": "roads",
+      "mesh": "road-crossroad",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "shop",
+      "library": "commercial",
+      "mesh": "building-a",
+      "at": [
+        -2,
+        0,
+        2
+      ]
+    },
+    {
+      "id": "office",
+      "library": "commercial",
+      "mesh": "building-d",
+      "at": [
+        -2,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "works",
+      "library": "industrial",
+      "mesh": "building-a",
+      "at": [
+        2,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "stack",
+      "library": "industrial",
+      "mesh": "chimney-large",
+      "at": [
+        3.5,
+        0,
+        -2
+      ]
+    },
+    {
+      "id": "house",
+      "library": "suburban",
+      "mesh": "building-type-a",
+      "at": [
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "id": "oak",
+      "library": "suburban",
+      "mesh": "tree-large",
+      "at": [
+        3.5,
+        0,
+        2.5
+      ]
+    },
+    {
+      "id": "lamp-ne",
+      "library": "roads",
+      "mesh": "light-square",
+      "at": [
+        1,
+        0,
+        1
+      ]
+    }
   ],
   "points": [
-    { "id": "junction", "at": [0, 0, 0], "kind": "waypoint" }
+    {
+      "id": "junction",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "kind": "waypoint"
+    }
   ]
 }

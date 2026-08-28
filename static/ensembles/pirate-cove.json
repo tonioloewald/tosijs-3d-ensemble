@@ -3,7 +3,7 @@
   "libraries": [
     {
       "name": "pirate",
-      "url": "/pirate-kit.glb"
+      "url": "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb"
     }
   ],
   "kind": "location",

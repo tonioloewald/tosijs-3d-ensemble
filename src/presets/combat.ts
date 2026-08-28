@@ -32,6 +32,7 @@ moved behind a call the consumer makes.
   an unsolvable objective, which looks entirely normal until a player spends
   five minutes failing to kill something. That rule is meaningful only here.
 */
+/*{"parent":"Presets","order":2}*/
 import { b3dCollisions, b3dLauncher, b3dTurret } from 'tosijs-3d'
 import { registerFeature } from '../format/registry'
 import { registerRole } from '../format/roles'

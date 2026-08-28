@@ -23,6 +23,7 @@ are genuinely different poses: aim runs from the knuckles forward, while the
 hand is a few centimetres back and lower. Using one for both is why some apps
 feel like you are grabbing with a stick.
 */
+/*{"parent":"Internals","order":3}*/
 import type { EditorPointer, EditorRay, PointerId } from './pointer'
 import type { Vec3 } from '../../format/types'
 

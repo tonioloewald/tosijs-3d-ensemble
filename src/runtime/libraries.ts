@@ -1,5 +1,5 @@
 /*#
-# Mounting an ensemble's libraries
+# Mounting libraries
 
 An ensemble declares the libraries its meshes come from, so loading one anywhere
 is enough — the consumer does not have to be told out of band what content to
@@ -20,6 +20,7 @@ The qualifier earns its place the moment two libraries both export `cube`.
 Without it that piece renders differently depending on which library finished
 loading first — a bug that reproduces on one machine and not another.
 */
+/*{"parent":"Internals","order":10}*/
 import type { Ensemble, Piece } from '../format/types'
 import type { SceneElement } from '../format/registry'
 
@@ -48,7 +49,7 @@ export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): P
   const declared = ensemble.libraries ?? []
   if (!declared.length) return
 
-  const pending: Array<Promise<void>> = []
+  const mounted: LibraryElement[] = []
   for (const { name, url } of declared) {
     if (!name || !url) continue
     let element = host.getLibrary?.(name) ?? null
@@ -78,12 +79,36 @@ export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): P
       host.appendChild?.(created)
       element = created
     }
-    const ready = element.ready
-    // A library that fails to load must not reject the whole mount: the rest
-    // still resolve, and the pieces that needed this one fall back to boxes.
-    if (ready) pending.push(ready.catch(() => undefined))
+    mounted.push(element)
   }
-  await Promise.all(pending)
+
+  /*
+    READ `ready` ONLY AFTER THE ELEMENT IS UPGRADED.
+
+    `ready` is a property the custom element defines, so it does not exist on a
+    node whose class has not been registered yet — and appending does not
+    upgrade an element the registry has never heard of. On a page that imports
+    tosijs-3d eagerly the definition is already there and reading `ready` inline
+    works; on one that reaches it through a dynamic import it is `undefined`,
+    nothing is awaited, and the caller builds against a library that has not
+    even started downloading. Every piece becomes a placeholder box, silently.
+
+    Measured on the doc-site editor page: 19 boxes, no error, and a manual
+    rebuild from the console fixed it — the tell that this is a race, not a
+    resolution failure.
+  */
+  await whenLibrariesUpgrade()
+
+  // A library that fails to load must not reject the whole mount: the rest
+  // still resolve, and the pieces that needed this one fall back to boxes.
+  await Promise.all(mounted.map((el) => el.ready?.catch(() => undefined)))
+}
+
+/** Resolves once `<tosi-b3d-library>` is a defined custom element. */
+async function whenLibrariesUpgrade(): Promise<void> {
+  const registry = globalThis.customElements
+  if (!registry?.whenDefined) return
+  await registry.whenDefined('tosi-b3d-library').catch(() => undefined)
 }
 
 /** Names a scene can resolve meshes from, in declaration order. */

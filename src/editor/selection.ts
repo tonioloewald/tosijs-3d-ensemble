@@ -18,6 +18,7 @@ is built once per rebuild, keyed by the node objects themselves, so a pick is a
 walk up a short parent chain with a hash lookup at each step — and it stays that
 way with a thousand pieces.
 */
+/*{"parent":"Internals","order":6}*/
 import type { BuiltEnsemble } from '../runtime/build'
 import type { EditorRay } from './input/pointer'
 

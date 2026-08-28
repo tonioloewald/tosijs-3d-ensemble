@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { libraryNames, meshesByLibrary, resolveLibrary } from './libraries'
+import { libraryNames, meshesByLibrary, mountLibraries, resolveLibrary } from './libraries'
 import type { SceneElement } from '../format/registry'
 import type { Ensemble, Piece } from '../format/types'
 
@@ -61,5 +61,56 @@ describe('library resolution', () => {
     const map = meshesByLibrary(s, ['props', 'vehicles', 'missing'])
     expect([...map.keys()]).toEqual(['props', 'vehicles'])
     expect(map.get('props')).toEqual(new Set(['bench', 'lamp']))
+  })
+})
+
+describe('mounting waits for the element to upgrade', () => {
+  /*
+    The library element defines `ready` itself, so a node appended before its
+    class is registered has no such property — and reading it inline made
+    `mountLibraries` resolve instantly against a library that had not begun
+    downloading. Every piece then built as a placeholder box, with no error.
+  */
+  it('reads `ready` only after the custom element is defined', async () => {
+    let upgrade!: () => void
+    let load!: () => void
+    const defined = new Promise<void>((resolve) => {
+      upgrade = resolve
+    })
+    const original = globalThis.customElements
+    ;(globalThis as { customElements?: unknown }).customElements = {
+      whenDefined: () => defined,
+    }
+
+    const element: Record<string, unknown> = {
+      setAttribute: () => {},
+      getAttribute: () => null,
+    }
+    const host = {
+      getLibrary: () => null,
+      ownerDocument: { createElement: () => element },
+      appendChild: () => {},
+    } as unknown as SceneElement
+
+    let settled = false
+    const mounting = mountLibraries(ensemble(['props']), host).then(() => {
+      settled = true
+    })
+
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    // Upgrading is what gives the element a `ready` promise at all.
+    element.ready = new Promise<void>((resolve) => {
+      load = resolve
+    })
+    upgrade()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    load()
+    await mounting
+    expect(settled).toBe(true)
+    ;(globalThis as { customElements?: unknown }).customElements = original
   })
 })

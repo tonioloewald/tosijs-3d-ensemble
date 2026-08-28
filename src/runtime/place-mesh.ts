@@ -29,6 +29,7 @@ Without a library — or with a mesh name the library does not have — the piec
 becomes a `b3d-box` at the same spot. The ARRANGEMENT is most of what an author
 is judging, so cubes in the right places beat an empty scene.
 */
+/*{"parent":"Internals","order":9}*/
 import { b3dBox, b3dDestroyable, b3dRadarBlip } from 'tosijs-3d'
 import type { SceneElement } from '../format/registry'
 import type { Piece, Vec3 } from '../format/types'

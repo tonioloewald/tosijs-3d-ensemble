@@ -26,6 +26,7 @@ featuresOf({ id: 'r1', at: [0, 0, 0], role: 'reactor', features: { destroyable: 
 // → { destroyable: { hp: 80, explode: true }, blip: { faction: 'hostile', profile: 2 } }
 ```
 */
+/*{"parent":"Format","order":4}*/
 import type { Features, Piece, Role } from './types'
 
 /*

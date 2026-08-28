@@ -1,5 +1,7 @@
 # tosijs-3d-ensemble
 
+<!--{"pin":"top","order":1}-->
+
 **The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
 An *ensemble* is a reusable, JSON-described arrangement with declared
@@ -68,7 +70,7 @@ See `SPEC.md` open question 5 for the argument and its costs.
 
 ```bash
 bun install
-bun start        # doc site + the editor at /editor.html, on :8032
+bun start        # doc site + the editor at /editor/, on :8032
 bun test
 bun run build
 ```

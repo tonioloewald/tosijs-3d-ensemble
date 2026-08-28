@@ -1,8 +1,8 @@
 /*#
-# &lt;tosi-ensemble-editor&gt;
+# <tosi-ensemble-editor>
 
 The editor is a **component**, not an application. Drop it on a page, give it a
-library and an ensemble, and it edits — the doc site's `/editor.html` is one
+library and an ensemble, and it edits — the doc site's `/editor/` is one
 such page and has no privileged access to anything.
 
 ```html
@@ -54,6 +54,7 @@ debug READOUT that looks exactly like one — so pieces are currently placed by
 editing numbers. That is the editor's single most important interaction and it
 is an upstream build; see UPSTREAM.md.
 */
+/*{"parent":"Editing","order":1}*/
 import { Component } from 'tosijs'
 import {
   b3d,
@@ -68,6 +69,7 @@ import {
   panel3d,
   select3d,
   slider3d,
+  textBlock3d,
 } from 'tosijs-3d'
 import { Color3, HighlightLayer, Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
@@ -415,6 +417,35 @@ export class EnsembleEditor extends Component {
     }
     const canvas = scene?.getEngine?.()?.getRenderingCanvas?.()
     if (canvas) camera.attachControl?.(canvas, false)
+    /*
+      CLEAR THE CAMERA'S CACHED DRAG ORIGIN BEFORE GIVING IT BACK.
+
+      `BaseCameraPointersInput` records `_pointA` on pointerdown and diffs every
+      later move against it. `detachControl()` clears the modifier and button
+      state but NOT `_pointA` — so the sequence is: press (camera stores the
+      press point), we detach, the user drags a handle right across the screen,
+      we re-attach on release, and the next mouse move diffs against a point
+      from before the drag. The camera swings by the whole drag distance in one
+      frame.
+
+      Reported as "the move worked but upon ending the drag the view was changed
+      by the stored delta", which is precisely what it is. Nothing errors, and
+      it only shows up when something detaches the camera MID-gesture — which is
+      exactly what a manipulator does.
+
+      `_pointA`/`_pointB` are private, hence the guarded cast: no public API
+      resets this, and the alternative (synthesising a window `blur`, the one
+      event whose handler does clear them) reaches further and breaks more.
+    */
+    const pointers = (
+      camera as unknown as {
+        inputs?: { attached?: { pointers?: { _pointA?: unknown; _pointB?: unknown } } }
+      }
+    ).inputs?.attached?.pointers
+    if (pointers) {
+      pointers._pointA = null
+      pointers._pointB = null
+    }
   }
 
   private _toolContext(): ToolContext {
@@ -508,6 +539,7 @@ export class EnsembleEditor extends Component {
     let running = true
     const tick = () => {
       if (!running) return
+      this._syncHandleScale()
       this._hub.update()
       requestAnimationFrame(tick)
     }
@@ -538,6 +570,9 @@ export class EnsembleEditor extends Component {
     // pieces resolve to real meshes on the first pass rather than boxes.
     if (this._scene) await mountLibraries(data, this._scene)
     this.ensemble = data
+    // Belt and braces: `mountLibraries` waits, but a library mounted by some
+    // other path — or one that resolves after this build — still has to land.
+    void this._rebuildWhenLibraryReady()
   }
 
   /** Hand the current ensemble to the host's `onSave`. */
@@ -610,6 +645,21 @@ export class EnsembleEditor extends Component {
   }
 
   private _mountScene(): void {
+    /*
+      ADOPT AN EXISTING SCENE RATHER THAN BUILDING A SECOND ONE.
+
+      `connectedCallback` runs again whenever the element is moved or
+      re-attached — which a doc-browser SPA does on every navigation. Mounting
+      unconditionally left a second `<tosi-b3d>` in the shadow root while
+      `_scene` still pointed at the first, so every piece was appended to an
+      ORPHANED scene: 19 bodies built, 0 meshes rendered, and no error anywhere.
+    */
+    const existing = this._root.querySelector?.('tosi-b3d') as SceneElement | null
+    if (existing) {
+      this._scene = existing
+      this._attachPointers()
+      return
+    }
     const scene = b3d({
       /*
         Pointers attach HERE, not in `connectedCallback`.
@@ -813,6 +863,31 @@ export class EnsembleEditor extends Component {
    * current — a manipulator floating over nothing is a control that does
    * nothing, which invites trust in a reading it never produced.
    */
+  /**
+   * Keep the handles a constant size on screen.
+   *
+   * `0.12` of the camera distance puts the axis stick at roughly a sixth of the
+   * viewport height at Babylon's default field of view, which makes the fat
+   * pick target about 60 px across on a laptop and 40 on a phone. World-sized
+   * handles measured ELEVEN px on the sample ensemble — the difference between
+   * a tool that works and one the owner described as "very hit and mostly
+   * miss".
+   *
+   * Per frame, not per selection: the size is wrong the instant the camera
+   * moves, and the camera moves constantly.
+   */
+  private _syncHandleScale(): void {
+    if (!this._handles) return
+    const camera = (this._scene as unknown as { scene?: SceneWithCamera }).scene?.activeCamera as
+      | { position?: { x: number; y: number; z: number } }
+      | undefined
+    const eye = camera?.position
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    if (!eye || !built) return
+    const distance = Math.hypot(eye.x - built.at[0], eye.y - built.at[1], eye.z - built.at[2])
+    this._handles.setScale(Math.max(distance * 0.12, 0.05))
+  }
+
   private _syncHandles(): void {
     const scene = (this._scene as unknown as { scene?: unknown }).scene
     if (!scene) return
@@ -887,14 +962,15 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       'left',
       panel3d(
-        // 34 per row, not 30: a button3d is taller than its label and the last
-        // entry was rendering below the fold, where a panel silently clips.
-        { width: 150, height: 74 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
+        /*
+          Height is a BUDGET, and a short one silently drops whatever is LAST.
+          `Delete` fell off this palette twice while the hint above it was
+          being adjusted — so the hint now goes last and the controls come
+          first: a clipped hint costs advice, a clipped button costs a feature.
+          34 per row (a button3d is taller than its label), plus the hint.
+        */
+        { width: 150, height: 190 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
         label3d({ text: 'Tools', bold: true }),
-        // Navigation is discoverable nowhere else: the camera's gestures are
-        // Babylon's defaults, and an editor that does not say so leaves you
-        // unable to move the view at all.
-        label3d({ text: 'drag orbit · ⌃drag pan · wheel zoom', muted: true, compact: true }),
         ...(tools.map((tool) =>
           button3d({
             // The current tool is marked in its label rather than by colour
@@ -911,7 +987,18 @@ export class EnsembleEditor extends Component {
               command.run(this._toolContext())
             },
           })
-        ) as never[])
+        ) as never[]),
+        /*
+          Navigation is discoverable nowhere else: the camera's gestures are
+          Babylon's defaults, and an editor that does not say so leaves you
+          unable to move the view at all.
+
+          `textBlock3d`, not `label3d`: a label is one line and CLIPS at the
+          panel edge without a mark, so this shipped for a while reading
+          "drag orbit · ⌃dra" — advice truncated mid-word, which is worse than
+          no advice. A text block measures and wraps to the panel width.
+        */
+        textBlock3d({ lines: ['drag orbit · ⌃drag pan · wheel zoom'], muted: true })
       )
     )
   }

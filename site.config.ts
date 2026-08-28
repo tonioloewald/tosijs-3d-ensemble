@@ -15,7 +15,7 @@ export default defineSiteConfig({
     github: `https://github.com/tonioloewald/${PROJECT}`,
   },
   navbarLinks: [
-    { href: '/editor.html', label: 'editor', icon: 'edit' },
+    { href: '/editor/', label: 'editor', icon: 'edit' },
     { href: 'https://3d.tosijs.net', label: 'tosijs-3d', icon: 'tosiXr' },
     { href: `https://github.com/tonioloewald/${PROJECT}`, label: 'github', icon: 'github' },
   ],
@@ -30,7 +30,7 @@ export default defineSiteConfig({
   // markdown. SPEC.md and PLAN.md are the decision record and belong on the
   // site: this format is meant to be generated FOR, and a format nobody can
   // read is a format nobody else will target.
-  docPaths: ['src', 'README.md', 'SPEC.md', 'PLAN.md', 'UPSTREAM.md'],
+  docPaths: ['src', 'README.md', 'editor.md', 'SPEC.md', 'PLAN.md', 'UPSTREAM.md'],
   bundleEntry: './demo/site.ts',
   staticDirs: ['static'],
   port: 8032,

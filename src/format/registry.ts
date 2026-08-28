@@ -56,6 +56,7 @@ A throw inside a Babylon render observer kills the render loop **permanently** â
 goes black with no error where anyone would look. A `bind`/`link` that registers
 per-frame work must guard itself.
 */
+/*{"parent":"Format","order":3}*/
 import type { Ensemble, Piece, Vec3 } from './types'
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer

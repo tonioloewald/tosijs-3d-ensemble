@@ -1,5 +1,5 @@
 /*#
-# Writing a transform to a live body
+# Writing a transform
 
 An ensemble's pieces have **two kinds of body** and they are written to
 differently. Getting this wrong does not error — it silently does nothing, which
@@ -25,6 +25,7 @@ baked orientation. `position` worked, which is what made it look wired up.
 So rotating a node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
+/*{"parent":"Internals","order":8}*/
 import type { Euler, Vec3 } from '../format/types'
 
 const DEG_TO_RAD = Math.PI / 180

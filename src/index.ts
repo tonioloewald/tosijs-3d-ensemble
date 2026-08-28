@@ -1,5 +1,5 @@
 /*#
-# tosijs-3d-ensemble
+# What a consumer imports
 
 The **ensemble format**, its **instantiator**, and the **editor** that authors
 them — one package, so that the editor writes exactly what the runtime reads
@@ -33,6 +33,7 @@ The split is enforced by a test rather than by packaging (`src/tree-shaking.test
 which is the only way it stays true: a stray import from the format layer into
 the editor is exactly how this rots, and nothing else would notice.
 */
+/*{"parent":"Format","order":5}*/
 
 // ── The format: pure, no engine, no UI ──────────────────────────────────────
 export type {

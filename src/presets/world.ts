@@ -45,8 +45,9 @@ knob**, and a knob is a sub-mesh of the door model rather than a piece of its
 own. It is a regex source string, like `subsystems`, for the same reason —
 a `RegExp` does not survive `JSON.stringify`.
 */
+/*{"parent":"Presets","order":1}*/
 import { b3dTrigger } from 'tosijs-3d'
-import { registerFeature } from '../../format/registry'
+import { registerFeature } from '../format/registry'
 import {
   canUse,
   closedDoor,
@@ -56,10 +57,10 @@ import {
   spinAngle,
   stepDoor,
   unlocks,
-} from './logic'
-import type { DoorState, LockState } from './logic'
-import type { FeatureContext, SceneElement } from '../../format/registry'
-import type { Piece } from '../../format/types'
+} from './world-logic'
+import type { DoorState, LockState } from './world-logic'
+import type { FeatureContext, SceneElement } from '../format/registry'
+import type { Piece } from '../format/types'
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
   type: 'number',

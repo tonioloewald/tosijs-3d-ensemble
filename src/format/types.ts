@@ -48,6 +48,7 @@ mission compiler.
 Positions are **ensemble-local**, so the same ensemble works at sea level or on
 a plateau.
 */
+/*{"parent":"Format","order":1}*/
 
 /**
  * A library of meshes the ensemble draws from.

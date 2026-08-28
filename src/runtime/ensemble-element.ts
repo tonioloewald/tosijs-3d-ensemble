@@ -1,5 +1,5 @@
 /*#
-# &lt;tosi-ensemble&gt;
+# <tosi-ensemble>
 
 Load an ensemble into a scene **in one line**, declaratively, as a child of
 `<tosi-b3d>`:
@@ -55,6 +55,7 @@ and — more to the point — never sees `shield` in a property panel.
 | `library` | library `type` to instantiate meshes from; omit for none |
 | `at` | where to put its local origin, `"x y z"`, default `"0 0 0"` |
 */
+/*{"parent":"Runtime","order":2}*/
 import { Component } from 'tosijs'
 import { buildEnsemble } from './build'
 import { placeMesh } from './place-mesh'

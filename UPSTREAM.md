@@ -1,5 +1,7 @@
 # Upstream — what we're waiting on
 
+<!--{"pin":"bottom","parent":"Project","order":3}-->
+
 **An index, not a record.** The issues on the owning repo are the record: the
 context, the workaround and the suggestion live there, self-contained for
 someone who has never seen this repo. Keeping a second copy here would drift —
@@ -21,6 +23,7 @@ when it lands, and close the issue.
 | 6 | `b3d-spawner` is player-relative — no way to spawn at an authored place | [#40](https://github.com/tonioloewald/tosijs-3d/issues/40) |
 | 7 | A scene-owned clock: effect timing can be scaled, craft motion cannot | [#41](https://github.com/tonioloewald/tosijs-3d/issues/41) |
 | 9 | `b3d-library` ignores a glb's own catalogue: `getNames()` over-reports sub-parts (80 vs 72 declared), and per-item `extras` — category, tags, **clips** — are unreachable | [#45](https://github.com/tonioloewald/tosijs-3d/issues/45) |
+| 10 | `b3dWater` defaults `normalMap` to `/waterbump.png` but the package does not ship it — the sea renders as Babylon's fallback CHECKERBOARD, which reads as a style, not a fault | [#46](https://github.com/tonioloewald/tosijs-3d/issues/46) |
 | 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them
@@ -39,6 +42,17 @@ nobody declared. One has already been collected: see the struck-through row.
 | `presets/world`'s own `interactive` (reach, activation, refusal) | 🔜 #36 in 0.7.3 |
 | The family-cycler + separate list standing in for a hierarchical palette | #37 |
 | Deriving palette categories from NAME PREFIXES, when the library now declares real ones | #45 |
+| Our own copy of `waterbump.png` in `static/` (see `static/ASSETS.md`) | tosijs-3d #46 |
+| `editor.md`'s `calc(100dvh - 4rem)`, a hand-tuned navbar offset | tosijs-ui #115 |
+| Nulling the camera input's private `_pointA`/`_pointB` on re-attach | Babylon (third-party; no upstream row) |
+
+## tosijs-ui
+
+| | Finding | Issue |
+|---|---|---|
+| A | Dev-server auth sessions live in `new Map()`, so every restart invalidates every issued edit link while the 30-day cookie stays valid — it presents as Safari eating cookies | [#114](https://github.com/tonioloewald/tosijs-ui/issues/114) |
+| B | A full-screen page that is ONE element: markdown wraps it in a `<p>` and nothing in the chain has a definite height, so `height: 100%` collapses. Suggested fix is raw `.html` doc pages | [#115](https://github.com/tonioloewald/tosijs-ui/issues/115) |
+| C | The dev server answers a missing asset with the SPA shell — HTML at 200 — so a 404 presents as a silently wrong render | [#116](https://github.com/tonioloewald/tosijs-ui/issues/116) |
 
 ### Not filed, deliberately
 

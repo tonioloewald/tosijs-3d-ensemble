@@ -19,6 +19,7 @@ A drag that snaps by stepping the delta accumulates error: sixty frames of
 a long drag. Quantising the resulting absolute value instead means a snapped
 piece is always exactly on the grid, however it got there.
 */
+/*{"parent":"Internals","order":4}*/
 import type { Vec3 } from '../format/types'
 import type { EditorRay } from './input/pointer'
 

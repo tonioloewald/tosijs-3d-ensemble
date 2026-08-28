@@ -35,6 +35,7 @@ consumer that wants them. An earlier version shipped them as built-ins next to
 `terrain` and `water`, which quietly made every consumer's scene format a combat
 format.
 */
+/*{"parent":"Runtime","order":3}*/
 import {
   b3dAmbient,
   b3dClouds,

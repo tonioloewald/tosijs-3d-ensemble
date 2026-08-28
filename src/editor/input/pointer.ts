@@ -34,6 +34,7 @@ gesture**. That is what makes two-handed actions expressible later — dragging 
 object along a path with one hand while the other drops keyframes — without a
 left/right special case in every tool.
 */
+/*{"parent":"Internals","order":1}*/
 import type { Vec3 } from '../../format/types'
 
 /** A world-space ray. Plain numbers: the engine does not belong in this contract. */

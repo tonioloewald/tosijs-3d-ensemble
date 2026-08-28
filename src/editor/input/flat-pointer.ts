@@ -9,6 +9,7 @@ It has no `grip()`, because a flat pointer has no position in the world: there
 is nothing to reach out and hold with. Everything it does is far interaction,
 which is why the ray/near split had to exist before the first tool was written.
 */
+/*{"parent":"Internals","order":2}*/
 import type { EditorPointer, EditorRay } from './pointer'
 import type { Vec3 } from '../../format/types'
 

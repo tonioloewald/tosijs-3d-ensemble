@@ -1,9 +1,12 @@
-// Hydration bundle entry — loaded by every generated page AND by the
-// full-screen editor route at /editor.html.
+// Hydration bundle entry — loaded by every generated page, the editor page
+// among them.
 //
-// Importing the package here is what registers `<tosi-ensemble-editor>`: the
-// editor is a component, so the route is a plain page that uses it, with no
-// privileged access to anything.
+// Importing the package here is what registers `<tosi-ensemble-editor>`. The
+// editor is a component, so `/editor/` is an ORDINARY doc page that happens to
+// use it — `layout: full-screen` in `editor.md` is the whole of its special
+// treatment. It had a hand-written `static/editor.html` until tosijs-ui 1.12
+// made a doc page able to go full-screen and keep the global nav; a bespoke
+// page bypassed that nav and quietly drifted from the rest of the site.
 
 import 'tosijs-ui' // registers <tosi-doc-system> and the tosi-* element family
 import * as tosijs from 'tosijs'

@@ -1,5 +1,5 @@
 /*#
-# World behaviour, as pure functions
+# World behaviour rules
 
 Doors, locks, lamps and spinners are mostly **state over time**, and state over
 time is where behaviour goes subtly wrong: a door that opens the long way round,
@@ -17,6 +17,7 @@ pauses. Each function here takes elapsed seconds and returns the state that
 elapsed time implies, so a dropped frame is a bigger step rather than a
 different outcome.
 */
+/*{"parent":"Internals","order":11}*/
 
 /** Where a door is in its travel. */
 export type DoorPhase = 'closed' | 'opening' | 'open' | 'closing'

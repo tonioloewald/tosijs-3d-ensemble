@@ -34,6 +34,7 @@ range of 260 metres gets typed into a field that wanted kilometres.
 Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
 */
+/*{"parent":"Internals","order":7}*/
 import { label3d, panel3d, select3d, slider3d, toggle3d, ui } from 'tosijs-3d'
 import type { FeatureSchema } from '../format/registry'
 

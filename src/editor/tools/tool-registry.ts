@@ -31,6 +31,7 @@ The options are **JSON Schema**, so the panel that edits them is generated, not
 written — the same renderer the piece property panel uses. A tool with a
 bespoke panel would drift from the rest of the editor within a week.
 */
+/*{"parent":"Editing","order":2}*/
 import type { EditorRay, Gesture } from '../input/pointer'
 import type { Ensemble, Piece, Vec3 } from '../../format/types'
 import type { FeatureSchema, SceneElement } from '../../format/registry'

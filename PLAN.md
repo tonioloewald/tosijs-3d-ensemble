@@ -1,5 +1,7 @@
 # tosijs-3d-ensemble — project plan
 
+<!--{"pin":"bottom","parent":"Project","order":2}-->
+
 **The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
 An *ensemble* is a reusable, JSON-described arrangement of library meshes with
@@ -142,7 +144,7 @@ tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice
   build/dev/doc system — no hand-rolled bundler, dev server or docs page.
 - `site.config.ts` + `bin/site.ts` + `demo/site.ts`, the ecosystem's shape.
 - The editor is a **component** (`<tosi-ensemble-editor>`); the doc site carries
-  it as a full-screen route at `/editor.html`, which is a page that USES the
+  it as a full-screen route at `/editor/`, which is a page that USES the
   component and has no privileged access to anything.
 - **Done:** `bun start` serves it on :8032, `bun run build` produces the bundle
   and 12 static pages, `bun test` is green.

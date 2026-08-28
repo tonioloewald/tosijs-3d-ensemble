@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { buildEnsemble } from '../../runtime/build'
-import { registerWorldPreset } from './index'
-import { unregisterFeature } from '../../format/registry'
-import type { SceneElement } from '../../format/registry'
-import type { Ensemble } from '../../format/types'
-import type { AnimationHandle, InteractiveHandle, LockHandle } from './index'
+import { buildEnsemble } from '../runtime/build'
+import { registerWorldPreset } from './world'
+import { unregisterFeature } from '../format/registry'
+import type { SceneElement } from '../format/registry'
+import type { Ensemble } from '../format/types'
+import type { AnimationHandle, InteractiveHandle, LockHandle } from './world'
 
 /*
   Features composing on features is the substrate claim: a door is not

@@ -38,6 +38,7 @@ The declarative `b3d({...}, ...children)` form does that implicitly, which is
 why loading at runtime is where it bites: no error, no pieces, nothing in the
 console. Every element this module creates is appended explicitly.
 */
+/*{"parent":"Runtime","order":1}*/
 import { featuresOf } from '../format/roles'
 import { featureRegistration } from '../format/registry'
 import { validate } from '../format/validate'

@@ -9,8 +9,8 @@ import {
   spinAngle,
   stepDoor,
   unlocks,
-} from './logic'
-import type { DoorState } from './logic'
+} from './world-logic'
+import type { DoorState } from './world-logic'
 
 const run = (state: DoorState, steps: number, dt: number, wants: boolean, seconds = 1) => {
   let s = state

@@ -1,5 +1,7 @@
 # Ensemble Editor — specification
 
+<!--{"pin":"bottom","parent":"Project","order":1}-->
+
 **Status:** proposal. Written after building a working prototype inside
 manta-recon (`src/prefab*.ts`, `src/bench-*.ts`, `static/prefab.html`) and
 discovering it does not belong there.

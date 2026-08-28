@@ -14,6 +14,7 @@ It selects on gesture **end**, not start, so that a press which turns into a
 camera orbit does not also change the selection — the two gestures begin
 identically and only diverge when you move.
 */
+/*{"parent":"Editing","order":3}*/
 import { snapVec3 } from '../handles'
 import { registerCommand, registerTool } from './tool-registry'
 import type { ToolContext } from './tool-registry'

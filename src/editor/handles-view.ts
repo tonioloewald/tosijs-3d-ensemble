@@ -17,6 +17,7 @@ They also draw **on top** (`renderingGroupId`), because a handle buried inside
 the mesh it manipulates cannot be clicked at all — and the piece an author most
 wants to move is usually the one embedded in something else.
 */
+/*{"parent":"Internals","order":5}*/
 import { Color3, MeshBuilder, StandardMaterial } from '@babylonjs/core'
 import type { Axis, TransformMode } from './handles'
 import type { Vec3 } from '../format/types'
@@ -31,6 +32,7 @@ interface HandleMesh {
     rotation: { x: number; y: number; z: number }
     isVisible: boolean
     visibility: number
+    scaling: { x: number; y: number; z: number }
     metadata: unknown
     dispose: () => void
     computeWorldMatrix: (force: boolean) => void
@@ -67,6 +69,17 @@ const PICK_FATNESS = 5
 export interface HandlesView {
   setMode(mode: TransformMode): void
   moveTo(position: Vec3): void
+  /**
+   * Resize the handles so they stay a constant size ON SCREEN.
+   *
+   * Called every frame with the distance from the camera. Without it the
+   * handles are world-sized: correct at one camera distance and unusable at
+   * every other. Framed on a 24 m ensemble, the fat pick target measured about
+   * ELEVEN PIXELS across — which the owner reported, accurately, as "touching
+   * the manipulator is very hit and mostly miss". A manipulator you cannot
+   * reliably hit is not a manipulator.
+   */
+  setScale(scale: number): void
   setVisible(visible: boolean): void
   /** The axis whose handle is within `NEAR_RADIUS` of a hand, if any. */
   nearestAxis(grip: Vec3): Axis | null
@@ -109,14 +122,14 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
         mode === 'rotate'
           ? MeshBuilder.CreateTorus(
               `${HANDLE_TAG}-${axis}`,
-              { diameter: 1.6 * scale, thickness: 0.09 * scale, tessellation: 48 },
+              { diameter: 1.6, thickness: 0.09, tessellation: 48 },
               s
             )
           : mode === 'scale'
-            ? MeshBuilder.CreateBox(`${HANDLE_TAG}-${axis}`, { size: 0.22 * scale }, s)
+            ? MeshBuilder.CreateBox(`${HANDLE_TAG}-${axis}`, { size: 0.22 }, s)
             : MeshBuilder.CreateCylinder(
                 `${HANDLE_TAG}-${axis}`,
-                { height: 1.1 * scale, diameter: 0.075 * scale, tessellation: 12 },
+                { height: 1.1, diameter: 0.075, tessellation: 12 },
                 s
               )
       ) as unknown as HandleMesh['mesh']
@@ -132,8 +145,8 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           ? MeshBuilder.CreateTorus(
               `${HANDLE_TAG}-${axis}-pick`,
               {
-                diameter: 1.6 * scale,
-                thickness: 0.09 * PICK_FATNESS * scale,
+                diameter: 1.6,
+                thickness: 0.09 * PICK_FATNESS,
                 tessellation: 24,
               },
               s
@@ -141,14 +154,14 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           : mode === 'scale'
             ? MeshBuilder.CreateBox(
                 `${HANDLE_TAG}-${axis}-pick`,
-                { size: 0.22 * 2.2 * scale },
+                { size: 0.22 * 2.2 },
                 s
               )
             : MeshBuilder.CreateCylinder(
                 `${HANDLE_TAG}-${axis}-pick`,
                 {
-                  height: 1.1 * scale,
-                  diameter: 0.075 * PICK_FATNESS * scale,
+                  height: 1.1,
+                  diameter: 0.075 * PICK_FATNESS,
                   tessellation: 8,
                 },
                 s
@@ -168,8 +181,17 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   }
 
   const place = () => {
+    /*
+      Scale is applied HERE, per frame, rather than baked into the geometry —
+      rebuilding three meshes and their pick targets every frame to track the
+      camera would be absurd, and `setMode` is the only thing that should ever
+      rebuild.
+    */
     const offset = mode === 'rotate' ? 0 : 0.75 * scale
     for (const { axis, mesh } of handles) {
+      mesh.scaling.x = scale
+      mesh.scaling.y = scale
+      mesh.scaling.z = scale
       mesh.position.x = position[0] + (axis === 'x' ? offset : 0)
       mesh.position.y = position[1] + (axis === 'y' ? offset : 0)
       mesh.position.z = position[2] + (axis === 'z' ? offset : 0)
@@ -211,6 +233,14 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       position = next
       place()
     },
+    setScale(next) {
+      // Same guard as `setMode`: this runs per frame, and re-placing six meshes
+      // (each forcing a world matrix) for a scale that has not moved is pure
+      // waste on the one loop that must never stutter.
+      if (Math.abs(next - scale) < 1e-3) return
+      scale = next
+      place()
+    },
     setVisible(visible) {
       // Pick targets stay at visibility 0 either way; only the drawn ones toggle.
       for (const { mesh } of handles) {
@@ -219,7 +249,14 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     },
     nearestAxis(grip) {
       let best: Axis | null = null
-      let bestDistance = NEAR_RADIUS * scale
+      /*
+        A hand is a fixed size; the handles are not, since they now track the
+        camera to stay constant on screen. So reach is the LARGER of what a hand
+        needs and what the handle actually occupies — scaling the hand radius
+        with the handle would shrink the grab volume to a centimetre exactly
+        when you are close enough to reach for it.
+      */
+      let bestDistance = Math.max(NEAR_RADIUS, 0.5 * scale)
       for (const { axis, mesh } of handles) {
         const d = Math.hypot(
           mesh.position.x - grip[0],

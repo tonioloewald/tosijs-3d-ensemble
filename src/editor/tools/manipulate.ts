@@ -35,6 +35,7 @@ the scene, which disposes the node being dragged. Copying on release leaves the
 original where it was and puts the copy at the dragged transform — the same
 outcome, without pulling the floor out from under the drag.
 */
+/*{"parent":"Editing","order":4}*/
 import {
   angleOnPlane,
   axisClosestApproach,

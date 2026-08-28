@@ -281,7 +281,7 @@ here, because none of them fails loudly.
 ## Commands
 
 ```bash
-bun start           # doc site + dev server on :8032; the editor is /editor.html
+bun start           # doc site + dev server on :8032; the editor is /editor/
 bun run build       # doc site + library build (tsc -p tsconfig.build.json)
 bun test            # everything
 bun test src/format # one directory; `bun test -t "two phases"` for one test

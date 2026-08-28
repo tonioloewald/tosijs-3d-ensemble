@@ -29,6 +29,7 @@ message **on the field** rather than in a list at the bottom of the screen.
   is really a loading race is worse than none, because it accuses good content.
   Pass `meshes` when you have it and omit it when you don't.
 */
+/*{"parent":"Format","order":2}*/
 import { featuresOf, roleFeatures } from './roles'
 import { featureRegistration } from './registry'
 import type { Ensemble, Piece, Point, Vec3, Zone } from './types'

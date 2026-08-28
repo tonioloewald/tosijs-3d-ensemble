@@ -13,8 +13,8 @@ when it lands, and close the issue.
 
 | | Finding | Issue |
 |---|---|---|
-| 1 | No way to touch a mesh — doors, knobs, switches and locks have no substrate. Our `presets/world` is offered for promotion | [#36](https://github.com/tonioloewald/tosijs-3d/issues/36) |
-| 2 | The SVG UI needs a form layer: number fields, a real popup select, rows, panel measurement | [#37](https://github.com/tonioloewald/tosijs-3d/issues/37) |
+| 1 | No way to touch a mesh. **Accepted and BUILT on main** as `<tosi-b3d-interactive>`, shipping in 0.7.3 — adopt it and port our world rules onto it | [#36](https://github.com/tonioloewald/tosijs-3d/issues/36) |
+| 2 | The SVG UI needs a form layer. **Accepted**, queued behind #36 and #38. Extended with what 561 models taught us: hierarchical + filterable select, provider-backed dynamic options, list virtualisation | [#37](https://github.com/tonioloewald/tosijs-3d/issues/37) |
 | 3 | No manipulator, and `b3d-panel`'s coloured axes look exactly like one | [#38](https://github.com/tonioloewald/tosijs-3d/issues/38) |
 | 4 | ✅ **RESOLVED** (tosijs-3d@0.7.2) — `destroyable="off"` landed, credited to this project | [#39](https://github.com/tonioloewald/tosijs-3d/issues/39) |
 | 5 | `b3d-turret`/`b3d-launcher` take no `library`, so a turret cannot have its own mesh | [#34](https://github.com/tonioloewald/tosijs-3d/issues/34) |
@@ -35,6 +35,8 @@ nobody declared. One has already been collected: see the struck-through row.
 | `numberField` + DOM key routing into `inputField`, and our own active-field tracking | #37 |
 | `handles-view.ts`, and the drag maths in `handles.ts` | #38 |
 | `ctx.simTime()` defaulting to wall-clock | #41 |
+| `presets/world`'s own `interactive` (reach, activation, refusal) | 🔜 #36 in 0.7.3 |
+| The family-cycler + separate list standing in for a hierarchical palette | #37 |
 
 ### Not filed, deliberately
 

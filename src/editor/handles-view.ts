@@ -39,6 +39,10 @@ export const HANDLE_TAG = 'ensemble-editor-handle'
 
 interface HandleMesh {
   grip: Grip
+  /** Where this part sits, in unit-scale local space. */
+  offset: Vec3
+  /** How this part is turned onto its axis, in radians. */
+  spin: Vec3
   mesh: {
     position: { x: number; y: number; z: number }
     rotation: { x: number; y: number; z: number }
@@ -100,8 +104,25 @@ const PAD_SIZE = 0.32
 const RING_DIAMETER = 2.4
 const RING_THICKNESS = 0.09
 const CUBE_SIZE = 0.17
-const CUBE_OFFSET = 1.6
+const CUBE_OFFSET = 1.95
 const CENTRE_SIZE = 0.2
+
+/**
+ * The arrowhead, and why a shaft alone was not enough.
+ *
+ * A bare cylinder is a thin target wherever you aim at it, and on a touchscreen
+ * that made single-axis movement effectively impossible while the big flat
+ * plane pads worked fine — reported as "I could do the planar move but not
+ * single axis with touch". A cone is both the conventional "drag me" affordance
+ * and, at this size, the fattest part of the axis: it gives the gesture an
+ * obvious place to land instead of asking for a hairline.
+ *
+ * It is a separate PART of the same grip, not a grip of its own — grabbing the
+ * head and grabbing the shaft mean the same drag.
+ */
+const HEAD_LENGTH = 0.4
+const HEAD_DIAMETER = 0.3
+const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2
 
 /**
  * The rings get a THINNER pick tube than everything else.
@@ -172,21 +193,27 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     return m
   }
 
+  interface PartSpec {
+    /** Distinguishes parts of one grip in mesh names — `translate-x-head`. */
+    part?: string
+    make: (name: string, fatness: number) => unknown
+    colour: [number, number, number]
+    alpha?: number
+    offset?: Vec3
+    spin?: Vec3
+  }
+
   /** The drawn mesh and its fat invisible twin, both tagged with the grip. */
-  const add = (
-    grip: Grip,
-    make: (name: string, fatness: number) => unknown,
-    colour: [number, number, number],
-    alpha = 1
-  ) => {
-    const key = `${grip.kind}-${grip.axis ?? 'all'}`
+  const add = (grip: Grip, spec: PartSpec) => {
+    const { make, colour, alpha = 1, offset = [0, 0, 0], spin = [0, 0, 0] } = spec
+    const key = `${grip.kind}-${grip.axis ?? 'all'}${spec.part ? `-${spec.part}` : ''}`
     const mesh = make(`${HANDLE_TAG}-${key}`, 1) as HandleMesh['mesh']
     mesh.material = material(key, colour, alpha)
     mesh.renderingGroupId = 1
     // The visible handle is NOT the pick target — the fat one below is.
     mesh.isPickable = false
     mesh.metadata = { [HANDLE_TAG]: grip }
-    handles.push({ grip, mesh })
+    handles.push({ grip, mesh, offset, spin })
 
     const target = make(`${HANDLE_TAG}-${key}-pick`, PICK_FATNESS) as HandleMesh['mesh']
     /*
@@ -197,7 +224,34 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     target.visibility = 0
     target.isPickable = true
     target.metadata = { [HANDLE_TAG]: grip }
-    handles.push({ grip, mesh: target })
+    handles.push({ grip, mesh: target, offset, spin })
+  }
+
+  const HALF = Math.PI / 2
+
+  /**
+   * Turn a shape built along +Y onto an axis, pointing OUTWARD.
+   *
+   * The sign matters now. A cylinder is symmetric, so the old `+90°` for X drew
+   * a shaft that was positioned on +X while oriented along −X and nobody could
+   * tell. A cone can tell: it would point back at the piece.
+   */
+  const alongAxis = (axis: Axis): Vec3 =>
+    axis === 'x' ? [0, 0, -HALF] : axis === 'z' ? [HALF, 0, 0] : [0, 0, 0]
+
+  /** Turn a torus (lying in XZ, normal +Y) so its normal is `axis`. */
+  const ringOn = (axis: Axis): Vec3 =>
+    axis === 'x' ? [0, 0, HALF] : axis === 'z' ? [HALF, 0, 0] : [0, 0, 0]
+
+  /** Turn a plane (facing +Z) so it faces `axis`. */
+  const facing = (axis: Axis): Vec3 =>
+    axis === 'x' ? [0, HALF, 0] : axis === 'y' ? [HALF, 0, 0] : [0, 0, 0]
+
+  /** A vector that is `distance` along one axis and zero elsewhere. */
+  const along = (axis: Axis, distance: number): Vec3 => {
+    const v: Vec3 = [0, 0, 0]
+    v[axisIndex(axis)] = distance
+    return v
   }
 
   const build = () => {
@@ -208,33 +262,64 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
 
     for (const axis of ['x', 'y', 'z'] as Axis[]) {
       const colour = AXIS_COLOR[axis]
+      const grip = (kind: Grip['kind']): Grip => ({ kind, axis })
 
       if (transforms.translate) {
-        add(
-          { kind: 'translate', axis },
-          (name, fat) =>
+        add(grip('translate'), {
+          part: 'shaft',
+          colour,
+          offset: along(axis, SHAFT_OFFSET),
+          spin: alongAxis(axis),
+          make: (name, fat) =>
             MeshBuilder.CreateCylinder(
               name,
               { height: SHAFT_LENGTH, diameter: 0.075 * fat, tessellation: fat > 1 ? 8 : 12 },
               s
             ),
-          colour
-        )
+        })
+        // The arrowhead: same grip, fatter target, and the part that says
+        // "drag along this axis" without anyone having to be told.
+        add(grip('translate'), {
+          part: 'head',
+          colour,
+          offset: along(axis, HEAD_OFFSET),
+          spin: alongAxis(axis),
+          make: (name, fat) =>
+            MeshBuilder.CreateCylinder(
+              name,
+              {
+                height: HEAD_LENGTH * (fat > 1 ? 1.5 : 1),
+                diameterTop: 0,
+                // The pick cone is fattened much less than a shaft is: it is
+                // already the widest thing on the axis, and inflating it 5×
+                // would swallow the ring and the scale cube beside it.
+                diameterBottom: HEAD_DIAMETER * (fat > 1 ? 1.8 : 1),
+                tessellation: fat > 1 ? 8 : 16,
+              },
+              s
+            ),
+        })
         // The plane pad's axis is the plane's NORMAL, so this one reads as
         // "the pad you slide across while that axis stays put".
-        add(
-          { kind: 'planar', axis },
-          (name, fat) =>
-            MeshBuilder.CreatePlane(name, { size: PAD_SIZE * (fat > 1 ? 1.6 : 1) }, s),
+        const [u, v] = otherAxes(axis)
+        const pad: Vec3 = [0, 0, 0]
+        pad[axisIndex(u)] = PAD_OFFSET
+        pad[axisIndex(v)] = PAD_OFFSET
+        add(grip('planar'), {
           colour,
-          0.35
-        )
+          alpha: 0.35,
+          offset: pad,
+          spin: facing(axis),
+          make: (name, fat) =>
+            MeshBuilder.CreatePlane(name, { size: PAD_SIZE * (fat > 1 ? 1.6 : 1) }, s),
+        })
       }
 
       if (transforms.rotate) {
-        add(
-          { kind: 'rotate', axis },
-          (name, fat) =>
+        add(grip('rotate'), {
+          colour,
+          spin: ringOn(axis),
+          make: (name, fat) =>
             MeshBuilder.CreateTorus(
               name,
               {
@@ -244,73 +329,52 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
               },
               s
             ),
-          colour
-        )
+        })
       }
 
       if (transforms.scale) {
-        add(
-          { kind: 'scale', axis },
-          (name, fat) => MeshBuilder.CreateBox(name, { size: CUBE_SIZE * (fat > 1 ? 2.2 : 1) }, s),
-          colour
-        )
+        add(grip('scale'), {
+          colour,
+          offset: along(axis, CUBE_OFFSET),
+          make: (name, fat) =>
+            MeshBuilder.CreateBox(name, { size: CUBE_SIZE * (fat > 1 ? 2.2 : 1) }, s),
+        })
       }
     }
 
     if (transforms.scale) {
       add(
         { kind: 'uniform' },
-        (name, fat) => MeshBuilder.CreateBox(name, { size: CENTRE_SIZE * (fat > 1 ? 2 : 1) }, s),
-        NEUTRAL
+        {
+          colour: NEUTRAL,
+          make: (name, fat) =>
+            MeshBuilder.CreateBox(name, { size: CENTRE_SIZE * (fat > 1 ? 2 : 1) }, s),
+        }
       )
     }
 
     place()
   }
 
+  /*
+    Position and orientation are decided at BUILD time and simply applied here.
+
+    They used to be recomputed from the grip kind on every frame, which worked
+    only while one kind meant exactly one mesh. An arrowhead is a second part of
+    the same grip sitting at a different offset, and a switch on `kind` has no
+    way to tell the two apart.
+  */
   const place = () => {
-    const half = Math.PI / 2
-    for (const { grip, mesh } of handles) {
+    for (const { mesh, offset, spin } of handles) {
       mesh.scaling.x = scale
       mesh.scaling.y = scale
       mesh.scaling.z = scale
-      mesh.rotation.x = 0
-      mesh.rotation.y = 0
-      mesh.rotation.z = 0
-
-      const offset: Vec3 = [0, 0, 0]
-      if (grip.axis) {
-        const i = axisIndex(grip.axis)
-        if (grip.kind === 'translate') offset[i] = SHAFT_OFFSET
-        if (grip.kind === 'scale') offset[i] = CUBE_OFFSET
-        if (grip.kind === 'planar') {
-          // Out along BOTH in-plane axes, so the pad sits in the quadrant
-          // between the two shafts it moves you along.
-          const [u, v] = otherAxes(grip.axis)
-          offset[axisIndex(u)] = PAD_OFFSET
-          offset[axisIndex(v)] = PAD_OFFSET
-        }
-      }
+      mesh.rotation.x = spin[0]
+      mesh.rotation.y = spin[1]
+      mesh.rotation.z = spin[2]
       mesh.position.x = position[0] + offset[0] * scale
       mesh.position.y = position[1] + offset[1] * scale
       mesh.position.z = position[2] + offset[2] * scale
-
-      /*
-        A cylinder is built along Y, a torus lies in XZ, a plane faces +Z. All
-        three need turning onto their axis and the three need DIFFERENT turns,
-        which is why this is a per-kind table rather than one clever expression.
-      */
-      if (grip.kind === 'translate' || grip.kind === 'scale') {
-        if (grip.axis === 'x') mesh.rotation.z = half
-        if (grip.axis === 'z') mesh.rotation.x = half
-      } else if (grip.kind === 'rotate') {
-        if (grip.axis === 'x') mesh.rotation.z = half
-        if (grip.axis === 'z') mesh.rotation.x = half
-      } else if (grip.kind === 'planar') {
-        // A plane faces +Z, so the pad whose NORMAL is z needs no turn at all.
-        if (grip.axis === 'x') mesh.rotation.y = half
-        if (grip.axis === 'y') mesh.rotation.x = half
-      }
 
       /*
         FORCE THE WORLD MATRIX. A mesh that has been positioned but not yet

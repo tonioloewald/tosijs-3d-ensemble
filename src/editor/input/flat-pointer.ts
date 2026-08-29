@@ -39,6 +39,21 @@ export class FlatPointer implements EditorPointer {
   /** A press the hub has not sampled yet. See `endPoll`. */
   private latched = false
   private alt = false
+  /**
+   * Every pointer currently down, by id.
+   *
+   * A count, not a boolean, because "how many fingers" is the whole question:
+   * one is a tool gesture, two is the camera's.
+   */
+  private readonly contacts = new Set<number>()
+  /**
+   * A multi-touch gesture is in progress and this pointer has stood down.
+   *
+   * Stays true until EVERY finger lifts. Clearing it when the count drops back
+   * to one would restart a drag halfway through a pan, from wherever the
+   * remaining finger happened to be.
+   */
+  private yielded = false
   private detach: () => void = () => {}
 
   constructor(
@@ -52,13 +67,34 @@ export class FlatPointer implements EditorPointer {
     }
     const down = (e: PointerEvent) => {
       move(e)
+      this.contacts.add(e.pointerId)
+      /*
+        TWO FINGERS ARE THE CAMERA'S, NOT A TOOL'S.
+
+        A second contact means pan or pinch, and the camera already implements
+        both — but only if it SEES them. The first finger arrives as an ordinary
+        press, so by the time the second lands a tool may already have grabbed a
+        handle and detached the camera, and the pan goes nowhere.
+
+        So the second contact stands this pointer down. The gesture in flight
+        ends on the next poll, which hands the camera back, and nothing new
+        starts until every finger has lifted.
+      */
+      if (this.contacts.size > 1) {
+        this.yielded = true
+        this.down = false
+        this.alt = false
+        return
+      }
+      if (this.yielded) return
       // Button 0 only. A right-drag is the camera's, and stealing it makes the
       // scene un-navigable the moment a tool is active.
       if (e.button !== 0) return
       /*
-        Ctrl/⌘ + left-drag is the camera's PAN gesture. Claiming it too meant a
-        pan both moved the view and dragged whatever was under the pointer —
-        two things happening for one gesture, with no way to ask for either.
+        Ctrl/⌘ + left-drag is the camera's PAN gesture — the mouse spelling of
+        the same two-finger intent. Claiming it too meant a pan both moved the
+        view and dragged whatever was under the pointer: two things happening
+        for one gesture, with no way to ask for either.
       */
       if (e.ctrlKey || e.metaKey) return
       this.down = true
@@ -66,6 +102,8 @@ export class FlatPointer implements EditorPointer {
       this.alt = e.shiftKey || e.altKey
     }
     const up = (e: PointerEvent) => {
+      this.contacts.delete(e.pointerId)
+      if (this.contacts.size === 0) this.yielded = false
       if (e.button !== 0) return
       this.down = false
       this.alt = false
@@ -80,16 +118,38 @@ export class FlatPointer implements EditorPointer {
       welded on. A mouse almost never produces it, which is why this survived
       until someone used a touchscreen.
     */
-    const cancel = () => {
+    const cancel = (e: PointerEvent) => {
+      this.contacts.delete(e.pointerId)
+      if (this.contacts.size === 0) this.yielded = false
       this.down = false
       this.alt = false
     }
     canvas.addEventListener('pointermove', move)
     canvas.addEventListener('pointerdown', down)
+    // `down` on the canvas but the rest on the window: a second finger that
+    // lands OUTSIDE the canvas still ends the gesture, and a release anywhere
+    // still clears the contact. Tracking contacts only on the canvas leaves the
+    // set permanently non-empty, which welds the pointer into `yielded`.
     // `up` goes on the window: releasing outside the canvas still ends the drag,
     // otherwise the tool keeps dragging with the button already released.
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', cancel)
+    /*
+      A second finger landing off-canvas still has to be counted, or the pointer
+      never yields and the camera never pans. `down` is canvas-only on purpose —
+      a press that starts on a panel belongs to the panel — so this listener
+      counts contacts WITHOUT starting anything.
+    */
+    const contact = (e: PointerEvent) => {
+      if (this.contacts.has(e.pointerId)) return
+      this.contacts.add(e.pointerId)
+      if (this.contacts.size > 1) {
+        this.yielded = true
+        this.down = false
+        this.alt = false
+      }
+    }
+    window.addEventListener('pointerdown', contact)
     // Without this the browser claims touch gestures for panning and zooming
     // the PAGE, and the canvas never sees a coherent drag at all.
     canvas.style.touchAction = 'none'
@@ -97,6 +157,7 @@ export class FlatPointer implements EditorPointer {
       canvas.removeEventListener('pointermove', move)
       canvas.removeEventListener('pointerdown', down)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointerdown', contact)
       window.removeEventListener('pointercancel', cancel)
     }
   }

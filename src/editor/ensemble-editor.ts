@@ -202,6 +202,9 @@ export class EnsembleEditor extends Component {
   set ensemble(value: Ensemble) {
     this._ensemble = value
     this._selected = value.pieces[0]?.id ?? null
+    // A NEW arrangement earns a new view. An edit to the current one does not —
+    // see the note in `rebuild`.
+    this._needsFraming = true
     this.rebuild()
   }
   private _ensemble: Ensemble = EMPTY
@@ -761,6 +764,10 @@ export class EnsembleEditor extends Component {
    */
   rebuild(): void {
     if (!this._scene) return
+    // Read the pose BEFORE anything is disposed: comparing it with the pose
+    // afterwards is how the rebuild finds out whether the ensemble moved the
+    // camera itself.
+    const before = this._cameraPose()
     this._built?.dispose()
     this._built = buildEnsemble(this._ensemble, {
       scene: this._scene,
@@ -772,7 +779,72 @@ export class EnsembleEditor extends Component {
     this._syncSelection()
     this._syncHandles()
     this._renderChrome()
-    this.frame()
+
+    /*
+      THE AUTHOR'S VIEWPOINT SURVIVES AN EDIT. THE FILE'S WINS ON LOAD.
+
+      Every edit rebuilds — that is the design — and a rebuild re-runs every
+      feature, including a `camera` one. So an ensemble that declares a view
+      snapped the camera back to it at the end of EVERY drag, every typed
+      coordinate, every insert. Reported as "still having the zoom jump after I
+      finish a touch transform", and it is a different bug from the orbit swing
+      fixed before it: that was the camera's stale press point, this is the
+      ensemble's own data reasserting itself at the worst possible moment.
+
+      Three cases, and the pose before the build tells them apart:
+
+      - a NEW ensemble that declares a camera → let it win, it is the shot the
+        author of that file chose
+      - a NEW ensemble that declares none → fit one, or you start off in space
+      - an EDIT → put the view back. An author frames the shot they want to work
+        in, and the file has no business overruling that while they work.
+    */
+    if (this._needsFraming) {
+      this._needsFraming = false
+      /*
+        Ask the DATA, not the camera, whether a view was declared.
+
+        Comparing the pose before and after the build looked like the neat way
+        to detect it, and it is wrong: a rebuild can hand back a different
+        camera object at its defaults, which reads as a moved camera and
+        suppressed the framing. Measured — loading an ensemble with its camera
+        piece removed left the view at Babylon's default radius 8 inside a 24 m
+        arrangement, which is the "you start off in space" case this branch is
+        here to prevent. The feature list cannot be fooled that way.
+      */
+      if (!this._declares('camera')) this.frame()
+    } else if (before && !samePose(before, this._cameraPose())) {
+      this._setCameraPose(before)
+    }
+  }
+
+  /** Whether any piece carries this feature. Same test the backdrop uses. */
+  private _declares(feature: string): boolean {
+    return this._ensemble.pieces.some((piece) => feature in (piece.features ?? {}))
+  }
+
+  /** Set when a whole ensemble arrives, cleared by the rebuild that resolves it. */
+  private _needsFraming = true
+
+  private _camera(): ArcCamera | undefined {
+    return (this._scene as unknown as { scene?: { activeCamera?: ArcCamera } }).scene?.activeCamera
+  }
+
+  private _cameraPose(): CameraPose | null {
+    const c = this._camera()
+    if (!c || typeof c.alpha !== 'number' || !c.target) return null
+    return { alpha: c.alpha, beta: c.beta, radius: c.radius, target: [c.target.x, c.target.y, c.target.z] }
+  }
+
+  private _setCameraPose(pose: CameraPose): void {
+    const c = this._camera()
+    if (!c?.target) return
+    c.alpha = pose.alpha
+    c.beta = pose.beta
+    c.radius = pose.radius
+    c.target.x = pose.target[0]
+    c.target.y = pose.target[1]
+    c.target.z = pose.target[2]
   }
 
   /**
@@ -977,7 +1049,7 @@ export class EnsembleEditor extends Component {
           first: a clipped hint costs advice, a clipped button costs a feature.
           34 per row (a button3d is taller than its label), plus the hint.
         */
-        { width: 150, height: 190 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
+        { width: 168, height: 232 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
         label3d({ text: 'Tools', bold: true }),
         ...(tools.map((tool) =>
           button3d({
@@ -1006,7 +1078,10 @@ export class EnsembleEditor extends Component {
           "drag orbit · ⌃dra" — advice truncated mid-word, which is worse than
           no advice. A text block measures and wraps to the panel width.
         */
-        textBlock3d({ lines: ['drag orbit · ⌃drag pan · wheel zoom'], muted: true })
+        textBlock3d({
+          lines: ['orbit: drag', 'pan: 2-finger, ⌃drag', 'zoom: pinch, wheel'],
+          muted: true,
+        })
       )
     )
   }
@@ -1211,3 +1286,38 @@ export class EnsembleEditor extends Component {
 export const ensembleEditor = EnsembleEditor.elementCreator() as (
   ...args: unknown[]
 ) => EnsembleEditor
+
+/** An ArcRotateCamera, as much of one as the editor needs to read and restore. */
+interface ArcCamera {
+  alpha: number
+  beta: number
+  radius: number
+  target?: { x: number; y: number; z: number }
+}
+
+/** Where the camera is looking, as plain numbers. */
+interface CameraPose {
+  alpha: number
+  beta: number
+  radius: number
+  target: Vec3
+}
+
+/**
+ * Whether two poses are the same view.
+ *
+ * The tolerance is what makes this usable as a signal: a rebuild that does not
+ * touch the camera still leaves floating-point noise in `radius` from the
+ * camera's own inertia, and an exact compare would read that as "the ensemble
+ * claimed the view" on every single edit.
+ */
+function samePose(a: CameraPose | null, b: CameraPose | null): boolean {
+  if (!a || !b) return a === b
+  const near = (x: number, y: number) => Math.abs(x - y) < 1e-4
+  return (
+    near(a.alpha, b.alpha) &&
+    near(a.beta, b.beta) &&
+    near(a.radius, b.radius) &&
+    a.target.every((v, i) => near(v, b.target[i]!))
+  )
+}

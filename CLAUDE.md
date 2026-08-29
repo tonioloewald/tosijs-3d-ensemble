@@ -189,25 +189,34 @@ Cheap now, painful to retrofit:
   that radius inside the geometry it is meant to cover. `BuiltPiece.scale3` is
   the honest triple.
 
-### Scale did nothing at all until 2026-08-29, and nothing said so
+### Rotation and scale did nothing at all, and nothing said so
 
-`b3d-destroyable`'s `size` is the placeholder cube's edge length and is
-**ignored when `library` is set** — which is every mesh piece we place. So
-`piece.scale` was a documented field that moved nothing: measured in a browser,
-a piece rendered 5.273 wide at `scale` 1, 2 and 4 alike, with its root node
-still at `1,1,1`. The editor shipped a scale control against it, and a test
-asserted `element.size === 3` and passed the whole time.
+**Only POSITION survives the trip through `b3d-destroyable`.** The element
+rewrites `mesh.position` from `x`/`y`/`z` every frame, which is why moving a
+piece has always worked. Nothing else gets through:
 
-The fix writes `element.mesh.scaling` — the library instance's root
-`TransformNode`, which the element does not rewrite the way it rewrites
-position. Filed as tosijs-3d#47. **The instance does not exist when the element
-is appended** (destroyable instantiates inside `lib.ready.then(...)`), so
-`place-mesh.ts`'s `whenMeshed` retries on a render observer with a frame budget;
-applying once, immediately, is the same silent nothing one layer down.
+| written | result |
+|---|---|
+| `piece.scale` 1 → 2 → 4 | rendered width 5.273 every time (`size` is the placeholder cube's edge, ignored once `library` is set) |
+| `element.ry = 90` | node rotation `0,0,0`, quaternion null, unchanged |
+| authored `rot: [0, 45, 0]` | footprint 3.63 × 3.63, identical to no rotation — `instantiate` is called with position only |
+
+So `piece.scale` and `piece.rot` were documented format fields that moved
+nothing. The editor shipped controls against both, and a test asserted
+`element.size === 3` and passed the whole time.
+
+The fix writes the library instance's root `TransformNode` — `element.mesh` —
+which the element does not rewrite the way it rewrites position:
+`src/runtime/node-transform.ts`. Filed as tosijs-3d#47 (scale) and #48
+(rotation). **The instance does not exist when the element is appended**
+(destroyable instantiates inside `lib.ready.then(...)`), so `place-mesh.ts`'s
+`whenMeshed` retries on a render observer with a frame budget; applying once,
+immediately, is the same silent nothing one layer down.
 
 This is the project's own "verify the OUTPUT, not the mechanism" rule catching
-its own code, and it is worth re-reading as such: the attribute was set, the
-element accepted it, the test passed, and the mesh never changed size.
+its own code three times over: the attribute was set, the element accepted it,
+the test passed, and the mesh never moved. **Before trusting any transform
+attribute on a tosijs-3d element, measure the rendered result.**
 
 ## Prior art to lift, not reinvent
 

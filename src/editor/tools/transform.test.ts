@@ -175,6 +175,39 @@ describe('select and transform are ONE tool', () => {
   })
 })
 
+describe('a press that did not drag is a click', () => {
+  it('falls through to selection when a grabbed handle never moved', () => {
+    /*
+      With everything on, the widget and its deliberately fat pick targets cover
+      much of what is behind them, so tapping the piece BESIDE a selection
+      usually lands on a handle. Before this, that gesture grabbed a grip, moved
+      nothing, committed nothing and swallowed the tap — "select seems a bit
+      unreliable… hard to touch outside the widget once something is selected".
+    */
+    picked = 'another-piece'
+    const c = ctx()
+    // grab a handle, then release without ever moving
+    tool().onGesture!.start!(gestureWith(rayAtX(0)), c)
+    tool().onGesture!.end!(gestureWith(rayAtX(0)), c)
+    expect(selectedId).toBe('another-piece')
+  })
+
+  it('still commits when the drag actually moved something', () => {
+    picked = 'another-piece'
+    run([rayAtX(0), rayAtX(3)], ctx())
+    expect(ensemble.pieces[0]!.at).toEqual([3, 0, 0])
+    expect(selectedId).toBe('rock') // and does NOT reselect what is behind
+  })
+
+  it('treats a drag that snapped back to where it started as a click', () => {
+    // Nothing to commit, so the tap should not be swallowed either.
+    picked = 'another-piece'
+    run([rayAtX(0), rayAtX(0.2)], ctx({ gridSnap: 1 }))
+    expect(ensemble.pieces[0]!.at).toEqual([0, 0, 0])
+    expect(selectedId).toBe('another-piece')
+  })
+})
+
 describe('translate', () => {
   it('moves the piece by the pointer delta and writes the JSON on release', () => {
     const c = ctx()

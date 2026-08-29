@@ -42,8 +42,8 @@ So rotating a node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
 /*{"parent":"Internals","order":8}*/
-import { applyScale } from '../runtime/node-scale'
-import type { ScalableNode } from '../runtime/node-scale'
+import { applyEuler, applyScale } from '../runtime/node-transform'
+import type { TransformableNode } from '../runtime/node-transform'
 import type { Euler, Vec3 } from '../format/types'
 
 const DEG_TO_RAD = Math.PI / 180
@@ -57,7 +57,7 @@ export interface ElementBody {
   rz?: number
   size?: number
   /** The managed node. Present once the library has instantiated — see below. */
-  mesh?: ScalableNode | null
+  mesh?: TransformableNode | null
 }
 
 export interface NodeBody {
@@ -107,10 +107,16 @@ function writeElement(element: ElementBody, { at, rot, scale }: Transform): void
     element.z = at[2]
   }
   if (rot) {
-    // Degrees, straight through — the element's own unit.
+    /*
+      The attributes are set for the record — a rebuild reads them back — but
+      they are NOT what turns the piece. `b3d-destroyable` forwards only
+      position to `library.instantiate`, so `rx`/`ry`/`rz` never reach the
+      instance. Measured: `element.ry = 90` left the node at rotation 0,0,0.
+    */
     element.rx = rot[0]
     element.ry = rot[1]
     element.rz = rot[2]
+    applyEuler(element.mesh, rot)
   }
   /*
     NOT `element.size` — that is the placeholder-cube attribute and it is

@@ -250,10 +250,32 @@ export function registerTransformTool(hooks: TransformHooks): void {
         // otherwise a mis-click leaves the view frozen with no way to recover.
         ctx.captureCamera(false)
 
-        if (!finished) {
-          /*
-            No handle was grabbed, so this gesture was a SELECTION.
+        /*
+          A PRESS THAT DID NOT DRAG IS A CLICK, even on a handle.
 
+          With everything switched on the widget covers a good deal of what is
+          behind it, and its pick targets are deliberately fatter still — so
+          once a piece is selected, tapping the piece BESIDE it usually lands on
+          a handle instead. The gesture grabbed a grip, moved nothing, committed
+          nothing, and swallowed the tap: "select seems a bit unreliable… maybe
+          it's just hard to touch outside the widget once something is
+          selected".
+
+          So a grab that never moved falls through to selection. The threshold
+          is on the RESULT, not on pointer travel, because that is what decides
+          whether there is anything to commit: a drag whose value snapped back
+          to where it started has changed nothing either.
+        */
+        // Snap the VALUE, not the accumulated delta — see handles.ts.
+        const grid = Number(ctx.options.gridSnap ?? 0)
+        const angle = Number(ctx.options.angleSnap ?? 0)
+        const at = finished ? snapVec3(finished.at, grid) : null
+        const rot = finished
+          ? (finished.rot.map((a) => wrapDegrees(snap(a, angle))) as Euler)
+          : null
+
+        if (!finished || !at || !rot || !moved(finished, at, rot)) {
+          /*
             On end rather than start, so a press that turns into a camera orbit
             does not also change what is selected — the two gestures begin
             identically and only diverge once something moves.
@@ -263,11 +285,6 @@ export function registerTransformTool(hooks: TransformHooks): void {
           return
         }
 
-        // Snap the VALUE, not the accumulated delta — see handles.ts.
-        const grid = Number(ctx.options.gridSnap ?? 0)
-        const angle = Number(ctx.options.angleSnap ?? 0)
-        const at = snapVec3(finished.at, grid)
-        const rot = finished.rot.map((a) => wrapDegrees(snap(a, angle))) as Euler
         const scale = narrowScale(finished.scale)
         const kind = finished.grip.kind
 
@@ -297,6 +314,26 @@ export function registerTransformTool(hooks: TransformHooks): void {
       },
     },
   })
+}
+
+/**
+ * Did this drag actually change anything?
+ *
+ * Takes the SNAPPED position and rotation, not the raw ones, because the
+ * snapped values are what would be committed. A ten-centimetre nudge on a
+ * one-metre grid rounds back to where it started: there is nothing to write,
+ * and treating it as a drag would swallow a tap to no purpose.
+ *
+ * Compared against what the drag started FROM, so a gesture that wandered and
+ * came back also reads as unmoved.
+ */
+function moved(state: Drag, at: Vec3, rot: Euler): boolean {
+  const near = (a: number, b: number, epsilon: number) => Math.abs(a - b) < epsilon
+  const still =
+    at.every((v, i) => near(v, state.startAt[i]!, 1e-4)) &&
+    rot.every((v, i) => near(v, state.startRot[i]!, 1e-3)) &&
+    state.scale.every((v, i) => near(v, state.startScale[i]!, 1e-4))
+  return !still
 }
 
 /** Where the pointer is, in the units this grip drags in. */

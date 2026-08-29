@@ -23,13 +23,19 @@ over. Every mesh piece is placed the same way and `destroyable` is a genuine
 decorator: it contributes hit points to a body that already exists rather than
 being the reason the body exists.
 
-## Scale goes on the NODE, because `size` is inert
+## Rotation and scale go on the NODE; only position survives the element
 
 `b3d-destroyable`'s `size` is the placeholder cube's edge length and is
 *ignored when `library` is set* — so for every piece with a real mesh, writing
-it does nothing. Measured before trusting it: rendered width stayed 5.273 at
-`scale` 1, 2 and 4 alike. `piece.scale` was a documented field that moved
-nothing, which is the worst kind of control there is.
+it does nothing. Worse, the element forwards only `{x, y, z, canonical}` to
+`library.instantiate`, so **`rx`/`ry`/`rz` never reach the instance either**.
+
+Both measured before trusting anything: rendered width stayed 5.273 at `scale`
+1, 2 and 4 alike, and an authored `rot: [0, 45, 0]` left the footprint at
+3.63 × 3.63 — identical to no rotation. `piece.scale` and `piece.rot` were
+documented fields that moved nothing, which is the worst kind of control there
+is. Position is the exception and always worked, because the element rewrites
+`mesh.position` from `x`/`y`/`z` every frame.
 
 The element's own `mesh` — the library instance's root `TransformNode` — does
 scale, and the element does not rewrite its scaling the way it rewrites
@@ -52,8 +58,8 @@ is judging, so cubes in the right places beat an empty scene.
 */
 /*{"parent":"Internals","order":9}*/
 import { b3dBox, b3dDestroyable, b3dRadarBlip } from 'tosijs-3d'
-import { applyScale } from './node-scale'
-import type { ScalableNode } from './node-scale'
+import { applyEuler, applyScale } from './node-transform'
+import type { TransformableNode } from './node-transform'
 import type { SceneElement } from '../format/registry'
 import type { Piece, Vec3 } from '../format/types'
 import type { PlaceContext, Placement } from './build'
@@ -122,7 +128,13 @@ export function placeMesh(
     // Creating an element does not add it. This is the step whose absence
     // produces no errors, no pieces, and nothing in the console.
     ctx.scene.appendChild(element)
-    const stopWaiting = whenMeshed(ctx.scene, element, (node) => applyScale(node, scale))
+    const stopWaiting = whenMeshed(ctx.scene, element, (node) => {
+      // BOTH, and both for the same reason: the element forwards neither to the
+      // library instance. `rx`/`ry`/`rz` are dropped by `instantiate`, and
+      // `size` is the placeholder cube's edge. Only position survives the trip.
+      applyEuler(node, [rotation.rx, rotation.ry, rotation.rz])
+      applyScale(node, scale)
+    })
     return {
       element,
       dispose: () => {
@@ -166,10 +178,10 @@ export function placeMesh(
 function whenMeshed(
   sceneElement: SceneElement,
   element: SceneElement,
-  apply: (node: ScalableNode) => void,
+  apply: (node: TransformableNode) => void,
   frameBudget = 240
 ): () => void {
-  const host = element as unknown as { mesh?: ScalableNode | null }
+  const host = element as unknown as { mesh?: TransformableNode | null }
   if (host.mesh) {
     apply(host.mesh)
     return () => {}

@@ -10,10 +10,17 @@ const elementBody = () => ({
     ry: 0,
     rz: 0,
     size: 1,
-    // The library instance's root node. `size` is the placeholder cube's edge
-    // length and is ignored once a library is set, so this is the only thing
-    // that actually scales.
-    mesh: { scaling: { x: 1, y: 1, z: 1 } },
+    /*
+      The library instance's root node. Only POSITION survives the trip through
+      the element: `size` is the placeholder cube's edge and is ignored once a
+      library is set, and `rx`/`ry`/`rz` are never forwarded to `instantiate`.
+      So this node is the only thing that actually turns or scales.
+    */
+    mesh: {
+      rotation: { x: 0, y: 0, z: 0 },
+      rotationQuaternion: { w: 1 } as unknown,
+      scaling: { x: 1, y: 1, z: 1 },
+    },
   },
 })
 
@@ -35,10 +42,32 @@ describe('writeTransform', () => {
     expect([body.element.x, body.element.y, body.element.z]).toEqual([1, 2, 3])
   })
 
-  it('keeps element rotation in DEGREES', () => {
+  it('keeps element rotation in DEGREES on the attribute', () => {
     const body = elementBody()
     writeTransform(body, { rot: [0, 90, 0] })
     expect(body.element.ry).toBe(90)
+  })
+
+  it('also turns the NODE, because the attribute alone does nothing', () => {
+    /*
+      `b3d-destroyable` calls `library.instantiate` with position only, so
+      `rx`/`ry`/`rz` never reach the instance. Measured: `element.ry = 90` left
+      the node at rotation 0,0,0 with its quaternion untouched, across frames.
+      The attribute is still written — a rebuild reads it back — but it is not
+      what turns the piece.
+    */
+    const body = elementBody()
+    writeTransform(body, { rot: [0, 90, 0] })
+    expect(body.element.mesh.rotation.y).toBeCloseTo(Math.PI / 2, 9)
+  })
+
+  it('clears the node quaternion before turning an element body', () => {
+    // Same trap as the node branch: a TransformNode ignores `.rotation` while
+    // it has a quaternion, and the glTF loader always sets one.
+    const body = elementBody()
+    expect(body.element.mesh.rotationQuaternion).not.toBeNull()
+    writeTransform(body, { rot: [0, 45, 0] })
+    expect(body.element.mesh.rotationQuaternion).toBeNull()
   })
 
   it('writes a node directly, converting rotation to radians', () => {

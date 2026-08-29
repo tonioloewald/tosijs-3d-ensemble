@@ -25,6 +25,7 @@ when it lands, and close the issue.
 | 9 | `b3d-library` ignores a glb's own catalogue: `getNames()` over-reports sub-parts (80 vs 72 declared), and per-item `extras` — category, tags, **clips** — are unreachable | [#45](https://github.com/tonioloewald/tosijs-3d/issues/45) |
 | 10 | `b3dWater` defaults `normalMap` to `/waterbump.png` but the package does not ship it — the sea renders as Babylon's fallback CHECKERBOARD, which reads as a style, not a fault | [#46](https://github.com/tonioloewald/tosijs-3d/issues/46) |
 | 11 | `b3d-destroyable` cannot scale a library-backed piece at all — `size` is the placeholder cube's edge and is ignored once `library` is set. Measured: width identical at scale 1, 2 and 4 | [#47](https://github.com/tonioloewald/tosijs-3d/issues/47) |
+| 12 | `b3d-destroyable` drops `rx`/`ry`/`rz` — `instantiate` is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored `rot: [0,45,0]` left the footprint identical | [#48](https://github.com/tonioloewald/tosijs-3d/issues/48) |
 | 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them
@@ -44,7 +45,7 @@ nobody declared. One has already been collected: see the struck-through row.
 | The family-cycler + separate list standing in for a hierarchical palette | #37 |
 | Deriving palette categories from NAME PREFIXES, when the library now declares real ones | #45 |
 | Our own copy of `waterbump.png` in `static/` (see `static/ASSETS.md`) | tosijs-3d #46 |
-| Writing `element.mesh.scaling` past the element, and `whenMeshed`'s retry, because the instance does not exist when the element is appended | tosijs-3d #47 |
+| `runtime/node-transform.ts` — writing rotation AND scale past the element onto the instance root, plus `whenMeshed`'s retry, because the instance does not exist when the element is appended | tosijs-3d #47, #48 |
 | `editor.md`'s `calc(100dvh - 4rem)`, a hand-tuned navbar offset | tosijs-ui #115 |
 | Nulling the camera input's private `_pointA`/`_pointB` on re-attach | Babylon (third-party; no upstream row) |
 

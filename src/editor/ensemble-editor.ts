@@ -71,7 +71,7 @@ import {
   slider3d,
   textBlock3d,
 } from 'tosijs-3d'
-import { Color3, HighlightLayer, Ray, Vector3 } from '@babylonjs/core'
+import { Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
 import {
   libraryCatalogue,
@@ -121,37 +121,6 @@ interface SceneWithCamera {
 /** Trim trailing zeros so a coordinate reads as a number, not a measurement. */
 const format = (n: number): string =>
   Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)))
-
-/** Outline colour for the selected piece. */
-const SELECTION_COLOR = new Color3(0.18, 0.62, 0.56)
-
-/**
- * The meshes that make up a piece's body.
- *
- * A highlight layer takes MESHES, not transform nodes — and both kinds of body
- * hand you a transform node at the top. An element's `mesh` is the library
- * instance's root, which is a `TransformNode` with the real geometry beneath
- * it, so passing it straight to the layer outlines nothing.
- *
- * That is exactly what shipped: this function had the rule written in its own
- * doc comment and applied it only to the node branch, `addMesh` rejected the
- * transform node, and the `catch` around the call swallowed it. Reported as
- * "there's no visual indication of selection" — for the second time, because
- * the highlight layer was added to fix the first report and never actually
- * highlighted anything.
- */
-function selectableMeshes(built: { element?: unknown; node?: unknown }): unknown[] {
-  const root = ((built.element as { mesh?: unknown } | null)?.mesh ?? built.node) as {
-    getChildMeshes?: (direct?: boolean) => unknown[]
-    getClassName?: () => string
-  } | null
-  if (!root) return []
-  const children = root.getChildMeshes?.(false) ?? []
-  if (children.length) return children
-  // A root that IS a mesh is its own answer; a childless transform node has
-  // nothing to outline and must not be handed over.
-  return root.getClassName?.().includes('Mesh') ? [root] : []
-}
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
 
@@ -564,6 +533,7 @@ export class EnsembleEditor extends Component {
     const tick = () => {
       if (!running) return
       this._syncHandleScale()
+      this._syncHandlePosition()
       this._syncMarker()
       this._hub.update()
       requestAnimationFrame(tick)
@@ -928,30 +898,24 @@ export class EnsembleEditor extends Component {
     An outline rather than a bounding box: a box around a tree is mostly empty
     air and reads as "this region", where an outline reads as "this thing".
   */
+  /*
+    ONE SELECTION SIGNAL, NOT TWO.
+
+    There was a `HighlightLayer` here as well, glowing the selected meshes. It
+    is gone, for two reasons that point the same way. It never worked — it was
+    handed a `TransformNode`, which the layer rejects, inside a `catch` — and
+    when it was finally fixed the glow turned out to be actively unhelpful:
+    "kind of off putting and makes it hard to see what's going on". A glow
+    recolours the thing you are judging, which is the one thing an arrangement
+    editor must not do.
+
+    The box and axes say more (where the origin is, how big the piece is) and
+    say it without touching a single pixel of the model.
+  */
   private _syncSelection(): void {
     const scene = (this._scene as unknown as { scene?: unknown }).scene
     if (!scene) return
-    if (!this._highlight) {
-      this._highlight = new HighlightLayer('ensemble-editor-selection', scene as never)
-      // Otherwise the outline is hidden by anything drawn in front of it —
-      // including the piece itself, which is the usual case for a mesh with
-      // interior geometry.
-      this._highlight.innerGlow = false
-    }
     if (!this._marker) this._marker = createSelectionView(scene)
-    this._highlight.removeAllMeshes()
-    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
-    if (!built) {
-      this._marker.hide()
-      return
-    }
-    for (const mesh of selectableMeshes(built)) {
-      try {
-        this._highlight.addMesh(mesh as never, SELECTION_COLOR)
-      } catch {
-        /* a mesh the layer cannot outline is not worth losing the selection over */
-      }
-    }
     this._syncMarker()
   }
 
@@ -971,27 +935,44 @@ export class EnsembleEditor extends Component {
     }
     const root = ((built.element as { mesh?: unknown } | null)?.mesh ?? built.node) as {
       getHierarchyBoundingVectors?: () => { min: XYZ; max: XYZ }
+      getAbsolutePosition?: () => XYZ
       computeWorldMatrix?: (force: boolean) => void
     } | null
+    root?.computeWorldMatrix?.(true)
     const bounds = root?.getHierarchyBoundingVectors?.()
+    const here = this._liveOrigin(built)
     if (!bounds) {
       /*
         No mesh yet — an environment primitive, or a library still loading.
         Mark the authored POINT rather than nothing: an author who selected a
         sun or a fog layer should still see where it claims to be.
       */
-      this._marker.show({ centre: built.at, extents: [0.4, 0.4, 0.4] })
+      this._marker.show({ centre: here, extents: [0.4, 0.4, 0.4] })
       return
     }
-    root?.computeWorldMatrix?.(true)
     const { min, max } = bounds
+    /*
+      SIZE from the mesh, POSITION from the live body.
+
+      The bounds are in world space and therefore a frame behind during a drag:
+      an element writes `mesh.position` from its own `x`/`y`/`z` on its update
+      pass, so the node trails the value a tool has already written. Taking the
+      centre straight from the bounds made the box lag the piece it marks.
+
+      So the model's offset from its own origin is measured (a tower's bounds
+      are centred above its base, not on it) and re-applied at where the body
+      says it is NOW.
+    */
+    const node = root?.getAbsolutePosition?.()
+    const offset: Vec3 = node
+      ? [(min.x + max.x) / 2 - node.x, (min.y + max.y) / 2 - node.y, (min.z + max.z) / 2 - node.z]
+      : [0, 0, 0]
     this._marker.show({
-      centre: [(min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2],
+      centre: [here[0] + offset[0], here[1] + offset[1], here[2] + offset[2]],
       extents: [(max.x - min.x) / 2, (max.y - min.y) / 2, (max.z - min.z) / 2],
     })
   }
 
-  private _highlight: HighlightLayer | null = null
   private _marker: SelectionView | null = null
 
   /**
@@ -1022,8 +1003,35 @@ export class EnsembleEditor extends Component {
     const eye = camera?.position
     const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
     if (!eye || !built) return
-    const distance = Math.hypot(eye.x - built.at[0], eye.y - built.at[1], eye.z - built.at[2])
+    const here = this._liveOrigin(built)
+    const distance = Math.hypot(eye.x - here[0], eye.y - here[1], eye.z - here[2])
     this._handles.setScale(Math.max(distance * 0.12, 0.05))
+  }
+
+  /**
+   * Where the selected piece's body actually IS, right now.
+   *
+   * `built.at` is where the last BUILD put it, which is a frame behind during a
+   * drag — the body is written live and the JSON only catches up on release. A
+   * widget reading `built.at` therefore sits still while the piece slides out
+   * from under it, reported as "the widget doesn't move with the object".
+   */
+  private _liveOrigin(built: { element?: unknown; node?: unknown; at: Vec3 }): Vec3 {
+    const element = built.element as { x?: number; y?: number; z?: number } | null
+    if (element && typeof element.x === 'number' && typeof element.y === 'number' && typeof element.z === 'number') {
+      return [element.x, element.y, element.z]
+    }
+    const node = built.node as { position?: XYZ } | null
+    const at = node?.position
+    return at ? [at.x, at.y, at.z] : built.at
+  }
+
+  /** Keep the widget on the piece while it is being dragged. */
+  private _syncHandlePosition(): void {
+    if (!this._handles) return
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    if (!built) return
+    this._handles.moveTo(this._liveOrigin(built))
   }
 
   private _syncHandles(): void {

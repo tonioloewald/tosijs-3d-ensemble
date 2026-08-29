@@ -91,6 +91,8 @@ import {
 import { registerEditorTools } from './tools/built-in'
 import { registerTransformTool, transformsOf } from './tools/transform'
 import { createHandles } from './handles-view'
+import { createSelectionView } from './selection-view'
+import type { SelectionView } from './selection-view'
 import type { HandlesView } from './handles-view'
 import { noTransforms } from './handles'
 import type { Grip } from './handles'
@@ -126,17 +128,29 @@ const SELECTION_COLOR = new Color3(0.18, 0.62, 0.56)
 /**
  * The meshes that make up a piece's body.
  *
- * An element body exposes one `mesh`; a library instance is a NODE whose meshes
- * are its children — a highlight layer takes meshes, not transform nodes, so a
- * piece made of five parts has to contribute all five or it outlines nothing.
+ * A highlight layer takes MESHES, not transform nodes — and both kinds of body
+ * hand you a transform node at the top. An element's `mesh` is the library
+ * instance's root, which is a `TransformNode` with the real geometry beneath
+ * it, so passing it straight to the layer outlines nothing.
+ *
+ * That is exactly what shipped: this function had the rule written in its own
+ * doc comment and applied it only to the node branch, `addMesh` rejected the
+ * transform node, and the `catch` around the call swallowed it. Reported as
+ * "there's no visual indication of selection" — for the second time, because
+ * the highlight layer was added to fix the first report and never actually
+ * highlighted anything.
  */
 function selectableMeshes(built: { element?: unknown; node?: unknown }): unknown[] {
-  const element = built.element as { mesh?: unknown } | null
-  if (element?.mesh) return [element.mesh]
-  const node = built.node as { getChildMeshes?: (direct?: boolean) => unknown[] } | null
-  if (!node) return []
-  const children = node.getChildMeshes?.(false) ?? []
-  return children.length ? children : [node]
+  const root = ((built.element as { mesh?: unknown } | null)?.mesh ?? built.node) as {
+    getChildMeshes?: (direct?: boolean) => unknown[]
+    getClassName?: () => string
+  } | null
+  if (!root) return []
+  const children = root.getChildMeshes?.(false) ?? []
+  if (children.length) return children
+  // A root that IS a mesh is its own answer; a childless transform node has
+  // nothing to outline and must not be handed over.
+  return root.getClassName?.().includes('Mesh') ? [root] : []
 }
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
@@ -412,6 +426,12 @@ export class EnsembleEditor extends Component {
    * reattached to a stale canvas stops responding entirely.
    */
   captureCamera(capture: boolean): void {
+    /*
+      Capturing the camera is also what marks the gesture EXCLUSIVE: a tool only
+      captures once it has actually grabbed a handle, which is exactly when a
+      stray second contact must not be allowed to cancel the drag.
+    */
+    if (this._pointer) this._pointer.exclusive = capture
     const scene = (this._scene as unknown as { scene?: SceneWithCamera }).scene
     const camera = scene?.activeCamera
     if (!camera) return
@@ -544,6 +564,7 @@ export class EnsembleEditor extends Component {
     const tick = () => {
       if (!running) return
       this._syncHandleScale()
+      this._syncMarker()
       this._hub.update()
       requestAnimationFrame(tick)
     }
@@ -562,6 +583,8 @@ export class EnsembleEditor extends Component {
     this._stopFrames = null
     this._handles?.dispose()
     this._handles = null
+    this._marker?.dispose()
+    this._marker = null
     this._pointer?.dispose()
     this._pointer = null
     super.disconnectedCallback?.()
@@ -915,9 +938,13 @@ export class EnsembleEditor extends Component {
       // interior geometry.
       this._highlight.innerGlow = false
     }
+    if (!this._marker) this._marker = createSelectionView(scene)
     this._highlight.removeAllMeshes()
     const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
-    if (!built) return
+    if (!built) {
+      this._marker.hide()
+      return
+    }
     for (const mesh of selectableMeshes(built)) {
       try {
         this._highlight.addMesh(mesh as never, SELECTION_COLOR)
@@ -925,9 +952,47 @@ export class EnsembleEditor extends Component {
         /* a mesh the layer cannot outline is not worth losing the selection over */
       }
     }
+    this._syncMarker()
+  }
+
+  /**
+   * Put the box and axes on the selection's real bounds.
+   *
+   * Per frame as well as per rebuild, because a drag moves the BODY without
+   * rebuilding — a marker that only followed rebuilds would sit where the piece
+   * used to be for the whole gesture, which is worse than not drawing it.
+   */
+  private _syncMarker(): void {
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    if (!this._marker) return
+    if (!built) {
+      this._marker.hide()
+      return
+    }
+    const root = ((built.element as { mesh?: unknown } | null)?.mesh ?? built.node) as {
+      getHierarchyBoundingVectors?: () => { min: XYZ; max: XYZ }
+      computeWorldMatrix?: (force: boolean) => void
+    } | null
+    const bounds = root?.getHierarchyBoundingVectors?.()
+    if (!bounds) {
+      /*
+        No mesh yet — an environment primitive, or a library still loading.
+        Mark the authored POINT rather than nothing: an author who selected a
+        sun or a fog layer should still see where it claims to be.
+      */
+      this._marker.show({ centre: built.at, extents: [0.4, 0.4, 0.4] })
+      return
+    }
+    root?.computeWorldMatrix?.(true)
+    const { min, max } = bounds
+    this._marker.show({
+      centre: [(min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2],
+      extents: [(max.x - min.x) / 2, (max.y - min.y) / 2, (max.z - min.z) / 2],
+    })
   }
 
   private _highlight: HighlightLayer | null = null
+  private _marker: SelectionView | null = null
 
   /**
    * Put the handles on the selection, or take them away.
@@ -1320,4 +1385,12 @@ function samePose(a: CameraPose | null, b: CameraPose | null): boolean {
     near(a.radius, b.radius) &&
     a.target.every((v, i) => near(v, b.target[i]!))
   )
+}
+
+
+/** A Babylon vector, as much of one as reading bounds needs. */
+interface XYZ {
+  x: number
+  y: number
+  z: number
 }

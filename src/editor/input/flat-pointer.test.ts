@@ -113,6 +113,39 @@ describe('FlatPointer: two fingers are the CAMERA’s', () => {
   })
 })
 
+describe('FlatPointer: an exclusive gesture survives a stray contact', () => {
+  it('keeps a manipulation alive when a second finger lands', () => {
+    /*
+      A tool marks the gesture exclusive once it has grabbed a handle. Before
+      this, ANY second contact killed the drag the instant it arrived and the
+      piece snapped back — reported as "transform isn't working now… it just
+      flashes". Mid-manipulation, a second contact is far more likely to be a
+      palm or a resting thumb than a request to pan.
+    */
+    const { canvas, pointer, cleanup } = setup()
+    canvas.dispatchEvent(press(1))
+    pointer.exclusive = true
+    canvas.dispatchEvent(press(2))
+    pointer.endPoll()
+    expect(pointer.active).toBe(true)
+    cleanup()
+  })
+
+  it('yields again once the tool releases the gesture', () => {
+    const { canvas, pointer, cleanup } = setup()
+    canvas.dispatchEvent(press(1))
+    pointer.exclusive = true
+    window.dispatchEvent(release(1))
+    pointer.exclusive = false
+    pointer.endPoll()
+    canvas.dispatchEvent(press(2))
+    canvas.dispatchEvent(press(3))
+    pointer.endPoll()
+    expect(pointer.active).toBe(false)
+    cleanup()
+  })
+})
+
 describe('FlatPointer: the camera keeps its own gestures', () => {
   it('ignores ⌃drag, the mouse spelling of the same pan intent', () => {
     const { canvas, pointer, cleanup } = setup()

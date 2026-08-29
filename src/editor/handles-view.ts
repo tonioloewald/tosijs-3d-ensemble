@@ -97,7 +97,20 @@ const PICK_FATNESS = 5
  * own fat invisible twin, so a bad layout does not break a drag — it just makes
  * you fight for the one you wanted.
  */
+/*
+  The shaft is deliberately HAIRLINE now.
+
+  It is a line showing which way the axis runs, not the thing you reach for —
+  the arrowhead is. A fat shaft reads as grabbable along its whole length,
+  competes with the rings and pads for the same pixels, and hides the model
+  underneath it. Thin shaft, obvious head: the affordance says where to aim.
+
+  Its pick target stays generous, so aiming at the line still works; it just no
+  longer ADVERTISES itself as the target.
+*/
 const SHAFT_LENGTH = 1.1
+const SHAFT_DIAMETER = 0.032
+const SHAFT_PICK_FATNESS = 11
 const SHAFT_OFFSET = 0.75
 const PAD_OFFSET = 0.34
 const PAD_SIZE = 0.32
@@ -273,7 +286,11 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           make: (name, fat) =>
             MeshBuilder.CreateCylinder(
               name,
-              { height: SHAFT_LENGTH, diameter: 0.075 * fat, tessellation: fat > 1 ? 8 : 12 },
+              {
+                height: SHAFT_LENGTH,
+                diameter: SHAFT_DIAMETER * (fat > 1 ? SHAFT_PICK_FATNESS : 1),
+                tessellation: fat > 1 ? 8 : 10,
+              },
               s
             ),
         })

@@ -54,6 +54,20 @@ export class FlatPointer implements EditorPointer {
    * remaining finger happened to be.
    */
   private yielded = false
+  /**
+   * A tool has this gesture and must keep it, whatever else touches the screen.
+   *
+   * Set while the camera is captured — i.e. while a handle is actually being
+   * dragged. Without it, ANY stray second contact killed a manipulation in
+   * flight: the drag died the instant it started and the piece snapped back,
+   * reported as "transform isn't working now… it just flashes". A second finger
+   * arriving mid-manipulation is far more likely to be a palm, a thumb resting
+   * on the bezel, or a stray touch than a genuine request to pan.
+   *
+   * A gesture that grabbed NOTHING is not exclusive, so two-finger pan still
+   * works everywhere it matters — which is over the scene, not over a handle.
+   */
+  exclusive = false
   private detach: () => void = () => {}
 
   constructor(
@@ -81,9 +95,7 @@ export class FlatPointer implements EditorPointer {
         starts until every finger has lifted.
       */
       if (this.contacts.size > 1) {
-        this.yielded = true
-        this.down = false
-        this.alt = false
+        if (!this.exclusive) this.standDown()
         return
       }
       if (this.yielded) return
@@ -143,11 +155,7 @@ export class FlatPointer implements EditorPointer {
     const contact = (e: PointerEvent) => {
       if (this.contacts.has(e.pointerId)) return
       this.contacts.add(e.pointerId)
-      if (this.contacts.size > 1) {
-        this.yielded = true
-        this.down = false
-        this.alt = false
-      }
+      if (this.contacts.size > 1 && !this.exclusive) this.standDown()
     }
     window.addEventListener('pointerdown', contact)
     // Without this the browser claims touch gestures for panning and zooming
@@ -160,6 +168,20 @@ export class FlatPointer implements EditorPointer {
       window.removeEventListener('pointerdown', contact)
       window.removeEventListener('pointercancel', cancel)
     }
+  }
+
+  /**
+   * Hand this gesture to the camera.
+   *
+   * `latched` goes too. Leaving it set means one more poll reads as active, so
+   * the tool gets a final `move` at the second finger's position — a stray nudge
+   * to the very piece the user was trying to stop touching.
+   */
+  private standDown(): void {
+    this.yielded = true
+    this.down = false
+    this.latched = false
+    this.alt = false
   }
 
   get active(): boolean {

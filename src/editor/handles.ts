@@ -5,12 +5,22 @@ The maths a manipulator needs, as **pure functions**. No scene, no engine, no
 pointer — so the part most likely to be subtly wrong is the part that can be
 tested without a browser.
 
-Each drag mode answers one question: *given where the pointer is aiming now,
-what value should this handle have?*
+Each grip answers one question: *given where the pointer is aiming now, what
+value should this handle have?*
 
 - **translate** — the point on the axis closest to the pointer's ray
+- **planar** — where the ray crosses the plane the grip lies in, as a point
 - **rotate** — the angle around the axis where the ray crosses its plane
 - **scale** — the same projection as translate, read as a ratio
+- **uniform** — the ray's distance from the widget centre, read as a ratio
+
+## A grip, not a mode
+
+The widget shows every enabled affordance AT ONCE and lets the grip you grab say
+what the drag means — the shape Cheetah 3D's universal manipulator made its
+reputation on. A mode switch asks the author to declare their intent twice: once
+to the toolbar, and again to the handle. Here `Grip` is the whole vocabulary,
+and it is what a pick returns.
 
 ## Snapping quantises the VALUE, not the movement
 
@@ -23,8 +33,44 @@ piece is always exactly on the grid, however it got there.
 import type { Vec3 } from '../format/types'
 import type { EditorRay } from './input/pointer'
 
-export type TransformMode = 'translate' | 'rotate' | 'scale'
 export type Axis = 'x' | 'y' | 'z'
+
+/** What a grip does when you drag it. */
+export type GripKind = 'translate' | 'planar' | 'rotate' | 'scale' | 'uniform'
+
+/**
+ * One grabbable part of the manipulator.
+ *
+ * `axis` means the axis dragged along or turned around — except for `planar`,
+ * where it is the axis NORMAL to the drag plane (so the XZ pad is
+ * `{kind: 'planar', axis: 'y'}`). Encoding a plane by its normal keeps every
+ * grip the same shape, which is what lets one pick, one metadata field and one
+ * drag record cover all five kinds. `uniform` has no axis.
+ */
+export interface Grip {
+  kind: GripKind
+  axis?: Axis
+}
+
+/** Which transforms the widget offers. All off is a pure selection tool. */
+export interface TransformSet {
+  translate: boolean
+  rotate: boolean
+  scale: boolean
+}
+
+export const NO_TRANSFORMS: TransformSet = { translate: false, rotate: false, scale: false }
+
+/** True when the widget would draw nothing. */
+export const noTransforms = (t: TransformSet): boolean => !t.translate && !t.rotate && !t.scale
+
+/** The two axes that are not this one, in cyclic order. */
+export function otherAxes(axis: Axis): [Axis, Axis] {
+  return axis === 'x' ? ['y', 'z'] : axis === 'y' ? ['z', 'x'] : ['x', 'y']
+}
+
+/** Index of an axis into a `Vec3`. */
+export const axisIndex = (axis: Axis): 0 | 1 | 2 => (axis === 'x' ? 0 : axis === 'y' ? 1 : 2)
 
 const AXIS_VECTOR: Record<Axis, Vec3> = {
   x: [1, 0, 0],
@@ -75,16 +121,8 @@ export function angleOnPlane(
   axis: Axis,
   ray: EditorRay
 ): number | null {
-  const normal = AXIS_VECTOR[axis]
-  const denominator = dot(normal, ray.direction)
-  if (Math.abs(denominator) < 1e-9) return null // ray runs along the plane
-  const t = dot(normal, sub(origin, ray.origin)) / denominator
-  if (t < 0) return null // the plane is behind the pointer
-  const hit: Vec3 = [
-    ray.origin[0] + ray.direction[0] * t,
-    ray.origin[1] + ray.direction[1] * t,
-    ray.origin[2] + ray.direction[2] * t,
-  ]
+  const hit = rayPlanePoint(origin, axis, ray)
+  if (!hit) return null
   const local = sub(hit, origin)
   // Two in-plane axes, chosen per rotation axis so that the angle increases the
   // same way around each — otherwise one ring drags backwards and it reads as a
@@ -92,6 +130,51 @@ export function angleOnPlane(
   const [u, v] =
     axis === 'y' ? [local[0], local[2]] : axis === 'x' ? [local[2], local[1]] : [local[0], local[1]]
   return (Math.atan2(v, u) * 180) / Math.PI
+}
+
+/**
+ * Where a ray crosses the plane through `origin` whose normal is `axis`.
+ *
+ * The point a planar grip drags to, and the intersection `angleOnPlane` reads
+ * its angle from — one solve, so a plane pad and a rotation ring can never
+ * disagree about where the pointer is.
+ *
+ * Null when the ray runs ALONG the plane (no crossing) or when the plane is
+ * behind the pointer, which is a drag reaching round the back of the widget.
+ */
+export function rayPlanePoint(origin: Vec3, axis: Axis, ray: EditorRay): Vec3 | null {
+  const normal = AXIS_VECTOR[axis]
+  const denominator = dot(normal, ray.direction)
+  if (Math.abs(denominator) < 1e-9) return null
+  const t = dot(normal, sub(origin, ray.origin)) / denominator
+  if (t < 0) return null
+  return [
+    ray.origin[0] + ray.direction[0] * t,
+    ray.origin[1] + ray.direction[1] * t,
+    ray.origin[2] + ray.direction[2] * t,
+  ]
+}
+
+/**
+ * Perpendicular distance from a point to a ray.
+ *
+ * What the centre grip scales by: pull away from the widget and it grows. It
+ * needs no axis and no camera, which is what makes it the one affordance that
+ * behaves identically from a mouse and from a hand — an in-scene widget has no
+ * "screen space" to fall back on.
+ */
+export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
+  const w = sub(origin, ray.origin)
+  const dd = dot(ray.direction, ray.direction)
+  if (dd < 1e-12) return 0
+  const t = dot(w, ray.direction) / dd
+  const closest: Vec3 = [
+    ray.origin[0] + ray.direction[0] * t,
+    ray.origin[1] + ray.direction[1] * t,
+    ray.origin[2] + ray.direction[2] * t,
+  ]
+  const d = sub(origin, closest)
+  return Math.hypot(d[0], d[1], d[2])
 }
 
 /**

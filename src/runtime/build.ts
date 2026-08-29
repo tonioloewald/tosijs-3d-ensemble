@@ -41,6 +41,7 @@ console. Every element this module creates is appended explicitly.
 /*{"parent":"Runtime","order":1}*/
 import { featuresOf } from '../format/roles'
 import { featureRegistration } from '../format/registry'
+import { scaleVector, uniformScale } from '../format/scale'
 import { validate } from '../format/validate'
 import { libraryNames, meshesByLibrary, mountLibraries, resolveLibrary } from './libraries'
 import type { FeatureContext, SceneElement } from '../format/registry'
@@ -77,7 +78,7 @@ export interface BuildOptions {
    * Not called when a **body feature** already claimed the piece (see
    * `FeatureRegistration.body`).
    */
-  placePiece?: (piece: Piece, at: Vec3, scale: number, ctx: PlaceContext) => Placement | null
+  placePiece?: (piece: Piece, at: Vec3, scale: Vec3, ctx: PlaceContext) => Placement | null
 }
 
 /**
@@ -106,8 +107,16 @@ export interface BuiltPiece {
   piece: Piece
   /** World position: origin + `at` × ensemble scale. */
   at: Vec3
-  /** Ensemble scale × piece scale. */
+  /**
+   * Ensemble scale × piece scale, as the ENCLOSING scalar.
+   *
+   * A piece's scale may be per-axis; this is the largest component, which is
+   * what a feature sizing a radius or a range wants. `scale3` is the honest
+   * triple — see [[Scale, uniform or per axis]].
+   */
   scale: number
+  /** Ensemble scale × piece scale, per axis. */
+  scale3: Vec3
   /** The element carrying this piece's body, if its body is an element. */
   element: SceneElement | null
   /** The Babylon node carrying this piece's body, if it is not an element. */
@@ -154,7 +163,15 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
 
   for (const piece of ensemble.pieces) {
     if (!piece.id || piece.ensemble) continue // reported by validate; not buildable
-    const scale = ensembleScale * (piece.scale ?? 1)
+    const pieceScale = scaleVector(piece.scale)
+    const scale3: Vec3 = [
+      ensembleScale * pieceScale[0],
+      ensembleScale * pieceScale[1],
+      ensembleScale * pieceScale[2],
+    ]
+    // The scalar features see. Max rather than mean: a feature using it to size
+    // a radius wants the extent that ENCLOSES the piece.
+    const scale = ensembleScale * uniformScale(piece.scale)
     const at: Vec3 = [
       origin[0] + piece.at[0] * ensembleScale,
       origin[1] + piece.at[1] * ensembleScale,
@@ -168,6 +185,7 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       piece,
       at,
       scale,
+      scale3,
       element: null,
       node: null,
       handles: new Map(),
@@ -196,7 +214,7 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       if (!isBody(name) && !built.element && !built.node) {
         applyPlacement(
           built,
-          placePiece?.(piece, at, scale, { scene, library: pieceLibrary, features }),
+          placePiece?.(piece, at, scale3, { scene, library: pieceLibrary, features }),
           onDispose
         )
       }
@@ -235,7 +253,7 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
     if (!built.element && !built.node) {
       applyPlacement(
         built,
-        placePiece?.(piece, at, scale, { scene, library: pieceLibrary, features }),
+        placePiece?.(piece, at, scale3, { scene, library: pieceLibrary, features }),
         onDispose
       )
     }

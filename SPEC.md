@@ -341,7 +341,7 @@ ensembleEditor({
 |---|---|
 | **Library palette** | every mesh the loaded libraries expose, by public name |
 | **Select** | click in viewport *or* list; picking walks UP to the owning piece, so clicking a turret barrel selects the turret |
-| **Manipulate** | move / rotate / scale gizmos, writing back to the JSON **on drag release** (not per frame) in ensemble-local coordinates |
+| **Manipulate** | **fused with Select** — one tool, and which transforms it offers is a setting rather than a mode. A universal widget in Cheetah 3D's sense: shafts for one axis, pads for two, rings to turn, cubes to scale (the secondary button scaling the *other* two axes), all on screen together, with the grip you grab saying what the drag means. Writes back to the JSON **on drag release** (not per frame) in ensemble-local coordinates. All three transforms default OFF, so the default tool is a plain selector with nothing drawn over what you are pointing at |
 | **Bounding box + wireframe** | toggles; wireframe is how you read a fortress's interior |
 | **Placement** | `land` (ground at 0) and `aquatic` (water at 0, seabed at a variable depth). Both planes **pinned to the origin** — a bench looks at one thing from many angles, so the world holds still and the camera moves |
 | **Camera** | fit-to-bounds (re-fitting as async models load), named angles, and **orthographic as a toggle independent of angle** — ortho for judging alignment, perspective for judging how it reads |

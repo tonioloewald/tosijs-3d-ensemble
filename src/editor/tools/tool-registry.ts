@@ -14,13 +14,13 @@ Two kinds of thing live in the palette, because two kinds of thing belong there:
 
 ```typescript
 registerTool({
-  name: 'manipulate',
-  label: 'Move',
+  name: 'paint',
+  label: 'Paint',
   optionsSchema: {
     type: 'object',
     properties: {
-      mode: { type: 'string', enum: ['translate', 'rotate', 'scale'], default: 'translate' },
-      snap: { type: 'number', default: 1, 'x-unit': 'm' },
+      colour: { type: 'string', default: '#8a6a52' },
+      radius: { type: 'number', default: 1, 'x-unit': 'm' },
     },
   },
   onGesture(gesture, ctx) { ... },

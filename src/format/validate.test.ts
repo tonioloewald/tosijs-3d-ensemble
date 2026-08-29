@@ -156,3 +156,32 @@ describe('validate', () => {
     expect(problems[0]!.severity).toBe('warning')
   })
 })
+
+describe('scale, uniform or per axis', () => {
+  const withScale = (scale: unknown): Ensemble =>
+    ({
+      name: 'e',
+      pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], scale }],
+    }) as unknown as Ensemble
+
+  it('accepts both canonical spellings', () => {
+    expect(codes(withScale(2))).not.toContain('bad-scale')
+    expect(codes(withScale([1, 2, 3]))).not.toContain('bad-scale')
+  })
+
+  it('rejects a triple that is not three long', () => {
+    expect(codes(withScale([1, 2]))).toContain('bad-scale')
+  })
+
+  it('rejects a scale that is neither', () => {
+    expect(codes(withScale('big'))).toContain('bad-scale')
+  })
+
+  it('warns rather than errors on a zero or negative component', () => {
+    // A collapsed piece looks like a MISSING piece, so this is worth saying —
+    // but a generator emitting it should not fail the whole load.
+    const problems = validate(withScale([1, 0, 1]))
+    expect(problems.map((p) => p.code)).toContain('non-positive-scale')
+    expect(problems.find((p) => p.code === 'non-positive-scale')!.severity).toBe('warning')
+  })
+})

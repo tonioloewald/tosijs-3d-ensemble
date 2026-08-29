@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'bun:test'
 import {
+  NO_TRANSFORMS,
   angleOnPlane,
   axisClosestApproach,
   axisVector,
+  noTransforms,
+  otherAxes,
+  rayPerpendicularDistance,
+  rayPlanePoint,
   scaleFactor,
   snap,
   snapVec3,
   wrapDegrees,
 } from './handles'
 import type { EditorRay } from './input/pointer'
+import type { Vec3 } from '../format/types'
 
 const ray = (origin: [number, number, number], direction: [number, number, number]): EditorRay => ({
   origin,
@@ -58,6 +64,84 @@ describe('angleOnPlane', () => {
     // Rotating a ring you are pointing away from would otherwise track a
     // phantom intersection behind your hand.
     expect(angleOnPlane([0, 0, 0], 'y', ray([0, 5, 0], [0, 1, 0]))).toBeNull()
+  })
+})
+
+describe('rayPlanePoint', () => {
+  it('finds where a ray crosses the plane with a given normal', () => {
+    // Straight down onto the XZ plane (normal Y) through the origin.
+    const hit = rayPlanePoint([0, 0, 0], 'y', { origin: [3, 5, -2], direction: [0, -1, 0] })
+    expect(hit).toEqual([3, 0, -2])
+  })
+
+  it('measures the plane from the handle origin, not the world origin', () => {
+    const hit = rayPlanePoint([0, 4, 0], 'y', { origin: [1, 9, 1], direction: [0, -1, 0] })
+    expect(hit).toEqual([1, 4, 1])
+  })
+
+  it('returns null when the ray runs ALONG the plane', () => {
+    // No crossing exists; inventing one sends the piece to infinity.
+    expect(rayPlanePoint([0, 0, 0], 'y', { origin: [0, 1, 0], direction: [1, 0, 0] })).toBeNull()
+  })
+
+  it('returns null when the plane is behind the pointer', () => {
+    expect(rayPlanePoint([0, 0, 0], 'y', { origin: [0, 5, 0], direction: [0, 1, 0] })).toBeNull()
+  })
+
+  it('agrees with the angle the rotation ring reads', () => {
+    // One solve behind both, so a plane pad and a ring can never disagree about
+    // where the pointer is.
+    const ray = { origin: [2, 5, 2] as Vec3, direction: [0, -1, 0] as Vec3 }
+    const hit = rayPlanePoint([0, 0, 0], 'y', ray)!
+    expect(angleOnPlane([0, 0, 0], 'y', ray)).toBeCloseTo(
+      (Math.atan2(hit[2], hit[0]) * 180) / Math.PI,
+      9
+    )
+  })
+})
+
+describe('rayPerpendicularDistance', () => {
+  it('is the distance from the point to the closest place on the ray', () => {
+    // The centre grip's reading: pull away from the widget and it grows.
+    expect(
+      rayPerpendicularDistance([0, 0, 0], { origin: [3, 0, 10], direction: [0, 0, -1] })
+    ).toBeCloseTo(3, 9)
+  })
+
+  it('is zero when the ray goes straight through', () => {
+    expect(
+      rayPerpendicularDistance([0, 0, 0], { origin: [0, 0, 10], direction: [0, 0, -1] })
+    ).toBeCloseTo(0, 9)
+  })
+
+  it('needs no axis and no camera, so it reads the same from a hand', () => {
+    // Same point, ray coming from somewhere else entirely.
+    const fromAbove = rayPerpendicularDistance([0, 0, 0], { origin: [0, 9, 4], direction: [0, -1, 0] })
+    expect(fromAbove).toBeCloseTo(4, 9)
+  })
+})
+
+describe('otherAxes', () => {
+  it('names the two axes that are not this one', () => {
+    expect(otherAxes('x')).toEqual(['y', 'z'])
+    expect(otherAxes('y')).toEqual(['z', 'x'])
+    expect(otherAxes('z')).toEqual(['x', 'y'])
+  })
+
+  it('is what both the plane pads and secondary-scale are built on', () => {
+    // A pad's axis is its NORMAL, so the axes it moves you along are the others
+    // — the same pair the secondary button scales.
+    for (const axis of ['x', 'y', 'z'] as const) {
+      expect(otherAxes(axis)).not.toContain(axis)
+      expect(new Set(otherAxes(axis)).size).toBe(2)
+    }
+  })
+})
+
+describe('noTransforms', () => {
+  it('is true only when the widget would draw nothing', () => {
+    expect(noTransforms(NO_TRANSFORMS)).toBe(true)
+    expect(noTransforms({ translate: false, rotate: true, scale: false })).toBe(false)
   })
 })
 

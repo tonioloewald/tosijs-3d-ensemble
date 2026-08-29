@@ -89,10 +89,11 @@ import {
   registeredTools,
 } from './tools/tool-registry'
 import { registerEditorTools } from './tools/built-in'
-import { registerManipulateTool } from './tools/manipulate'
+import { registerTransformTool, transformsOf } from './tools/transform'
 import { createHandles } from './handles-view'
 import type { HandlesView } from './handles-view'
-import type { Axis, TransformMode } from './handles'
+import { noTransforms } from './handles'
+import type { Grip } from './handles'
 import type { NumberField } from './schema-panel'
 import { numberField, schemaWidgets } from './schema-panel'
 import type { EditorRay } from './input/pointer'
@@ -263,7 +264,7 @@ export class EnsembleEditor extends Component {
     // wants hit points registers the combat preset itself.
     registerSceneFeatures()
     registerEditorTools()
-    this._registerManipulate()
+    this._registerTransformTool()
     this._mountScene()
     this.setTool(this._tool)
     // Draw the chrome even with nothing loaded. `rebuild` is otherwise the only
@@ -278,10 +279,10 @@ export class EnsembleEditor extends Component {
     the tool never learns what a scene, an element or a Babylon node is. That is
     also what let its drag maths be tested without a browser.
   */
-  private _registerManipulate(): void {
-    registerManipulateTool({
-      nearAxis: (grip) => this._handles?.nearestAxis(grip) ?? null,
-      farAxis: (ray) => {
+  private _registerTransformTool(): void {
+    registerTransformTool({
+      nearGrip: (hand) => this._handles?.nearestGrip(hand) ?? null,
+      farGrip: (ray) => {
         const scene = (this._scene as unknown as { scene?: unknown }).scene as
           | { pickWithRay: (r: unknown, p?: (m: unknown) => boolean) => { pickedMesh?: unknown } | null }
           | undefined
@@ -291,9 +292,9 @@ export class EnsembleEditor extends Component {
             new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
             new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
           ),
-          (mesh) => this._handles?.axisOf(mesh) !== null
+          (mesh) => this._handles?.gripOf(mesh) !== null
         )
-        return (this._handles.axisOf(hit?.pickedMesh) as Axis | null) ?? null
+        return (this._handles.gripOf(hit?.pickedMesh) as Grip | null) ?? null
       },
       bodyOf: (id) => {
         const built = this._built?.pieces.get(id)
@@ -394,7 +395,7 @@ export class EnsembleEditor extends Component {
         new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
         new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
       ),
-      (mesh) => this._handles?.axisOf(mesh) == null
+      (mesh) => this._handles?.gripOf(mesh) == null
     )
     const point = hit?.pickedPoint
     return point ? [point.x, point.y, point.z] : null
@@ -859,7 +860,7 @@ export class EnsembleEditor extends Component {
   /**
    * Put the handles on the selection, or take them away.
    *
-   * Handles exist only while a piece is selected AND the manipulate tool is
+   * Handles exist only while a piece is selected AND the select tool is
    * current — a manipulator floating over nothing is a control that does
    * nothing, which invites trust in a reading it never produced.
    */
@@ -892,14 +893,21 @@ export class EnsembleEditor extends Component {
     const scene = (this._scene as unknown as { scene?: unknown }).scene
     if (!scene) return
     const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
-    const wanted = this._tool === 'manipulate' && built
+    /*
+      The widget appears when a piece is selected AND the tool offers at least
+      one transform. With all three off — the default — the fused tool is a
+      pure selection tool and nothing is drawn over the thing you are pointing
+      at, which is the point of defaulting them off.
+    */
+    const transforms = transformsOf(this._toolOptions)
+    const wanted = this._tool === 'select' && built && !noTransforms(transforms)
     if (!wanted) {
       this._handles?.dispose()
       this._handles = null
       return
     }
     if (!this._handles) this._handles = createHandles(scene)
-    this._handles.setMode((this._toolOptions.mode as TransformMode) ?? 'translate')
+    this._handles.setTransforms(transforms)
     this._handles.moveTo(built.at)
   }
 

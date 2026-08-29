@@ -5,20 +5,15 @@ Registered by the editor on connect. A consumer adds its own with
 [[Tools and commands]] and they appear in the palette beside these — the same
 open-for-extension property the feature registry has.
 
-## Select
-
-The default tool, and the one that defines what a gesture MEANS when no other
-tool is active: press on a piece to select it, press on scenery to deselect.
-
-It selects on gesture **end**, not start, so that a press which turns into a
-camera orbit does not also change the selection — the two gestures begin
-identically and only diverge when you move.
+Selecting is NOT here. It fused with the manipulator — see
+[[The select-and-transform tool]] — because selecting and transforming are one
+gesture with two outcomes, told apart by whether you grabbed a handle. A
+separate select tool meant declaring your intent to a palette before declaring
+it again to the thing you were pointing at.
 */
 /*{"parent":"Editing","order":3}*/
 import { snapVec3 } from '../handles'
 import { registerCommand, registerTool } from './tool-registry'
-import type { ToolContext } from './tool-registry'
-import type { Gesture } from '../input/pointer'
 
 let registered = false
 
@@ -26,19 +21,6 @@ let registered = false
 export function registerEditorTools(): void {
   if (registered) return
   registered = true
-
-  registerTool({
-    name: 'select',
-    label: 'Select',
-    icon: 'pointer',
-    onGesture: {
-      end(gesture: Gesture, ctx: ToolContext) {
-        const ray = gesture.primary.ray()
-        if (!ray) return
-        ctx.select(ctx.pick(ray))
-      },
-    },
-  })
 
   registerTool({
     name: 'insert',

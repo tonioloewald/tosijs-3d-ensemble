@@ -130,12 +130,52 @@ describe('buildEnsemble', () => {
         scene: fakeScene(),
         origin: [100, 0, 0],
         placePiece: (piece, at, scale) => {
-          placed.push([piece.id, [...at, scale]])
+          placed.push([piece.id, [...at, ...scale]])
           return null
         },
       }
     )
-    expect(placed).toEqual([['a', [102, 4, 6, 6]]])
+    // Placement takes a per-axis scale; a scalar in the file becomes a uniform
+    // triple here rather than every consumer branching on which it was given.
+    expect(placed).toEqual([['a', [102, 4, 6, 6, 6, 6]]])
+  })
+
+  it('carries a per-axis scale through to placement', () => {
+    const placed: number[][] = []
+    buildEnsemble(
+      { name: 's', scale: 2, pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], scale: [1, 3, 5] }] },
+      {
+        scene: fakeScene(),
+        placePiece: (_piece, _at, scale) => {
+          placed.push([...scale])
+          return null
+        },
+      }
+    )
+    expect(placed).toEqual([[2, 6, 10]])
+  })
+
+  it('gives a feature the ENCLOSING scalar for a per-axis scale', () => {
+    // `FeatureContext.scale` is one number and features size radii with it, so
+    // the honest reading is the component that encloses the piece. A mean would
+    // put a blast radius inside the geometry it is meant to cover.
+    const seen: number[] = []
+    register({
+      name: 'probe',
+      schema: {},
+      bind: (_piece, _cfg, ctx) => {
+        seen.push(ctx.scale)
+        return {}
+      },
+    })
+    buildEnsemble(
+      {
+        name: 's',
+        pieces: [{ id: 'a', mesh: 'X', at: [0, 0, 0], scale: [1, 4, 2], features: { probe: {} } }],
+      },
+      { scene: fakeScene() }
+    )
+    expect(seen).toEqual([4])
   })
 
   it('reports a feature that throws instead of losing the rest of the ensemble', () => {

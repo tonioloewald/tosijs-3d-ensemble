@@ -202,8 +202,15 @@ export interface Piece {
   at: Vec3
   /** Euler DEGREES, optional. */
   rot?: Euler
-  /** Multiplies the ensemble scale for this piece alone. */
-  scale?: number
+  /**
+   * Multiplies the ensemble scale for this piece alone.
+   *
+   * A number is uniform; `[x, y, z]` stretches per axis. Both spellings are
+   * canonical — a number is not sugar the loader rewrites, it is what a file
+   * says when the scale IS uniform, and writing `[2, 2, 2]` everywhere would
+   * make the common case the noisy one.
+   */
+  scale?: number | Vec3
   /** Preset that expands to features; explicit `features` win. */
   role?: Role
   features?: Features
@@ -242,7 +249,13 @@ export interface Ensemble {
   libraries?: LibraryRef[]
   /** Free-form, for consumers to group by: `rig`, `dome-facility`, `fortress`. */
   kind?: string
-  /** Multiplies every offset and piece scale. */
+  /**
+   * Multiplies every offset and piece scale.
+   *
+   * Scalar, unlike a piece's, and deliberately: a non-uniform scale applied to
+   * an arrangement shears every piece that carries a rotation, so a "stretched"
+   * ensemble would silently deform its own contents. Stretch the pieces.
+   */
   scale?: number
   pieces: Piece[]
   links?: Link[]

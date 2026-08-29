@@ -153,6 +153,26 @@ export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Proble
       ids.add(p.id)
     }
 
+    /*
+      Scale may be a number or a triple, and BOTH spellings are canonical — but
+      a zero or negative component collapses or mirrors the piece, which no drag
+      ever meant and which reads as a missing mesh rather than a bad number.
+      A warning, not an error: a generator emitting `0` should hear about it
+      without the whole ensemble refusing to load.
+    */
+    if (p.scale !== undefined) {
+      const components = typeof p.scale === 'number' ? [p.scale] : p.scale
+      if (!Array.isArray(components) && typeof p.scale !== 'number') {
+        add('error', 'bad-scale', `piece "${p.id}" has a scale that is neither a number nor [x, y, z]`, `${at}/scale`)
+      } else if (Array.isArray(p.scale) && p.scale.length !== 3) {
+        add('error', 'bad-scale', `piece "${p.id}" has a scale of ${p.scale.length} components, not 3`, `${at}/scale`)
+      } else if (components.some((c) => !Number.isFinite(c))) {
+        add('error', 'bad-scale', `piece "${p.id}" has a non-numeric scale`, `${at}/scale`)
+      } else if (components.some((c) => c <= 0)) {
+        add('warning', 'non-positive-scale', `piece "${p.id}" has a scale component of zero or less`, `${at}/scale`)
+      }
+    }
+
     if (p.ensemble) {
       add(
         'error',

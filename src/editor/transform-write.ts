@@ -10,6 +10,22 @@ is the worst failure mode a manipulator can have.
 | an ELEMENT (`b3d-destroyable`) | `el.x/y/z`, `el.rx/ry/rz` | the element OWNS its transform: `render()` writes `mesh.position` from those attributes, so a write straight to the mesh is undone the next time anything re-renders |
 | a NODE (a plain library instance) | `node.position` / `rotation` / `scaling` | nothing manages it, so the node IS the truth |
 
+## Scale is the exception, and `size` is a trap
+
+`b3d-destroyable`'s `size` is documented as the *placeholder cube edge length*,
+**ignored when `library` is set** — so writing it does nothing for any piece
+with a real mesh, which is every mesh piece we place. Measured before relying on
+it: a piece's rendered width was 5.273 at `scale: 1`, `2` and `4` alike, with
+the root node's scaling sitting at `1,1,1` throughout. `piece.scale` was inert,
+and the editor's scale control was moving a number nothing read.
+
+What DOES work is the element's own node. `element.mesh` is the library
+instance's root `TransformNode`, the element manages its position and rotation
+but not its scaling, and a write there survives: setting `2, 1.5, 3` held across
+frames and took the width from 5.273 to 10.546. So scale goes to the node in
+both branches, and per-axis comes free — filed upstream as tosijs-3d#47, since
+a scale attribute belongs on the element.
+
 `rx`/`ry`/`rz` are **degrees** on an element (`yaw`/`pitch`/`roll` are aliases
 for `ry`/`rx`/`rz`), matching the format. Babylon nodes are **radians**, so the
 node path converts.
@@ -26,6 +42,8 @@ So rotating a node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
 /*{"parent":"Internals","order":8}*/
+import { applyScale } from '../runtime/node-scale'
+import type { ScalableNode } from '../runtime/node-scale'
 import type { Euler, Vec3 } from '../format/types'
 
 const DEG_TO_RAD = Math.PI / 180
@@ -38,13 +56,15 @@ export interface ElementBody {
   ry?: number
   rz?: number
   size?: number
+  /** The managed node. Present once the library has instantiated — see below. */
+  mesh?: ScalableNode | null
 }
 
 export interface NodeBody {
   position?: { x: number; y: number; z: number }
   rotation?: { x: number; y: number; z: number }
   rotationQuaternion?: unknown
-  scaling?: { setAll?: (value: number) => void }
+  scaling?: { x: number; y: number; z: number }
 }
 
 export interface Transform {
@@ -52,8 +72,8 @@ export interface Transform {
   at?: Vec3
   /** Euler DEGREES, as the format stores them. */
   rot?: Euler
-  /** Uniform scale. */
-  scale?: number
+  /** Uniform when a number, per-axis when a triple. */
+  scale?: number | Vec3
 }
 
 export interface WritableBody {
@@ -92,8 +112,15 @@ function writeElement(element: ElementBody, { at, rot, scale }: Transform): void
     element.ry = rot[1]
     element.rz = rot[2]
   }
-  if (scale !== undefined) element.size = scale
+  /*
+    NOT `element.size` — that is the placeholder-cube attribute and it is
+    ignored for a library-backed piece. The node is the only thing that
+    actually scales. See the note at the top; this was measured, not reasoned.
+  */
+  applyScale(element.mesh, scale)
 }
+
+
 
 function writeNode(node: NodeBody, { at, rot, scale }: Transform): void {
   if (at && node.position) {
@@ -109,5 +136,5 @@ function writeNode(node: NodeBody, { at, rot, scale }: Transform): void {
     node.rotation.y = rot[1] * DEG_TO_RAD
     node.rotation.z = rot[2] * DEG_TO_RAD
   }
-  if (scale !== undefined) node.scaling?.setAll?.(scale)
+  applyScale(node, scale)
 }

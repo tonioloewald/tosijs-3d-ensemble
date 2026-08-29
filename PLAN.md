@@ -227,17 +227,33 @@ scene).
   assignment, so two-handed actions stay expressible.
 - ✅ Select: viewport click **or** list; picking walks **up** to the owning piece
   (clicking a turret barrel selects the turret).
-- Gizmos: move / rotate / scale, writing back to the JSON **on drag release**,
+- ✅ Gizmos: move / rotate / scale, writing back to the JSON **on drag release**,
   in ensemble-local coordinates. **Snapping** (grid and angle) moved OUT of the
   non-goals: it is a tool option, and the options panel exists to hold it.
-  > ⚠️ **This is the schedule risk, and it is upstream.** tosijs-3d has NO
+
+  Built as a **universal widget fused into Select**, not a separate tool with a
+  mode — one tool whose enabled transforms are settings, every affordance drawn
+  at once, and the grip you grab saying what the drag means. Shafts move along
+  an axis, pads move in a plane, rings turn, cubes scale, and the secondary
+  button makes a cube scale the *other* two axes. Cheetah 3D's arrangement,
+  which is the one everybody who has used it remembers.
+
+  Two things fell out of building it that were not on this list:
+  - **Per-axis scale**, because a per-axis grip that collapsed to uniform on
+    release would be a control that lies. `Piece.scale` is `number | Vec3` now.
+  - **Scale worked at all.** It never had: `b3d-destroyable`'s `size` is ignored
+    for a library-backed piece, so `piece.scale` moved nothing, measured
+    identical at 1, 2 and 4. Filed as tosijs-3d#47; we write the instance root's
+    `scaling` until it lands.
+
+  > ⚠️ **This was the schedule risk, and it was upstream.** tosijs-3d has NO
   > manipulator — `b3d-panel`'s coloured axes are a debug readout that looks
   > exactly like one, which has already fooled a reader. Babylon's
-  > `GizmoManager` exists and is mouse-shaped, so `bench-gizmo.ts` lifts cleanly
-  > ONLY if the editor stays flat. If open question 5 lands on the SVG UI, an XR
-  > manipulator is a real build and the editor's single most important
-  > interaction. Settle question 5 before scheduling this, and file the upstream
-  > ask early: it is on tosijs-3d's TODO but nobody owns it.
+  > `GizmoManager` is mouse-shaped, so lifting it would have meant building the
+  > real manipulator twice once question 5 landed on the SVG UI. It was built
+  > here instead, pointer-agnostic, and the ask is filed as tosijs-3d#38.
+  > **Still unverified in a headset** — the near-grab path has never been used
+  > by an actual hand.
 - Bounding box and wireframe toggles.
 - Add / delete / duplicate pieces from the palette.
 - **Schema-driven property panel** — the editor must not know what

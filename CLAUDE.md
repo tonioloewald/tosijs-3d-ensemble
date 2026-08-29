@@ -179,6 +179,35 @@ Cheap now, painful to retrofit:
   format unserializable.
 - **`rot` is euler DEGREES**, matching tosijs-3d elements. Say so where a reader
   will look.
+- **`scale` is `number | Vec3`, and both spellings are canonical.** A number is
+  not sugar the loader rewrites — it is what a file says when the scale IS
+  uniform. `src/format/scale.ts` holds the two functions that let everything
+  else stop caring which it got, and a drag writes back the NARROW spelling so
+  a uniform scale round-trips as the number the author typed.
+- **`FeatureContext.scale` stays a single number**, defined as the *enclosing*
+  component (the max) — a feature uses it to size a radius, and a mean would put
+  that radius inside the geometry it is meant to cover. `BuiltPiece.scale3` is
+  the honest triple.
+
+### Scale did nothing at all until 2026-08-29, and nothing said so
+
+`b3d-destroyable`'s `size` is the placeholder cube's edge length and is
+**ignored when `library` is set** — which is every mesh piece we place. So
+`piece.scale` was a documented field that moved nothing: measured in a browser,
+a piece rendered 5.273 wide at `scale` 1, 2 and 4 alike, with its root node
+still at `1,1,1`. The editor shipped a scale control against it, and a test
+asserted `element.size === 3` and passed the whole time.
+
+The fix writes `element.mesh.scaling` — the library instance's root
+`TransformNode`, which the element does not rewrite the way it rewrites
+position. Filed as tosijs-3d#47. **The instance does not exist when the element
+is appended** (destroyable instantiates inside `lib.ready.then(...)`), so
+`place-mesh.ts`'s `whenMeshed` retries on a render observer with a frame budget;
+applying once, immediately, is the same silent nothing one layer down.
+
+This is the project's own "verify the OUTPUT, not the mechanism" rule catching
+its own code, and it is worth re-reading as such: the attribute was set, the
+element accepted it, the test passed, and the mesh never changed size.
 
 ## Prior art to lift, not reinvent
 

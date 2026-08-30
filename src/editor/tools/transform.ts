@@ -62,6 +62,7 @@ import {
   rayPerpendicularDistance,
   rayPlanePoint,
   scaleFactor,
+  normaliseDegrees,
   snap,
   snapVec3,
   wrapDegrees,
@@ -333,8 +334,9 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const grid = Number(ctx.options.gridSnap ?? 0)
         const angle = Number(ctx.options.angleSnap ?? 0)
         const at = finished ? snapVec3(finished.at, grid) : null
+        // Snap first, then normalise: 359.6 rounds to 360 and is stored as 0.
         const rot = finished
-          ? (finished.rot.map((a) => wrapDegrees(snap(a, angle))) as Euler)
+          ? (finished.rot.map((a) => normaliseDegrees(snap(a, angle))) as Euler)
           : null
 
         if (!finished || !finished.dragged) {
@@ -412,7 +414,9 @@ function moved(state: Drag, at: Vec3, rot: Euler): boolean {
   const near = (a: number, b: number, epsilon: number) => Math.abs(a - b) < epsilon
   const still =
     at.every((v, i) => near(v, state.startAt[i]!, 1e-4)) &&
-    rot.every((v, i) => near(v, state.startRot[i]!, 1e-3)) &&
+    // Both sides normalised: the drag's value has been, the piece's stored one
+    // may predate the rule, and -40 versus 320 is not a movement.
+    rot.every((v, i) => near(normaliseDegrees(v), normaliseDegrees(state.startRot[i]!), 1e-3)) &&
     state.scale.every((v, i) => near(v, state.startScale[i]!, 1e-4))
   return !still
 }

@@ -245,6 +245,24 @@ export function wrapDegrees(angle: number): number {
   return wrapped === -180 ? 180 : wrapped
 }
 
+/**
+ * An angle as it is STORED: 0 up to but not including 360.
+ *
+ * Distinct from `wrapDegrees`, and the two must not be confused. A DELTA is
+ * signed — turning back five degrees is -5, and calling it 355 would spin the
+ * piece the long way round — so deltas keep the (-180, 180] wrap. A stored
+ * ANGLE has no direction to preserve and reads better without minus signs,
+ * particularly now that composing a rotation returns whichever euler triple
+ * Babylon picks: a piece turned about its own axis came back as [-5, 174, -40]
+ * where nobody would have typed that.
+ *
+ * 360 normalises to 0, which is the same orientation spelled shorter.
+ */
+export function normaliseDegrees(angle: number): number {
+  if (!Number.isFinite(angle)) return 0
+  return ((angle % 360) + 360) % 360
+}
+
 /** Scale factor from a drag along an axis, clamped so a piece cannot invert. */
 export function scaleFactor(startDistance: number, currentDistance: number): number {
   if (Math.abs(startDistance) < 1e-6) return 1

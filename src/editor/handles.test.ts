@@ -5,6 +5,7 @@ import {
   axisClosestApproach,
   axisVector,
   noTransforms,
+  normaliseDegrees,
   otherAxes,
   rayPerpendicularDistance,
   rayPlanePoint,
@@ -195,5 +196,40 @@ describe('scaleFactor', () => {
 
   it('is identity when the drag started at the pivot', () => {
     expect(scaleFactor(0, 5)).toBe(1)
+  })
+})
+
+describe('normaliseDegrees', () => {
+  it('brings an angle into 0..360', () => {
+    expect(normaliseDegrees(-40)).toBeCloseTo(320, 9)
+    expect(normaliseDegrees(400)).toBeCloseTo(40, 9)
+    expect(normaliseDegrees(-400)).toBeCloseTo(320, 9)
+  })
+
+  it('spells a full turn as 0', () => {
+    expect(normaliseDegrees(360)).toBe(0)
+    expect(normaliseDegrees(-360)).toBe(0)
+    expect(normaliseDegrees(720)).toBe(0)
+  })
+
+  it('has no negative zero to leak into a file', () => {
+    expect(Object.is(normaliseDegrees(-0), 0)).toBe(true)
+  })
+
+  it('leaves an angle already in range alone', () => {
+    expect(normaliseDegrees(0)).toBe(0)
+    expect(normaliseDegrees(180)).toBe(180)
+    expect(normaliseDegrees(359.5)).toBeCloseTo(359.5, 9)
+  })
+
+  it('is NOT what a delta uses', () => {
+    /*
+      A stored angle has no direction to preserve; a delta does. Turning back
+      five degrees is -5, and storing that as 355 would send the piece the long
+      way round — so `wrapDegrees` keeps the signed wrap for deltas and this is
+      only ever applied to the value that lands in the file.
+    */
+    expect(wrapDegrees(-5)).toBe(-5)
+    expect(normaliseDegrees(-5)).toBe(355)
   })
 })

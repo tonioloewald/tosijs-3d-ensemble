@@ -71,7 +71,7 @@ import {
   slider3d,
   textBlock3d,
 } from 'tosijs-3d'
-import { Ray, Vector3 } from '@babylonjs/core'
+import { Quaternion, Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
 import {
   libraryCatalogue,
@@ -105,7 +105,7 @@ import { placeMesh } from '../runtime/place-mesh'
 import { registerSceneFeatures } from '../runtime/features-scene'
 import { validate } from '../format/validate'
 import type { BuiltEnsemble } from '../runtime/build'
-import type { Ensemble, Piece, Vec3 } from '../format/types'
+import type { Ensemble, Euler, Piece, Vec3 } from '../format/types'
 import type { SceneElement } from '../format/registry'
 
 /** A sample world to author against. Never saved with the ensemble. */
@@ -321,6 +321,7 @@ export class EnsembleEditor extends Component {
         return built?.at ?? [0, 0, 0]
       },
       axisDirection: (axis) => this._pieceAxes()?.[axis] ?? axisVector(axis),
+      composeRotation: (start, axis, degrees) => composeLocalRotation(start, axis, degrees),
     })
   }
 
@@ -1152,7 +1153,7 @@ export class EnsembleEditor extends Component {
     const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
     if (!built) return
     this._handles.moveTo(this._liveOrigin(built))
-    this._handles.setAxes(this._pieceAxes())
+    this._handles.setOrientation(this.selection?.rot ?? null)
   }
 
   /**
@@ -1590,4 +1591,37 @@ interface XYZ {
   x: number
   y: number
   z: number
+}
+
+
+const DEG = Math.PI / 180
+
+const WORLD_AXIS: Record<'x' | 'y' | 'z', Vector3> = {
+  x: new Vector3(1, 0, 0),
+  y: new Vector3(0, 1, 0),
+  z: new Vector3(0, 0, 1),
+}
+
+/**
+ * Turn a rotation by `degrees` about one of the piece's OWN axes.
+ *
+ * Babylon does the arithmetic on purpose. Composing quaternions is easy;
+ * getting back to the euler triple the format stores means matching Babylon's
+ * own order exactly, and a hand-rolled conversion that is subtly wrong produces
+ * a rotation that looks plausible and is not — the failure mode this project
+ * has already paid for three times. `RotationYawPitchRoll` and `toEulerAngles`
+ * are inverses of each other, so the round trip is theirs.
+ *
+ * The multiply ORDER is what makes it local rather than global, and it is not
+ * guessable from the docs. Verified by output: under a turn about the piece's
+ * own Y, that axis must come out pointing exactly where it did, while the other
+ * two sweep. The opposite order leaves WORLD y fixed instead, which is the
+ * global rotation we are not doing.
+ */
+function composeLocalRotation(start: Euler, axis: 'x' | 'y' | 'z', degrees: number): Euler {
+  const current = Quaternion.RotationYawPitchRoll(start[1] * DEG, start[0] * DEG, start[2] * DEG)
+  const spin = Quaternion.RotationAxis(WORLD_AXIS[axis], degrees * DEG)
+  const turned = current.multiply(spin)
+  const e = turned.toEulerAngles()
+  return [e.x / DEG, e.y / DEG, e.z / DEG]
 }

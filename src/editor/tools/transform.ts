@@ -53,7 +53,8 @@ outcome, without pulling the floor out from under the drag.
 */
 /*{"parent":"Editing","order":4}*/
 import {
-  angleOnPlane,
+  RING_BASIS,
+  angleAboutAxis,
   axisClosestApproach,
   axisIndex,
   axisVector,
@@ -223,6 +224,18 @@ export interface TransformHooks {
   /** Where the piece sits in WORLD space (its local `at` plus the origin). */
   worldOrigin(): Vec3
   /**
+   * Turn a rotation by `degrees` about one of the PIECE's own axes.
+   *
+   * A composition, not an addition. `rot[i] += delta` edits one euler
+   * component, which matches a real rotation only while the piece has no prior
+   * rotation — turn an already-turned piece that way and it goes somewhere
+   * nobody asked for. Composing needs quaternions, and converting the result
+   * back to euler needs Babylon's exact convention, so this is a hook: the
+   * engine does its own arithmetic rather than having it re-derived here and
+   * being subtly wrong about the order.
+   */
+  composeRotation(start: Euler, axis: Axis, degrees: number): Euler
+  /**
    * World direction of one of the PIECE's own axes.
    *
    * Scale needs this and nothing else does. `node.scaling` is local, so on a
@@ -280,7 +293,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const origin = hooks.worldOrigin()
         const now = measure(drag.grip, origin, ray, hooks.axisDirection)
         if (now === null) return
-        apply(drag, now)
+        apply(drag, now, hooks.composeRotation)
         if (changed(drag)) drag.dragged = true
         const body = hooks.bodyOf(drag.pieceId)
         if (body) {
@@ -414,14 +427,28 @@ function measure(
   if (grip.kind === 'uniform') return rayPerpendicularDistance(origin, ray)
   if (!grip.axis) return null
   if (grip.kind === 'planar') return rayPlanePoint(origin, grip.axis, ray)
-  if (grip.kind === 'rotate') return angleOnPlane(origin, grip.axis, ray)
-  // Scale alone measures along the PIECE's axis; translate is a world move.
+  if (grip.kind === 'rotate') {
+    // About the piece's own axis, in the plane the ring is actually drawn in.
+    const [u, v] = RING_BASIS[grip.axis]
+    return angleAboutAxis(
+      origin,
+      axisDirection(grip.axis),
+      axisDirection(u),
+      axisDirection(v),
+      ray
+    )
+  }
+  // Scale measures along the PIECE's axis too; translate is a world move.
   const along = grip.kind === 'scale' ? axisDirection(grip.axis) : axisVector(grip.axis)
   return axisClosestApproach(origin, along, ray)
 }
 
 /** Fold the pointer's current reading into the drag's running transform. */
-function apply(state: Drag, now: number | Vec3): void {
+function apply(
+  state: Drag,
+  now: number | Vec3,
+  composeRotation: (start: Euler, axis: Axis, degrees: number) => Euler
+): void {
   const { kind, axis } = state.grip
 
   if (kind === 'planar') {
@@ -450,10 +477,10 @@ function apply(state: Drag, now: number | Vec3): void {
 
   if (kind === 'rotate') {
     if (!axis) return
-    const i = axisIndex(axis)
-    const delta = wrapDegrees(now - state.startValue)
-    state.rot = [...state.startRot] as Euler
-    state.rot[i] = wrapDegrees(state.startRot[i]! + delta)
+    // From the rotation the drag STARTED with, every frame — composing onto the
+    // running value would accumulate rounding over a long drag, and composing
+    // onto the euler would not be a global rotation at all.
+    state.rot = composeRotation(state.startRot, axis, wrapDegrees(now - state.startValue))
     return
   }
 

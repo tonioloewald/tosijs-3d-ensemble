@@ -29,10 +29,19 @@ the mesh it manipulates cannot be clicked at all — and the piece an author mos
 wants to move is usually the one embedded in something else.
 */
 /*{"parent":"Internals","order":5}*/
-import { Color3, MeshBuilder, StandardMaterial } from '@babylonjs/core'
+import { Color3, MeshBuilder, Quaternion, StandardMaterial, Vector3 } from '@babylonjs/core'
 import { axisIndex, noTransforms, otherAxes } from './handles'
 import type { Axis, Grip, GripKind, TransformSet } from './handles'
-import type { Vec3 } from '../format/types'
+import type { Euler, Vec3 } from '../format/types'
+
+const DEG = Math.PI / 180
+
+/** A vector turned by a quaternion, as plain numbers. */
+function rotated(v: Vec3, q: Quaternion): Vec3 {
+  const out = Vector3.Zero()
+  new Vector3(v[0], v[1], v[2]).rotateByQuaternionToRef(q, out)
+  return [out.x, out.y, out.z]
+}
 
 /** Marks a mesh as ours, so picking can tell a handle from the scene. */
 export const HANDLE_TAG = 'ensemble-editor-handle'
@@ -60,6 +69,7 @@ interface HandleMesh {
     position: { x: number; y: number; z: number }
     rotation: { x: number; y: number; z: number }
     scaling: { x: number; y: number; z: number }
+    rotationQuaternion: Quaternion | null
     isVisible: boolean
     isDisposed: () => boolean
     visibility: number
@@ -187,19 +197,18 @@ export interface HandlesView {
    */
   setScale(scale: number): void
   /**
-   * The world directions of the piece's OWN axes.
+   * The piece's own rotation, for the grips that work in its frame.
    *
-   * Only the scale cubes use them, and they must: `node.scaling` is local, so
-   * on a piece that has been turned, "scale x" stretches along the piece's x —
-   * which is no longer world x. With the cubes drawn on world axes the control
-   * lied, and measurably: a piece turned 90 degrees about Y grew along world Z
-   * when its X cube was dragged. Reported as "the z and x scale affordances are
-   * switched with their functions".
+   * Scale and rotate both do. `node.scaling` is local, and rotation is defined
+   * as being about the object's own axes — so a cube drawn on a world axis, or
+   * a ring lying in a world plane, is a control pointing somewhere other than
+   * where it acts. Measured before it was fixed: a piece turned 90 degrees
+   * about Y grew along world Z when its X cube was dragged, reported as "the z
+   * and x scale affordances are switched with their functions".
    *
-   * Translate and rotate stay world-aligned, because they are world
-   * operations — `at` is a world position and `rot` is world euler.
+   * Translate stays world-aligned, because `at` is a world position.
    */
-  setAxes(axes: { x: Vec3; y: Vec3; z: Vec3 } | null): void
+  setOrientation(rot: Euler | null): void
   setVisible(visible: boolean): void
   /** The grip within `NEAR_RADIUS` of a hand, if any. */
   nearestGrip(hand: Vec3): Grip | null
@@ -230,7 +239,7 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   let position: Vec3 = [0, 0, 0]
   let transforms: TransformSet = { translate: true, rotate: false, scale: false }
   /** Null means "not turned", and world axes are used as they are. */
-  let axes: { x: Vec3; y: Vec3; z: Vec3 } | null = null
+  let orientation: Quaternion | null = null
 
   const material = (key: string, colour: [number, number, number], alpha = 1) => {
     const m = new StandardMaterial(`${HANDLE_TAG}-${key}`, s) as unknown as {
@@ -444,13 +453,23 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       mesh.rotation.y = spin[1]
       mesh.rotation.z = spin[2]
       /*
-        A scale cube rides the PIECE's axis, not the world's — that is the axis
-        it will actually stretch. Everything else stays world-aligned.
+        Scale cubes and rotation rings ride the PIECE's frame — those are the
+        axes they actually act on. Translate shafts and pads stay world-aligned,
+        because a move is a world move.
       */
-      const dir = grip.kind === 'scale' && grip.axis && axes ? axes[grip.axis] : null
-      const along: Vec3 = dir
-        ? [dir[0] * CUBE_OFFSET, dir[1] * CUBE_OFFSET, dir[2] * CUBE_OFFSET]
+      const local = orientation && (grip.kind === 'scale' || grip.kind === 'rotate')
+      const along: Vec3 = local
+        ? rotated(offset, orientation!)
         : offset
+      if (local) {
+        // A quaternion, not euler: composing the piece's turn with the grip's
+        // own turn in euler would mean re-deriving Babylon's order by hand.
+        mesh.rotationQuaternion = orientation!.multiply(
+          Quaternion.RotationYawPitchRoll(spin[1], spin[0], spin[2])
+        )
+      } else {
+        mesh.rotationQuaternion = null
+      }
       mesh.position.x = position[0] + along[0] * scale
       mesh.position.y = position[1] + along[1] * scale
       mesh.position.z = position[2] + along[2] * scale
@@ -488,18 +507,18 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       position = next
       place()
     },
-    setAxes(next) {
+    setOrientation(rot) {
+      const next =
+        rot && (rot[0] !== 0 || rot[1] !== 0 || rot[2] !== 0)
+          ? Quaternion.RotationYawPitchRoll(rot[1] * DEG, rot[0] * DEG, rot[2] * DEG)
+          : null
       const same =
-        (next === null && axes === null) ||
-        (next !== null &&
-          axes !== null &&
-          (['x', 'y', 'z'] as const).every((a) =>
-            next[a].every((v, i) => Math.abs(v - axes![a][i]!) < 1e-4)
-          ))
-      // Per frame, like `setScale`: re-placing every mesh for axes that have
-      // not turned is waste on the one loop that must not stutter.
+        (next === null && orientation === null) ||
+        (next !== null && orientation !== null && Quaternion.AreClose(next, orientation, 1e-4))
+      // Per frame, like `setScale`: re-placing every mesh for an orientation
+      // that has not changed is waste on the one loop that must not stutter.
       if (same) return
-      axes = next ? { x: [...next.x] as Vec3, y: [...next.y] as Vec3, z: [...next.z] as Vec3 } : null
+      orientation = next
       place()
     },
     setScale(next) {

@@ -178,6 +178,48 @@ export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
 }
 
 /**
+ * The same angle, about an ARBITRARY axis rather than a world one.
+ *
+ * Rotation happens in the object's own frame, so the ring a pointer is dragging
+ * lies in a plane whose normal is the piece's axis — not the world's. `normal`
+ * is that axis; `u` and `v` are the other two, and they set where zero is and
+ * which way the angle grows. Pass world axes and this reduces exactly to
+ * `angleOnPlane`, which is how it is tested.
+ */
+export function angleAboutAxis(
+  origin: Vec3,
+  normal: Vec3,
+  u: Vec3,
+  v: Vec3,
+  ray: EditorRay
+): number | null {
+  const denominator = dot(normal, ray.direction)
+  if (Math.abs(denominator) < 1e-9) return null // ray runs along the plane
+  const t = dot(normal, sub(origin, ray.origin)) / denominator
+  if (t < 0) return null // the plane is behind the pointer
+  const hit: Vec3 = [
+    ray.origin[0] + ray.direction[0] * t,
+    ray.origin[1] + ray.direction[1] * t,
+    ray.origin[2] + ray.direction[2] * t,
+  ]
+  const local = sub(hit, origin)
+  return (Math.atan2(dot(local, v), dot(local, u)) * 180) / Math.PI
+}
+
+/**
+ * Which two axes span the plane of a rotation ring, and in which order.
+ *
+ * The order fixes where zero is and which way the angle grows; get it wrong for
+ * one ring and that ring drags backwards, which reads as a bug in the pointer
+ * rather than a sign.
+ */
+export const RING_BASIS: Record<Axis, [Axis, Axis]> = {
+  x: ['z', 'y'],
+  y: ['x', 'z'],
+  z: ['x', 'y'],
+}
+
+/**
  * Quantise a value to a step. `step <= 0` means no snapping.
  *
  * Applied to the absolute value rather than the delta — see the note above.

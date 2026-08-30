@@ -695,6 +695,43 @@ nested ensemble.
 > bare id. That is another reason to namespace from day one — the encounter
 > format inherits whatever identity scheme this one ships with.
 
+#### Nesting is a BLACK BOX, and that decides the coordinate systems
+
+> **Owner: *"The ensemble however can be a 'black box' inside a scene, and to do
+> stuff internal to it you would switch context (drill into it) and then pop back
+> out."*** — and, following from it, *"you're always scaling in the object's
+> coordinate system and rotating and translating in global space."*
+
+A nested ensemble is opaque from outside. You move, turn and scale it as one
+piece; to touch what is inside you **drill in**, and everything is then relative
+to that ensemble's frame until you **pop out**. You never see two levels at
+once.
+
+That collapses a question the editor was about to grow a control for. Three
+coordinate systems are conventional — global, parent, local — and **parent is
+identical to global here**, because the only parent you can ever be looking at
+is the ensemble you have drilled into. So there is nothing to choose between,
+and the frames are fixed by what each operation can actually express:
+
+| | frame | why it is not a preference |
+|---|---|---|
+| translate | global | `at` is a position in the current ensemble's space |
+| rotate | global | `rot` is euler in the same space |
+| scale | **the object's own** | `node.scaling` is local; non-uniform world scale needs shear, which a transform cannot hold |
+
+So the editor ships **no orientation picker**. It also explains why `scale` is
+its own mode rather than a toggle alongside the other two: it is permanently in
+a different frame, and a widget cannot honestly draw both at once.
+
+**What this costs today:** rotation was doing neither. `rot[i] += delta` is an
+edit in EULER space, which coincides with a global rotation only while the piece
+has no prior rotation — so turning an already-turned piece went somewhere
+nobody asked for. Global rotation is a composition, not an addition.
+
+**What drill-in needs when nesting lands:** a context stack (which ensemble am I
+editing, and how do I get back), and ids that are already paths — which is why
+namespacing from day one is in the list above.
+
 ### 2. Terrain and environment — **revised: primitives you can author with**
 
 The original answer here was "a different thing; give them join points": an

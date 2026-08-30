@@ -80,6 +80,18 @@ const withGrip = (grip: Grip | null) => {
     // checked in a browser, where the node's world matrix is the only honest
     // source for them.
     axisDirection: (axis) => (axis === 'x' ? [1, 0, 0] : axis === 'y' ? [0, 1, 0] : [0, 0, 1]),
+    /*
+      An unturned piece, where composing about its own axis reduces to adding
+      to the matching euler component. The turned case cannot be checked here
+      without re-implementing Babylon's euler order, which is exactly what the
+      hook exists to avoid — it is verified in a browser instead, by output.
+    */
+    composeRotation: (start, axis, degrees) => {
+      const i = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
+      const out = [...start] as [number, number, number]
+      out[i] = start[i]! + degrees
+      return out
+    },
   })
 }
 

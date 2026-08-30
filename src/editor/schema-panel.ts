@@ -51,12 +51,15 @@ interface PropertySpec {
   /**
    * Show this property only while the other options match.
    *
-   * `{'x-requires': {mode: 'transform'}}` hides a field until `mode` is
-   * `transform`. Without it a panel can contradict itself: the select tool
-   * showed "Move: on" beside "Mode: select", so an author switched a toggle
-   * that could not do anything, saw the camera orbit instead, and reasonably
-   * concluded transforms were broken. A control that cannot act should not be
-   * on screen claiming to be on.
+   * `{'x-requires': {mode: 'turn'}}` hides a field unless `mode` is `turn`; an
+   * ARRAY means one of, so `{mode: ['turn', 'move + turn']}` covers both.
+   *
+   * Without it a panel contradicts itself. The select tool showed "Move: on"
+   * beside "Mode: select", so an author switched a control that could not act,
+   * saw the camera orbit instead, and reasonably concluded transforms were
+   * broken. A control that cannot act should not be on screen claiming to be
+   * on — and an angle snap has nothing to say to a tool that is not turning
+   * anything.
    */
   'x-requires'?: Record<string, unknown>
 }
@@ -125,7 +128,9 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
 
   for (const [key, spec] of Object.entries(properties)) {
     const requires = spec['x-requires']
-    if (requires && !Object.entries(requires).every(([k, v]) => values[k] === v)) continue
+    const satisfied = (k: string, v: unknown) =>
+      Array.isArray(v) ? v.includes(values[k]) : values[k] === v
+    if (requires && !Object.entries(requires).every(([k, v]) => satisfied(k, v))) continue
     const unit = spec['x-unit'] ? ` (${spec['x-unit']})` : ''
     const label = `${spec.title ?? key}${unit}`
     const value = values[key] ?? spec.default

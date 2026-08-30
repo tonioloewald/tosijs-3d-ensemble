@@ -125,48 +125,37 @@ export function currentDrag(): Readonly<Drag> | null {
   return drag
 }
 
+/** What the tool does, in the order an author cycles through them. */
+export const MODES = ['select', 'move', 'turn', 'move + turn', 'scale'] as const
+
+export type TransformMode = (typeof MODES)[number]
+
 export const TRANSFORM_SCHEMA = {
   type: 'object',
   title: 'Select',
   properties: {
     /*
-      MODE first, then which transforms the mode offers.
+      ONE MODE, not a mode plus three toggles.
 
-      Two levels, because they answer different questions. "Get the widget out
-      of my way so I can click things" is one decision and should cost one
-      action — it used to mean switching three toggles off and then back on
-      again, and switching back meant remembering which had been on.
+      Scale earns its own entry rather than composing with the others, because
+      it is a different KIND of operation: `node.scaling` is local, so a scale
+      widget has to sit on the piece's axes while translate and rotate sit on
+      the world's. Offering them together means one widget drawn in two frames
+      at once, which is unreadable and was already confusing at the data level.
 
-      The toggles keep their state across the mode, so `select` is a pause
-      rather than a reset, and they are HIDDEN in select mode rather than shown
-      switched-on-but-inert — a panel reading "Mode: select" beside "Move: on"
-      is a panel lying to you, and it cost exactly one round of "I try to use
-      any transform and it just rotates the view".
-
-      `translate` is on by default so that choosing `transform` does something
-      the first time.
+      The two that DO compose get a combined entry, because "nudge it over and
+      turn it a bit" is one job.
     */
     mode: {
       type: 'string',
       title: 'Mode',
-      enum: ['select', 'transform'],
+      enum: MODES,
       default: 'select',
     },
-    translate: { type: 'boolean', title: 'Move', default: true, 'x-requires': { mode: 'transform' } },
-    rotate: { type: 'boolean', title: 'Turn', default: false, 'x-requires': { mode: 'transform' } },
-    scale: { type: 'boolean', title: 'Scale', default: false, 'x-requires': { mode: 'transform' } },
     /*
-      SNAP IS A CHOICE FROM A LIST, not a point on a continuum.
-
-      These were unbounded sliders — 0 to 10 metres, 0 to 90 degrees — and
-      landing on a useful value was, accurately, "an exercise in frustration":
-      the SVG UI's slider has no step, so every drag gives you 0.7382 m. Nobody
-      has ever wanted a 0.7382 m grid.
-
-      An enum renders as a cycler, which snaps by construction and reads its
-      value back exactly. The list is the values an author actually uses,
-      doubling as it goes, with 0 for free movement at the front. It becomes a
-      stepped slider the moment tosijs-3d#50 lands.
+      Each setting appears only where it applies. A grid snap has nothing to say
+      to a tool that is only turning things, and neither has anything to say to
+      a tool that is only selecting.
     */
     gridSnap: {
       type: 'number',
@@ -175,6 +164,7 @@ export const TRANSFORM_SCHEMA = {
       default: 1,
       'x-unit': 'm',
       description: '0 to move freely',
+      'x-requires': { mode: ['move', 'move + turn'] },
     },
     angleSnap: {
       type: 'number',
@@ -182,27 +172,24 @@ export const TRANSFORM_SCHEMA = {
       enum: [0, 5, 15, 22.5, 30, 45, 90],
       default: 15,
       'x-unit': '°',
+      'x-requires': { mode: ['turn', 'move + turn'] },
     },
     duplicate: {
       type: 'boolean',
       title: 'Copy on drag',
       default: false,
+      'x-requires': { mode: ['move', 'turn', 'move + turn', 'scale'] },
     },
   },
 }
 
-/**
- * Read the transform toggles out of a tool's options.
- *
- * `select` mode reports none of them, whatever the toggles say — so the widget
- * disappears without the toggles being disturbed, and comes back as it was.
- */
+/** Which grips a mode puts on screen. */
 export function transformsOf(options: Record<string, unknown>): TransformSet {
-  if (options.mode !== 'transform') return { translate: false, rotate: false, scale: false }
+  const mode = options.mode as TransformMode | undefined
   return {
-    translate: options.translate === true,
-    rotate: options.rotate === true,
-    scale: options.scale === true,
+    translate: mode === 'move' || mode === 'move + turn',
+    rotate: mode === 'turn' || mode === 'move + turn',
+    scale: mode === 'scale',
   }
 }
 

@@ -56,7 +56,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     select: (id: string | null) => (selectedId = id),
     scene: {} as never,
     edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
-    options: { mode: 'transform', gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
+    options: { mode: 'move + turn', gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
     pick: () => picked,
     pickPoint: () => null,
     captureCamera: () => {},
@@ -112,23 +112,33 @@ const run = (rays: EditorRay[], c: ToolContext, hand: Vec3 | null = null, second
 }
 
 describe('transformsOf', () => {
-  it('offers nothing in select mode, whatever the toggles say', () => {
-    /*
-      The toggles keep their state across the mode, so getting the widget out of
-      the way is one action and getting it back is one action — not three, and
-      not "remember which of the three you had on".
-    */
+  it('offers nothing in select mode', () => {
     expect(transformsOf({})).toEqual({ translate: false, rotate: false, scale: false })
-    expect(transformsOf({ translate: true, rotate: true, scale: true })).toEqual({
+    expect(transformsOf({ mode: 'select' })).toEqual({
       translate: false,
       rotate: false,
       scale: false,
     })
   })
 
-  it('reads three independent toggles in transform mode', () => {
-    expect(transformsOf({ mode: 'transform', translate: true, scale: true })).toEqual({
+  it('gives each mode exactly its own grips', () => {
+    expect(transformsOf({ mode: 'move' })).toEqual({ translate: true, rotate: false, scale: false })
+    expect(transformsOf({ mode: 'turn' })).toEqual({ translate: false, rotate: true, scale: false })
+    expect(transformsOf({ mode: 'move + turn' })).toEqual({
       translate: true,
+      rotate: true,
+      scale: false,
+    })
+  })
+
+  it('keeps SCALE to itself', () => {
+    /*
+      Not fussiness: `node.scaling` is local, so scale grips ride the piece's
+      axes while translate and rotate ride the world's. Showing them together
+      means one widget drawn in two frames at once.
+    */
+    expect(transformsOf({ mode: 'scale' })).toEqual({
+      translate: false,
       rotate: false,
       scale: true,
     })

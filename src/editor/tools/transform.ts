@@ -138,8 +138,13 @@ export const TRANSFORM_SCHEMA = {
       again, and switching back meant remembering which had been on.
 
       The toggles keep their state across the mode, so `select` is a pause
-      rather than a reset. `translate` is on by default so that choosing
-      `transform` does something the first time.
+      rather than a reset, and they are HIDDEN in select mode rather than shown
+      switched-on-but-inert — a panel reading "Mode: select" beside "Move: on"
+      is a panel lying to you, and it cost exactly one round of "I try to use
+      any transform and it just rotates the view".
+
+      `translate` is on by default so that choosing `transform` does something
+      the first time.
     */
     mode: {
       type: 'string',
@@ -147,9 +152,9 @@ export const TRANSFORM_SCHEMA = {
       enum: ['select', 'transform'],
       default: 'select',
     },
-    translate: { type: 'boolean', title: 'Move', default: true },
-    rotate: { type: 'boolean', title: 'Turn', default: false },
-    scale: { type: 'boolean', title: 'Scale', default: false },
+    translate: { type: 'boolean', title: 'Move', default: true, 'x-requires': { mode: 'transform' } },
+    rotate: { type: 'boolean', title: 'Turn', default: false, 'x-requires': { mode: 'transform' } },
+    scale: { type: 'boolean', title: 'Scale', default: false, 'x-requires': { mode: 'transform' } },
     /*
       SNAP IS A CHOICE FROM A LIST, not a point on a continuum.
 

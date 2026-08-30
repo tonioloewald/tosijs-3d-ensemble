@@ -48,6 +48,17 @@ interface PropertySpec {
   default?: unknown
   'x-unit'?: string
   'x-widget'?: string
+  /**
+   * Show this property only while the other options match.
+   *
+   * `{'x-requires': {mode: 'transform'}}` hides a field until `mode` is
+   * `transform`. Without it a panel can contradict itself: the select tool
+   * showed "Move: on" beside "Mode: select", so an author switched a toggle
+   * that could not do anything, saw the camera orbit instead, and reasonably
+   * concluded transforms were broken. A control that cannot act should not be
+   * on screen claiming to be on.
+   */
+  'x-requires'?: Record<string, unknown>
 }
 
 export interface SchemaPanelOptions {
@@ -113,6 +124,8 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
   const widgets: unknown[] = []
 
   for (const [key, spec] of Object.entries(properties)) {
+    const requires = spec['x-requires']
+    if (requires && !Object.entries(requires).every(([k, v]) => values[k] === v)) continue
     const unit = spec['x-unit'] ? ` (${spec['x-unit']})` : ''
     const label = `${spec.title ?? key}${unit}`
     const value = values[key] ?? spec.default

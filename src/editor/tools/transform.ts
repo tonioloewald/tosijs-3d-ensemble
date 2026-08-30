@@ -93,6 +93,15 @@ interface Drag {
    * happened to be holding it when you let go.
    */
   secondary: boolean
+  /**
+   * World metres per local unit — the ensemble's own scale.
+   *
+   * A drag measures in WORLD space (that is where the pointer and the handles
+   * are) and writes a LOCAL `at`, so the two disagree by exactly this factor on
+   * any ensemble that sets `scale`. Every sample happens to be 1, which is the
+   * only reason this never showed up.
+   */
+  worldPerLocal: number
   /** The transform as it currently stands, in ensemble-local terms. */
   at: Vec3
   rot: Euler
@@ -210,9 +219,11 @@ export function registerTransformTool(hooks: TransformHooks): void {
         // the drag moves the piece AND orbits the view under it.
         ctx.captureCamera(true)
         const startScale = scaleVector(piece.scale)
+        const worldPerLocal = Number(ctx.ensemble.scale ?? 1) || 1
         drag = {
           grip,
           pieceId: piece.id,
+          worldPerLocal,
           startAt: [...piece.at] as Vec3,
           startRot: [...(piece.rot ?? [0, 0, 0])] as Euler,
           startScale,
@@ -361,7 +372,7 @@ function apply(state: Drag, now: number | Vec3): void {
     state.at = [...state.startAt] as Vec3
     for (const a of [u, v]) {
       const i = axisIndex(a)
-      state.at[i] = state.startAt[i]! + (now[i]! - state.startValue[i]!)
+      state.at[i] = state.startAt[i]! + (now[i]! - state.startValue[i]!) / state.worldPerLocal
     }
     return
   }
@@ -372,7 +383,8 @@ function apply(state: Drag, now: number | Vec3): void {
     if (!axis) return
     const i = axisIndex(axis)
     state.at = [...state.startAt] as Vec3
-    state.at[i] = state.startAt[i]! + (now - state.startValue)
+    // World metres in, local units out — see `worldPerLocal`.
+    state.at[i] = state.startAt[i]! + (now - state.startValue) / state.worldPerLocal
     return
   }
 
@@ -408,10 +420,12 @@ function apply(state: Drag, now: number | Vec3): void {
 /** The drag's ensemble-local position expressed in world space. */
 function worldAt(state: Drag, origin: Vec3): Vec3 {
   // `origin` is where the piece's body currently sits; the drag tracks the
-  // piece's LOCAL `at`, so the world write is the delta applied to that origin.
+  // piece's LOCAL `at`, so the world write is the local delta scaled back up
+  // and applied to that origin.
+  const k = state.worldPerLocal
   return [
-    origin[0] + (state.at[0] - state.startAt[0]),
-    origin[1] + (state.at[1] - state.startAt[1]),
-    origin[2] + (state.at[2] - state.startAt[2]),
+    origin[0] + (state.at[0] - state.startAt[0]) * k,
+    origin[1] + (state.at[1] - state.startAt[1]) * k,
+    origin[2] + (state.at[2] - state.startAt[2]) * k,
   ]
 }

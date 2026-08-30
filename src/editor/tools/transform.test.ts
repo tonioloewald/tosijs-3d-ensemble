@@ -231,6 +231,29 @@ describe('translate', () => {
     expect(ensemble.pieces[0]!.at).toEqual([0, 0, 0])
   })
 
+  it('converts world metres to LOCAL units on a scaled ensemble', () => {
+    /*
+      A drag measures in world space — that is where the pointer and the handles
+      are — and writes `piece.at`, which is local. On an ensemble with
+      `scale: 2` a three-metre drag is one and a half local units. Every sample
+      ensemble happens to be scale 1, which is the only reason this never
+      showed up as a wrong-feeling drag.
+    */
+    ensemble.scale = 2
+    run([rayAtX(0), rayAtX(3)], ctx())
+    expect(ensemble.pieces[0]!.at).toEqual([1.5, 0, 0])
+  })
+
+  it('writes the world delta back to the live body at ensemble scale', () => {
+    // The body lives in world space, so the local value has to scale back up or
+    // the piece drifts away from the pointer as you drag.
+    ensemble.scale = 2
+    const c = ctx()
+    tool().onGesture!.start!(gestureWith(rayAtX(0)), c)
+    tool().onGesture!.move!(gestureWith(rayAtX(3)), c)
+    expect((body.element as { x: number }).x).toBeCloseTo(3, 6)
+  })
+
   it('writes no rotation or scale, so a nudge cannot stamp defaults', () => {
     run([rayAtX(0), rayAtX(2)], ctx())
     expect(ensemble.pieces[0]!.rot).toBeUndefined()

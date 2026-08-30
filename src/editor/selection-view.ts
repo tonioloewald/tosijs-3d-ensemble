@@ -1,7 +1,7 @@
 /*#
 # The selection marker
 
-A wireframe box around the selected piece and three thin axis lines through it.
+A box around the selected piece and three thin axis rods through its origin.
 Shown whenever something is selected — **including when no transform is
 enabled**, which is the whole reason it exists.
 
@@ -18,15 +18,24 @@ and nothing about *where the origin is* or *how big the thing is* — and in an
 arrangement editor those are the two questions. The box answers the second, the
 axes answer the first, and both read at a glance against a busy scene.
 
-## Deliberately quiet
+## Quiet, but not invisible
 
-Thin lines, no fill, drawn on top. This marks the selection; it is not a
-control, and anything that LOOKS grabbable but is not is worse than nothing —
-the same rule that keeps the manipulator's shafts thin now that the arrowheads
-are what you reach for.
+The first version used `CreateLines` for the axes and a `wireframe` material for
+the box. Both render — measured: four meshes, visible, enabled, in the active
+list — and both are effectively **one pixel wide**, because WebGL has no line
+width. On a phone that is nothing at all: "I don't see selection feedback so I
+need to turn on transformation to get any selection feedback."
+
+So the axes are thin CYLINDERS, which have real width and scale with the piece,
+and the box adds `enableEdgesRendering`, which draws its edges as camera-facing
+quads at a width in pixels rather than as hairlines. Still no fill, still
+nothing that tints the model — just wide enough to see.
+
+It marks the selection; it is not a control, and anything that LOOKS grabbable
+but is not is worse than nothing.
 */
 /*{"parent":"Internals","order":6}*/
-import { Color3, MeshBuilder, StandardMaterial } from '@babylonjs/core'
+import { Color3, Color4, MeshBuilder, StandardMaterial } from '@babylonjs/core'
 import type { Vec3 } from '../format/types'
 
 /** Marks a mesh as ours, so picking can tell a marker from the scene. */
@@ -40,8 +49,22 @@ const AXIS_COLOR: Record<'x' | 'y' | 'z', [number, number, number]> = {
 
 const BOX_COLOR: [number, number, number] = [0.18, 0.62, 0.56]
 
-/** How far the axis lines reach past the box, as a fraction of its half-size. */
+/** How far the axis rods reach past the box, as a fraction of its half-size. */
 const AXIS_OVERSHOOT = 0.35
+
+/**
+ * Edge width in PIXELS, which is the point of using edge rendering at all.
+ *
+ * A wireframe material draws one-pixel lines whatever the screen; edges are
+ * quads and hold their width. Four is legible on a phone without reading as a
+ * control you could grab.
+ */
+const EDGE_WIDTH = 4
+
+/** Axis rod thickness, as a fraction of the piece's smallest half-extent. */
+const ROD_THICKNESS = 0.06
+/** Never thinner than this in metres, or a flat piece gets invisible rods. */
+const ROD_MIN = 0.02
 
 export interface Bounds {
   centre: Vec3
@@ -62,7 +85,10 @@ interface Marker {
   isPickable: boolean
   renderingGroupId: number
   material?: unknown
-  color?: Color3
+  rotation: { x: number; y: number; z: number }
+  enableEdgesRendering?: () => void
+  edgesWidth?: number
+  edgesColor?: Color4
   dispose: () => void
   computeWorldMatrix: (force: boolean) => void
 }
@@ -70,6 +96,7 @@ interface Marker {
 export function createSelectionView(scene: unknown): SelectionView {
   const s = scene as never
   const parts: Marker[] = []
+  const materials: Array<{ dispose: () => void }> = []
 
   const box = MeshBuilder.CreateBox(`${MARKER_TAG}-box`, { size: 1 }, s) as unknown as Marker
   const outline = new StandardMaterial(`${MARKER_TAG}-box-mat`, s) as unknown as {
@@ -87,33 +114,45 @@ export function createSelectionView(scene: unknown): SelectionView {
   outline.wireframe = true
   outline.alpha = 0.9
   box.material = outline
+  /*
+    The edges are what you actually SEE. `wireframe` draws one-pixel lines; edge
+    rendering draws quads at a width in pixels, so the box survives a phone
+    screen. Both are on: the wireframe costs nothing and fills in the diagonals
+    of the triangulation that edges deliberately skip.
+  */
+  box.enableEdgesRendering?.()
+  box.edgesWidth = EDGE_WIDTH
+  box.edgesColor = new Color4(...BOX_COLOR, 1)
   parts.push(box)
 
   /*
-    Axis lines are built along the axis at UNIT length and scaled to the piece,
+    Axis rods are built along the axis at UNIT length and scaled to the piece,
     so there is one mesh per axis for the life of the view rather than a rebuild
     every time the selection changes size.
   */
-  const axes: Record<'x' | 'y' | 'z', Marker> = {
-    x: line('x'),
-    y: line('y'),
-    z: line('z'),
-  }
+  const HALF = Math.PI / 2
+  const axes: Record<'x' | 'y' | 'z', Marker> = { x: rod('x'), y: rod('y'), z: rod('z') }
 
-  function line(axis: 'x' | 'y' | 'z'): Marker {
-    const unit: Vec3 = axis === 'x' ? [1, 0, 0] : axis === 'y' ? [0, 1, 0] : [0, 0, 1]
-    const mesh = MeshBuilder.CreateLines(
+  function rod(axis: 'x' | 'y' | 'z'): Marker {
+    // A cylinder, not a line: WebGL lines are one pixel wide at every distance
+    // and on every screen, which is why the first version could not be seen.
+    const mesh = MeshBuilder.CreateCylinder(
       `${MARKER_TAG}-axis-${axis}`,
-      {
-        points: [
-          { x: -unit[0], y: -unit[1], z: -unit[2] },
-          { x: unit[0], y: unit[1], z: unit[2] },
-        ] as never,
-      },
+      { height: 2, diameter: 1, tessellation: 6 },
       s
     ) as unknown as Marker
-    // A LinesMesh carries its colour directly; it has no lit material to fight.
-    mesh.color = new Color3(...AXIS_COLOR[axis])
+    // Built along Y; turn it onto its own axis.
+    mesh.rotation.x = axis === 'z' ? HALF : 0
+    mesh.rotation.z = axis === 'x' ? HALF : 0
+    const material = new StandardMaterial(`${MARKER_TAG}-axis-${axis}-mat`, s) as unknown as {
+      emissiveColor: Color3
+      disableLighting: boolean
+      dispose: () => void
+    }
+    material.emissiveColor = new Color3(...AXIS_COLOR[axis])
+    material.disableLighting = true
+    mesh.material = material
+    materials.push(material)
     parts.push(mesh)
     return mesh
   }
@@ -144,15 +183,25 @@ export function createSelectionView(scene: unknown): SelectionView {
       box.isVisible = true
       box.computeWorldMatrix(true)
 
+      /*
+        A rod is a unit-height cylinder along its axis, so ONE component of its
+        scaling is its length and the other two are its thickness. Thickness is
+        taken from the SMALLEST half-extent so a long thin piece gets thin rods
+        rather than rods as fat as the piece is short.
+      */
       const reach = 1 + AXIS_OVERSHOOT
+      const thickness = Math.max(Math.min(size[0], size[1], size[2]) * ROD_THICKNESS, ROD_MIN)
       for (const axis of ['x', 'y', 'z'] as const) {
         const mesh = axes[axis]
+        const i = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
         mesh.position.x = centre[0]
         mesh.position.y = centre[1]
         mesh.position.z = centre[2]
-        mesh.scaling.x = size[0] * reach
-        mesh.scaling.y = size[1] * reach
-        mesh.scaling.z = size[2] * reach
+        // The cylinder's own length runs along ITS local Y whatever axis it has
+        // been turned onto, so length is always the y component of scaling.
+        mesh.scaling.x = thickness
+        mesh.scaling.y = size[i]! * reach
+        mesh.scaling.z = thickness
         mesh.isVisible = true
         mesh.computeWorldMatrix(true)
       }
@@ -162,8 +211,10 @@ export function createSelectionView(scene: unknown): SelectionView {
     },
     dispose() {
       for (const part of parts) part.dispose()
+      for (const m of materials) m.dispose()
       outline.dispose()
       parts.length = 0
+      materials.length = 0
     },
   }
 }

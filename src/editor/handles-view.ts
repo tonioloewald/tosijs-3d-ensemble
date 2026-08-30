@@ -143,10 +143,14 @@ const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2
  * `PICK_FATNESS` is a multiplier on a radius, and a ring's radius sweeps a
  * whole torus: at 5× the pick tube spans nearly the full width of the widget
  * and swallows the scale cubes and shaft ends sitting outside it. A ring is
- * also the easiest thing here to hit — it is the biggest target on screen —
- * so it can afford to be the least inflated.
+ * also the biggest target on screen, so it can afford the least inflation.
+ *
+ * 4, not 3: with the scale cubes moved outboard to 1.95 there is room, and a
+ * ring is the hardest grip to hit with a FINGER — it is the only one that has
+ * to be caught side-on, and "I couldn't rotate anything, but that's with touch"
+ * is what too little tube feels like.
  */
-const RING_PICK_FATNESS = 3
+const RING_PICK_FATNESS = 4
 
 export interface HandlesView {
   /** Rebuild for a new transform set. Cheap no-op when nothing changed. */

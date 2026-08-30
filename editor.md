@@ -15,20 +15,16 @@ order: 2
   hard-coded the navbar's height and would have been wrong the moment the
   navbar changed.
 
-  It resolves against the VIEWPORT, deliberately. There is no positioned
-  ancestor and `.doc-content` must not become one: on this page the whole
-  chrome is fixed-position and `html` measures sixteen pixels, so an `inset: 0`
-  aimed at `.doc-content` gives a sixteen-pixel box. Aimed at the viewport it
-  gives the window.
+  `top: 0` and `height: 100%` against the SIDENAV'S CONTENT AREA, which becomes
+  the positioned parent once the page hydrates — so this box already starts
+  below the header and needs no offset for it.
 
-  `top` and the height both come from `--header-height`, the doc system's own
-  variable, rather than a number measured off a screenshot — `top: 0` filled
-  the window but covered the global navigation, which is the thing this page
-  moved here to get. The height is stated rather than left to `bottom: 0`,
-  which the element's own styling wins against: it overhung the viewport by
-  exactly the header.
+  I had `top: var(--header-height)` here briefly, on the strength of measuring
+  the element covering the navbar. That measurement was taken before hydration
+  settled, when the containing block was still the viewport; against the real
+  parent the same rule double-counts the header and leaves a white band of
+  exactly that height across the top. Measure this one AFTER the layout
+  settles — it changes shape underneath you.
 
-  Filed as tosijs-ui#115; when raw `.html` doc pages land, none of this is
-  needed.
 -->
-<tosi-ensemble-editor src="/ensembles/pirate-cove.json" style="display:block;position:absolute;top:var(--header-height,3.5rem);left:0;right:0;height:calc(100dvh - var(--header-height,3.5rem));min-height:30rem"></tosi-ensemble-editor>
+<tosi-ensemble-editor src="/ensembles/pirate-cove.json" style="display:block;position:absolute;top:0;left:0;right:0;height:100%;min-height:30rem"></tosi-ensemble-editor>

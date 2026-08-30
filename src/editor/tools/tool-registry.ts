@@ -85,6 +85,13 @@ export interface ToolContext {
    * Babylon's own gizmos detach camera control for exactly this reason.
    */
   captureCamera(capture: boolean): void
+  /** Step back through `edit` calls. No-op with nothing to undo. */
+  undo(): void
+  /** Step forward again, until the next edit forks the timeline. */
+  redo(): void
+  /** Whether there is anything to step to, for a command's enabled state. */
+  canUndo(): boolean
+  canRedo(): boolean
 }
 
 /** One offerable mesh: which library, what it is called, and its family. */

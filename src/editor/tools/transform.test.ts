@@ -60,6 +60,10 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     pick: () => picked,
     pickPoint: () => null,
     captureCamera: () => {},
+    undo: () => {},
+    redo: () => {},
+    canUndo: () => false,
+    canRedo: () => false,
     meshNames: () => [],
     meshCatalog: () => [],
   }) as ToolContext

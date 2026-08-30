@@ -91,6 +91,7 @@ import {
 import { registerEditorTools } from './tools/built-in'
 import { registerTransformTool, transformsOf } from './tools/transform'
 import { createHandles } from './handles-view'
+import { createHistory } from './history'
 import { createSelectionView } from './selection-view'
 import type { SelectionView } from './selection-view'
 import type { HandlesView } from './handles-view'
@@ -123,6 +124,15 @@ const format = (n: number): string =>
   Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)))
 
 const EMPTY: Ensemble = { name: 'untitled', pieces: [] }
+
+/**
+ * How many steps back an author can go.
+ *
+ * Generous, because the whole document is small and the drags are coarse — a
+ * long editing session is hundreds of edits, not millions. Bounded anyway, so
+ * a session left open overnight cannot grow without limit.
+ */
+const HISTORY_LIMIT = 200
 
 /*
   Backdrop grid, tiled so ONE TILE IS TEN METRES. That makes it metric rather
@@ -188,6 +198,9 @@ export class EnsembleEditor extends Component {
     // A NEW arrangement earns a new view. An edit to the current one does not —
     // see the note in `rebuild`.
     this._needsFraming = true
+    // History does not cross documents: an undo that reached back into the
+    // previous ensemble would restore pieces this one has never heard of.
+    this._history.clear()
     this.rebuild()
   }
   private _ensemble: Ensemble = EMPTY
@@ -273,11 +286,27 @@ export class EnsembleEditor extends Component {
           | { pickWithRay: (r: unknown, p?: (m: unknown) => boolean) => { pickedMesh?: unknown } | null }
           | undefined
         if (!scene || !this._handles) return null
+        const babylonRay = new Ray(
+          new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
+          new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
+        )
+        /*
+          TWO PASSES: what you AIMED at, then what you were REACHING for.
+
+          Pass one considers only the handles you can see. A hit there is
+          unambiguous — it is the geometry under the pointer. Pass two falls
+          back to the fat invisible targets, which exist so a grip can be caught
+          without pixel accuracy.
+
+          One pass over both was the bug: the fat targets overlap by design, so
+          the nearest SURFACE was regularly a ring's tube passing in front of
+          the arrowhead squarely under the cursor.
+        */
+        const drawn = scene.pickWithRay(babylonRay, (mesh) => this._handles?.isDrawn(mesh) === true)
+        const aimed = this._handles.gripOf(drawn?.pickedMesh) as Grip | null
+        if (aimed) return aimed
         const hit = scene.pickWithRay(
-          new Ray(
-            new Vector3(ray.origin[0], ray.origin[1], ray.origin[2]),
-            new Vector3(ray.direction[0], ray.direction[1], ray.direction[2])
-          ),
+          babylonRay,
           (mesh) => this._handles?.gripOf(mesh) !== null
         )
         return (this._handles.gripOf(hit?.pickedMesh) as Grip | null) ?? null
@@ -452,6 +481,10 @@ export class EnsembleEditor extends Component {
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
       captureCamera: (capture) => this.captureCamera(capture),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      canUndo: () => this.canUndo(),
+      canRedo: () => this.canRedo(),
       meshNames: () => [...(this._meshNames() ?? [])],
       meshCatalog: () => this.meshCatalog(),
     } as ToolContext
@@ -463,8 +496,58 @@ export class EnsembleEditor extends Component {
    * Undo is still a v1 non-goal, but one path is what makes adding it a single
    * change rather than an archaeology exercise across the editor.
    */
-  edit(_describe: string, mutate: (ensemble: Ensemble) => void): void {
+  edit(describe: string, mutate: (ensemble: Ensemble) => void): void {
+    /*
+      SNAPSHOT BEFORE, not a diff.
+
+      An ensemble is a small JSON document and an edit is coarse — one drag
+      release, one typed field, one insert. Cloning the whole thing costs less
+      than the rebuild that follows it, and it cannot get out of step with a
+      mutation it did not model. Undo was a v1 non-goal on the strength of
+      "everything goes through one path, so adding it later is cheap"; this is
+      that promise being cashed, and it was one function.
+    */
+    this._history.record(describe, this._ensemble)
     mutate(this._ensemble)
+    this.rebuild()
+  }
+
+  private readonly _history = createHistory<Ensemble>((e) => structuredClone(e), HISTORY_LIMIT)
+
+  canUndo(): boolean {
+    return this._history.canUndo()
+  }
+
+  canRedo(): boolean {
+    return this._history.canRedo()
+  }
+
+  /** Step back one edit. */
+  undo(): void {
+    const step = this._history.undo(this._ensemble)
+    if (step) this._restore(step.state)
+  }
+
+  /** Step forward again. */
+  redo(): void {
+    const step = this._history.redo(this._ensemble)
+    if (step) this._restore(step.state)
+  }
+
+  /**
+   * Put a remembered ensemble back.
+   *
+   * NOT through the `ensemble` setter: that one re-frames the camera and resets
+   * the selection, which is right for loading a different arrangement and wrong
+   * for stepping back one edit — an author undoing a nudge expects to be
+   * looking at the same thing from the same place.
+   */
+  private _restore(ensemble: Ensemble): void {
+    this._ensemble = ensemble
+    if (this._selected && !ensemble.pieces.some((p) => p.id === this._selected)) {
+      // The piece the selection pointed at may not exist in this version.
+      this._selected = null
+    }
     this.rebuild()
   }
 
@@ -516,6 +599,7 @@ export class EnsembleEditor extends Component {
     if (!scene || !canvas) return
     this._pointer = new FlatPointer(canvas, scene as never)
     this._hub.add(this._pointer)
+    this._attachShortcuts()
 
     /*
       THE INPUT LOOP IS NOT THE RENDER LOOP.
@@ -557,6 +641,8 @@ export class EnsembleEditor extends Component {
     this._marker = null
     this._pointer?.dispose()
     this._pointer = null
+    this._detachShortcuts?.()
+    this._detachShortcuts = null
     super.disconnectedCallback?.()
   }
 
@@ -915,6 +1001,19 @@ export class EnsembleEditor extends Component {
   private _syncSelection(): void {
     const scene = (this._scene as unknown as { scene?: unknown }).scene
     if (!scene) return
+    /*
+      RECREATE WHEN DEAD, not only when absent.
+
+      A view holds Babylon meshes, and a scene can be torn down and rebuilt
+      under it — a library reload, an element reconnecting. The object survives
+      and goes on writing to disposed meshes, so selection feedback disappears
+      for the rest of the session with nothing in the console. Measured exactly
+      that way: marker present, zero of its meshes in the scene.
+    */
+    if (this._marker && !this._marker.alive()) {
+      this._marker.dispose()
+      this._marker = null
+    }
     if (!this._marker) this._marker = createSelectionView(scene)
     this._syncMarker()
   }
@@ -985,7 +1084,7 @@ export class EnsembleEditor extends Component {
   /**
    * Keep the handles a constant size on screen.
    *
-   * `0.12` of the camera distance puts the axis stick at roughly a sixth of the
+   * `0.105` of the camera distance puts the widget at roughly a fifth of the
    * viewport height at Babylon's default field of view, which makes the fat
    * pick target about 60 px across on a laptop and 40 on a phone. World-sized
    * handles measured ELEVEN px on the sample ensemble — the difference between
@@ -1005,7 +1104,10 @@ export class EnsembleEditor extends Component {
     if (!eye || !built) return
     const here = this._liveOrigin(built)
     const distance = Math.hypot(eye.x - here[0], eye.y - here[1], eye.z - here[2])
-    this._handles.setScale(Math.max(distance * 0.12, 0.05))
+    // 0.105, down from 0.12: the widget reaches further along each axis now
+    // that the rings sit outside the arrows, and this keeps its screen size the
+    // same rather than letting the layout change quietly enlarge it.
+    this._handles.setScale(Math.max(distance * 0.105, 0.05))
   }
 
   /**
@@ -1051,6 +1153,11 @@ export class EnsembleEditor extends Component {
       this._handles = null
       return
     }
+    // Same guard as the marker: a handle set outlives the scene it was built in.
+    if (this._handles && !this._handles.alive()) {
+      this._handles.dispose()
+      this._handles = null
+    }
     if (!this._handles) this._handles = createHandles(scene)
     this._handles.setTransforms(transforms)
     this._handles.moveTo(built.at)
@@ -1065,10 +1172,20 @@ export class EnsembleEditor extends Component {
    * the mesh rather than the element.
    */
   update(id: string, patch: Partial<Piece>): void {
-    const piece = this._ensemble.pieces.find((p) => p.id === id)
-    if (!piece) return
-    Object.assign(piece, patch)
-    this.rebuild()
+    /*
+      THROUGH `edit`, not around it.
+
+      This mutated the piece directly and called `rebuild` itself, which was
+      invisible until undo existed: typing a coordinate changed the ensemble
+      without recording a step, so the property panel was the one edit an author
+      could not take back. "Every edit goes through one path" is only true if
+      the paths that predate the rule are moved onto it.
+    */
+    this.edit(`update ${id}`, (ensemble) => {
+      const piece = ensemble.pieces.find((p) => p.id === id)
+      if (!piece) return
+      Object.assign(piece, patch)
+    })
   }
 
   /*
@@ -1341,6 +1458,34 @@ export class EnsembleEditor extends Component {
   }
 
   private _activeField: NumberField | null = null
+
+  /**
+   * Undo and redo on the keyboard, because a button alone is not undo.
+   *
+   * On the WINDOW, not a panel: undo has to work while you are looking at the
+   * viewport, which is where an author spends the whole session and where none
+   * of the SVG panels has focus. It steps aside for a text field, so typing a
+   * coordinate that contains a `z` is not an undo.
+   */
+  private _attachShortcuts(): void {
+    this._detachShortcuts?.()
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return
+      if (this._activeField) return
+      const target = event.target as { tagName?: string; isContentEditable?: boolean } | null
+      if (target?.isContentEditable || target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
+        return
+      }
+      // ⇧⌘Z redoes, the convention everywhere except an editor nobody enjoys.
+      if (event.shiftKey) this.redo()
+      else this.undo()
+      event.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    this._detachShortcuts = () => window.removeEventListener('keydown', onKey)
+  }
+
+  private _detachShortcuts: (() => void) | null = null
 
   private _addPanel(side: 'left' | 'right', panel: SVGSVGElement): void {
     panel.classList.add('ensemble-editor-chrome')

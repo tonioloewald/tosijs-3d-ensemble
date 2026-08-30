@@ -75,6 +75,17 @@ export interface Bounds {
 export interface SelectionView {
   show(bounds: Bounds): void
   hide(): void
+  /**
+   * Are these meshes still in a live scene?
+   *
+   * A view holds Babylon meshes, and those can be disposed out from under it —
+   * a scene torn down and rebuilt, a library reload, an element reconnecting.
+   * The view object survives that perfectly happily and writes to disposed
+   * meshes forever after, which is silent and permanent: measured mid-session
+   * with the marker object present, zero of its meshes in the scene, and no
+   * selection feedback for the rest of the run.
+   */
+  alive(): boolean
   dispose(): void
 }
 
@@ -83,6 +94,7 @@ interface Marker {
   scaling: { x: number; y: number; z: number }
   isVisible: boolean
   isPickable: boolean
+  isDisposed: () => boolean
   renderingGroupId: number
   material?: unknown
   rotation: { x: number; y: number; z: number }
@@ -208,6 +220,9 @@ export function createSelectionView(scene: unknown): SelectionView {
     },
     hide() {
       for (const part of parts) part.isVisible = false
+    },
+    alive() {
+      return parts.length > 0 && !box.isDisposed()
     },
     dispose() {
       for (const part of parts) part.dispose()

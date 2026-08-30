@@ -37,6 +37,19 @@ import type { Vec3 } from '../format/types'
 /** Marks a mesh as ours, so picking can tell a handle from the scene. */
 export const HANDLE_TAG = 'ensemble-editor-handle'
 
+/**
+ * Marks the mesh you can SEE, as opposed to its fat invisible twin.
+ *
+ * Picking runs in two passes and this is what separates them. One pass over the
+ * drawn handles answers "what were you aiming at"; a second over the fat
+ * targets answers "what were you reaching for". Deciding between overlapping
+ * grips by ray DEPTH alone gave the ring whose tube happened to pass in front —
+ * "I rotated when I tried to translate" — and deciding by distance to the drawn
+ * mesh's centre was worse, because a torus is centred on the widget origin and
+ * so never wins against anything.
+ */
+export const DRAWN_TAG = 'ensemble-editor-handle-drawn'
+
 interface HandleMesh {
   grip: Grip
   /** Where this part sits, in unit-scale local space. */
@@ -48,6 +61,7 @@ interface HandleMesh {
     rotation: { x: number; y: number; z: number }
     scaling: { x: number; y: number; z: number }
     isVisible: boolean
+    isDisposed: () => boolean
     visibility: number
     metadata: unknown
     dispose: () => void
@@ -87,15 +101,20 @@ const PICK_FATNESS = 5
 /**
  * Where each grip sits, at unit scale. One table, so the layout can be read.
  *
- * Ordered outward from the centre — pads, shafts, rings, then scale cubes —
- * which is Cheetah 3D's arrangement and the reason its widget stays readable
- * with everything switched on. The rings go OUTSIDE the shafts they share a
- * widget with; nesting them the other way puts the largest target on top of
- * the smallest, and the smallest is the one you were aiming at.
+ * Ordered outward from the centre, and EVERY GRIP OWNS A BAND along the axis:
  *
- * This matters for CROWDING, not for correctness. Every grip is picked by its
- * own fat invisible twin, so a bad layout does not break a drag — it just makes
- * you fight for the one you wanted.
+ *   pads    0.02 – 0.58     shafts  0.15 – 0.95     cones  0.95 – 1.35
+ *   rings   1.38 – 1.92     cubes   1.96 – 2.34
+ *
+ * That separation is the point, and it was missing. A ring at radius 1.2 with
+ * shafts reaching 1.3 physically CROSSES them, so at four points on every ring
+ * the drawn geometry of two different grips occupies the same pixels and no
+ * amount of clever picking can tell which you meant. Measured: aiming squarely
+ * at the ring translated the piece. "With more than one transform open, it may
+ * be difficult to click the one you want."
+ *
+ * The rings now sit OUTSIDE the arrows entirely, which is also Cheetah 3D's
+ * arrangement and the reason its widget stays readable with everything on.
  */
 /*
   The shaft is deliberately HAIRLINE now.
@@ -108,16 +127,16 @@ const PICK_FATNESS = 5
   Its pick target stays generous, so aiming at the line still works; it just no
   longer ADVERTISES itself as the target.
 */
-const SHAFT_LENGTH = 1.1
+const SHAFT_LENGTH = 0.8
 const SHAFT_DIAMETER = 0.032
 const SHAFT_PICK_FATNESS = 11
-const SHAFT_OFFSET = 0.75
-const PAD_OFFSET = 0.34
-const PAD_SIZE = 0.32
-const RING_DIAMETER = 2.4
+const SHAFT_OFFSET = 0.55
+const PAD_OFFSET = 0.3
+const PAD_SIZE = 0.28
+const RING_DIAMETER = 3.3
 const RING_THICKNESS = 0.09
 const CUBE_SIZE = 0.17
-const CUBE_OFFSET = 1.95
+const CUBE_OFFSET = 2.15
 const CENTRE_SIZE = 0.2
 
 /**
@@ -150,7 +169,7 @@ const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2
  * to be caught side-on, and "I couldn't rotate anything, but that's with touch"
  * is what too little tube feels like.
  */
-const RING_PICK_FATNESS = 4
+const RING_PICK_FATNESS = 3
 
 export interface HandlesView {
   /** Rebuild for a new transform set. Cheap no-op when nothing changed. */
@@ -172,6 +191,14 @@ export interface HandlesView {
   nearestGrip(hand: Vec3): Grip | null
   /** The grip a handle mesh belongs to, for resolving a ray pick. */
   gripOf(mesh: unknown): Grip | null
+  /**
+   * Is this one of the DRAWN handles, rather than a fat invisible pick target?
+   *
+   * The two are picked in separate passes — see the note on `add`.
+   */
+  isDrawn(mesh: unknown): boolean
+  /** Are these meshes still in a live scene? See [[The selection marker]]. */
+  alive(): boolean
   dispose(): void
 }
 
@@ -227,9 +254,16 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     const mesh = make(`${HANDLE_TAG}-${key}`, 1) as HandleMesh['mesh']
     mesh.material = material(key, colour, alpha)
     mesh.renderingGroupId = 1
-    // The visible handle is NOT the pick target — the fat one below is.
-    mesh.isPickable = false
-    mesh.metadata = { [HANDLE_TAG]: grip }
+    /*
+      The drawn handle IS pickable, and is picked FIRST.
+
+      It used to be unpickable, leaving the fat targets to decide everything by
+      ray depth — which is how aiming squarely at an arrowhead could rotate the
+      piece instead. A hit on drawn geometry is unambiguous: it is the thing you
+      could see and aimed at. The fat targets remain for everything else.
+    */
+    mesh.isPickable = true
+    mesh.metadata = { [HANDLE_TAG]: grip, [DRAWN_TAG]: true }
     handles.push({ grip, mesh, offset, spin })
 
     const target = make(`${HANDLE_TAG}-${key}-pick`, PICK_FATNESS) as HandleMesh['mesh']
@@ -470,6 +504,13 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     gripOf(mesh) {
       const meta = (mesh as { metadata?: Record<string, Grip> } | null)?.metadata
       return meta?.[HANDLE_TAG] ?? null
+    },
+    isDrawn(mesh) {
+      const meta = (mesh as { metadata?: Record<string, unknown> } | null)?.metadata
+      return meta?.[DRAWN_TAG] === true
+    },
+    alive() {
+      return handles.length > 0 && !handles[0]!.mesh.isDisposed()
     },
     dispose() {
       for (const { mesh } of handles) mesh.dispose()

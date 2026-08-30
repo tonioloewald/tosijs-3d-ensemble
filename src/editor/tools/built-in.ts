@@ -74,6 +74,22 @@ export function registerEditorTools(): void {
   })
 
   registerCommand({
+    name: 'undo',
+    label: 'Undo',
+    icon: 'undo',
+    enabled: (ctx) => ctx.canUndo(),
+    run: (ctx) => ctx.undo(),
+  })
+
+  registerCommand({
+    name: 'redo',
+    label: 'Redo',
+    icon: 'redo',
+    enabled: (ctx) => ctx.canRedo(),
+    run: (ctx) => ctx.redo(),
+  })
+
+  registerCommand({
     name: 'delete',
     label: 'Delete',
     icon: 'trash',

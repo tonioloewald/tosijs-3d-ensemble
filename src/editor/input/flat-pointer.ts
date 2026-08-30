@@ -40,10 +40,19 @@ export class FlatPointer implements EditorPointer {
   private latched = false
   private alt = false
   /**
-   * Every pointer currently down, by id.
+   * Every TOUCH currently down, by id.
    *
    * A count, not a boolean, because "how many fingers" is the whole question:
    * one is a tool gesture, two is the camera's.
+   *
+   * Touch only, and that matters. Counting every pointer meant a mouse could
+   * be stood down by an unrelated press elsewhere on the page, and worse, an
+   * id that never got its `pointerup` — a press whose target stopped
+   * propagation, a drag that ended over another window — left the set
+   * permanently non-empty, so EVERY later click read as a second finger and
+   * did nothing. Reported from a laptop as "trouble selecting things" and
+   * "clicking the manipulators usually doesn't register". A mouse cannot make
+   * a two-finger gesture, so it has no business in this set.
    */
   private readonly contacts = new Set<number>()
   /**
@@ -79,9 +88,26 @@ export class FlatPointer implements EditorPointer {
       this.x = e.clientX - rect.left
       this.y = e.clientY - rect.top
     }
+    /** Only a finger can be one of several contacts. */
+    const isTouch = (e: PointerEvent) => e.pointerType === 'touch'
+
     const down = (e: PointerEvent) => {
       move(e)
-      this.contacts.add(e.pointerId)
+      /*
+        A PRIMARY touch is the start of a fresh gesture, so the set is reset to
+        it. That is the self-heal: any id stranded by a missing `pointerup`
+        cannot outlive the next time a finger touches down alone.
+      */
+      if (isTouch(e)) {
+        if (e.isPrimary) {
+          this.contacts.clear()
+          // The self-heal is only a heal if it clears the STATE too. Leaving
+          // `yielded` set means the stranded id is forgotten and the pointer
+          // stays stood down anyway, which is the same dead end one step later.
+          this.yielded = false
+        }
+        this.contacts.add(e.pointerId)
+      }
       /*
         TWO FINGERS ARE THE CAMERA'S, NOT A TOOL'S.
 
@@ -153,7 +179,7 @@ export class FlatPointer implements EditorPointer {
       counts contacts WITHOUT starting anything.
     */
     const contact = (e: PointerEvent) => {
-      if (this.contacts.has(e.pointerId)) return
+      if (!isTouch(e) || this.contacts.has(e.pointerId)) return
       this.contacts.add(e.pointerId)
       if (this.contacts.size > 1 && !this.exclusive) this.standDown()
     }

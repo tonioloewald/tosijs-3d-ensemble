@@ -22,7 +22,23 @@ const setup = () => {
 }
 
 const press = (id: number, extra: Record<string, unknown> = {}) =>
-  new PointerEvent('pointerdown', { bubbles: true, pointerId: id, button: 0, ...extra })
+  new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: id,
+    button: 0,
+    pointerType: 'touch',
+    isPrimary: id === 1,
+    ...extra,
+  })
+const mouse = (type: string, extra: Record<string, unknown> = {}) =>
+  new PointerEvent(type, {
+    bubbles: true,
+    pointerId: 1,
+    button: 0,
+    pointerType: 'mouse',
+    isPrimary: true,
+    ...extra,
+  })
 const release = (id: number) =>
   new PointerEvent('pointerup', { bubbles: true, pointerId: id, button: 0 })
 
@@ -142,6 +158,35 @@ describe('FlatPointer: an exclusive gesture survives a stray contact', () => {
     canvas.dispatchEvent(press(3))
     pointer.endPoll()
     expect(pointer.active).toBe(false)
+    cleanup()
+  })
+})
+
+describe('FlatPointer: a mouse is never a second finger', () => {
+  it('is not stood down by another press somewhere on the page', () => {
+    /*
+      Counting every pointer, not just touches, meant an id that never got its
+      `pointerup` — a press whose target stopped propagation, a drag released
+      over another window — stranded the set non-empty, and every later click
+      read as a second finger and did nothing at all. From a laptop: "trouble
+      selecting things… clicking the manipulators usually doesn't register".
+    */
+    const { canvas, pointer, cleanup } = setup()
+    window.dispatchEvent(mouse('pointerdown'))
+    canvas.dispatchEvent(mouse('pointerdown'))
+    expect(pointer.active).toBe(true)
+    cleanup()
+  })
+
+  it('recovers even after a touch id is stranded without its release', () => {
+    const { canvas, pointer, cleanup } = setup()
+    canvas.dispatchEvent(press(1))
+    canvas.dispatchEvent(press(2)) // second finger: stands down, as it should
+    pointer.endPoll()
+    expect(pointer.active).toBe(false)
+    // Neither release ever arrives. The next primary touch must still work.
+    canvas.dispatchEvent(press(1))
+    expect(pointer.active).toBe(true)
     cleanup()
   })
 })

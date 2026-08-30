@@ -140,6 +140,7 @@ export function placeMesh(
       dispose: () => {
         stopWaiting()
         element.remove()
+        reapOrphan(ctx.scene, element)
       },
     }
   }
@@ -215,6 +216,54 @@ interface BabylonScene {
     add?: (fn: () => void) => unknown
     remove?: (observer: unknown) => void
   }
+}
+
+/**
+ * Dispose an instance that arrives AFTER its element was removed.
+ *
+ * `b3d-destroyable` instantiates inside `lib.ready.then(...)`, so there is a
+ * window between "element appended" and "node exists". Remove the element
+ * inside that window — which the editor does constantly, because it rebuilds on
+ * every edit — and the disconnect finds nothing to dispose, then the pending
+ * callback creates a node belonging to nobody. It is never disposed and never
+ * moves again.
+ *
+ * Measured: four edits in quick succession left FOUR copies of the same tower
+ * standing in the scene, 210 meshes where there had been 81, and it did not
+ * settle. Reported as "movement seems to duplicate objects", which is exactly
+ * what a ghost left at the old position looks like.
+ *
+ * Filed as tosijs-3d#49 — an element that has been disconnected should not
+ * instantiate, or should dispose what it instantiated. Until then this watches
+ * for the orphan and reaps it.
+ */
+function reapOrphan(sceneElement: SceneElement, element: SceneElement, frameBudget = 240): void {
+  const host = element as unknown as { mesh?: { dispose?: () => void; isDisposed?: () => boolean } | null }
+  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene
+  const observable = scene?.onBeforeRenderObservable
+  const reap = () => {
+    const node = host.mesh
+    if (!node || node.isDisposed?.()) return false
+    // Only ever an orphan: if the element came back, it owns this again.
+    if (element.isConnected) return true
+    node.dispose?.()
+    return true
+  }
+  if (reap() || !observable?.add) return
+  let frames = 0
+  let observer: unknown = null
+  const stop = () => {
+    if (observer) observable.remove?.(observer)
+    observer = null
+  }
+  observer = observable.add(() => {
+    // A throw inside a render observer kills the loop permanently — guard it.
+    try {
+      if (reap() || ++frames > frameBudget) stop()
+    } catch {
+      stop()
+    }
+  })
 }
 
 /** `b3dRadarBlip` as a child of the piece — it travels with what it marks. */

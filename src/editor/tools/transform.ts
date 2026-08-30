@@ -102,6 +102,16 @@ interface Drag {
    * only reason this never showed up.
    */
   worldPerLocal: number
+  /**
+   * Did the pointer ever actually move this?
+   *
+   * Distinct from "did the committed value change". A drag that travelled and
+   * then rounded back to the grid it started on has changed nothing to commit,
+   * but it was still a DRAG — treating it as a click hands the selection to
+   * whatever is behind the widget, which is how "clicking a foreground object
+   * trumps clicking on the transform affordances" happens on every small nudge.
+   */
+  dragged: boolean
   /** The transform as it currently stands, in ensemble-local terms. */
   at: Vec3
   rot: Euler
@@ -120,15 +130,24 @@ export const TRANSFORM_SCHEMA = {
   title: 'Select',
   properties: {
     /*
-      All three default FALSE.
+      MODE first, then which transforms the mode offers.
 
-      The tool an author reaches for most is "click things to see what they
-      are", and a manipulator sitting on the selection is in the way of exactly
-      that. Turning one on is a deliberate act, which is also what keeps the
-      widget from being unusable on a touchscreen: crowding is real, and the
-      author decides how much of it they want.
+      Two levels, because they answer different questions. "Get the widget out
+      of my way so I can click things" is one decision and should cost one
+      action — it used to mean switching three toggles off and then back on
+      again, and switching back meant remembering which had been on.
+
+      The toggles keep their state across the mode, so `select` is a pause
+      rather than a reset. `translate` is on by default so that choosing
+      `transform` does something the first time.
     */
-    translate: { type: 'boolean', title: 'Move', default: false },
+    mode: {
+      type: 'string',
+      title: 'Mode',
+      enum: ['select', 'transform'],
+      default: 'select',
+    },
+    translate: { type: 'boolean', title: 'Move', default: true },
     rotate: { type: 'boolean', title: 'Turn', default: false },
     scale: { type: 'boolean', title: 'Scale', default: false },
     gridSnap: {
@@ -156,8 +175,14 @@ export const TRANSFORM_SCHEMA = {
   },
 }
 
-/** Read the transform toggles out of a tool's options. */
+/**
+ * Read the transform toggles out of a tool's options.
+ *
+ * `select` mode reports none of them, whatever the toggles say — so the widget
+ * disappears without the toggles being disturbed, and comes back as it was.
+ */
 export function transformsOf(options: Record<string, unknown>): TransformSet {
+  if (options.mode !== 'transform') return { translate: false, rotate: false, scale: false }
   return {
     translate: options.translate === true,
     rotate: options.rotate === true,
@@ -229,6 +254,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
           startScale,
           startValue: start,
           secondary: gesture.primary.secondary === true,
+          dragged: false,
           at: [...piece.at] as Vec3,
           rot: [...(piece.rot ?? [0, 0, 0])] as Euler,
           scale: [...startScale] as Vec3,
@@ -243,6 +269,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const now = measure(drag.grip, origin, ray)
         if (now === null) return
         apply(drag, now)
+        if (changed(drag)) drag.dragged = true
         const body = hooks.bodyOf(drag.pieceId)
         if (body) {
           writeTransform(body, {
@@ -285,8 +312,11 @@ export function registerTransformTool(hooks: TransformHooks): void {
           ? (finished.rot.map((a) => wrapDegrees(snap(a, angle))) as Euler)
           : null
 
-        if (!finished || !at || !rot || !moved(finished, at, rot)) {
+        if (!finished || !finished.dragged) {
           /*
+            Nothing was grabbed, or something was grabbed and never moved. Both
+            are clicks, and a click selects.
+
             On end rather than start, so a press that turns into a camera orbit
             does not also change what is selected — the two gestures begin
             identically and only diverge once something moves.
@@ -295,6 +325,11 @@ export function registerTransformTool(hooks: TransformHooks): void {
           if (ray) ctx.select(ctx.pick(ray))
           return
         }
+
+        // It was a real drag whose value happens to land where it started —
+        // a nudge inside one grid step. Nothing to commit, and emphatically not
+        // a click: the selection stays put.
+        if (!at || !rot || !moved(finished, at, rot)) return
 
         const scale = narrowScale(finished.scale)
         const kind = finished.grip.kind
@@ -325,6 +360,16 @@ export function registerTransformTool(hooks: TransformHooks): void {
       },
     },
   })
+}
+
+/** Has the running transform left the one the drag started from? */
+function changed(state: Drag): boolean {
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-6
+  return !(
+    state.at.every((v, i) => near(v, state.startAt[i]!)) &&
+    state.rot.every((v, i) => near(v, state.startRot[i]!)) &&
+    state.scale.every((v, i) => near(v, state.startScale[i]!))
+  )
 }
 
 /**

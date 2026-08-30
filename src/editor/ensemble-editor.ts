@@ -337,9 +337,23 @@ export class EnsembleEditor extends Component {
   setTool(name: string): void {
     const previous = getTool(this._tool)
     previous?.deactivate?.(this._toolContext())
+    // Remember where this tool was left before moving off it.
+    this._toolSettings.set(this._tool, { ...this._toolOptions })
     this._tool = name
     const tool = getTool(name)
-    this._toolOptions = defaultOptions(tool?.optionsSchema)
+    /*
+      TOOLS REMEMBER THEIR SETTINGS.
+
+      Options used to be re-derived from the schema on every switch, so a trip
+      to Insert and back reset the transform mode, both snap steps and
+      copy-on-drag. That is a tool forgetting what it was doing while you did
+      something else, and it makes reaching for another tool feel expensive.
+
+      Defaults still fill any gap, so a tool whose schema GAINS a property picks
+      it up rather than being stuck with an old shape.
+    */
+    const remembered = this._toolSettings.get(name)
+    this._toolOptions = { ...defaultOptions(tool?.optionsSchema), ...(remembered ?? {}) }
     tool?.activate?.(this._toolContext())
     this._syncHandles()
     this._hub.setHandlers({
@@ -350,9 +364,12 @@ export class EnsembleEditor extends Component {
     this._renderChrome()
   }
 
+  private readonly _toolSettings = new Map<string, Record<string, unknown>>()
+
   /** Set one option on the current tool. */
   setToolOption(key: string, value: unknown): void {
     this._toolOptions = { ...this._toolOptions, [key]: value }
+    this._toolSettings.set(this._tool, { ...this._toolOptions })
     // The mode option changes which handles exist, so they are rebuilt here
     // rather than only when the selection changes.
     this._syncHandles()

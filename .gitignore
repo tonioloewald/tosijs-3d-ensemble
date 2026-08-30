@@ -48,3 +48,4 @@ llms.txt
 # Keep them in static/ locally so the dev server serves them; the deployed site
 # and the ensembles point at cdn.tosijs.net.
 static/*.glb
+docs.last-good/

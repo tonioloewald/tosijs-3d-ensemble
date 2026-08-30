@@ -56,7 +56,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     select: (id: string | null) => (selectedId = id),
     scene: {} as never,
     edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
-    options: { gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
+    options: { mode: 'transform', gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
     pick: () => picked,
     pickPoint: () => null,
     captureCamera: () => {},
@@ -108,9 +108,22 @@ const run = (rays: EditorRay[], c: ToolContext, hand: Vec3 | null = null, second
 }
 
 describe('transformsOf', () => {
-  it('reads three independent toggles, all off by default', () => {
+  it('offers nothing in select mode, whatever the toggles say', () => {
+    /*
+      The toggles keep their state across the mode, so getting the widget out of
+      the way is one action and getting it back is one action — not three, and
+      not "remember which of the three you had on".
+    */
     expect(transformsOf({})).toEqual({ translate: false, rotate: false, scale: false })
-    expect(transformsOf({ translate: true, scale: true })).toEqual({
+    expect(transformsOf({ translate: true, rotate: true, scale: true })).toEqual({
+      translate: false,
+      rotate: false,
+      scale: false,
+    })
+  })
+
+  it('reads three independent toggles in transform mode', () => {
+    expect(transformsOf({ mode: 'transform', translate: true, scale: true })).toEqual({
       translate: true,
       rotate: false,
       scale: true,
@@ -203,12 +216,18 @@ describe('a press that did not drag is a click', () => {
     expect(selectedId).toBe('rock') // and does NOT reselect what is behind
   })
 
-  it('treats a drag that snapped back to where it started as a click', () => {
-    // Nothing to commit, so the tap should not be swallowed either.
+  it('does NOT hand the selection away when a real drag snapped back', () => {
+    /*
+      A nudge smaller than one grid step commits nothing — but it was a drag,
+      not a click. Treating it as a click gives the selection to whatever is
+      behind the widget, which is what "clicking a foreground object trumps
+      clicking on the transform affordances" felt like: every small movement
+      quietly reselected the scenery underneath.
+    */
     picked = 'another-piece'
     run([rayAtX(0), rayAtX(0.2)], ctx({ gridSnap: 1 }))
-    expect(ensemble.pieces[0]!.at).toEqual([0, 0, 0])
-    expect(selectedId).toBe('another-piece')
+    expect(ensemble.pieces[0]!.at).toEqual([0, 0, 0]) // nothing committed
+    expect(selectedId).toBe('rock') // and the selection is untouched
   })
 })
 

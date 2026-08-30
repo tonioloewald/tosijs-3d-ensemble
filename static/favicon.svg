@@ -14,12 +14,17 @@
     (I removed the frame and handles on the way in, having read them as
     registration marks left over from drawing. They are the subject.)
 
+    The backdrop is SOLID #505050 and bleeds to all four edges. It was a 50%
+    black tile inset to the 4,4-60,60 safe area, which at 16 px let the page
+    show through and left the letter to fight whatever was behind it. Opaque and
+    full-bleed, the E reads as a small blue glyph on grey at any size.
+
     Only two things were changed: `width`/`height` of 64px are gone so the file
     scales to whatever asks for it, and a `<title>` was added for screen
     readers. The geometry is untouched.
   -->
   <g id="Layer_1">
-    <path id="Path" style="fill:#000000;fill-opacity:0.5;fill-rule:evenodd;opacity:1;stroke:none;" d="M4,4 C4,4,60,4,60,4 C60,4,60,60,60,60 C60,60,4,60,4,60 C4,60,4,4,4,4 z"/>
+    <path id="Path" style="fill:#505050;fill-opacity:1;fill-rule:evenodd;opacity:1;stroke:none;" d="M0,0 C0,0,64,0,64,0 C64,0,64,64,64,64 C64,64,0,64,0,64 C0,64,0,0,0,0 z"/>
     <path id="Path-1" style="fill:#8ee6ff;fill-opacity:1;fill-rule:nonzero;opacity:1;stroke:none;" d="M56,4 C56,4,52,8,52,8 C52,8,48,4,48,4 C48,4,44,8,44,8 C44,8,40,4,40,4 C40,4,36,8,36,8 C36,8,36,20,36,20 C36,20,40,16,40,16 C40,16,44,20,44,20 C44,20,48,16,48,16 C48,16,52,20,52,20 C52,20,56,15,56,15 C56,15,56,4,56,4 z"/>
     <g id="Group">
       <linearGradient x1="8" y1="27" x2="20" y2="27" gradientUnits="userSpaceOnUse" id="am2">

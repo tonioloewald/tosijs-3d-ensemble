@@ -76,6 +76,10 @@ const withGrip = (grip: Grip | null) => {
     farGrip: () => grip,
     bodyOf: () => body,
     worldOrigin: () => [0, 0, 0],
+    // An unturned piece, so its axes ARE the world's. The rotated case is
+    // checked in a browser, where the node's world matrix is the only honest
+    // source for them.
+    axisDirection: (axis) => (axis === 'x' ? [1, 0, 0] : axis === 'y' ? [0, 1, 0] : [0, 0, 1]),
   })
 }
 

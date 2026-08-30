@@ -70,7 +70,7 @@ import { writeTransform } from '../transform-write'
 import type { WritableBody } from '../transform-write'
 import { registerTool } from './tool-registry'
 import { uniqueId } from './built-in'
-import type { Grip, TransformSet } from '../handles'
+import type { Axis, Grip, TransformSet } from '../handles'
 import type { Gesture } from '../input/pointer'
 import type { ToolContext } from './tool-registry'
 import type { Euler, Piece, Vec3 } from '../../format/types'
@@ -150,11 +150,23 @@ export const TRANSFORM_SCHEMA = {
     translate: { type: 'boolean', title: 'Move', default: true },
     rotate: { type: 'boolean', title: 'Turn', default: false },
     scale: { type: 'boolean', title: 'Scale', default: false },
+    /*
+      SNAP IS A CHOICE FROM A LIST, not a point on a continuum.
+
+      These were unbounded sliders — 0 to 10 metres, 0 to 90 degrees — and
+      landing on a useful value was, accurately, "an exercise in frustration":
+      the SVG UI's slider has no step, so every drag gives you 0.7382 m. Nobody
+      has ever wanted a 0.7382 m grid.
+
+      An enum renders as a cycler, which snaps by construction and reads its
+      value back exactly. The list is the values an author actually uses,
+      doubling as it goes, with 0 for free movement at the front. It becomes a
+      stepped slider the moment tosijs-3d#50 lands.
+    */
     gridSnap: {
       type: 'number',
       title: 'Grid snap',
-      minimum: 0,
-      maximum: 10,
+      enum: [0, 0.125, 0.25, 0.5, 1, 2, 4, 8],
       default: 1,
       'x-unit': 'm',
       description: '0 to move freely',
@@ -162,8 +174,7 @@ export const TRANSFORM_SCHEMA = {
     angleSnap: {
       type: 'number',
       title: 'Angle snap',
-      minimum: 0,
-      maximum: 90,
+      enum: [0, 5, 15, 22.5, 30, 45, 90],
       default: 15,
       'x-unit': '°',
     },
@@ -219,6 +230,15 @@ export interface TransformHooks {
   bodyOf(pieceId: string): WritableBody | null
   /** Where the piece sits in WORLD space (its local `at` plus the origin). */
   worldOrigin(): Vec3
+  /**
+   * World direction of one of the PIECE's own axes.
+   *
+   * Scale needs this and nothing else does. `node.scaling` is local, so on a
+   * turned piece "scale x" stretches along the piece's x — and measuring the
+   * drag along world x would read the wrong component of the movement, quite
+   * apart from the handle being drawn in the wrong place.
+   */
+  axisDirection(axis: Axis): Vec3
 }
 
 export function registerTransformTool(hooks: TransformHooks): void {
@@ -238,7 +258,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const ray = gesture.primary.ray()
         if (!ray) return
         const origin = hooks.worldOrigin()
-        const start = measure(grip, origin, ray)
+        const start = measure(grip, origin, ray, hooks.axisDirection)
         if (start === null) return // parallel or behind — not a usable drag
         // The camera must stop listening the moment a handle is grabbed, or
         // the drag moves the piece AND orbits the view under it.
@@ -266,7 +286,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const ray = gesture.primary.ray()
         if (!ray) return
         const origin = hooks.worldOrigin()
-        const now = measure(drag.grip, origin, ray)
+        const now = measure(drag.grip, origin, ray, hooks.axisDirection)
         if (now === null) return
         apply(drag, now)
         if (changed(drag)) drag.dragged = true
@@ -396,13 +416,16 @@ function moved(state: Drag, at: Vec3, rot: Euler): boolean {
 function measure(
   grip: Grip,
   origin: Vec3,
-  ray: { origin: Vec3; direction: Vec3 }
+  ray: { origin: Vec3; direction: Vec3 },
+  axisDirection: (axis: Axis) => Vec3
 ): number | Vec3 | null {
   if (grip.kind === 'uniform') return rayPerpendicularDistance(origin, ray)
   if (!grip.axis) return null
   if (grip.kind === 'planar') return rayPlanePoint(origin, grip.axis, ray)
   if (grip.kind === 'rotate') return angleOnPlane(origin, grip.axis, ray)
-  return axisClosestApproach(origin, axisVector(grip.axis), ray)
+  // Scale alone measures along the PIECE's axis; translate is a world move.
+  const along = grip.kind === 'scale' ? axisDirection(grip.axis) : axisVector(grip.axis)
+  return axisClosestApproach(origin, along, ray)
 }
 
 /** Fold the pointer's current reading into the drag's running transform. */

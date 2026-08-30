@@ -95,7 +95,7 @@ import { createHistory } from './history'
 import { createSelectionView } from './selection-view'
 import type { SelectionView } from './selection-view'
 import type { HandlesView } from './handles-view'
-import { noTransforms } from './handles'
+import { axisVector, noTransforms } from './handles'
 import type { Grip } from './handles'
 import type { NumberField } from './schema-panel'
 import { numberField, schemaWidgets } from './schema-panel'
@@ -320,6 +320,7 @@ export class EnsembleEditor extends Component {
         const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
         return built?.at ?? [0, 0, 0]
       },
+      axisDirection: (axis) => this._pieceAxes()?.[axis] ?? axisVector(axis),
     })
   }
 
@@ -1151,6 +1152,32 @@ export class EnsembleEditor extends Component {
     const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
     if (!built) return
     this._handles.moveTo(this._liveOrigin(built))
+    this._handles.setAxes(this._pieceAxes())
+  }
+
+  /**
+   * The world directions of the selected piece's own axes.
+   *
+   * Read off the node's world matrix rather than derived from `piece.rot`,
+   * because that is the frame `node.scaling` actually acts in — deriving it
+   * would mean re-implementing Babylon's euler order and being subtly wrong
+   * about it. Null when the piece has no node, in which case world axes are
+   * correct anyway.
+   */
+  private _pieceAxes(): { x: Vec3; y: Vec3; z: Vec3 } | null {
+    const built = this.selection ? this._built?.pieces.get(this.selection.id) : null
+    const node = ((built?.element as { mesh?: unknown } | null)?.mesh ?? built?.node) as {
+      computeWorldMatrix?: (force: boolean) => void
+      getDirection?: (local: Vector3) => { x: number; y: number; z: number }
+    } | null
+    if (!node?.getDirection) return null
+    node.computeWorldMatrix?.(true)
+    const of = (v: Vector3): Vec3 => {
+      const d = node.getDirection!(v)
+      const length = Math.hypot(d.x, d.y, d.z) || 1
+      return [d.x / length, d.y / length, d.z / length]
+    }
+    return { x: of(new Vector3(1, 0, 0)), y: of(new Vector3(0, 1, 0)), z: of(new Vector3(0, 0, 1)) }
   }
 
   private _syncHandles(): void {

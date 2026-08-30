@@ -186,6 +186,20 @@ export interface HandlesView {
    * reliably hit is not a manipulator.
    */
   setScale(scale: number): void
+  /**
+   * The world directions of the piece's OWN axes.
+   *
+   * Only the scale cubes use them, and they must: `node.scaling` is local, so
+   * on a piece that has been turned, "scale x" stretches along the piece's x —
+   * which is no longer world x. With the cubes drawn on world axes the control
+   * lied, and measurably: a piece turned 90 degrees about Y grew along world Z
+   * when its X cube was dragged. Reported as "the z and x scale affordances are
+   * switched with their functions".
+   *
+   * Translate and rotate stay world-aligned, because they are world
+   * operations — `at` is a world position and `rot` is world euler.
+   */
+  setAxes(axes: { x: Vec3; y: Vec3; z: Vec3 } | null): void
   setVisible(visible: boolean): void
   /** The grip within `NEAR_RADIUS` of a hand, if any. */
   nearestGrip(hand: Vec3): Grip | null
@@ -215,6 +229,8 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   const materials: Array<{ dispose: () => void }> = []
   let position: Vec3 = [0, 0, 0]
   let transforms: TransformSet = { translate: true, rotate: false, scale: false }
+  /** Null means "not turned", and world axes are used as they are. */
+  let axes: { x: Vec3; y: Vec3; z: Vec3 } | null = null
 
   const material = (key: string, colour: [number, number, number], alpha = 1) => {
     const m = new StandardMaterial(`${HANDLE_TAG}-${key}`, s) as unknown as {
@@ -420,16 +436,24 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     way to tell the two apart.
   */
   const place = () => {
-    for (const { mesh, offset, spin } of handles) {
+    for (const { grip, mesh, offset, spin } of handles) {
       mesh.scaling.x = scale
       mesh.scaling.y = scale
       mesh.scaling.z = scale
       mesh.rotation.x = spin[0]
       mesh.rotation.y = spin[1]
       mesh.rotation.z = spin[2]
-      mesh.position.x = position[0] + offset[0] * scale
-      mesh.position.y = position[1] + offset[1] * scale
-      mesh.position.z = position[2] + offset[2] * scale
+      /*
+        A scale cube rides the PIECE's axis, not the world's — that is the axis
+        it will actually stretch. Everything else stays world-aligned.
+      */
+      const dir = grip.kind === 'scale' && grip.axis && axes ? axes[grip.axis] : null
+      const along: Vec3 = dir
+        ? [dir[0] * CUBE_OFFSET, dir[1] * CUBE_OFFSET, dir[2] * CUBE_OFFSET]
+        : offset
+      mesh.position.x = position[0] + along[0] * scale
+      mesh.position.y = position[1] + along[1] * scale
+      mesh.position.z = position[2] + along[2] * scale
 
       /*
         FORCE THE WORLD MATRIX. A mesh that has been positioned but not yet
@@ -462,6 +486,20 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     },
     moveTo(next) {
       position = next
+      place()
+    },
+    setAxes(next) {
+      const same =
+        (next === null && axes === null) ||
+        (next !== null &&
+          axes !== null &&
+          (['x', 'y', 'z'] as const).every((a) =>
+            next[a].every((v, i) => Math.abs(v - axes![a][i]!) < 1e-4)
+          ))
+      // Per frame, like `setScale`: re-placing every mesh for axes that have
+      // not turned is waste on the one loop that must not stutter.
+      if (same) return
+      axes = next ? { x: [...next.x] as Vec3, y: [...next.y] as Vec3, z: [...next.z] as Vec3 } : null
       place()
     },
     setScale(next) {

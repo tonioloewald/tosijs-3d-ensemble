@@ -49,6 +49,12 @@ nobody declared. One has already been collected: see the struck-through row.
 | `editor.md`'s `calc(100dvh - 4rem)`, a hand-tuned navbar offset | tosijs-ui #115 |
 | Nulling the camera input's private `_pointA`/`_pointB` on re-attach | Babylon (third-party; no upstream row) |
 
+## haltija
+
+| | Finding | Issue |
+|---|---|---|
+| D | An agent driving a BACKGROUND tab cannot verify rendered output — `rAF` is throttled, a self-pausing scene stops, and hand-driving the frame loop changed the semantics enough to produce two false diagnoses in one session. Asks for a leased, reusable foreground instance | [#41](https://github.com/tonioloewald/haltija/issues/41) |
+
 ## tosijs-ui
 
 | | Finding | Issue |

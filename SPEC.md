@@ -749,8 +749,21 @@ Three decisions to make before any of it is built:
 
 1. **What a carve-out is, as data.** A height response curve over the area is
    the general answer, and the owner is adding a **curves editor upstream** so
-   the curve is authorable rather than typed as numbers. Flatten, plateau, ramp
-   and crater are all presets of one curve.
+   the curve is authorable rather than typed as numbers.
+
+   > **Owner: *"an authorable curve turns four features into lemmas of one
+   > killer feature."*** — and that decides the data. Flatten, plateau, ramp and
+   > crater are **not four carve types**; they are one curve with four shapes.
+   >
+   > So the format stores the CURVE, and the preset names live in the editor as
+   > a palette — never as a `carve: 'flatten' | 'plateau' | ...` enum. This is
+   > the same call already made for `Point.kind`, `Zone.kind` and roles, and for
+   > the same reason: the first province that wants a shape not on the list
+   > would otherwise be a type error rather than a curve someone drew. A closed
+   > list of four is a closed list.
+   >
+   > It also means the editor's terrain work is ONE tool with a curve widget,
+   > not four tools, which is the difference between a week and a quarter.
 2. **When it is applied.** At load, into the terrain the ensemble is dropped on
    — which means an ensemble can no longer assume it owns the terrain, and needs
    a way to say "modify what is here" rather than "create this".

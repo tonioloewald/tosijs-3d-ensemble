@@ -766,22 +766,29 @@ Three decisions to make before any of it is built:
    > not four tools, which is the difference between a week and a quarter.
 
    > **Owner: *"we can also use the same curve as the falloff for the
-   > province."*** — so there is not a shape curve AND an edge-blend
-   > parameter. The falloff IS the tail of the same function, and a province
-   > reduces to **an area plus one curve**.
+   > province"*** — meaning the same curve EDITOR, used twice. There are two
+   > curves, and they answer different questions:
    >
-   > That leaves exactly one thing to define, and it is the thing that will be
-   > wrong if nobody states it: **what the curve's input measures.** The useful
-   > answer is normalised depth INTO the area — 0 at the boundary, 1 at the
-   > core — because it works for a polygon as well as a circle, where "distance
-   > from centre" does not. Then `curve(0) = 0` is a seamless edge for free, and
-   > a hard-edged plateau is a curve that jumps at 0 rather than a separate
-   > mode.
+   > | curve | input | output | the natural map |
+   > |---|---|---|---|
+   > | **profile** | heightfield sample | actual height | a line going **up** — identity, terrain unchanged |
+   > | **falloff** | 0 at centre → 1 at province edge | how much the province applies | a slope **down** from 1 to 0 |
    >
-   > Read that way the four shapes are the four obvious curves over the same
-   > domain: a plateau rises fast and stays flat, a ramp is monotone, a crater
-   > goes negative in the middle, a flatten is constant. None of them needs a
-   > name in the data.
+   > The profile is the shape-maker: a plateau is a profile that flattens above
+   > some sampled height, a terrace is a staircase, and leaving it as the
+   > identity line means "do not change the ground, just build on it". The
+   > falloff is the blend: 1 at the centre where the province fully governs,
+   > 0 at the edge where the surrounding terrain is untouched, which is what
+   > makes a province droppable anywhere without a seam.
+   >
+   > Composed: `height = lerp(sampled, profile(sampled), falloff(d))`. Both
+   > default to something honest — identity and a straight descent — so a
+   > province with neither authored does nothing to the terrain and still
+   > places its pieces.
+   >
+   > One curve widget, two uses, and no enum in either. That is the real shape
+   > of "four features as lemmas of one".
+
 2. **When it is applied.** At load, into the terrain the ensemble is dropped on
    — which means an ensemble can no longer assume it owns the terrain, and needs
    a way to say "modify what is here" rather than "create this".

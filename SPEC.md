@@ -634,6 +634,131 @@ Working code to lift, and lessons that cost real time:
 - **an editor must render content at the game's scale**, or it teaches you the
   wrong thing about your own data
 
+## Part 6 — authoring beyond one-piece-at-a-time
+
+Sketched with the owner while the SVG UI backlog lands upstream. Nothing here is
+built. It is here so the format decisions each one implies get made once, and
+early, rather than four times under deadline — and because three of the four
+turn out to need the SAME two things.
+
+**What they share.** Every item below is a *rule that produces pieces* rather
+than a piece: a rectangle that becomes tiles, a light that carries geometry, a
+station whose position is relative to a formation, a base that reshapes ground
+before it sits on it. Two consequences, and they are the whole design:
+
+1. **Generators are pieces that expand.** An ensemble stays flat JSON a game
+   loads; a generator is a piece the LOADER expands into pieces, the way nested
+   ensembles flatten. That keeps the runtime unchanged and the output
+   inspectable — you can always ask what a generator produced, and hand-edit it.
+2. **Their inputs are annotations on LIBRARIES, not code.** A kit author knows
+   which meshes are road-straight, road-corner and road-tee; the editor cannot
+   guess it and should not try. That is `extras` in the glb (tosijs-3d#45), read
+   as a catalogue.
+
+### Procedural tile sets — roads, rooms, plateaus, water
+
+> **Owner:** *"the ability to define procedural tile sets such as roads, terrain
+> plateaus, and rooms… drag out a rectangle on a grid and have it turn into
+> tiled water or rooms or terrain."*
+
+The affordance is a rectangle drag. The content behind it is a **tile set**: a
+named group of meshes with the roles a tiler needs — for a road, `straight`,
+`corner`, `tee`, `cross`, `end`; for a room, `floor`, `wall`, `corner`,
+`door`; for water, one tile and a rule about edges.
+
+Three things this needs, in order of how expensive they are to get wrong:
+
+- **A vocabulary of tile ROLES per set type**, declared by the kit author in the
+  library's `extras`. Kenney's kits already group and name consistently enough
+  to annotate; nothing else has to change.
+- **Neighbour rules**, because a tiler picks a mesh from what is adjacent. The
+  cheap version is a 4-bit mask (which sides connect) and a lookup; the
+  expensive one is wave-function collapse. Ship the mask.
+- **A generator piece**: `{kind: 'tiles', set: 'city/road', area: [...], grid: 4}`,
+  expanded at load. The area is authored; the tiles are derived and never
+  hand-edited, which is what makes re-running it safe.
+
+The trap to avoid: **do not invent a tile taxonomy in this repo**. It belongs to
+whoever packs the kit, and a taxonomy invented here would be wrong for the first
+kit that did not fit it.
+
+### Placeable lights, and primitives that carry geometry
+
+> **Owner:** *"primitives we want to have from tosijs-3d such as placeable lights
+> with default geometry (that can have meshes attached)."*
+
+A light is a piece with no mesh today: the `light` feature IS its body. What is
+missing is that a light in an editor needs to be **visible and grabbable when it
+is not selected** — you cannot arrange what you cannot see — and in a game it
+often wants a fixture: a lamp housing, a bulb, a sconce.
+
+So the shape is: a primitive whose default body is editor-only geometry, and
+which accepts a `mesh` that replaces it. That is a small extension of what
+`place-mesh` already does, and it generalises past lights to cameras, spawns and
+speakers — every primitive an author has to place and cannot otherwise see.
+
+**Upstream, not here:** the default geometry belongs in tosijs-3d beside the
+elements it represents, or every consumer draws its own lamp.
+
+### Points and zones with consumer-defined types
+
+> **Owner:** *"labeled points and zones with types and names… you might want to
+> create a Carrier group formation and place locations where picket ships and
+> combat air patrols should hang out relative to the formation."*
+
+**The format is already right for this**, which is worth saying because it was
+not obvious when `kind` was made a free string rather than a union:
+
+```json
+{"id": "picket-north", "at": [0, 0, 900], "kind": "station",
+ "meta": {"label": "Picket N", "role": "picket"}}
+```
+
+`Point.kind`, `Zone.kind`, `meta` and `Zone.values` are all open. A carrier
+group is an ensemble whose pieces are ships and whose POINTS are stations —
+and because a point declared inside a piece is local to that piece, a station
+follows the ship it hangs off without any extra machinery.
+
+What is missing is entirely editor-side, and it is two things:
+
+- **A UI**: place a point, name it, pick a type, see it. Points and zones are
+  currently invisible in the editor — the one part of the format with no
+  affordance at all.
+- **A consumer-supplied vocabulary.** The editor must offer the HOST's types
+  (`station`, `cap`, `picket`) without knowing them, which is the same
+  registry pattern as features and roles: `registerPointKind`, or a list on the
+  component. It must stay a suggestion, never a constraint — the moment the
+  editor rejects an unknown kind, the format's openness is gone.
+
+### Provinces: authoring onto terrain, and reshaping it
+
+> **Owner:** *"author things that get placed on terrain such as provinces with
+> associated carve outs… a base that can be dropped onto terrain, sculpts the
+> terrain locally to suit its purposes and then places meshes on it."*
+
+The hardest of the four and the most valuable, because it is the one that makes
+an ensemble a thing you drop onto a world rather than a thing that owns its
+world.
+
+A province is: an **area**, a **terrain modification** inside it, and **pieces
+placed relative to the result**. A base flattens its footprint, cuts a ramp, and
+puts its buildings on the flattened ground — so the buildings' heights are
+derived, not authored.
+
+Three decisions to make before any of it is built:
+
+1. **What a carve-out is, as data.** A height response curve over the area is
+   the general answer, and the owner is adding a **curves editor upstream** so
+   the curve is authorable rather than typed as numbers. Flatten, plateau, ramp
+   and crater are all presets of one curve.
+2. **When it is applied.** At load, into the terrain the ensemble is dropped on
+   — which means an ensemble can no longer assume it owns the terrain, and needs
+   a way to say "modify what is here" rather than "create this".
+3. **What pieces resolve against.** A piece at `y: 0` in a province means "on
+   the ground", and the ground is only known after the carve. That is a third
+   phase after bind and link, and it is the reason to decide this early: the
+   two-phase build is load-bearing and a third phase changes its contract.
+
 ## Open questions — with recommendations
 
 Answered rather than left hanging, since each affects the format and the format

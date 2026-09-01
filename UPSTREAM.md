@@ -66,6 +66,7 @@ nobody declared. One has already been collected: see the struck-through row.
 | A | Dev-server auth sessions live in `new Map()`, so every restart invalidates every issued edit link while the 30-day cookie stays valid — it presents as Safari eating cookies | [#114](https://github.com/tonioloewald/tosijs-ui/issues/114) |
 | B | A full-screen page that is ONE element: markdown wraps it in a `<p>` and nothing in the chain has a definite height, so `height: 100%` collapses. Suggested fix is raw `.html` doc pages | [#115](https://github.com/tonioloewald/tosijs-ui/issues/115) |
 | C | The dev server answers a missing asset with the SPA shell — HTML at 200 — so a 404 presents as a silently wrong render | [#116](https://github.com/tonioloewald/tosijs-ui/issues/116) |
+| D | `describeHolder()` with no holder returns a rendered "pid undefined" warning rather than saying there is none — the reader added by #118 tells a caller the opposite of the truth | [#123](https://github.com/tonioloewald/tosijs-ui/issues/123) |
 
 ### Not filed, deliberately
 

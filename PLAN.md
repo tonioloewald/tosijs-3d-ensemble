@@ -299,6 +299,24 @@ solvable or fair.
 
 ## Deliberate non-goals for v1
 
+### Sketched, not scheduled — SPEC.md Part 6
+
+Four capabilities the owner outlined while the SVG UI backlog lands upstream:
+procedural tile sets, placeable lights with default geometry, points and zones
+with consumer-defined types, and provinces that reshape terrain. None is built.
+
+Two things they share are worth knowing before any of them starts, because both
+are format decisions rather than editor ones: each is **a rule that produces
+pieces** (so it wants loader expansion, like nested ensembles), and each takes
+its vocabulary from **library annotations** rather than code (tosijs-3d#45).
+
+The cheapest is points and zones — the format already holds them, and the whole
+gap is an editor affordance plus a consumer-supplied list of kinds. The most
+expensive is provinces, which needs a third build phase: a piece sitting "on the
+ground" cannot resolve its height until the terrain carve has run.
+
+### Explicitly out of scope for v1
+
 Named so they are decisions rather than omissions: undo/redo, **multi-select**
 (still out — the manipulator lands on a single selection first), alignment
 guides, terrain painting, **nested ensembles** (reserve

@@ -765,29 +765,45 @@ Three decisions to make before any of it is built:
    > It also means the editor's terrain work is ONE tool with a curve widget,
    > not four tools, which is the difference between a week and a quarter.
 
-   > **Owner: *"we can also use the same curve as the falloff for the
-   > province"*** — meaning the same curve EDITOR, used twice. There are two
-   > curves, and they answer different questions:
+   > **SHIPPED UPSTREAM in tosijs-3d 0.7.4** as `curve3d` + `footprint3d`, and
+   > the model grew a third part in the process. A province is a **footprint**
+   > plus **one curve per layer**:
    >
-   > | curve | input | output | the natural map |
-   > |---|---|---|---|
-   > | **profile** | heightfield sample | actual height | a line going **up** — identity, terrain unchanged |
-   > | **falloff** | 0 at centre → 1 at province edge | how much the province applies | a slope **down** from 1 to 0 |
+   > | part | maps | the natural setting |
+   > |---|---|---|
+   > | **footprint** | direction → extent | a polygon; `ngon(6)`, a 16-gon for a circle |
+   > | **shape** (map/profile) | height sample → height | a line going **up** — identity, terrain unchanged |
+   > | **falloff** | 0 at centre → 1 at edge | a slope **down** from 1 to 0 |
    >
-   > The profile is the shape-maker: a plateau is a profile that flattens above
-   > some sampled height, a terrace is a staircase, and leaving it as the
-   > identity line means "do not change the ground, just build on it". The
-   > falloff is the blend: 1 at the centre where the province fully governs,
-   > 0 at the edge where the surrounding terrain is untouched, which is what
-   > makes a province droppable anywhere without a seam.
+   > Three constraints upstream chose, each of which is a bug it declines to
+   > have:
    >
-   > Composed: `height = lerp(sampled, profile(sampled), falloff(d))`. Both
-   > default to something honest — identity and a straight descent — so a
-   > province with neither authored does nothing to the terrain and still
-   > places its pieces.
+   > - **The range is closed.** A curve maps `[0,1]` to `[0,1]` and a drag
+   >   clamps rather than stretching the range, because a profile returning 1.4
+   >   silently changes the height a province occupies — it fails as *geometry*
+   >   while reporting nothing. Amplitude belongs to the block, shape to the
+   >   curve.
+   > - **A falloff is pinned to 0 at its edge; a profile is not.** A province
+   >   still carrying weight at its boundary does not blend. Pinned at the edge,
+   >   free in the middle — a crater rim and a volcano cone are non-monotonic.
+   > - **A footprint is a polygon, not a sampled curve.** `polygonExtent` casts
+   >   a real ray at the straight edge; interpolating radius against angle bows
+   >   every edge inward. Vertices cannot pass their neighbours or reach the
+   >   centre, which keeps it star-shaped — the property that makes "extent in
+   >   this direction" have an answer at all.
    >
-   > One curve widget, two uses, and no enum in either. That is the real shape
-   > of "four features as lemmas of one".
+   > `blendSample` composes provinces convexly, so a tile's bounds are known
+   > before anything is evaluated however many overlap — which is what makes
+   > dropping two bases near each other safe.
+   >
+   > **Still to come upstream:** carving and terrain-shader biasing under the
+   > same province, so a volcano profile can drive up vulcanism in the middle.
+   > That is the part that makes a province more than a height edit — it becomes
+   > the place where "what this ground IS" is authored, not just its shape.
+   >
+   > For this repo the consequence is unchanged and now cheap: a province piece
+   > carries a footprint and two curves as DATA, and the editor's job is to hand
+   > them to widgets that already exist rather than to invent a carve vocabulary.
 
 2. **When it is applied.** At load, into the terrain the ensemble is dropped on
    — which means an ensemble can no longer assume it owns the terrain, and needs

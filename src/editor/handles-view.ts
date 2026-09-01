@@ -30,8 +30,8 @@ wants to move is usually the one embedded in something else.
 */
 /*{"parent":"Internals","order":5}*/
 import { Color3, MeshBuilder, Quaternion, StandardMaterial, Vector3 } from '@babylonjs/core'
-import { axisIndex, noTransforms, otherAxes } from './handles'
-import type { Axis, Grip, GripKind, TransformSet } from './handles'
+import { axisIndex, otherAxes } from './handles'
+import type { Axis, Grip, TransformSet } from './handles'
 import type { Euler, Vec3 } from '../format/types'
 
 const DEG = Math.PI / 180
@@ -578,8 +578,4 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   }
 }
 
-/** Whether a transform set would draw anything at all. */
-export const drawsNothing = noTransforms
 
-/** Every grip kind the widget can build, for tests and for a palette. */
-export const GRIP_KINDS: GripKind[] = ['translate', 'planar', 'rotate', 'scale', 'uniform']

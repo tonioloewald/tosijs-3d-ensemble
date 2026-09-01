@@ -122,10 +122,6 @@ interface Drag {
 
 let drag: Drag | null = null
 
-/** Exposed so the editor can show handles only while something is selected. */
-export function currentDrag(): Readonly<Drag> | null {
-  return drag
-}
 
 /** What the tool does, in the order an author cycles through them. */
 export const MODES = ['select', 'move', 'turn', 'move + turn', 'scale'] as const

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import {
   NO_TRANSFORMS,
-  angleOnPlane,
+  RING_BASIS,
+  angleAboutAxis,
   axisClosestApproach,
   axisVector,
   noTransforms,
@@ -49,22 +50,53 @@ describe('axisClosestApproach', () => {
   })
 })
 
-describe('angleOnPlane', () => {
+describe('angleAboutAxis', () => {
+  /*
+    Pass WORLD axes and this is the world-plane case, which is how it read when
+    it took an `Axis` instead of three vectors. It takes vectors now because
+    rotation happens in the object's own frame — see RING_BASIS for which two
+    axes span each ring, and why their order is not arbitrary.
+  */
+  const world = { x: [1, 0, 0] as Vec3, y: [0, 1, 0] as Vec3, z: [0, 0, 1] as Vec3 }
+  const about = (axis: 'x' | 'y' | 'z', origin: Vec3, r: EditorRay) => {
+    const [u, v] = RING_BASIS[axis]
+    return angleAboutAxis(origin, world[axis], world[u], world[v], r)
+  }
+
   it('reads an angle around the Y axis in degrees', () => {
-    const a = angleOnPlane([0, 0, 0], 'y', ray([1, 5, 0], [0, -1, 0]))
-    expect(a).toBeCloseTo(0, 6)
-    const b = angleOnPlane([0, 0, 0], 'y', ray([0, 5, 1], [0, -1, 0]))
-    expect(b).toBeCloseTo(90, 6)
+    // Crossing the XZ plane at (1,0) is 0°; at (0,1) it is 90°.
+    expect(about('y', [0, 0, 0], ray([1, 5, 0], [0, -1, 0]))).toBeCloseTo(0, 9)
+    expect(about('y', [0, 0, 0], ray([0, 5, 1], [0, -1, 0]))).toBeCloseTo(90, 9)
   })
 
   it('returns null when the ray runs along the plane', () => {
-    expect(angleOnPlane([0, 0, 0], 'y', ray([0, 0, 0], [1, 0, 0]))).toBeNull()
+    expect(about('y', [0, 0, 0], ray([0, 1, 0], [1, 0, 0]))).toBeNull()
   })
 
   it('returns null when the plane is behind the pointer', () => {
-    // Rotating a ring you are pointing away from would otherwise track a
-    // phantom intersection behind your hand.
-    expect(angleOnPlane([0, 0, 0], 'y', ray([0, 5, 0], [0, 1, 0]))).toBeNull()
+    expect(about('y', [0, 0, 0], ray([0, 5, 0], [0, 1, 0]))).toBeNull()
+  })
+
+  it('measures the plane from the handle origin, not the world origin', () => {
+    expect(about('y', [0, 4, 0], ray([1, 9, 0], [0, -1, 0]))).toBeCloseTo(0, 9)
+  })
+
+  it('turns the same way around every axis', () => {
+    // Each ring's basis pair is chosen so the angle grows consistently; get one
+    // wrong and that ring drags backwards, which reads as a pointer bug.
+    for (const axis of ['x', 'y', 'z'] as const) {
+      const [u, v] = RING_BASIS[axis]
+      const origin: Vec3 = [0, 0, 0]
+      // A ray aimed at a point one unit along `v` should read +90°.
+      const target = world[v]
+      const from: Vec3 = [
+        target[0] + world[axis][0] * 5,
+        target[1] + world[axis][1] * 5,
+        target[2] + world[axis][2] * 5,
+      ]
+      const dir: Vec3 = [-world[axis][0], -world[axis][1], -world[axis][2]]
+      expect(about(axis, origin, { origin: from, direction: dir })).toBeCloseTo(90, 6)
+    }
   })
 })
 
@@ -90,11 +122,13 @@ describe('rayPlanePoint', () => {
   })
 
   it('agrees with the angle the rotation ring reads', () => {
-    // One solve behind both, so a plane pad and a ring can never disagree about
-    // where the pointer is.
-    const ray = { origin: [2, 5, 2] as Vec3, direction: [0, -1, 0] as Vec3 }
-    const hit = rayPlanePoint([0, 0, 0], 'y', ray)!
-    expect(angleOnPlane([0, 0, 0], 'y', ray)).toBeCloseTo(
+    // The pad and the ring solve the same intersection, so they can never
+    // disagree about where the pointer is.
+    const r = { origin: [2, 5, 2] as Vec3, direction: [0, -1, 0] as Vec3 }
+    const hit = rayPlanePoint([0, 0, 0], 'y', r)!
+    const [u, v] = RING_BASIS.y
+    const world = { x: [1, 0, 0] as Vec3, y: [0, 1, 0] as Vec3, z: [0, 0, 1] as Vec3 }
+    expect(angleAboutAxis([0, 0, 0], world.y, world[u], world[v], r)).toBeCloseTo(
       (Math.atan2(hit[2], hit[0]) * 180) / Math.PI,
       9
     )

@@ -110,75 +110,7 @@ export function axisClosestApproach(
 }
 
 /**
- * Where a ray crosses the plane through `origin` with normal `axis`, as an
- * angle in DEGREES around that axis.
- *
- * Degrees because the format is degrees everywhere; converting once here beats
- * converting at every call site and getting it wrong at one of them.
- */
-export function angleOnPlane(
-  origin: Vec3,
-  axis: Axis,
-  ray: EditorRay
-): number | null {
-  const hit = rayPlanePoint(origin, axis, ray)
-  if (!hit) return null
-  const local = sub(hit, origin)
-  // Two in-plane axes, chosen per rotation axis so that the angle increases the
-  // same way around each — otherwise one ring drags backwards and it reads as a
-  // bug in the pointer rather than a sign.
-  const [u, v] =
-    axis === 'y' ? [local[0], local[2]] : axis === 'x' ? [local[2], local[1]] : [local[0], local[1]]
-  return (Math.atan2(v, u) * 180) / Math.PI
-}
-
-/**
- * Where a ray crosses the plane through `origin` whose normal is `axis`.
- *
- * The point a planar grip drags to, and the intersection `angleOnPlane` reads
- * its angle from — one solve, so a plane pad and a rotation ring can never
- * disagree about where the pointer is.
- *
- * Null when the ray runs ALONG the plane (no crossing) or when the plane is
- * behind the pointer, which is a drag reaching round the back of the widget.
- */
-export function rayPlanePoint(origin: Vec3, axis: Axis, ray: EditorRay): Vec3 | null {
-  const normal = AXIS_VECTOR[axis]
-  const denominator = dot(normal, ray.direction)
-  if (Math.abs(denominator) < 1e-9) return null
-  const t = dot(normal, sub(origin, ray.origin)) / denominator
-  if (t < 0) return null
-  return [
-    ray.origin[0] + ray.direction[0] * t,
-    ray.origin[1] + ray.direction[1] * t,
-    ray.origin[2] + ray.direction[2] * t,
-  ]
-}
-
-/**
- * Perpendicular distance from a point to a ray.
- *
- * What the centre grip scales by: pull away from the widget and it grows. It
- * needs no axis and no camera, which is what makes it the one affordance that
- * behaves identically from a mouse and from a hand — an in-scene widget has no
- * "screen space" to fall back on.
- */
-export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
-  const w = sub(origin, ray.origin)
-  const dd = dot(ray.direction, ray.direction)
-  if (dd < 1e-12) return 0
-  const t = dot(w, ray.direction) / dd
-  const closest: Vec3 = [
-    ray.origin[0] + ray.direction[0] * t,
-    ray.origin[1] + ray.direction[1] * t,
-    ray.origin[2] + ray.direction[2] * t,
-  ]
-  const d = sub(origin, closest)
-  return Math.hypot(d[0], d[1], d[2])
-}
-
-/**
- * The same angle, about an ARBITRARY axis rather than a world one.
+ * The angle a ray makes about an axis, in DEGREES.
  *
  * Rotation happens in the object's own frame, so the ring a pointer is dragging
  * lies in a plane whose normal is the piece's axis — not the world's. `normal`
@@ -217,6 +149,48 @@ export const RING_BASIS: Record<Axis, [Axis, Axis]> = {
   x: ['z', 'y'],
   y: ['x', 'z'],
   z: ['x', 'y'],
+}
+
+/**
+ * Where a ray crosses the plane through `origin` whose normal is `axis`.
+ *
+ * The point a planar grip drags to. Null when the ray runs ALONG the plane (no
+ * crossing) or when the plane is behind the pointer, which is a drag reaching
+ * round the back of the widget.
+ */
+export function rayPlanePoint(origin: Vec3, axis: Axis, ray: EditorRay): Vec3 | null {
+  const normal = AXIS_VECTOR[axis]
+  const denominator = dot(normal, ray.direction)
+  if (Math.abs(denominator) < 1e-9) return null
+  const t = dot(normal, sub(origin, ray.origin)) / denominator
+  if (t < 0) return null
+  return [
+    ray.origin[0] + ray.direction[0] * t,
+    ray.origin[1] + ray.direction[1] * t,
+    ray.origin[2] + ray.direction[2] * t,
+  ]
+}
+
+/**
+ * Perpendicular distance from a point to a ray.
+ *
+ * What the centre grip scales by: pull away from the widget and it grows. It
+ * needs no axis and no camera, which is what makes it the one affordance that
+ * behaves identically from a mouse and from a hand — an in-scene widget has no
+ * "screen space" to fall back on.
+ */
+export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
+  const w = sub(origin, ray.origin)
+  const dd = dot(ray.direction, ray.direction)
+  if (dd < 1e-12) return 0
+  const t = dot(w, ray.direction) / dd
+  const closest: Vec3 = [
+    ray.origin[0] + ray.direction[0] * t,
+    ray.origin[1] + ray.direction[1] * t,
+    ray.origin[2] + ray.direction[2] * t,
+  ]
+  const d = sub(origin, closest)
+  return Math.hypot(d[0], d[1], d[2])
 }
 
 /**

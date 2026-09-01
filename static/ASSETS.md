@@ -17,18 +17,20 @@ Two changes from the file as supplied: `width`/`height` of 64px removed so it
 scales to whatever asks for it, and a `<title>` added for screen readers. The
 geometry is untouched — 64 paths, `viewBox` 0 0 64 64.
 
-## `waterbump.png`
+## `waterbump.png` — GONE, and why the note stays
 
-The normal map `b3dWater` expects. **tosijs-3d defaults `normalMap` to
-`/waterbump.png` but does not ship the file** — it lives in that repo's own
-`static/`, so every consumer has to supply it at that exact root-absolute path
-or get water with no ripples.
+There was a copy of tosijs-3d's water normal map here, because `b3dWater`
+defaulted `normalMap` to `/waterbump.png` and the package did not ship the file.
+The sea rendered as Babylon's fallback checkerboard, which reads as a style
+rather than a fault.
 
-Copied from `tosijs-3d/static/waterbump.png`. Filed upstream as tosijs-3d#46.
+**tosijs-3d 0.7.4 generates the map procedurally** (tosijs-3d#46, our report), so
+there is no file to serve and no path to get wrong — and an explicit `normalMap`
+that fails to load now logs an error instead of silently becoming a checker
+pattern. Nothing here sets `normalMap`, so the default applies and the copy is
+deleted.
 
-It failed silently and interestingly: this site's dev server answers an unknown
-path with the SPA shell — **HTML, at status 200** — so Babylon fetched a page,
-failed to decode it as an image, and substituted its fallback checkerboard. The
-sea rendered as a tiled grid that looked deliberate enough to be complimented
-before it was diagnosed. A 404 would have named the problem instantly; see
-tosijs-ui#116.
+The note stays as the record of how it failed: a decoder that substitutes on
+error turns a missing asset into a design decision, and this site's dev server
+answered the missing path with the SPA shell at status 200 (tosijs-ui#116), so
+neither end reported anything wrong.

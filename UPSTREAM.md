@@ -22,12 +22,12 @@ when it lands, and close the issue.
 | 5 | `b3d-turret`/`b3d-launcher` take no `library`, so a turret cannot have its own mesh | [#34](https://github.com/tonioloewald/tosijs-3d/issues/34) |
 | 6 | `b3d-spawner` is player-relative — no way to spawn at an authored place | [#40](https://github.com/tonioloewald/tosijs-3d/issues/40) |
 | 7 | A scene-owned clock: effect timing can be scaled, craft motion cannot | [#41](https://github.com/tonioloewald/tosijs-3d/issues/41) |
-| 9 | `b3d-library` ignores a glb's own catalogue: `getNames()` over-reports sub-parts (80 vs 72 declared), and per-item `extras` — category, tags, **clips** — are unreachable | [#45](https://github.com/tonioloewald/tosijs-3d/issues/45) |
-| 10 | `b3dWater` defaults `normalMap` to `/waterbump.png` but the package does not ship it — the sea renders as Babylon's fallback CHECKERBOARD, which reads as a style, not a fault | [#46](https://github.com/tonioloewald/tosijs-3d/issues/46) |
+| 9 | ✅ **RESOLVED** (tosijs-3d@0.7.4) — `getManifest()`, `getInfo(name)` without instantiating, and `getNames()` narrows to declared items. Measured upstream at 559 raw nodes vs 131 declared | [#45](https://github.com/tonioloewald/tosijs-3d/issues/45) |
+| 10 | ✅ **RESOLVED** (tosijs-3d@0.7.4) — the normal map is generated procedurally, so there is no file and no path; an explicit `normalMap` that fails now logs instead of silently checkerboarding | [#46](https://github.com/tonioloewald/tosijs-3d/issues/46) |
 | 11 | `b3d-destroyable` cannot scale a library-backed piece at all — `size` is the placeholder cube's edge and is ignored once `library` is set. Measured: width identical at scale 1, 2 and 4 | [#47](https://github.com/tonioloewald/tosijs-3d/issues/47) |
 | 12 | `b3d-destroyable` drops `rx`/`ry`/`rz` — `instantiate` is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored `rot: [0,45,0]` left the footprint identical | [#48](https://github.com/tonioloewald/tosijs-3d/issues/48) |
 | 13 | `b3d-destroyable` removed before its `lib.ready.then` instantiate resolves ORPHANS the node — nothing disposes it, ever. Measured: 4 rapid edits left 4 copies and 210 meshes where there were 81, and it never recovered | [#49](https://github.com/tonioloewald/tosijs-3d/issues/49) |
-| 14 | `slider3d` has no `step` and there is no numeric field you can type into — setting a grid snap to a useful value is guesswork. Asks for both, plus a log2 mode for scale | [#50](https://github.com/tonioloewald/tosijs-3d/issues/50) |
+| 14 | ✅ **RESOLVED** (tosijs-3d@0.7.4) — numeric fields scrub and type; `slider3d`'s `step` always quantised and is now documented. Our snap cyclers STAY: they carry a `0` sentinel plus a doubling series, which is a cycler's job, not a slider's | [#50](https://github.com/tonioloewald/tosijs-3d/issues/50) |
 | 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them
@@ -40,13 +40,13 @@ nobody declared. One has already been collected: see the struck-through row.
 |---|---|
 | ~~`destroyable` registers `body: true`~~ — **gone in 0.7.2.** Placement is uniform and destruction decorates a body it no longer has to create | ✅ #39 |
 | `launchpad` is registered `editorOnly` — authorable, and honestly marked as something the runtime will not build | #40 |
-| `numberField` + DOM key routing into `inputField`, and our own active-field tracking | #37 |
+| ~~`numberField` + DOM key routing + our own active-field tracking~~ — **gone in 0.7.4.** `vector3d`/`euler3d` put a coordinate on ONE row and `ui.fieldGroup` owns exclusivity, commit-on-leave and key routing | ✅ #37 (items 1, 7) |
 | `handles-view.ts`, and the drag maths in `handles.ts` | #38 |
 | `ctx.simTime()` defaulting to wall-clock | #41 |
 | `presets/world`'s own `interactive` (reach, activation, refusal) | 🔜 #36 in 0.7.3 |
 | The family-cycler + separate list standing in for a hierarchical palette | #37 |
 | Deriving palette categories from NAME PREFIXES, when the library now declares real ones | #45 |
-| Our own copy of `waterbump.png` in `static/` (see `static/ASSETS.md`) | tosijs-3d #46 |
+| ~~Our own copy of `waterbump.png`~~ — **deleted in 0.7.4.** The map is procedural now | ✅ #46 |
 | `runtime/node-transform.ts` — writing rotation AND scale past the element onto the instance root, plus `whenMeshed`'s retry, because the instance does not exist when the element is appended | tosijs-3d #47, #48 |
 | `place-mesh.ts`'s `reapOrphan` — watching for an instance that arrives after its element was removed, and disposing it | tosijs-3d #49 |
 | Snap settings spelled as `enum`s so they render as cyclers — the right VALUES through the wrong control | tosijs-3d #50 |

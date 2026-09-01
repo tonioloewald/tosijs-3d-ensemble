@@ -68,8 +68,11 @@ import {
   list3d,
   panel3d,
   select3d,
+  euler3d,
   slider3d,
   textBlock3d,
+  ui,
+  vector3d,
 } from 'tosijs-3d'
 import { Quaternion, Ray, Vector3 } from '@babylonjs/core'
 import { buildEnsemble } from '../runtime/build'
@@ -95,7 +98,7 @@ import { createHistory } from './history'
 import { createSelectionView } from './selection-view'
 import type { SelectionView } from './selection-view'
 import type { HandlesView } from './handles-view'
-import { axisVector, noTransforms } from './handles'
+import { axisVector, noTransforms, normaliseDegrees } from './handles'
 import type { Grip } from './handles'
 import type { NumberField } from './schema-panel'
 import { numberField, schemaWidgets } from './schema-panel'
@@ -1430,39 +1433,90 @@ export class EnsembleEditor extends Component {
     const selected = this.selection
     if (!selected) return
     /*
-      TYPED COORDINATES, not sliders. A slider is bounded, imprecise, and ours
-      showed no number at all — you could not see where a piece WAS, let alone
-      put it somewhere exact. Dragging belongs on the handles in the viewport;
-      the panel's job is the number.
+      ONE ROW PER VECTOR, not three stacked fields.
+
+      This was a hand-rolled `numberField` stacked three deep with a label above
+      each, because the SVG UI had no vector control and no numeric field you
+      could type into. It worked and it was three times taller than it needed to
+      be, which is most of why a property panel ran out of room.
+
+      `vector3d`/`euler3d` shipped in tosijs-3d 0.7.4 and replace the lot:
+      drag to scrub, click to type, three tab stops on one row. `euler3d` is not
+      a styling variant — it WRAPS where `vector3d` clamps, which is right for
+      an angle and wrong for a coordinate, and getting that from the widget
+      rather than from our own arithmetic is the point of adopting it.
+
+      Rotation is still normalised to 0..360 on write; the widget's own
+      (-180, 180] is its scrubbing range, not what lands in the file.
     */
-    const rows = (['x', 'y', 'z'] as const).flatMap((axis, i) => [
-      label3d({ text: `${axis}  ${format(selected.at[i] ?? 0)}`, muted: true }),
-      numberField({
-        label: axis,
-        value: selected.at[i] ?? 0,
-        onFocus: (field) => {
-          // Exclusive: two lit fields both claiming the keyboard is worse than
-          // none, because the caret is somewhere you are not looking.
-          this._activeField?.setActive(false)
-          this._activeField = field
-        },
-        onCommit: (value) => {
-          const at = [...selected.at] as [number, number, number]
-          at[i] = value
-          this.update(selected.id, { at })
-        },
-      }),
-    ])
+    const inputs: Array<{ fields: unknown[] }> = []
+    const position = vector3d({
+      value: { x: selected.at[0] ?? 0, y: selected.at[1] ?? 0, z: selected.at[2] ?? 0 },
+      step: 0.25,
+      scrub: 0.02,
+      onChange: (v) => this.update(selected.id, { at: [v.x, v.y, v.z] }),
+    })
+    inputs.push(position as unknown as { fields: unknown[] })
+    const fields: unknown[] = [
+      label3d({ text: 'position', muted: true, compact: true }),
+      position,
+    ]
+    if (selected.mesh) {
+      const rot = selected.rot ?? [0, 0, 0]
+      const rotation = euler3d({
+        value: { x: rot[0], y: rot[1], z: rot[2] },
+        step: 5,
+        scrub: 0.5,
+        onChange: (v) =>
+          this.update(selected.id, {
+            rot: [v.x, v.y, v.z].map(normaliseDegrees) as Euler,
+          }),
+      })
+      inputs.push(rotation as unknown as { fields: unknown[] })
+      fields.push(label3d({ text: 'rotation', muted: true, compact: true }), rotation)
+    }
+    /*
+      ONE GROUP OWNS THE KEYBOARD.
+
+      `fieldGroup` does the three chores that always travel together and that
+      this file used to do by hand: exclusivity (two lit fields both claiming
+      the keyboard is worse than none), commit-on-leave (so a half-typed `1.`
+      never survives as a value), and routing real key events. `attach()` is
+      opt-in and returns its own detacher, which is why the old panel-level
+      `keydown` listener and `_activeField` tracking are gone.
+    */
+    this._detachFields?.()
+    // `ui.fieldGroup`, not a bare export — the keyboard helpers live on the
+    // `ui` namespace rather than the package root.
+    const group = ui.fieldGroup({ fields: inputs.flatMap((i) => i.fields) as never[] })
+    this._detachFields = group.attach()
+    const vectors = inputs.length
+    const captions = fields.length - vectors
     this._addPanel(
       'right',
       panel3d(
-        { width: 240, height: 96 + rows.length * 32, padding: 10, gap: 4 },
+        /*
+          A vector row is NOT a label's height, and treating them the same
+          clipped the rotation row off the bottom — the third time a panel has
+          silently dropped its last control, and the second time in this file.
+          Counted separately, and measured rather than guessed: a caption is 24,
+          a three-field row is 54. The check that matters is in the browser —
+          the lowest glyph's baseline must sit inside the panel's height, which
+          is the only thing that catches a clip, because a clipped panel reports
+          nothing at all.
+        */
+        {
+          width: 240,
+          height: 92 + captions * 24 + vectors * 54,
+          padding: 10,
+          gap: 4,
+        },
         label3d({ text: selected.id, bold: true }),
         label3d({
           text: selected.mesh ?? `${Object.keys(selected.features ?? {}).join(', ') || 'no body'}`,
           muted: true,
         }),
-        ...(rows as never[])
+        ...(fields as never[])
       )
     )
   }
@@ -1503,6 +1557,9 @@ export class EnsembleEditor extends Component {
   }
 
   private _activeField: NumberField | null = null
+
+  /** Detaches the property panel's key routing. Re-made on every render. */
+  private _detachFields: (() => void) | null = null
 
   /**
    * Undo and redo on the keyboard, because a button alone is not undo.

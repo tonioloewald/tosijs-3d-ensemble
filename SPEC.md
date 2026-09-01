@@ -764,6 +764,24 @@ Three decisions to make before any of it is built:
    >
    > It also means the editor's terrain work is ONE tool with a curve widget,
    > not four tools, which is the difference between a week and a quarter.
+
+   > **Owner: *"we can also use the same curve as the falloff for the
+   > province."*** — so there is not a shape curve AND an edge-blend
+   > parameter. The falloff IS the tail of the same function, and a province
+   > reduces to **an area plus one curve**.
+   >
+   > That leaves exactly one thing to define, and it is the thing that will be
+   > wrong if nobody states it: **what the curve's input measures.** The useful
+   > answer is normalised depth INTO the area — 0 at the boundary, 1 at the
+   > core — because it works for a polygon as well as a circle, where "distance
+   > from centre" does not. Then `curve(0) = 0` is a seamless edge for free, and
+   > a hard-edged plateau is a curve that jumps at 0 rather than a separate
+   > mode.
+   >
+   > Read that way the four shapes are the four obvious curves over the same
+   > domain: a plateau rises fast and stays flat, a ramp is monotone, a crater
+   > goes negative in the middle, a flatten is constant. None of them needs a
+   > name in the data.
 2. **When it is applied.** At load, into the terrain the ensemble is dropped on
    — which means an ensemble can no longer assume it owns the terrain, and needs
    a way to say "modify what is here" rather than "create this".

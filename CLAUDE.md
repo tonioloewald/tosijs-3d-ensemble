@@ -282,11 +282,43 @@ failures**. Recorded here because they will recur:
   hours went to `getMeshByName('water')` and `Drone` vs
   `Drone_collideBox.model`.
 
-## Do NOT build the scene inside somebody else's render frame (2026-09-02)
+## A DOM MOVE rebuilds the whole scene — the worst bug this project has had (2026-09-02)
 
-**The single worst bug this project has had, and it wore four different faces.**
-Dark sky, white meshes, empty scene, half-loaded scene — one cause. The doc
-system creates this element from inside a `requestAnimationFrame` render pass:
+**Four faces, one cause.** Dark sky, meshes rendering white, empty scene,
+half-loaded scene. `tosi-b3d`'s `connectedCallback` constructs `new Engine` and
+`new Scene` unconditionally, so ANY reconnect rebuilds everything — and a
+reconnect needs no mutation in our shadow root at all: when the doc system
+re-parents our HOST in the light DOM, every element inside the shadow root is
+disconnected and reconnected.
+
+Measured on one load, instrumented from module load:
+
+```
+scenesSeen    id 1 @ 1483ms,  id 2 @ 1526ms
+skyTimeline   SkyMaterial 6 @ 1483,  23 @ 1526
+deleteProgram @ 1531
+b3dDomEvents  []            <- the element was never added or removed
+```
+
+The disposed scene takes a shared shader program with it, and the survivor
+renders black while every uniform reads correct and `isReady()` returns true —
+`gl.isProgram()` false, `gl.getError()` 1282, and nothing in the console. Filed
+as tosijs-3d#58 and being fixed upstream.
+
+**Two things here are MITIGATIONS, not the fix**, and should be re-examined
+when #58 lands rather than trusted: the deferred mount below, and the lazy kit
+shelf. Both narrow the window; neither closes it.
+
+**How to catch this class at all: poll from MODULE LOAD.** The window is 43ms
+at t≈1.5s. Every probe fired from a tool round-trip lands ten seconds later and
+finds a perfectly healthy scene, which is how it survived three wrong diagnoses.
+A query-gated spy that starts polling as its module evaluates is the only thing
+that saw it.
+
+### The deferred mount (a mitigation, kept on its own merits)
+
+The doc system creates this element from inside a `requestAnimationFrame`
+render pass:
 
 ```
 connectedCallback   ensemble-editor.ts
@@ -297,9 +329,13 @@ queueRender
 
 so building a Babylon engine in `connectedCallback` happens DURING another
 component's frame, and materials and shader programs come out bound to the
-wrong thing. About 70% of page loads. `connectedCallback` now defers the whole
-mount with `setTimeout(…, 0)`; `disconnectedCallback` cancels it. Verified by
-the owner across many refreshes AND SPA navigations: zero bad loads.
+wrong thing. About 70% of page loads. `connectedCallback` defers the whole
+mount with `setTimeout(…, 0)`; `disconnectedCallback` cancels it.
+
+⚠️ I called this fixed on four consecutive clean loads. It was not: the real
+cause is above, and four loads cannot distinguish "fixed" from "rarer" when the
+failure rate is unknown. Building into somebody else's render frame is still
+wrong and the deferral still belongs here — but it is a mitigation.
 
 **How it was finally found, after a day of wrong answers:** put a WORKING
 reference beside the broken one, in the same page, at the same moment.

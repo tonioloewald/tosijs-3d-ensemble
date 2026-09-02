@@ -31,6 +31,7 @@ wants to move is usually the one embedded in something else.
 /*{"parent":"Internals","order":5}*/
 import {
   Color3,
+  Mesh,
   MeshBuilder,
   Quaternion,
   StandardMaterial,
@@ -119,8 +120,8 @@ const PICK_FATNESS = 5;
  *
  * Ordered outward from the centre, and EVERY GRIP OWNS A BAND along the axis:
  *
- *   pads    0.02 – 0.58     shafts  0.15 – 0.95     cones  0.95 – 1.35
- *   rings   1.40 – 1.50     cubes   1.69 – 1.87
+ *   Along −axis:  pad 0.50      arc 0.95
+ *   Along +axis:  shaft 0.15 – 0.95   cone 0.95 – 1.35   cube 1.78
  *
  * That separation is the point, and it was missing. A ring at radius 1.2 with
  * shafts reaching 1.3 physically CROSSES them, so at four points on every ring
@@ -147,20 +148,40 @@ const SHAFT_LENGTH = 0.8;
 const SHAFT_DIAMETER = 0.032;
 const SHAFT_PICK_FATNESS = 11;
 const SHAFT_OFFSET = 0.55;
-const PAD_OFFSET = 0.3;
 const PAD_SIZE = 0.28;
 /*
-  SMALLER AND THINNER THAN THEY WERE.
+  A FLAT QUARTER ANNULUS ON THE AXIS ROW, NOT A RING AROUND EVERYTHING.
 
-  At 3.3 across with a 0.09 tube the rings dominated the widget and, because the
-  whole thing is scaled to a constant SCREEN size, dwarfed whatever small piece
-  you had selected — "the rotation rings are ENORMOUS both in size and
-  fatness". The band separation below is what actually needed defending, not the
-  absolute size, so the rings came in and the cubes came in behind them and the
-  ordering is unchanged.
+  The rings used to encircle the whole widget — 3.3 across — so on a widget
+  scaled to a constant SCREEN size they dwarfed whatever piece was selected, and
+  three of them crossing made the thing hard to read at all.
+
+  Now every axis is one ROW, which is the owner's layout:
+
+      -X  (   []   +----->  +X
+
+  the arc turns about that axis, the pad slides in the plane that axis is normal
+  to, and the arrow moves along it. Everything belonging to an axis sits on that
+  axis, and the three rows do not overlap.
+
+  FLAT, not tubular. A ribbon is a broad face pointed along the axis, which is a
+  much larger click target than the silhouette of a tube, and it is ~24
+  triangles against a torus's several hundred.
+
+  The arc is drawn OFFSET along the negative axis, while the drag still measures
+  in the plane through the widget's origin — the offset is cosmetic, and
+  `angleAboutAxis` does not care where along the normal the plane sits. That is
+  a deliberate separation of "what you grab" from "where it measures", and the
+  only one in the widget.
 */
-const RING_DIAMETER = 2.9;
-const RING_THICKNESS = 0.05;
+const ARC_INNER = 0.4;
+const ARC_OUTER = 0.62;
+/** How much wider the invisible pick band is, per edge. */
+const ARC_PICK_MARGIN = 0.16;
+const ARC_OFFSET = 0.95;
+const ARC_SEGMENTS = 10;
+/** The pad sits between the arc and the origin, on the same row. */
+const PAD_ROW_OFFSET = 0.5;
 const CUBE_SIZE = 0.17;
 const CUBE_OFFSET = 1.78;
 const CENTRE_SIZE = 0.2;
@@ -179,23 +200,13 @@ const CENTRE_SIZE = 0.2;
  * head and grabbing the shaft mean the same drag.
  */
 const HEAD_LENGTH = 0.4;
-const HEAD_DIAMETER = 0.3;
+/*
+  Wider than the cone it replaces. `diameter` is the CIRCUMSCRIBED circle, so a
+  4-sided cross-section has sides of only d/√2 — keeping 0.3 would have quietly
+  shrunk the arrowhead by a third at the moment it stopped being round.
+*/
+const HEAD_DIAMETER = 0.42;
 const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2;
-
-/**
- * The rings get a THINNER pick tube than everything else.
- *
- * `PICK_FATNESS` is a multiplier on a radius, and a ring's radius sweeps a
- * whole torus: at 5× the pick tube spans nearly the full width of the widget
- * and swallows the scale cubes and shaft ends sitting outside it. A ring is
- * also the biggest target on screen, so it can afford the least inflation.
- *
- * 4, not 3: with the scale cubes moved outboard to 1.95 there is room, and a
- * ring is the hardest grip to hit with a FINGER — it is the only one that has
- * to be caught side-on, and "I couldn't rotate anything, but that's with touch"
- * is what too little tube feels like.
- */
-const RING_PICK_FATNESS = 3;
 
 export interface HandlesView {
   /** Rebuild for a new transform set. Cheap no-op when nothing changed. */
@@ -350,6 +361,34 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   const alongAxis = (axis: Axis): Vec3 =>
     axis === "x" ? [0, 0, -HALF] : axis === "z" ? [HALF, 0, 0] : [0, 0, 0];
 
+  /**
+   * A flat 90° annulus segment lying in XZ with normal +Y, so `ringOn` aims it
+   * exactly as the torus it replaces was aimed.
+   *
+   * Two arcs and a ribbon between them: `CreateDisc` would give a pie slice
+   * with no hole, and a torus is the thing being replaced. Double-sided,
+   * because a flat band seen from behind is otherwise both invisible and
+   * unpickable, and which side faces you is the camera's business.
+   */
+  const quarterAnnulus = (name: string, inner: number, outer: number) => {
+    const arc = (radius: number): Vector3[] => {
+      const points: Vector3[] = [];
+      for (let i = 0; i <= ARC_SEGMENTS; i++) {
+        const t = (i / ARC_SEGMENTS) * HALF;
+        points.push(new Vector3(Math.cos(t) * radius, 0, Math.sin(t) * radius));
+      }
+      return points;
+    };
+    return MeshBuilder.CreateRibbon(
+      name,
+      {
+        pathArray: [arc(inner), arc(outer)],
+        sideOrientation: Mesh.DOUBLESIDE,
+      },
+      s
+    );
+  };
+
   /** Turn a torus (lying in XZ, normal +Y) so its normal is `axis`. */
   const ringOn = (axis: Axis): Vec3 =>
     axis === "x" ? [0, 0, HALF] : axis === "z" ? [HALF, 0, 0] : [0, 0, 0];
@@ -409,21 +448,31 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
                 // already the widest thing on the axis, and inflating it 5×
                 // would swallow the ring and the scale cube beside it.
                 diameterBottom: HEAD_DIAMETER * (fat > 1 ? 1.8 : 1),
-                tessellation: fat > 1 ? 8 : 16,
+                /*
+                  FOUR SIDES, NOT A CONE.
+
+                  A square-based pyramid reads cleaner than a cone at this size,
+                  and its EDGES carry orientation: a cone is rotationally
+                  symmetric, so it tells you which way the axis points and
+                  nothing about how the piece is turned. The pyramid's silhouette
+                  changes as the widget turns, which is free feedback during a
+                  rotate drag.
+                */
+                tessellation: 4,
               },
               s
             ),
         });
-        // The plane pad's axis is the plane's NORMAL, so this one reads as
-        // "the pad you slide across while that axis stays put".
-        const [u, v] = otherAxes(axis);
-        const pad: Vec3 = [0, 0, 0];
-        pad[axisIndex(u)] = PAD_OFFSET;
-        pad[axisIndex(v)] = PAD_OFFSET;
+        /*
+          The plane pad's axis is the plane's NORMAL, so this reads as "the pad
+          you slide across while that axis stays put" — and it sits on that
+          axis's row, between the arc and the origin, rather than diagonally out
+          in the plane it slides in.
+        */
         add(grip("planar"), {
           colour,
           alpha: 0.35,
-          offset: pad,
+          offset: along(axis, -PAD_ROW_OFFSET),
           spin: facing(axis),
           make: (name, fat) =>
             MeshBuilder.CreatePlane(
@@ -437,16 +486,13 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       if (transforms.rotate) {
         add(grip("rotate"), {
           colour,
+          offset: along(axis, -ARC_OFFSET),
           spin: ringOn(axis),
           make: (name, fat) =>
-            MeshBuilder.CreateTorus(
+            quarterAnnulus(
               name,
-              {
-                diameter: RING_DIAMETER,
-                thickness: RING_THICKNESS * (fat > 1 ? RING_PICK_FATNESS : 1),
-                tessellation: fat > 1 ? 24 : 48,
-              },
-              s
+              fat > 1 ? ARC_INNER - ARC_PICK_MARGIN : ARC_INNER,
+              fat > 1 ? ARC_OUTER + ARC_PICK_MARGIN : ARC_OUTER
             ),
         });
       }

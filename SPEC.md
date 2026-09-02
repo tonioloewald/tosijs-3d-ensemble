@@ -757,6 +757,28 @@ speakers — every primitive an author has to place and cannot otherwise see.
 **Upstream, not here:** the default geometry belongs in tosijs-3d beside the
 elements it represents, or every consumer draws its own lamp.
 
+**Filed, and going further than asked.** The owner has requested this upstream,
+and the lights will also carry **brightness and hue curves** and an
+**attack / sustain / delay** envelope. Two consequences for this format:
+
+- **A light stops being an exception here.** With default geometry it is a
+  piece with a body like any other — visible, pickable, draggable when not
+  selected, and replaceable by a `mesh` when a fixture exists. The
+  editor-only-geometry problem in the utilities sketch below therefore applies
+  only to POINTS and ZONES; lights solve it by having real geometry rather than
+  a stand-in.
+- **It is the curve again.** A brightness curve is the same authorable curve as
+  a province's profile and falloff — owner, on provinces: _"an authorable curve
+  turns four features into lemmas of one killer feature"_. A `light` feature's
+  schema should express its curves the way a province does, not invent a second
+  spelling; a flicker is a curve, a pulse is a curve, and ADS is three numbers
+  over one.
+
+  ⚠️ Which makes the curve a FORMAT question, not a widget one. If two features
+  serialise curves differently, an author who learns one has learned nothing
+  about the other, and a generator has two things to emit. Settle the curve's
+  JSON shape once, wherever it lands first.
+
 ### Points and zones with consumer-defined types
 
 > **Owner:** _"labeled points and zones with types and names… you might want to
@@ -827,11 +849,16 @@ What makes it fit rather than a special case:
   types (`station`, `cap`, `picket`) appear beside the built-in ones with no
   special casing.
 
-⚠️ **The geometry is the open question.** A light or a point has no mesh, so it
-needs a stand-in you can see, select and drag — and that stand-in must not be
-in the scene a game loads. That is a real design problem (editor-only geometry,
-scaled to stay visible, pickable but never exported) and it is the reason this
-is a sketch rather than a task.
+⚠️ **The geometry is the open question — for points and zones.** They have no
+mesh, so each needs a stand-in you can see, select and drag, and that stand-in
+must not be in the scene a game loads. Editor-only geometry that stays legible
+at any distance, picks reliably and never exports is a real design problem, and
+it is why this is a sketch rather than a task.
+
+Lights are no longer part of that problem: upstream is giving them default
+geometry, so a light is an ordinary piece with a real body. Points and zones are
+the remaining case, and they are the harder one — a light at least has an
+obvious thing to draw.
 
 ### Provinces: authoring onto terrain, and reshaping it
 

@@ -382,11 +382,28 @@ export class EnsembleEditor extends Component {
         if (!built) return null;
         return { element: built.element as never, node: built.node };
       },
+      /*
+        WHERE THE BODY IS, NOT WHERE THE LAST BUILD PUT IT.
+
+        This read `built.at`, which a drag release no longer refreshes: since
+        committing a transform stopped rebuilding the scene (to kill the flash),
+        `built.at` holds the position from the last STRUCTURAL build. Move a
+        piece, then start a rotate: the drag takes the stale origin, and because
+        `worldAt` writes `origin + (at - startAt)` every frame — zero for a
+        rotate — it puts the piece back where it used to be and turns it there.
+        Reported as "the rowboat snaps back to its previous position and rotates
+        on that spot".
+
+        `_liveOrigin` reads the body itself and already backs the marker and the
+        handles, which is why THEY followed the piece while the drag maths did
+        not. One source of truth for "where is it", and this was the last
+        caller not using it.
+      */
       worldOrigin: () => {
         const built = this.selection
           ? this._built?.pieces.get(this.selection.id)
           : null;
-        return built?.at ?? [0, 0, 0];
+        return built ? this._liveOrigin(built) : [0, 0, 0];
       },
       axisDirection: (axis) => this._pieceAxes()?.[axis] ?? axisVector(axis),
       composeRotation: (start, axis, degrees) =>
@@ -1679,7 +1696,9 @@ export class EnsembleEditor extends Component {
     }
     if (!this._handles) this._handles = createHandles(scene);
     this._handles.setTransforms(transforms);
-    this._handles.moveTo(built.at);
+    // Live, for the same reason as `worldOrigin` — a no-rebuild commit
+    // leaves `built.at` a move behind.
+    this._handles.moveTo(this._liveOrigin(built));
   }
 
   /**

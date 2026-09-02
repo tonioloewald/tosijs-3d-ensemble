@@ -589,7 +589,7 @@ export class EnsembleEditor extends Component {
   edit(
     describe: string,
     mutate: (ensemble: Ensemble) => void,
-    options?: { rebuild?: boolean }
+    options?: { rebuild?: boolean; chrome?: boolean }
   ): void {
     /*
       SNAPSHOT BEFORE, not a diff.
@@ -627,10 +627,10 @@ export class EnsembleEditor extends Component {
     if (options?.rebuild === false) {
       this._syncSelection();
       this._syncHandles();
-      this._renderChrome();
+      if (options.chrome !== false) this._renderChrome();
       return;
     }
-    this.rebuild();
+    this.rebuild({ chrome: options?.chrome });
   }
 
   private readonly _history = createHistory<Ensemble>(
@@ -1130,7 +1130,7 @@ export class EnsembleEditor extends Component {
    * exercises here is the SAME one a game runs at load, so a leak or an
    * ordering bug shows up in the tool before it ships in a level.
    */
-  rebuild(): void {
+  rebuild(options?: { chrome?: boolean }): void {
     if (!this._scene) return;
     if (!this._sceneReady) {
       // Not dropped — deferred. `_onSceneReady` replays it.
@@ -1162,7 +1162,16 @@ export class EnsembleEditor extends Component {
     this._syncBackdrop();
     this._syncSelection();
     this._syncHandles();
-    this._renderChrome();
+    /*
+      A TYPED FIELD MUST NOT REDRAW THE PANEL IT IS BEING TYPED INTO.
+
+      `_renderChrome` rebuilds the panels, which destroys the focused input and
+      hands focus back to nobody. Through `update` that happens on every
+      keystroke: "typing into a field works BUT the field instantly loses
+      focus". The panel is already showing the typed value — it is where the
+      value came from — so redrawing it is destructive and pointless at once.
+    */
+    if (options?.chrome !== false) this._renderChrome();
 
     /*
       THE AUTHOR'S VIEWPOINT SURVIVES AN EDIT. THE FILE'S WINS ON LOAD.
@@ -1586,11 +1595,17 @@ export class EnsembleEditor extends Component {
       could not take back. "Every edit goes through one path" is only true if
       the paths that predate the rule are moved onto it.
     */
-    this.edit(`update ${id}`, (ensemble) => {
-      const piece = ensemble.pieces.find((p) => p.id === id);
-      if (!piece) return;
-      Object.assign(piece, patch);
-    });
+    this.edit(
+      `update ${id}`,
+      (ensemble) => {
+        const piece = ensemble.pieces.find((p) => p.id === id);
+        if (!piece) return;
+        Object.assign(piece, patch);
+      },
+      // The scene DOES need rebuilding — a typed coordinate moves the piece —
+      // but the panel does not, and redrawing it is what steals the focus.
+      { chrome: false }
+    );
   }
 
   /*
@@ -1974,18 +1989,29 @@ export class EnsembleEditor extends Component {
       This is what makes a summonable keyboard work at all, and it is why the
       container must be the panel's parent rather than the panel.
     */
+    /*
+      THE POPUP LAYER GOES IN THE DOCUMENT. Three containers, two of them wrong:
+
+      - the SHADOW ROOT throws. `useDomLayer` calls `getComputedStyle`, and a
+        `ShadowRoot` is not an Element — it took the whole chrome down.
+      - the HOST element does not throw and does not work. The layer becomes a
+        LIGHT-DOM child of an element whose shadow root has no `<slot>`, so it
+        is never rendered: measured, the keyboard was present the whole time at
+        `360×209`, connected, `getBoundingClientRect()` all zeros. That is what
+        "the keyboard doesn't open" actually was.
+      - `document.body` renders, and is where the layer's document-level
+        stylesheet applies.
+
+      Saying NOTHING does not work either, though 0.7.6 installs the layer
+      itself "when the panel is on the page": ours are not on the page, they are
+      in this element's shadow root. Measured with no call — no keypad anywhere
+      in the document and no light-DOM children on the host. So the explicit
+      call stays; only its argument was ever wrong.
+    */
     const withLayer = panel as SVGSVGElement & {
       useDomLayer?: (container: Element) => void;
     };
-    /*
-      The HOST element, not the shadow root. `useDomLayer` calls
-      `getComputedStyle` on what it is given and a `ShadowRoot` is not an
-      Element — it threw on the first panel, which took the whole chrome with
-      it. The host is also the right target on its own terms: the layer's
-      stylesheet is injected at document level, so a popup mounted in the light
-      DOM is styled and one inside the shadow root would not be.
-    */
-    withLayer.useDomLayer?.(this);
+    withLayer.useDomLayer?.(document.body);
     panel.style.top = `${this._stackTop[side]}px`;
     panel.style[side] = "8px";
     /*

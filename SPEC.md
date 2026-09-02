@@ -791,6 +791,48 @@ What is missing is entirely editor-side, and it is two things:
   component. It must stay a suggestion, never a constraint — the moment the
   editor rejects an unknown kind, the format's openness is gone.
 
+### A "utilities" library — the palette is where you insert ANYTHING
+
+> **Owner:** _"we may want a 'utilities' library that includes things like named
+> reference points and named zones and lights."_
+
+The three sections above each describe something an author needs to PLACE that
+does not come out of a `.glb`: a light, a labelled point, a zone. Each was
+heading for its own affordance — a button, a menu, a mode — and three
+mechanisms for one verb is how a tool palette becomes a maze.
+
+**They are library entries.** The insert palette already picks a library, then a
+family, then a thing, and drops it where you aim. A `utilities` library adds one
+more name to the first picker, and everything downstream works unchanged: the
+same picking, the same grid snap, the same placement at the point the ray meets
+the scene, the same undo step.
+
+That gives the editor ONE verb for "put something in the world", which is worth
+more than the code it saves. It also puts points and zones in front of the
+author for the first time — currently the only part of the format with no
+affordance at all.
+
+What makes it fit rather than a special case:
+
+- **It is not a `.glb`, and it does not have to be.** `meshCatalog()` already
+  returns `{ library, mesh, category }` from two different sources (a library's
+  declared taxonomy, or names split on punctuation). A third source that yields
+  `utilities · light · point`, `utilities · marker · station` is the same shape.
+- **What gets inserted differs by entry, and already does.** `placeMesh` decides
+  between a `b3d-destroyable` and a placeholder box today. A utilities entry
+  emits a piece with a `light` FEATURE and no mesh, or a `Point`, or a `Zone` —
+  which is a branch in one function rather than a new path through the editor.
+- **The consumer's vocabulary lands here too.** `registerPointKind` populates a
+  family in this library rather than needing a UI of its own, and the host's
+  types (`station`, `cap`, `picket`) appear beside the built-in ones with no
+  special casing.
+
+⚠️ **The geometry is the open question.** A light or a point has no mesh, so it
+needs a stand-in you can see, select and drag — and that stand-in must not be
+in the scene a game loads. That is a real design problem (editor-only geometry,
+scaled to stay visible, pickable but never exported) and it is the reason this
+is a sketch rather than a task.
+
 ### Provinces: authoring onto terrain, and reshaping it
 
 > **Owner:** _"author things that get placed on terrain such as provinces with

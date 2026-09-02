@@ -309,6 +309,13 @@ as tosijs-3d#58 and being fixed upstream.
 when #58 lands rather than trusted: the deferred mount below, and the lazy kit
 shelf. Both narrow the window; neither closes it.
 
+**How to TEST it: navigate back and forth, not reload.** Re-parenting is the
+trigger, so SPA navigation exercises it directly where a page load only does so
+incidentally — and it is faster, so you get a real sample instead of four
+anecdotes, and it shuffles the race order rather than repeating one. Owner:
+_"it's faster and changes likely race orders"_. Count outcomes over ~20 trips;
+anything less cannot tell "fixed" from "rarer".
+
 **How to catch this class at all: poll from MODULE LOAD.** The window is 43ms
 at t≈1.5s. Every probe fired from a tool round-trip lands ten seconds later and
 finds a perfectly healthy scene, which is how it survived three wrong diagnoses.

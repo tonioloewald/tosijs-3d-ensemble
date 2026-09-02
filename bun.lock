@@ -18,7 +18,7 @@
         "happy-dom": "^20.11.6",
         "prettier": "^2.8.8",
         "tosijs": "^1.8.2",
-        "tosijs-3d": "^0.7.4",
+        "tosijs-3d": "^0.7.5",
         "tosijs-ui": "^1.12.7",
         "typescript": "^5.9.3",
       },
@@ -112,7 +112,7 @@
 
     "tosijs": ["tosijs@1.8.2", "", { "bin": { "tosijs": "dist/cli.mjs" } }, "sha512-yzUyjldcjeUwvuLZPpoHwMWLNUmRkItQwOKj1t449sQu8EfHKmyfYmZUpeZva+EgkVTOtNLJIJcx0D0vFKXIiQ=="],
 
-    "tosijs-3d": ["tosijs-3d@0.7.4", "", { "peerDependencies": { "@babylonjs/core": "^9.0.0", "@babylonjs/gui": "^9.0.0", "@babylonjs/loaders": "^9.0.0", "@babylonjs/materials": "^9.0.0", "jolt-physics": "^1.1.0", "tosijs": "^1.7.8" }, "optionalPeers": ["jolt-physics"] }, "sha512-14lWDYKd+35R1pbAnSVBt1Akc2LmWM5k6EJSp7x+5u2X4/WJF3JHyCqw6MbWYImvwqkPDsJ2+xcAPJP1PeNW3g=="],
+    "tosijs-3d": ["tosijs-3d@0.7.5", "", { "peerDependencies": { "@babylonjs/core": "^9.0.0", "@babylonjs/gui": "^9.0.0", "@babylonjs/loaders": "^9.0.0", "@babylonjs/materials": "^9.0.0", "jolt-physics": "^1.1.0", "tosijs": "^1.7.8" }, "optionalPeers": ["jolt-physics"] }, "sha512-aN5DVzulxPSVTDyrNuqafQPI662w9C5Xsb12hR0ehumb1AUdeFnUDF68r6I9ZQfxX6WYR81VKOzJHlxG9lnZ0w=="],
 
     "tosijs-schema": ["tosijs-schema@1.9.0", "", {}, "sha512-+7SOtcHAYzdUF6nGuaCuMP5TbL+r3pmuYUejUFZPOz1YNU6/rMSF+DodQfTvlubD2h2C68wcXVJwg5UzMxBUKw=="],
 

@@ -16,7 +16,7 @@ when it lands, and close the issue.
 | | Finding | Issue |
 |---|---|---|
 | 1 | No way to touch a mesh. **Accepted and BUILT on main** as `<tosi-b3d-interactive>`, shipping in 0.7.3 — adopt it and port our world rules onto it | [#36](https://github.com/tonioloewald/tosijs-3d/issues/36) |
-| 2 | The SVG UI needs a form layer. **Accepted**, queued behind #36 and #38. Extended with what 561 models taught us: hierarchical + filterable select, provider-backed dynamic options, list virtualisation | [#37](https://github.com/tonioloewald/tosijs-3d/issues/37) |
+| 2 | ✅ **RESOLVED** (tosijs-3d@0.7.4–0.7.5) — `vector3d`/`euler3d`, `ui.fieldGroup`, a summonable on-screen keyboard, `select3d` menus, `iconGrid3d`, and popups that escape their panel. Panels size to content, which retires every hand-tuned height | [#37](https://github.com/tonioloewald/tosijs-3d/issues/37) |
 | 3 | No manipulator, and `b3d-panel`'s coloured axes look exactly like one | [#38](https://github.com/tonioloewald/tosijs-3d/issues/38) |
 | 4 | ✅ **RESOLVED** (tosijs-3d@0.7.2) — `destroyable="off"` landed, credited to this project | [#39](https://github.com/tonioloewald/tosijs-3d/issues/39) |
 | 5 | `b3d-turret`/`b3d-launcher` take no `library`, so a turret cannot have its own mesh | [#34](https://github.com/tonioloewald/tosijs-3d/issues/34) |
@@ -44,7 +44,8 @@ nobody declared. One has already been collected: see the struck-through row.
 | `handles-view.ts`, and the drag maths in `handles.ts` | #38 |
 | `ctx.simTime()` defaulting to wall-clock | #41 |
 | `presets/world`'s own `interactive` (reach, activation, refusal) | 🔜 #36 in 0.7.3 |
-| The family-cycler + separate list standing in for a hierarchical palette | #37 |
+| The family-cycler + separate list standing in for a hierarchical palette | #37 (list virtualisation still open) |
+| ~~Hand-tuned panel heights~~ — **gone in 0.7.5.** `height: 'fit'` is the default and `maxHeight` scrolls; three separate clipping bugs came from guessing this number | ✅ #37 |
 | Deriving palette categories from NAME PREFIXES, when the library now declares real ones | #45 |
 | ~~Our own copy of `waterbump.png`~~ — **deleted in 0.7.4.** The map is procedural now | ✅ #46 |
 | `runtime/node-transform.ts` — writing rotation AND scale past the element onto the instance root, plus `whenMeshed`'s retry, because the instance does not exist when the element is appended | tosijs-3d #47, #48 |

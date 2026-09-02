@@ -71,53 +71,8 @@ export interface SchemaPanelOptions {
   /** Panel heading. Omitted for an embedded group. */
   title?: string
   width?: number
-  height?: number
-}
-
-/**
- * A number you can READ and TYPE.
- *
- * Coordinates were sliders, and a slider is the wrong control for a position on
- * three counts: it is bounded, so you cannot place anything past its range; it
- * has no precision; and ours showed no value at all, so you could not even see
- * where a piece was. Direct manipulation belongs on the handles in the
- * viewport — the panel's job is exact numbers.
- *
- * Commits on Enter and on blur, not per keystroke: committing as you type means
- * `1`, `12`, `120` all land as edits while you are still typing `1200`.
- */
-export function numberField(config: {
-  label: string
-  value: number
-  onCommit: (value: number) => void
-  onFocus?: (field: NumberField) => void
-}): NumberField {
-  const format = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/0+$/, ''))
-  const field = ui.inputField({
-    value: format(config.value),
-    height: 30,
-    onEnter: (text: string) => {
-      const parsed = Number(text)
-      // Reject gibberish by restoring the last good value rather than writing
-      // NaN into the ensemble, which would render the piece nowhere.
-      if (Number.isFinite(parsed)) config.onCommit(parsed)
-      else field.setValue(format(config.value))
-    },
-    // The host needs to know WHICH field the keyboard belongs to; the widget
-    // cannot know, because it does not listen to the keyboard itself.
-    onFocus: () => config.onFocus?.(field),
-  }) as NumberField
-  field.label = config.label
-  return field
-}
-
-export interface NumberField {
-  label?: string
-  value: string
-  insert: (text: string) => void
-  action: (a: unknown) => void
-  setValue: (v: string) => void
-  setActive: (active: boolean) => void
+  /** Upper bound before the panel scrolls. Height itself is the content's. */
+  maxHeight?: number
 }
 
 /** Widgets for one schema's properties, in declaration order. */
@@ -193,7 +148,9 @@ export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
   return panel3d(
     {
       width: options.width ?? 260,
-      height: options.height ?? Math.min(420, 48 + widgets.length * 34 + heading.length * 26),
+      // Sized by content (tosijs-3d 0.7.5's default) with a bound to scroll
+      // past rather than a guess to clip against.
+      maxHeight: options.maxHeight ?? 420,
       padding: 10,
       gap: 6,
     },

@@ -100,8 +100,7 @@ import type { SelectionView } from './selection-view'
 import type { HandlesView } from './handles-view'
 import { axisVector, noTransforms, normaliseDegrees } from './handles'
 import type { Grip } from './handles'
-import type { NumberField } from './schema-panel'
-import { numberField, schemaWidgets } from './schema-panel'
+import { schemaWidgets } from './schema-panel'
 import type { EditorRay } from './input/pointer'
 import type { CatalogEntry, ToolContext } from './tools/tool-registry'
 import { placeMesh } from '../runtime/place-mesh'
@@ -439,6 +438,50 @@ export class EnsembleEditor extends Component {
   }
 
   /**
+   * Make two fingers PAN and a pinch ZOOM, rather than both at once.
+   *
+   * Babylon's default is `multiTouchPanAndZoom`, which applies panning AND
+   * pinch-zoom to the same two-finger gesture. Fingers never travel exactly
+   * parallel, so a swipe meant as a pan carries a small distance change too and
+   * the view creeps in and out under it — reported as "two finger drag is just
+   * a weird zoom that works better vertically than horizontally".
+   *
+   * With it off, `pinchToPanMaxDistance` decides: a gesture whose finger
+   * separation changes by less than that is a pan, more is a pinch. The default
+   * 20px is tight for a deliberate swipe, so it is widened — a pan is the
+   * common gesture and a pinch is the emphatic one.
+   *
+   * This matters more than it looks: **⌃drag does not exist on a touch device**,
+   * so two-finger drag is the ONLY way to pan there. A pan that zooms instead
+   * leaves a tablet with no way to move the view sideways at all.
+   */
+  private _configureTouchCamera(scene: { activeCamera?: unknown }): void {
+    const camera = scene.activeCamera as
+      | {
+          pinchToPanMaxDistance?: number
+          inputs?: {
+            attached?: {
+              pointers?: {
+                multiTouchPanning?: boolean
+                multiTouchPanAndZoom?: boolean
+                pinchZoom?: boolean
+              }
+            }
+          }
+        }
+      | undefined
+    const pointers = camera?.inputs?.attached?.pointers
+    if (!pointers) return
+    pointers.multiTouchPanning = true
+    pointers.pinchZoom = true
+    // The one that matters: choose a gesture rather than doing both.
+    pointers.multiTouchPanAndZoom = false
+    if (camera && typeof camera.pinchToPanMaxDistance === 'number') {
+      camera.pinchToPanMaxDistance = 60
+    }
+  }
+
+  /**
    * Detach or reattach the camera's own input.
    *
    * Reattaching uses the canvas the scene is actually rendering into rather
@@ -622,6 +665,7 @@ export class EnsembleEditor extends Component {
     this._pointer = new FlatPointer(canvas, scene as never)
     this._hub.add(this._pointer)
     this._attachShortcuts()
+    this._configureTouchCamera(scene as never)
 
     /*
       THE INPUT LOOP IS NOT THE RENDER LOOP.
@@ -877,6 +921,15 @@ export class EnsembleEditor extends Component {
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     })
     this._syncBackdrop()
+    /*
+      Re-applied per rebuild, not once at mount: an ensemble's `camera` feature
+      creates the camera, so at `sceneCreated` there is nothing to configure —
+      and a rebuild can replace it. Setting it once left the flags at Babylon's
+      defaults, which is exactly the bug it was meant to fix.
+    */
+    this._configureTouchCamera(
+      (this._scene as unknown as { scene?: { activeCamera?: unknown } }).scene ?? {}
+    )
     this._syncSelection()
     this._syncHandles()
     this._renderChrome()
@@ -1281,13 +1334,17 @@ export class EnsembleEditor extends Component {
       'left',
       panel3d(
         /*
-          Height is a BUDGET, and a short one silently drops whatever is LAST.
-          `Delete` fell off this palette twice while the hint above it was
-          being adjusted — so the hint now goes last and the controls come
-          first: a clipped hint costs advice, a clipped button costs a feature.
-          34 per row (a button3d is taller than its label), plus the hint.
+          `height: 'fit'` — the default in tosijs-3d 0.7.5, and the end of a
+          recurring bug. Height used to be a hand-tuned BUDGET, and a short one
+          silently drops whatever is last: `Delete` fell off this palette twice,
+          `Duplicate` once, and the property panel clipped its rotation row.
+          A panel too short for its content looks exactly like a panel missing
+          its last control, which is why it kept coming back.
+
+          The hint still goes last, because ordering by importance costs nothing
+          and a `maxHeight` scroll would put the same question back.
         */
-        { width: 168, height: 232 + (tools.length + commands.length) * 34, padding: 8, gap: 4 },
+        { width: 168, padding: 8, gap: 4 },
         label3d({ text: 'Tools', bold: true }),
         ...(tools.map((tool) =>
           button3d({
@@ -1317,7 +1374,9 @@ export class EnsembleEditor extends Component {
           no advice. A text block measures and wraps to the panel width.
         */
         textBlock3d({
-          lines: ['orbit: drag', 'pan: 2-finger, ⌃drag', 'zoom: pinch, wheel'],
+          // ⌃drag is named second on purpose: a touch device has no ctrl key,
+          // so two fingers is the pan a tablet actually has.
+          lines: ['orbit: drag', 'pan: 2 fingers', 'or ⌃drag · wheel/pinch: zoom'],
           muted: true,
         })
       )
@@ -1335,7 +1394,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       'right',
       panel3d(
-        { width: 240, height: 60 + widgets.length * 38, padding: 10, gap: 6 },
+        { width: 240, padding: 10, gap: 6 },
         label3d({ text: tool.label, bold: true }),
         ...(widgets as never[])
       )
@@ -1378,7 +1437,9 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       'left',
       panel3d(
-        { width: 200, height: 320, padding: 8, gap: 4 },
+        // A LIST is the one case for a bound: it is arbitrarily long, and
+        // `maxHeight` scrolls past it instead of growing off the screen.
+        { width: 200, maxHeight: 320, padding: 8, gap: 4 },
         label3d({ text: `Library (${catalog.length})`, bold: true }),
         select3d({
           label: '',
@@ -1415,7 +1476,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       'left',
       panel3d(
-        { width: 150, height: 340, padding: 8, gap: 4 },
+        { width: 150, maxHeight: 340, padding: 8, gap: 4 },
         label3d({ text: this._ensemble.name || 'untitled', bold: true }),
         label3d({
           text: `${this._ensemble.pieces.length} · ${errors}✕ · ${problems.length - errors}⚠`,
@@ -1490,27 +1551,13 @@ export class EnsembleEditor extends Component {
     // `ui` namespace rather than the package root.
     const group = ui.fieldGroup({ fields: inputs.flatMap((i) => i.fields) as never[] })
     this._detachFields = group.attach()
-    const vectors = inputs.length
-    const captions = fields.length - vectors
     this._addPanel(
       'right',
       panel3d(
-        /*
-          A vector row is NOT a label's height, and treating them the same
-          clipped the rotation row off the bottom — the third time a panel has
-          silently dropped its last control, and the second time in this file.
-          Counted separately, and measured rather than guessed: a caption is 24,
-          a three-field row is 54. The check that matters is in the browser —
-          the lowest glyph's baseline must sit inside the panel's height, which
-          is the only thing that catches a clip, because a clipped panel reports
-          nothing at all.
-        */
-        {
-          width: 240,
-          height: 92 + captions * 24 + vectors * 54,
-          padding: 10,
-          gap: 4,
-        },
+        // Sized by its content. The arithmetic that used to live here — 24 per
+        // caption, 54 per vector row — was measured in a browser and was still
+        // wrong the moment a row was added.
+        { width: 240, padding: 10, gap: 4 },
         label3d({ text: selected.id, bold: true }),
         label3d({
           text: selected.mesh ?? `${Object.keys(selected.features ?? {}).join(', ') || 'no body'}`,
@@ -1520,43 +1567,6 @@ export class EnsembleEditor extends Component {
       )
     )
   }
-
-  /*
-    ROUTE KEYSTROKES INTO THE SVG FIELDS.
-
-    `inputField` is a Widget3d that exposes `insert`/`action` and listens to
-    NOTHING — by design, because in a headset the keys come from an SVG
-    keyboard rather than from the DOM. Flat, that means the host has to carry
-    real key events across, or a field you can click into silently refuses to
-    accept a single character.
-
-    This is the form layer SPEC predicted we would have to build: forms are the
-    SVG UI's thinnest area, and the editor is the consumer that needs one.
-  */
-  private _routeKeys(panel: SVGSVGElement): void {
-    panel.setAttribute('tabindex', '0')
-    const onKey = (event: KeyboardEvent) => {
-      const field = this._activeField
-      if (!field) return
-      if (event.key === 'Enter') {
-        ;(field as unknown as { action: (a: string) => void }).action('enter')
-      } else if (event.key === 'Backspace') {
-        ;(field as unknown as { action: (a: string) => void }).action('backspace')
-      } else if (event.key.length === 1) {
-        field.insert(event.key)
-      } else {
-        return
-      }
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    panel.addEventListener('keydown', onKey)
-    // Clicking a field must also give the panel DOM focus, or the keydown
-    // never arrives however correctly it is routed.
-    panel.addEventListener('pointerdown', () => panel.focus({ preventScroll: true }))
-  }
-
-  private _activeField: NumberField | null = null
 
   /** Detaches the property panel's key routing. Re-made on every render. */
   private _detachFields: (() => void) | null = null
@@ -1573,7 +1583,6 @@ export class EnsembleEditor extends Component {
     this._detachShortcuts?.()
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return
-      if (this._activeField) return
       const target = event.target as { tagName?: string; isContentEditable?: boolean } | null
       if (target?.isContentEditable || target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
         return
@@ -1591,10 +1600,39 @@ export class EnsembleEditor extends Component {
 
   private _addPanel(side: 'left' | 'right', panel: SVGSVGElement): void {
     panel.classList.add('ensemble-editor-chrome')
-    this._routeKeys(panel)
+    /*
+      GIVE THE PANEL SOMEWHERE TO PUT A POPUP.
+
+      A menu or an on-screen keyboard is bigger than the panel that raised it,
+      and `showPopup` alone caps to the panel's own viewBox — so a keyboard on a
+      short panel came out squeezed flat over the field it types into.
+      `useDomLayer` mounts flat popups as positioned siblings OUTSIDE the
+      panel's `<svg>`, which is the presentation-specific half; in a headset
+      `panelScene` mounts the same popup as its own plane.
+
+      This is what makes a summonable keyboard work at all, and it is why the
+      container must be the panel's parent rather than the panel.
+    */
+    const withLayer = panel as SVGSVGElement & { useDomLayer?: (container: Element) => void }
+    /*
+      The HOST element, not the shadow root. `useDomLayer` calls
+      `getComputedStyle` on what it is given and a `ShadowRoot` is not an
+      Element — it threw on the first panel, which took the whole chrome with
+      it. The host is also the right target on its own terms: the layer's
+      stylesheet is injected at document level, so a popup mounted in the light
+      DOM is styled and one inside the shadow root would not be.
+    */
+    withLayer.useDomLayer?.(this)
     panel.style.top = `${this._stackTop[side]}px`
     panel.style[side] = '8px'
-    const height = Number(panel.getAttribute('height') ?? 0)
+    /*
+      Read the height the panel SETTLED on, not one we told it.
+
+      With `height: 'fit'` the attribute is written during layout, so the stack
+      offset has to come from the panel afterwards. Falling back to 0 would pile
+      every panel at the same top — which looks like only one panel exists.
+    */
+    const height = Number(panel.getAttribute('height') ?? 0) || panel.getBoundingClientRect().height
     this._stackTop[side] += height + 10
     this._root.append(panel)
     this._panels.push(panel)

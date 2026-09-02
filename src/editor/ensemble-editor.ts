@@ -2053,8 +2053,17 @@ export class EnsembleEditor extends Component {
     const libraries = [
       ...new Set(catalog.map((entry) => entry.library)),
     ].sort();
+    /*
+      DEFAULT TO THE ENSEMBLE'S OWN KIT, not to whichever sorts first.
+
+      With a shelf mounted, `libraries[0]` was "commercial" — alphabetical, and
+      nothing to do with the file being edited. The kit an ensemble DECLARES is
+      where its pieces come from and the one an author reaches for first.
+    */
+    const own = (this._ensemble.libraries ?? [])[0]?.name;
     const currentLibrary =
-      (this._toolOptions.library as string) ?? libraries[0]!;
+      (this._toolOptions.library as string) ??
+      (own && libraries.includes(own) ? own : libraries[0]!);
     const inLibrary = catalog.filter(
       (entry) => entry.library === currentLibrary
     );
@@ -2077,6 +2086,13 @@ export class EnsembleEditor extends Component {
         // can only tell you what you already know.
         ...(libraries.length > 1
           ? [
+              /*
+                CAPTIONED, because two bare steppers stacked do not say which is
+                which. The owner had this picker on screen and asked for the
+                ability to pick a library — which is what an unlabelled control
+                costs you: it may as well not be there.
+              */
+              label3d({ text: "library", muted: true, compact: true }),
               select3d({
                 label: "",
                 value: currentLibrary,
@@ -2089,6 +2105,7 @@ export class EnsembleEditor extends Component {
               }),
             ]
           : []),
+        label3d({ text: "family", muted: true, compact: true }),
         select3d({
           label: "",
           value: current,

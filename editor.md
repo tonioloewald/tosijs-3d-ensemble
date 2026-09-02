@@ -34,9 +34,13 @@ order: 2
   declares `pirate` and loads fine anywhere without the rest; the three city
   kits are here so the library picker has something to pick between, and so
   the palette is not a demo of one kit.
+
+  `z-index` because absolute positioning alone does not win: the editor and the
+  article's own prose are both in flow order, so the page heading showed THROUGH
+  the tool palette. One stacking context above the content it covers.
 -->
 
-<tosi-ensemble-editor src="/ensembles/pirate-cove.json" libraries="[{&quot;name&quot;:&quot;pirate&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb&quot;},{&quot;name&quot;:&quot;roads&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-roads.glb&quot;},{&quot;name&quot;:&quot;commercial&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-commercial.glb&quot;},{&quot;name&quot;:&quot;suburban&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-suburban.glb&quot;}]" style="display:block;position:absolute;top:0;left:0;right:0;height:100%;min-height:30rem"></tosi-ensemble-editor>
+<tosi-ensemble-editor src="/ensembles/pirate-cove.json" libraries="[{&quot;name&quot;:&quot;pirate&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb&quot;},{&quot;name&quot;:&quot;roads&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-roads.glb&quot;},{&quot;name&quot;:&quot;commercial&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-commercial.glb&quot;},{&quot;name&quot;:&quot;suburban&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-suburban.glb&quot;}]" style="display:block;position:absolute;z-index:1;top:0;left:0;right:0;height:100%;min-height:30rem"></tosi-ensemble-editor>
 
 <!-- toc -->
 - [Saving and loading ensembles](/storage/)

@@ -9,4 +9,4 @@ export {
   validate,
   registerSceneFeatures,
   ensemble, // <tosi-ensemble> — the one-line embed a game uses
-} from '../index'
+} from "../index";

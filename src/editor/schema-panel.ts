@@ -35,20 +35,32 @@ Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
 */
 /*{"parent":"Internals","order":7}*/
-import { iconGrid3d, label3d, panel3d, select3d, slider3d, toggle3d, ui } from 'tosijs-3d'
-import { DEFAULT_TOOL_CELLS, TOOL_CELLS, resolveToolCells } from './tools/transform'
-import type { FeatureSchema } from '../format/registry'
+import {
+  iconGrid3d,
+  label3d,
+  panel3d,
+  select3d,
+  slider3d,
+  toggle3d,
+  ui,
+} from "tosijs-3d";
+import {
+  DEFAULT_TOOL_CELLS,
+  TOOL_CELLS,
+  resolveToolCells,
+} from "./tools/transform";
+import type { FeatureSchema } from "../format/registry";
 
 interface PropertySpec {
-  type?: string
-  title?: string
-  description?: string
-  enum?: Array<string | number>
-  minimum?: number
-  maximum?: number
-  default?: unknown
-  'x-unit'?: string
-  'x-widget'?: string
+  type?: string;
+  title?: string;
+  description?: string;
+  enum?: Array<string | number>;
+  minimum?: number;
+  maximum?: number;
+  default?: unknown;
+  "x-unit"?: string;
+  "x-widget"?: string;
   /**
    * Show this property only while the other options match.
    *
@@ -63,44 +75,51 @@ interface PropertySpec {
    * on — and an angle snap has nothing to say to a tool that is not turning
    * anything.
    */
-  'x-requires'?: Record<string, unknown>
+  "x-requires"?: Record<string, unknown>;
 }
 
 export interface SchemaPanelOptions {
-  schema: FeatureSchema | undefined
-  values: Record<string, unknown>
-  onChange: (key: string, value: unknown) => void
+  schema: FeatureSchema | undefined;
+  values: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
   /** Panel heading. Omitted for an embedded group. */
-  title?: string
-  width?: number
+  title?: string;
+  width?: number;
   /** Upper bound before the panel scrolls. Height itself is the content's. */
-  maxHeight?: number
+  maxHeight?: number;
 }
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, onChange } = options
-  const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>
-  const widgets: unknown[] = []
+  const { schema, values, onChange } = options;
+  const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
+  const widgets: unknown[] = [];
 
   for (const [key, spec] of Object.entries(properties)) {
-    const requires = spec['x-requires']
-    const lit = Array.isArray(values.cells) ? (values.cells as number[]) : []
+    const requires = spec["x-requires"];
+    const lit = Array.isArray(values.cells) ? (values.cells as number[]) : [];
     const satisfied = (k: string, v: unknown) => {
       // `cell` / `anyCell` read the lit tool cells rather than a named option,
       // because the grid's value IS a set and "is this one on" is the question
       // every dependent field actually asks.
-      if (k === 'cell') return lit.includes(v as number)
-      if (k === 'anyCell') return (v as number[]).some((c) => lit.includes(c))
-      return Array.isArray(v) ? v.includes(values[k]) : values[k] === v
-    }
-    if (requires && !Object.entries(requires).every(([k, v]) => satisfied(k, v))) continue
+      if (k === "cell") return lit.includes(v as number);
+      if (k === "anyCell") return (v as number[]).some((c) => lit.includes(c));
+      return Array.isArray(v) ? v.includes(values[k]) : values[k] === v;
+    };
+    if (
+      requires &&
+      !Object.entries(requires).every(([k, v]) => satisfied(k, v))
+    )
+      continue;
 
-    if (spec['x-widget'] === 'tool-cells') {
+    if (spec["x-widget"] === "tool-cells") {
       widgets.push(
         iconGrid3d({
-          mode: 'checkbox',
-          items: TOOL_CELLS as unknown as Array<{ icon: string; label?: string }>,
+          mode: "checkbox",
+          items: TOOL_CELLS as unknown as Array<{
+            icon: string;
+            label?: string;
+          }>,
           selected: (values[key] as number[]) ?? DEFAULT_TOOL_CELLS,
           columns: 4,
           // The rule lives in the tool, not here — the grid asks what SHOULD
@@ -109,22 +128,22 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             resolveToolCells(change),
           handleSelect: (selection: number[]) => onChange(key, selection),
         }) as never
-      )
-      continue
+      );
+      continue;
     }
-    const unit = spec['x-unit'] ? ` (${spec['x-unit']})` : ''
-    const label = `${spec.title ?? key}${unit}`
-    const value = values[key] ?? spec.default
+    const unit = spec["x-unit"] ? ` (${spec["x-unit"]})` : "";
+    const label = `${spec.title ?? key}${unit}`;
+    const value = values[key] ?? spec.default;
 
-    if (spec.type === 'boolean') {
+    if (spec.type === "boolean") {
       widgets.push(
         toggle3d({
           label,
           value: value === true,
           onChange: (v: boolean) => onChange(key, v),
         })
-      )
-      continue
+      );
+      continue;
     }
 
     if (Array.isArray(spec.enum) && spec.enum.length) {
@@ -135,42 +154,44 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           options: spec.enum,
           onChange: (v: string | number) => onChange(key, v),
         })
-      )
-      continue
+      );
+      continue;
     }
 
-    if (spec.type === 'number' || spec.type === 'integer') {
+    if (spec.type === "number" || spec.type === "integer") {
       // A slider needs bounds. Without them in the schema, derive a range around
       // the current value rather than refusing to render — an unbounded number
       // is common in hand-written schemas and the field still has to be editable.
-      const min = spec.minimum ?? Math.min(0, Number(value) || 0)
-      const max = spec.maximum ?? Math.max(1, (Number(value) || 0) * 4 || 1)
+      const min = spec.minimum ?? Math.min(0, Number(value) || 0);
+      const max = spec.maximum ?? Math.max(1, (Number(value) || 0) * 4 || 1);
       widgets.push(
         slider3d({
           label,
           value: Number(value) || 0,
           min,
           max,
-          step: spec.type === 'integer' ? 1 : undefined,
+          step: spec.type === "integer" ? 1 : undefined,
           onChange: (v: number) => onChange(key, v),
         })
-      )
-      continue
+      );
+      continue;
     }
 
     // Strings and anything unrecognised: show the value rather than hide the
     // field. Text entry wants the SVG keyboard and lands with the property
     // panel — until then an author can at least SEE what is set.
-    widgets.push(label3d({ text: `${label}: ${value ?? '—'}`, muted: true }))
+    widgets.push(label3d({ text: `${label}: ${value ?? "—"}`, muted: true }));
   }
 
-  return widgets
+  return widgets;
 }
 
 /** A standalone panel for one schema. */
 export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
-  const widgets = schemaWidgets(options)
-  const heading = options.title ? [label3d({ text: options.title, bold: true })] : []
+  const widgets = schemaWidgets(options);
+  const heading = options.title
+    ? [label3d({ text: options.title, bold: true })]
+    : [];
   return panel3d(
     {
       width: options.width ?? 260,
@@ -182,5 +203,5 @@ export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
     },
     ...(heading as never[]),
     ...(widgets as never[])
-  )
+  );
 }

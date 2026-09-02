@@ -27,7 +27,7 @@ featuresOf({ id: 'r1', at: [0, 0, 0], role: 'reactor', features: { destroyable: 
 ```
 */
 /*{"parent":"Format","order":4}*/
-import type { Features, Piece, Role } from './types'
+import type { Features, Piece, Role } from "./types";
 
 /*
   NO ROLES SHIP WITH THE FORMAT.
@@ -45,22 +45,22 @@ import type { Features, Piece, Role } from './types'
   The fortification vocabulary is still one import away: see
   `registerCombatPreset()` in `presets/combat`.
 */
-const roles = new Map<string, Features>()
+const roles = new Map<string, Features>();
 
 /** Register a consumer-defined role. Overwrites a role of the same name. */
 export function registerRole(name: string, features: Features): void {
-  roles.set(name, features)
+  roles.set(name, features);
 }
 
 /** Every registered role name — what the editor offers in a role picker. */
 export function roleNames(): string[] {
-  return [...roles.keys()]
+  return [...roles.keys()];
 }
 
 /** The feature preset for a role, or `undefined` if it is not registered. */
 export function roleFeatures(name: Role): Features | undefined {
-  const f = roles.get(name)
-  return f && structuredClone(f)
+  const f = roles.get(name);
+  return f && structuredClone(f);
 }
 
 /**
@@ -73,10 +73,10 @@ export function roleFeatures(name: Role): Features | undefined {
  * rest of the feature they did not mention.
  */
 export function featuresOf(piece: Piece): Features {
-  const base = piece.role ? roleFeatures(piece.role) ?? {} : {}
-  const out: Features = { ...base }
+  const base = piece.role ? roleFeatures(piece.role) ?? {} : {};
+  const out: Features = { ...base };
   for (const [name, cfg] of Object.entries(piece.features ?? {})) {
-    out[name] = { ...(base[name] ?? {}), ...cfg }
+    out[name] = { ...(base[name] ?? {}), ...cfg };
   }
-  return out
+  return out;
 }

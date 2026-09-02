@@ -21,25 +21,38 @@ geometry it is meant to cover, and the minimum is worse. Say which you mean at
 the call site if it matters; most callers want the enclosing extent.
 */
 /*{"parent":"Format","order":6}*/
-import type { Vec3 } from './types'
+import type { Vec3 } from "./types";
 
 /** A scale as three components, whichever way it was written. */
-export function scaleVector(scale: number | Vec3 | undefined, fallback = 1): Vec3 {
-  if (scale === undefined) return [fallback, fallback, fallback]
-  if (typeof scale === 'number') return [scale, scale, scale]
-  return [scale[0] ?? fallback, scale[1] ?? fallback, scale[2] ?? fallback]
+export function scaleVector(
+  scale: number | Vec3 | undefined,
+  fallback = 1
+): Vec3 {
+  if (scale === undefined) return [fallback, fallback, fallback];
+  if (typeof scale === "number") return [scale, scale, scale];
+  return [scale[0] ?? fallback, scale[1] ?? fallback, scale[2] ?? fallback];
 }
 
 /** The enclosing scalar for a scale — see the note above on why it is the max. */
-export function uniformScale(scale: number | Vec3 | undefined, fallback = 1): number {
-  if (scale === undefined) return fallback
-  if (typeof scale === 'number') return scale
-  return Math.max(scale[0] ?? fallback, scale[1] ?? fallback, scale[2] ?? fallback)
+export function uniformScale(
+  scale: number | Vec3 | undefined,
+  fallback = 1
+): number {
+  if (scale === undefined) return fallback;
+  if (typeof scale === "number") return scale;
+  return Math.max(
+    scale[0] ?? fallback,
+    scale[1] ?? fallback,
+    scale[2] ?? fallback
+  );
 }
 
 /** True when all three components agree, within floating-point reach. */
 export function isUniform(scale: Vec3, epsilon = 1e-6): boolean {
-  return Math.abs(scale[0] - scale[1]) < epsilon && Math.abs(scale[1] - scale[2]) < epsilon
+  return (
+    Math.abs(scale[0] - scale[1]) < epsilon &&
+    Math.abs(scale[1] - scale[2]) < epsilon
+  );
 }
 
 /**
@@ -50,5 +63,5 @@ export function isUniform(scale: Vec3, epsilon = 1e-6): boolean {
  * round-tripping as the number the author typed.
  */
 export function narrowScale(scale: Vec3): number | Vec3 {
-  return isUniform(scale) ? scale[0] : [scale[0], scale[1], scale[2]]
+  return isUniform(scale) ? scale[0] : [scale[0], scale[1], scale[2]];
 }

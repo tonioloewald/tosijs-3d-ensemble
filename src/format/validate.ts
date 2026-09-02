@@ -30,24 +30,24 @@ message **on the field** rather than in a list at the bottom of the screen.
   Pass `meshes` when you have it and omit it when you don't.
 */
 /*{"parent":"Format","order":2}*/
-import { featuresOf, roleFeatures } from './roles'
-import { featureRegistration } from './registry'
-import type { Ensemble, Piece, Point, Vec3, Zone } from './types'
+import { featuresOf, roleFeatures } from "./roles";
+import { featureRegistration } from "./registry";
+import type { Ensemble, Piece, Point, Vec3, Zone } from "./types";
 
-export type Severity = 'error' | 'warning'
+export type Severity = "error" | "warning";
 
 export interface Problem {
-  severity: Severity
+  severity: Severity;
   /** Stable machine-readable kind. Match on this, never on `message`. */
-  code: string
-  message: string
+  code: string;
+  message: string;
   /** JSON Pointer into the ensemble, e.g. `/pieces/2/mesh`. */
-  path: string
+  path: string;
 }
 
-type Check = (ensemble: Ensemble) => Problem[]
+type Check = (ensemble: Ensemble) => Problem[];
 
-const checks = new Set<Check>()
+const checks = new Set<Check>();
 
 /**
  * Register a DOMAIN rule.
@@ -72,8 +72,8 @@ const checks = new Set<Check>()
  * ```
  */
 export function registerCheck(check: Check): () => void {
-  checks.add(check)
-  return () => checks.delete(check)
+  checks.add(check);
+  return () => checks.delete(check);
 }
 
 export interface ValidateOptions {
@@ -85,72 +85,101 @@ export interface ValidateOptions {
    * several are mounted, which is what lets a piece's `library` be checked
    * against the mesh it claims.
    */
-  meshes?: Set<string> | Map<string, Set<string>>
+  meshes?: Set<string> | Map<string, Set<string>>;
   /**
    * Also check roles and features against the live registries. Default true.
    * These are warnings, not errors: a host may register its own after load.
    */
-  checkRegistry?: boolean
+  checkRegistry?: boolean;
 }
 
 const isVec3 = (v: unknown): v is Vec3 =>
-  Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === 'number' && Number.isFinite(n))
+  Array.isArray(v) &&
+  v.length === 3 &&
+  v.every((n) => typeof n === "number" && Number.isFinite(n));
 
 /** Validate an ensemble. Returns problems; never throws. */
-export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Problem[] {
-  const { meshes, checkRegistry = true } = opts
-  const problems: Problem[] = []
-  const add = (severity: Severity, code: string, message: string, path: string) =>
-    problems.push({ severity, code, message, path })
+export function validate(
+  ensemble: Ensemble,
+  opts: ValidateOptions = {}
+): Problem[] {
+  const { meshes, checkRegistry = true } = opts;
+  const problems: Problem[] = [];
+  const add = (
+    severity: Severity,
+    code: string,
+    message: string,
+    path: string
+  ) => problems.push({ severity, code, message, path });
 
-  if (!ensemble || typeof ensemble !== 'object') {
-    add('error', 'not-an-object', 'ensemble is not an object', '')
-    return problems
+  if (!ensemble || typeof ensemble !== "object") {
+    add("error", "not-an-object", "ensemble is not an object", "");
+    return problems;
   }
-  if (!ensemble.name) add('error', 'no-name', 'ensemble has no name', '/name')
+  if (!ensemble.name) add("error", "no-name", "ensemble has no name", "/name");
   if (!Array.isArray(ensemble.pieces) || ensemble.pieces.length === 0) {
-    add('error', 'no-pieces', 'ensemble has no pieces', '/pieces')
-    return problems
+    add("error", "no-pieces", "ensemble has no pieces", "/pieces");
+    return problems;
   }
 
   // Declared libraries: names must be unique, or a piece's `library` is
   // ambiguous in exactly the situation the field exists to disambiguate.
-  const libraries = new Set<string>()
-  ;(ensemble.libraries ?? []).forEach((library, i) => {
+  const libraries = new Set<string>();
+  (ensemble.libraries ?? []).forEach((library, i) => {
     if (!library.name) {
-      add('error', 'no-library-name', `library ${i} has no name`, `/libraries/${i}/name`)
+      add(
+        "error",
+        "no-library-name",
+        `library ${i} has no name`,
+        `/libraries/${i}/name`
+      );
     } else if (libraries.has(library.name)) {
-      add('error', 'duplicate-library', `duplicate library "${library.name}"`, `/libraries/${i}/name`)
+      add(
+        "error",
+        "duplicate-library",
+        `duplicate library "${library.name}"`,
+        `/libraries/${i}/name`
+      );
     } else {
-      libraries.add(library.name)
+      libraries.add(library.name);
     }
     if (!library.url) {
-      add('error', 'no-library-url', `library "${library.name}" has no url`, `/libraries/${i}/url`)
+      add(
+        "error",
+        "no-library-url",
+        `library "${library.name}" has no url`,
+        `/libraries/${i}/url`
+      );
     }
-  })
+  });
 
   const knownMeshes = (library?: string): Set<string> | undefined => {
-    if (!meshes) return undefined
-    if (meshes instanceof Set) return meshes
-    if (library) return meshes.get(library)
+    if (!meshes) return undefined;
+    if (meshes instanceof Set) return meshes;
+    if (library) return meshes.get(library);
     // No qualifier: the mesh may come from any mounted library.
-    const all = new Set<string>()
-    for (const names of meshes.values()) for (const n of names) all.add(n)
-    return all
-  }
+    const all = new Set<string>();
+    for (const names of meshes.values()) for (const n of names) all.add(n);
+    return all;
+  };
 
-  const ids = new Set<string>()
+  const ids = new Set<string>();
   ensemble.pieces.forEach((p: Piece, i: number) => {
-    const at = `/pieces/${i}`
+    const at = `/pieces/${i}`;
 
     if (!p.id) {
       // Not defaulted from the index on purpose: a derived id renumbers the
       // world on every insertion, and yesterday's link points somewhere else.
-      add('error', 'no-piece-id', `piece ${i} has no id`, `${at}/id`)
+      add("error", "no-piece-id", `piece ${i} has no id`, `${at}/id`);
     } else if (ids.has(p.id)) {
-      add('error', 'duplicate-piece-id', `duplicate piece id "${p.id}"`, `${at}/id`)
+      add(
+        "error",
+        "duplicate-piece-id",
+        `duplicate piece id "${p.id}"`,
+        `${at}/id`
+      );
     } else {
-      ids.add(p.id)
+      ids.add(p.id);
     }
 
     /*
@@ -161,104 +190,171 @@ export function validate(ensemble: Ensemble, opts: ValidateOptions = {}): Proble
       without the whole ensemble refusing to load.
     */
     if (p.scale !== undefined) {
-      const components = typeof p.scale === 'number' ? [p.scale] : p.scale
-      if (!Array.isArray(components) && typeof p.scale !== 'number') {
-        add('error', 'bad-scale', `piece "${p.id}" has a scale that is neither a number nor [x, y, z]`, `${at}/scale`)
+      const components = typeof p.scale === "number" ? [p.scale] : p.scale;
+      if (!Array.isArray(components) && typeof p.scale !== "number") {
+        add(
+          "error",
+          "bad-scale",
+          `piece "${p.id}" has a scale that is neither a number nor [x, y, z]`,
+          `${at}/scale`
+        );
       } else if (Array.isArray(p.scale) && p.scale.length !== 3) {
-        add('error', 'bad-scale', `piece "${p.id}" has a scale of ${p.scale.length} components, not 3`, `${at}/scale`)
+        add(
+          "error",
+          "bad-scale",
+          `piece "${p.id}" has a scale of ${p.scale.length} components, not 3`,
+          `${at}/scale`
+        );
       } else if (components.some((c) => !Number.isFinite(c))) {
-        add('error', 'bad-scale', `piece "${p.id}" has a non-numeric scale`, `${at}/scale`)
+        add(
+          "error",
+          "bad-scale",
+          `piece "${p.id}" has a non-numeric scale`,
+          `${at}/scale`
+        );
       } else if (components.some((c) => c <= 0)) {
-        add('warning', 'non-positive-scale', `piece "${p.id}" has a scale component of zero or less`, `${at}/scale`)
+        add(
+          "warning",
+          "non-positive-scale",
+          `piece "${p.id}" has a scale component of zero or less`,
+          `${at}/scale`
+        );
       }
     }
 
     if (p.ensemble) {
       add(
-        'error',
-        'nested-not-supported',
+        "error",
+        "nested-not-supported",
         `piece "${p.id}" nests ensemble "${p.ensemble}" — the loader does not flatten yet`,
         `${at}/ensemble`
-      )
+      );
     } else if (!p.mesh) {
       // A piece with no mesh is legitimate when a feature IS its body — an
       // environment primitive (terrain, water, clouds, a medium layer) stands
       // for itself. A piece with neither a mesh nor a feature is nothing.
       if (!Object.keys(p.features ?? {}).length && !p.role) {
-        add('error', 'empty-piece', `piece "${p.id}" has no mesh and no features`, at)
+        add(
+          "error",
+          "empty-piece",
+          `piece "${p.id}" has no mesh and no features`,
+          at
+        );
       }
     } else {
       if (p.library && ensemble.libraries && !libraries.has(p.library)) {
         add(
-          'error',
-          'undeclared-library',
+          "error",
+          "undeclared-library",
           `piece "${p.id}" names library "${p.library}", which the ensemble does not declare`,
           `${at}/library`
-        )
+        );
       }
-      const known = knownMeshes(p.library)
+      const known = knownMeshes(p.library);
       if (known && !known.has(p.mesh)) {
         add(
-          'error',
-          'unknown-mesh',
-          `"${p.mesh}" is not in ${p.library ? `library "${p.library}"` : 'any mounted library'}`,
+          "error",
+          "unknown-mesh",
+          `"${p.mesh}" is not in ${
+            p.library ? `library "${p.library}"` : "any mounted library"
+          }`,
           `${at}/mesh`
-        )
+        );
       }
     }
     if (p.mesh && p.ensemble) {
-      add('error', 'mesh-and-ensemble', `piece "${p.id}" has both mesh and ensemble`, `${at}/mesh`)
+      add(
+        "error",
+        "mesh-and-ensemble",
+        `piece "${p.id}" has both mesh and ensemble`,
+        `${at}/mesh`
+      );
     }
 
-    if (!isVec3(p.at)) add('error', 'bad-position', `piece "${p.id}" has no valid position`, `${at}/at`)
+    if (!isVec3(p.at))
+      add(
+        "error",
+        "bad-position",
+        `piece "${p.id}" has no valid position`,
+        `${at}/at`
+      );
     if (p.rot !== undefined && !isVec3(p.rot)) {
-      add('error', 'bad-rotation', `piece "${p.id}" has an invalid rotation`, `${at}/rot`)
+      add(
+        "error",
+        "bad-rotation",
+        `piece "${p.id}" has an invalid rotation`,
+        `${at}/rot`
+      );
     }
 
     if (checkRegistry && p.role && !roleFeatures(p.role)) {
-      add('warning', 'unknown-role', `role "${p.role}" is not registered`, `${at}/role`)
+      add(
+        "warning",
+        "unknown-role",
+        `role "${p.role}" is not registered`,
+        `${at}/role`
+      );
     }
     if (checkRegistry) {
       for (const name of Object.keys(p.features ?? {})) {
         if (!featureRegistration(name)) {
-          add('warning', 'unknown-feature', `feature "${name}" is not registered`, `${at}/features/${name}`)
+          add(
+            "warning",
+            "unknown-feature",
+            `feature "${name}" is not registered`,
+            `${at}/features/${name}`
+          );
         }
       }
     }
 
     p.subsystems?.forEach((ss, j) => {
       try {
-        new RegExp(ss.match)
+        new RegExp(ss.match);
       } catch {
-        add('error', 'bad-subsystem-match', `"${ss.match}" is not a valid regex`, `${at}/subsystems/${j}/match`)
+        add(
+          "error",
+          "bad-subsystem-match",
+          `"${ss.match}" is not a valid regex`,
+          `${at}/subsystems/${j}/match`
+        );
       }
-    })
+    });
 
-    checkPlaces(p.points, p.zones, at, add)
-  })
+    checkPlaces(p.points, p.zones, at, add);
+  });
 
-  checkPlaces(ensemble.points, ensemble.zones, '', add)
-
-  ;(ensemble.links ?? []).forEach((l, i) => {
+  checkPlaces(ensemble.points, ensemble.zones, "", add);
+  (ensemble.links ?? []).forEach((l, i) => {
     if (!ids.has(l.from)) {
-      add('error', 'unknown-link-source', `link from unknown piece "${l.from}"`, `/links/${i}/from`)
+      add(
+        "error",
+        "unknown-link-source",
+        `link from unknown piece "${l.from}"`,
+        `/links/${i}/from`
+      );
     }
     if (!ids.has(l.to)) {
-      add('error', 'unknown-link-target', `link to unknown piece "${l.to}"`, `/links/${i}/to`)
+      add(
+        "error",
+        "unknown-link-target",
+        `link to unknown piece "${l.to}"`,
+        `/links/${i}/to`
+      );
     }
-  })
+  });
 
   // Domain rules registered by a consumer (or by a preset). The format itself
   // knows nothing about shields, occupancy or fire lanes — see `registerCheck`.
   for (const check of checks) {
     try {
-      problems.push(...check(ensemble))
+      problems.push(...check(ensemble));
     } catch {
       /* a broken rule must not take the whole report with it */
     }
   }
 
-  return problems
+  return problems;
 }
 
 function checkPlaces(
@@ -267,24 +363,53 @@ function checkPlaces(
   base: string,
   add: (s: Severity, c: string, m: string, p: string) => void
 ): void {
-  const pointIds = new Set<string>()
+  const pointIds = new Set<string>();
   points?.forEach((pt, i) => {
-    const at = `${base}/points/${i}`
-    if (!pt.id) add('error', 'no-point-id', `point ${i} has no id`, `${at}/id`)
-    else if (pointIds.has(pt.id)) add('error', 'duplicate-point-id', `duplicate point id "${pt.id}"`, `${at}/id`)
-    else pointIds.add(pt.id)
-    if (!isVec3(pt.at)) add('error', 'bad-position', `point "${pt.id}" has no valid position`, `${at}/at`)
-  })
+    const at = `${base}/points/${i}`;
+    if (!pt.id) add("error", "no-point-id", `point ${i} has no id`, `${at}/id`);
+    else if (pointIds.has(pt.id))
+      add(
+        "error",
+        "duplicate-point-id",
+        `duplicate point id "${pt.id}"`,
+        `${at}/id`
+      );
+    else pointIds.add(pt.id);
+    if (!isVec3(pt.at))
+      add(
+        "error",
+        "bad-position",
+        `point "${pt.id}" has no valid position`,
+        `${at}/at`
+      );
+  });
 
-  const zoneIds = new Set<string>()
+  const zoneIds = new Set<string>();
   zones?.forEach((z, i) => {
-    const at = `${base}/zones/${i}`
-    if (!z.id) add('error', 'no-zone-id', `zone ${i} has no id`, `${at}/id`)
-    else if (zoneIds.has(z.id)) add('error', 'duplicate-zone-id', `duplicate zone id "${z.id}"`, `${at}/id`)
-    else zoneIds.add(z.id)
-    if (!isVec3(z.at)) add('error', 'bad-position', `zone "${z.id}" has no valid position`, `${at}/at`)
-    if (!(typeof z.radius === 'number' && z.radius > 0)) {
-      add('error', 'bad-radius', `zone "${z.id}" needs a positive radius`, `${at}/radius`)
+    const at = `${base}/zones/${i}`;
+    if (!z.id) add("error", "no-zone-id", `zone ${i} has no id`, `${at}/id`);
+    else if (zoneIds.has(z.id))
+      add(
+        "error",
+        "duplicate-zone-id",
+        `duplicate zone id "${z.id}"`,
+        `${at}/id`
+      );
+    else zoneIds.add(z.id);
+    if (!isVec3(z.at))
+      add(
+        "error",
+        "bad-position",
+        `zone "${z.id}" has no valid position`,
+        `${at}/at`
+      );
+    if (!(typeof z.radius === "number" && z.radius > 0)) {
+      add(
+        "error",
+        "bad-radius",
+        `zone "${z.id}" needs a positive radius`,
+        `${at}/radius`
+      );
     }
-  })
+  });
 }

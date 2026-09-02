@@ -33,23 +33,23 @@ moved behind a call the consumer makes.
   five minutes failing to kill something. That rule is meaningful only here.
 */
 /*{"parent":"Presets","order":2}*/
-import { b3dCollisions, b3dLauncher, b3dTurret } from 'tosijs-3d'
-import { registerFeature } from '../format/registry'
-import { registerRole } from '../format/roles'
-import { featuresOf } from '../format/roles'
-import { registerCheck } from '../format/validate'
-import { add } from '../runtime/features-scene'
-import { attachBlip } from '../runtime/place-mesh'
-import type { SceneElement } from '../format/registry'
-import type { Problem } from '../format/validate'
+import { b3dCollisions, b3dLauncher, b3dTurret } from "tosijs-3d";
+import { registerFeature } from "../format/registry";
+import { registerRole } from "../format/roles";
+import { featuresOf } from "../format/roles";
+import { registerCheck } from "../format/validate";
+import { add } from "../runtime/features-scene";
+import { attachBlip } from "../runtime/place-mesh";
+import type { SceneElement } from "../format/registry";
+import type { Problem } from "../format/validate";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
-  type: 'number',
+  type: "number",
   minimum: min,
   maximum: max,
   ...(def === undefined ? {} : { default: def }),
-  ...(unit ? { 'x-unit': unit } : {}),
-})
+  ...(unit ? { "x-unit": unit } : {}),
+});
 
 /*
   ONE collisions processor per scene, shared by every piece that wants it.
@@ -59,43 +59,50 @@ const num = (min: number, max: number, def?: number, unit?: string) => ({
   matters because the editor rebuilds constantly — the processor must go when
   the last collidable piece does, and must NOT go while others remain.
 */
-const collisionUsers = new WeakMap<object, { element: SceneElement; count: number }>()
+const collisionUsers = new WeakMap<
+  object,
+  { element: SceneElement; count: number }
+>();
 
 function ensureCollisions(
   ctx: { scene: SceneElement; onDispose: (fn: () => void) => void },
   debug: boolean
 ): SceneElement {
-  let entry = collisionUsers.get(ctx.scene)
+  let entry = collisionUsers.get(ctx.scene);
   if (!entry) {
-    const element = b3dCollisions({ debug }) as unknown as SceneElement
-    ctx.scene.appendChild(element)
-    entry = { element, count: 0 }
-    collisionUsers.set(ctx.scene, entry)
+    const element = b3dCollisions({ debug }) as unknown as SceneElement;
+    ctx.scene.appendChild(element);
+    entry = { element, count: 0 };
+    collisionUsers.set(ctx.scene, entry);
   }
-  entry.count++
+  entry.count++;
   ctx.onDispose(() => {
     if (--entry!.count <= 0) {
-      entry!.element.remove()
-      collisionUsers.delete(ctx.scene)
+      entry!.element.remove();
+      collisionUsers.delete(ctx.scene);
     }
-  })
-  return entry.element
+  });
+  return entry.element;
 }
 
-let registered = false
+let registered = false;
 
 /** Register the fortification vocabulary: features, roles and its one rule. */
 export function registerCombatPreset(): void {
-  if (registered) return
-  registered = true
+  if (registered) return;
+  registered = true;
 
   registerFeature({
-    name: 'collidable',
+    name: "collidable",
     schema: {
-      type: 'object',
-      title: 'Collidable',
+      type: "object",
+      title: "Collidable",
       properties: {
-        debug: { type: 'boolean', default: false, description: 'draw the collider volumes' },
+        debug: {
+          type: "boolean",
+          default: false,
+          description: "draw the collider volumes",
+        },
       },
     },
     /*
@@ -106,21 +113,21 @@ export function registerCombatPreset(): void {
       it is shared, so ten collidable pieces make one of it.
     */
     bind: (_piece, cfg, ctx) => ensureCollisions(ctx, Boolean(cfg.debug)),
-  })
+  });
 
   registerFeature({
-    name: 'destroyable',
+    name: "destroyable",
     schema: {
-      type: 'object',
-      title: 'Destroyable',
+      type: "object",
+      title: "Destroyable",
       properties: {
         hp: num(1, 9999, 12),
         armor: num(0, 100000, 0),
-        explode: { type: 'boolean', default: true },
+        explode: { type: "boolean", default: true },
         collidable: {
-          type: 'boolean',
+          type: "boolean",
           default: true,
-          description: 'if you cannot hit it you cannot destroy it',
+          description: "if you cannot hit it you cannot destroy it",
         },
       },
     },
@@ -149,43 +156,43 @@ export function registerCombatPreset(): void {
         you shoot through but that still dies with its generator is the case
         that wants it.
       */
-      if (cfg.collidable !== false) ensureCollisions(ctx, false)
-      return ctx.element
+      if (cfg.collidable !== false) ensureCollisions(ctx, false);
+      return ctx.element;
     },
-  })
+  });
 
   registerFeature({
-    name: 'blip',
+    name: "blip",
     schema: {
-      type: 'object',
-      title: 'Radar blip',
+      type: "object",
+      title: "Radar blip",
       properties: {
-        faction: { type: 'string', default: 'hostile' },
+        faction: { type: "string", default: "hostile" },
         profile: num(0, 5, 1),
       },
     },
     bind: (_piece, cfg, ctx) => {
-      if (!ctx.element) return null
-      ctx.onDispose(attachBlip(ctx.element, cfg))
-      return ctx.element
+      if (!ctx.element) return null;
+      ctx.onDispose(attachBlip(ctx.element, cfg));
+      return ctx.element;
     },
-  })
+  });
 
   registerFeature({
-    name: 'turret',
+    name: "turret",
     schema: {
-      type: 'object',
-      title: 'Turret',
+      type: "object",
+      title: "Turret",
       properties: {
-        range: num(20, 2000, 260, 'm'),
-        fireRate: num(0.1, 20, 1.1, '/s'),
+        range: num(20, 2000, 260, "m"),
+        fireRate: num(0.1, 20, 1.1, "/s"),
         damage: num(1, 200, 4),
-        muzzleSpeed: num(20, 2000, 240, 'm/s'),
-        traverseRate: num(0.1, 10, 1.2, '/s'),
+        muzzleSpeed: num(20, 2000, 240, "m/s"),
+        traverseRate: num(0.1, 10, 1.2, "/s"),
         smart: {
-          type: 'boolean',
+          type: "boolean",
           default: false,
-          description: 'leads its target instead of firing where you are',
+          description: "leads its target instead of firing where you are",
         },
       },
     },
@@ -201,25 +208,25 @@ export function registerCombatPreset(): void {
           damage: cfg.damage ?? 4,
           muzzleSpeed: cfg.muzzleSpeed ?? 240,
           traverseRate: cfg.traverseRate ?? 1.2,
-          smart: cfg.smart ? 'on' : 'off',
+          smart: cfg.smart ? "on" : "off",
         })
       ),
     // A dead platform stops shooting.
     link: (turret, ctx) => {
-      const el = turret as SceneElement | null
-      if (!el || !ctx.element) return
-      ctx.element.addEventListener('destroyed', () => el.remove())
+      const el = turret as SceneElement | null;
+      if (!el || !ctx.element) return;
+      ctx.element.addEventListener("destroyed", () => el.remove());
     },
-  })
+  });
 
   registerFeature({
-    name: 'launcher',
+    name: "launcher",
     schema: {
-      type: 'object',
-      title: 'Missile launcher',
+      type: "object",
+      title: "Missile launcher",
       properties: {
-        range: num(50, 4000, 600, 'm'),
-        reloadRate: num(0.1, 60, 3, 's'),
+        range: num(50, 4000, 600, "m"),
+        reloadRate: num(0.1, 60, 3, "s"),
         damage: num(1, 500, 30),
       },
     },
@@ -234,20 +241,20 @@ export function registerCombatPreset(): void {
           reloadRate: cfg.reloadRate ?? 3,
         })
       ),
-  })
+  });
 
   registerFeature({
-    name: 'protector',
+    name: "protector",
     schema: {
-      type: 'object',
-      title: 'Shield field',
+      type: "object",
+      title: "Shield field",
       properties: {
         protection: num(0, 200, 12),
         source: {
-          type: 'string',
-          'x-widget': 'ref',
-          'x-roles': ['power', 'generator'],
-          description: 'the piece whose destruction drops this field',
+          type: "string",
+          "x-widget": "ref",
+          "x-roles": ["power", "generator"],
+          description: "the piece whose destruction drops this field",
         },
       },
     },
@@ -263,43 +270,50 @@ export function registerCombatPreset(): void {
       `protection` assigned afterwards is silently inert. Manta measured that.
     */
     link: (handle, ctx) => {
-      const { cfg } = handle as { cfg: Record<string, unknown> }
-      const sourceId = cfg.source as string | undefined
-      if (!sourceId) return
-      const source = ctx.handle(sourceId) as (SceneElement & { combatId?: string }) | undefined
-      const target = ctx.element as (SceneElement & { combatId?: string }) | null
-      const combat = (ctx.scene as unknown as { combat?: Map<string, Record<string, unknown>> }).combat
-      if (!source?.combatId || !target?.combatId || !combat) return
-      const record = combat.get(target.combatId)
-      if (!record) return
-      record.protectedBy = source.combatId
-      record.protection = cfg.protection ?? 12
-      source.addEventListener('destroyed', () => {
-        record.protection = 0
-        record.protectedBy = null
-      })
+      const { cfg } = handle as { cfg: Record<string, unknown> };
+      const sourceId = cfg.source as string | undefined;
+      if (!sourceId) return;
+      const source = ctx.handle(sourceId) as
+        | (SceneElement & { combatId?: string })
+        | undefined;
+      const target = ctx.element as
+        | (SceneElement & { combatId?: string })
+        | null;
+      const combat = (
+        ctx.scene as unknown as {
+          combat?: Map<string, Record<string, unknown>>;
+        }
+      ).combat;
+      if (!source?.combatId || !target?.combatId || !combat) return;
+      const record = combat.get(target.combatId);
+      if (!record) return;
+      record.protectedBy = source.combatId;
+      record.protection = cfg.protection ?? 12;
+      source.addEventListener("destroyed", () => {
+        record.protection = 0;
+        record.protectedBy = null;
+      });
     },
-  })
+  });
 
   registerFeature({
-    name: 'launchpad',
+    name: "launchpad",
     // No runtime binding — see the note at the top of this file. Marked so an
     // author finds out here rather than at ship time.
     editorOnly: true,
     schema: {
-      type: 'object',
-      title: 'Launch pad',
+      type: "object",
+      title: "Launch pad",
       properties: {
-        craft: { type: 'string', 'x-widget': 'mesh' },
-        interval: num(1, 300, 20, 's'),
+        craft: { type: "string", "x-widget": "mesh" },
+        interval: num(1, 300, 20, "s"),
         maxAlive: num(1, 32, 4),
       },
     },
-  })
+  });
 
-
-  registerCombatRoles()
-  registerCombatChecks()
+  registerCombatRoles();
+  registerCombatChecks();
 }
 
 /**
@@ -311,32 +325,32 @@ export function registerCombatPreset(): void {
  */
 function registerCombatRoles(): void {
   /** Armoured scenery you cannot kill. */
-  registerRole('structure', {})
+  registerRole("structure", {});
   /** An ordinary destroyable. */
-  registerRole('target', {
+  registerRole("target", {
     destroyable: { hp: 12, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  })
+    blip: { faction: "hostile", profile: 1 },
+  });
   /** Kill this to drop a shield. */
-  registerRole('power', {
+  registerRole("power", {
     destroyable: { hp: 16, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  })
+    blip: { faction: "hostile", profile: 1 },
+  });
   /** A shield projector; dies with its power. */
-  registerRole('generator', {
+  registerRole("generator", {
     destroyable: { hp: 14, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  })
+    blip: { faction: "hostile", profile: 1 },
+  });
   /** The field itself: shooting it directly is possible and a bad plan. */
-  registerRole('shield', {
+  registerRole("shield", {
     destroyable: { hp: 120, armor: 25 },
     protector: { protection: 12 },
-  })
+  });
   /** The objective, protected while its power stands. */
-  registerRole('critical', {
+  registerRole("critical", {
     destroyable: { hp: 20, explode: true },
-    blip: { faction: 'hostile', profile: 1 },
-  })
+    blip: { faction: "hostile", profile: 1 },
+  });
 }
 
 function registerCombatChecks(): void {
@@ -344,16 +358,16 @@ function registerCombatChecks(): void {
     ensemble.pieces.flatMap((piece, i) => {
       // Keyed on the protector FEATURE, not on a `shield` role name, so a
       // consumer's own role for a field is covered too.
-      if (!featuresOf(piece).protector) return []
-      if ((ensemble.links ?? []).some((l) => l.to === piece.id)) return []
+      if (!featuresOf(piece).protector) return [];
+      if ((ensemble.links ?? []).some((l) => l.to === piece.id)) return [];
       return [
         {
-          severity: 'error' as const,
-          code: 'unreachable-shield',
+          severity: "error" as const,
+          code: "unreachable-shield",
           message: `"${piece.id}" projects a field and has no incoming link — nothing can bring it down`,
           path: `/pieces/${i}`,
         },
-      ]
+      ];
     })
-  )
+  );
 }

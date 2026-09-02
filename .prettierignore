@@ -1,0 +1,8 @@
+# Generated output. `bun start` runs `bun format` first, so anything prettier
+# cannot parse in here takes the whole dev server down with exit code 2 — which
+# is how a doc heading containing a literal `<tosi-ensemble>` tag stopped the
+# site from booting at all.
+docs/
+docs.last-good/
+demo/docs.json
+node_modules/

@@ -57,18 +57,18 @@ goes black with no error where anyone would look. A `bind`/`link` that registers
 per-frame work must guard itself.
 */
 /*{"parent":"Format","order":3}*/
-import type { Ensemble, Piece, Vec3 } from './types'
+import type { Ensemble, Piece, Vec3 } from "./types";
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer
  *  does not import the framework. */
-export type SceneElement = HTMLElement & Record<string, unknown>
+export type SceneElement = HTMLElement & Record<string, unknown>;
 
 /** JSON Schema (plus `x-` UI annotations the editor reads). */
-export type FeatureSchema = Record<string, unknown>
+export type FeatureSchema = Record<string, unknown>;
 
 export interface FeatureContext {
   /** The `<tosi-b3d>` element to append components to. */
-  scene: SceneElement
+  scene: SceneElement;
   /**
    * The ELEMENT carrying this piece's body, when its body is an element.
    *
@@ -76,7 +76,7 @@ export interface FeatureContext {
    * environment primitive, where the feature IS the body), and a plain piece
    * instantiated straight off the library as a node — see `node`.
    */
-  element: SceneElement | null
+  element: SceneElement | null;
   /**
    * The Babylon NODE carrying this piece's body, when there is no element.
    *
@@ -84,26 +84,26 @@ export interface FeatureContext {
    * manages its transform and nothing can shoot it. Typed loosely so the format
    * layer stays free of the engine.
    */
-  node: unknown
+  node: unknown;
   /** The ensemble being built, as authored. */
-  ensemble: Ensemble
+  ensemble: Ensemble;
   /** The piece this feature is bound to. */
-  piece: Piece
+  piece: Piece;
   /** WORLD position of the piece: origin + `at` × scale. */
-  at: Vec3
+  at: Vec3;
   /** Effective scale for this piece: ensemble scale × piece scale. */
-  scale: number
+  scale: number;
   /** Library the ensemble instantiates meshes from; `''` when there is none. */
-  library: string
+  library: string;
   /** Register teardown. Runs on dispose, in reverse order of registration. */
-  onDispose(fn: () => void): void
+  onDispose(fn: () => void): void;
   /**
    * The handle another piece's `bind` returned. **`link` phase only** — during
    * `bind` the neighbours are still arriving.
    */
-  handle(pieceId: string): unknown
+  handle(pieceId: string): unknown;
   /** Pieces carrying a role. **`link` phase only.** */
-  piecesByRole(role: string): Piece[]
+  piecesByRole(role: string): Piece[];
   /**
    * Another feature's handle on **this same piece**.
    *
@@ -117,7 +117,7 @@ export interface FeatureContext {
    * then. Returns `undefined` when the feature is not on this piece, which is
    * the normal case: a door without a lock is just a door.
    */
-  feature(name: string): unknown
+  feature(name: string): unknown;
   /**
    * The time source, so effects honour pause and time scale.
    *
@@ -125,18 +125,22 @@ export interface FeatureContext {
    * velocity comes from `b3d-aircraft` integrating against the engine delta.
    * Real slow-motion needs `owner.simTime`/`simDt` upstream (tosijs-3d#30).
    */
-  simTime(): number
+  simTime(): number;
 }
 
 export interface FeatureRegistration<Handle = unknown> {
   /** The key in a piece's `features` map. */
-  name: string
+  name: string;
   /** JSON Schema; drives validation AND the editor's property panel. */
-  schema: FeatureSchema
+  schema: FeatureSchema;
   /** Create the behaviour and return a handle. Touch nothing else. */
-  bind?(piece: Piece, cfg: Record<string, unknown>, ctx: FeatureContext): Handle
+  bind?(
+    piece: Piece,
+    cfg: Record<string, unknown>,
+    ctx: FeatureContext
+  ): Handle;
   /** Reach for neighbours. Runs after every piece has bound. */
-  link?(handle: Handle, ctx: FeatureContext): void
+  link?(handle: Handle, ctx: FeatureContext): void;
   /**
    * This feature CREATES the piece's body, instead of decorating one.
    *
@@ -153,26 +157,30 @@ export interface FeatureRegistration<Handle = unknown> {
    * whose body is genuinely its own — a procedural mesh, a particle system, a
    * consumer's own geometry — rather than a decoration on a placed one.
    */
-  body?: boolean
+  body?: boolean;
   /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game
    * cannot load, and find out at ship time.
    */
-  editorOnly?: boolean
+  editorOnly?: boolean;
 }
 
-const features = new Map<string, FeatureRegistration<never>>()
+const features = new Map<string, FeatureRegistration<never>>();
 
 /** Register a feature. Overwrites a registration of the same name. */
-export function registerFeature<Handle>(reg: FeatureRegistration<Handle>): void {
-  features.set(reg.name, reg as FeatureRegistration<never>)
+export function registerFeature<Handle>(
+  reg: FeatureRegistration<Handle>
+): void {
+  features.set(reg.name, reg as FeatureRegistration<never>);
 }
 
 /** Look up one feature registration. */
-export function featureRegistration(name: string): FeatureRegistration<never> | undefined {
-  return features.get(name)
+export function featureRegistration(
+  name: string
+): FeatureRegistration<never> | undefined {
+  return features.get(name);
 }
 
 /**
@@ -182,10 +190,10 @@ export function featureRegistration(name: string): FeatureRegistration<never> | 
  * consumer's escort-zone feature beside `turret` with no special case.
  */
 export function registeredFeatures(): FeatureRegistration<never>[] {
-  return [...features.values()]
+  return [...features.values()];
 }
 
 /** Drop a registration. Mainly for tests, which must not leak into each other. */
 export function unregisterFeature(name: string): boolean {
-  return features.delete(name)
+  return features.delete(name);
 }

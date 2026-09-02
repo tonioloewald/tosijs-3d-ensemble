@@ -10,8 +10,8 @@ is nothing to reach out and hold with. Everything it does is far interaction,
 which is why the ray/near split had to exist before the first tool was written.
 */
 /*{"parent":"Internals","order":2}*/
-import type { EditorPointer, EditorRay } from './pointer'
-import type { Vec3 } from '../../format/types'
+import type { EditorPointer, EditorRay } from "./pointer";
+import type { Vec3 } from "../../format/types";
 
 interface PickingScene {
   createPickingRay: (
@@ -19,8 +19,11 @@ interface PickingScene {
     y: number,
     world: null,
     camera: unknown
-  ) => { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } }
-  activeCamera?: unknown
+  ) => {
+    origin: { x: number; y: number; z: number };
+    direction: { x: number; y: number; z: number };
+  };
+  activeCamera?: unknown;
 }
 
 /**
@@ -30,15 +33,15 @@ interface PickingScene {
  * panel's, and a tool that also saw it would act on a click meant for a button.
  */
 export class FlatPointer implements EditorPointer {
-  readonly id = 'primary' as const
-  readonly kind = 'flat' as const
+  readonly id = "primary" as const;
+  readonly kind = "flat" as const;
 
-  private x = 0
-  private y = 0
-  private down = false
+  private x = 0;
+  private y = 0;
+  private down = false;
   /** A press the hub has not sampled yet. See `endPoll`. */
-  private latched = false
-  private alt = false
+  private latched = false;
+  private alt = false;
   /**
    * Every TOUCH currently down, by id.
    *
@@ -54,7 +57,7 @@ export class FlatPointer implements EditorPointer {
    * "clicking the manipulators usually doesn't register". A mouse cannot make
    * a two-finger gesture, so it has no business in this set.
    */
-  private readonly contacts = new Set<number>()
+  private readonly contacts = new Set<number>();
   /**
    * A multi-touch gesture is in progress and this pointer has stood down.
    *
@@ -62,7 +65,7 @@ export class FlatPointer implements EditorPointer {
    * to one would restart a drag halfway through a pan, from wherever the
    * remaining finger happened to be.
    */
-  private yielded = false
+  private yielded = false;
   /**
    * A tool has this gesture and must keep it, whatever else touches the screen.
    *
@@ -76,23 +79,23 @@ export class FlatPointer implements EditorPointer {
    * A gesture that grabbed NOTHING is not exclusive, so two-finger pan still
    * works everywhere it matters — which is over the scene, not over a handle.
    */
-  exclusive = false
-  private detach: () => void = () => {}
+  exclusive = false;
+  private detach: () => void = () => {};
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly scene: PickingScene
   ) {
     const move = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      this.x = e.clientX - rect.left
-      this.y = e.clientY - rect.top
-    }
+      const rect = canvas.getBoundingClientRect();
+      this.x = e.clientX - rect.left;
+      this.y = e.clientY - rect.top;
+    };
     /** Only a finger can be one of several contacts. */
-    const isTouch = (e: PointerEvent) => e.pointerType === 'touch'
+    const isTouch = (e: PointerEvent) => e.pointerType === "touch";
 
     const down = (e: PointerEvent) => {
-      move(e)
+      move(e);
       /*
         A PRIMARY touch is the start of a fresh gesture, so the set is reset to
         it. That is the self-heal: any id stranded by a missing `pointerup`
@@ -100,13 +103,13 @@ export class FlatPointer implements EditorPointer {
       */
       if (isTouch(e)) {
         if (e.isPrimary) {
-          this.contacts.clear()
+          this.contacts.clear();
           // The self-heal is only a heal if it clears the STATE too. Leaving
           // `yielded` set means the stranded id is forgotten and the pointer
           // stays stood down anyway, which is the same dead end one step later.
-          this.yielded = false
+          this.yielded = false;
         }
-        this.contacts.add(e.pointerId)
+        this.contacts.add(e.pointerId);
       }
       /*
         TWO FINGERS ARE THE CAMERA'S, NOT A TOOL'S.
@@ -121,31 +124,31 @@ export class FlatPointer implements EditorPointer {
         starts until every finger has lifted.
       */
       if (this.contacts.size > 1) {
-        if (!this.exclusive) this.standDown()
-        return
+        if (!this.exclusive) this.standDown();
+        return;
       }
-      if (this.yielded) return
+      if (this.yielded) return;
       // Button 0 only. A right-drag is the camera's, and stealing it makes the
       // scene un-navigable the moment a tool is active.
-      if (e.button !== 0) return
+      if (e.button !== 0) return;
       /*
         Ctrl/⌘ + left-drag is the camera's PAN gesture — the mouse spelling of
         the same two-finger intent. Claiming it too meant a pan both moved the
         view and dragged whatever was under the pointer: two things happening
         for one gesture, with no way to ask for either.
       */
-      if (e.ctrlKey || e.metaKey) return
-      this.down = true
-      this.latched = true
-      this.alt = e.shiftKey || e.altKey
-    }
+      if (e.ctrlKey || e.metaKey) return;
+      this.down = true;
+      this.latched = true;
+      this.alt = e.shiftKey || e.altKey;
+    };
     const up = (e: PointerEvent) => {
-      this.contacts.delete(e.pointerId)
-      if (this.contacts.size === 0) this.yielded = false
-      if (e.button !== 0) return
-      this.down = false
-      this.alt = false
-    }
+      this.contacts.delete(e.pointerId);
+      if (this.contacts.size === 0) this.yielded = false;
+      if (e.button !== 0) return;
+      this.down = false;
+      this.alt = false;
+    };
     /*
       POINTERCANCEL IS NOT OPTIONAL ON TOUCH.
 
@@ -157,21 +160,21 @@ export class FlatPointer implements EditorPointer {
       until someone used a touchscreen.
     */
     const cancel = (e: PointerEvent) => {
-      this.contacts.delete(e.pointerId)
-      if (this.contacts.size === 0) this.yielded = false
-      this.down = false
-      this.alt = false
-    }
-    canvas.addEventListener('pointermove', move)
-    canvas.addEventListener('pointerdown', down)
+      this.contacts.delete(e.pointerId);
+      if (this.contacts.size === 0) this.yielded = false;
+      this.down = false;
+      this.alt = false;
+    };
+    canvas.addEventListener("pointermove", move);
+    canvas.addEventListener("pointerdown", down);
     // `down` on the canvas but the rest on the window: a second finger that
     // lands OUTSIDE the canvas still ends the gesture, and a release anywhere
     // still clears the contact. Tracking contacts only on the canvas leaves the
     // set permanently non-empty, which welds the pointer into `yielded`.
     // `up` goes on the window: releasing outside the canvas still ends the drag,
     // otherwise the tool keeps dragging with the button already released.
-    window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', cancel)
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
     /*
       A second finger landing off-canvas still has to be counted, or the pointer
       never yields and the camera never pans. `down` is canvas-only on purpose —
@@ -179,21 +182,21 @@ export class FlatPointer implements EditorPointer {
       counts contacts WITHOUT starting anything.
     */
     const contact = (e: PointerEvent) => {
-      if (!isTouch(e) || this.contacts.has(e.pointerId)) return
-      this.contacts.add(e.pointerId)
-      if (this.contacts.size > 1 && !this.exclusive) this.standDown()
-    }
-    window.addEventListener('pointerdown', contact)
+      if (!isTouch(e) || this.contacts.has(e.pointerId)) return;
+      this.contacts.add(e.pointerId);
+      if (this.contacts.size > 1 && !this.exclusive) this.standDown();
+    };
+    window.addEventListener("pointerdown", contact);
     // Without this the browser claims touch gestures for panning and zooming
     // the PAGE, and the canvas never sees a coherent drag at all.
-    canvas.style.touchAction = 'none'
+    canvas.style.touchAction = "none";
     this.detach = () => {
-      canvas.removeEventListener('pointermove', move)
-      canvas.removeEventListener('pointerdown', down)
-      window.removeEventListener('pointerup', up)
-      window.removeEventListener('pointerdown', contact)
-      window.removeEventListener('pointercancel', cancel)
-    }
+      canvas.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointerdown", contact);
+      window.removeEventListener("pointercancel", cancel);
+    };
   }
 
   /**
@@ -204,10 +207,10 @@ export class FlatPointer implements EditorPointer {
    * to the very piece the user was trying to stop touching.
    */
   private standDown(): void {
-    this.yielded = true
-    this.down = false
-    this.latched = false
-    this.alt = false
+    this.yielded = true;
+    this.down = false;
+    this.latched = false;
+    this.alt = false;
   }
 
   get active(): boolean {
@@ -215,34 +218,34 @@ export class FlatPointer implements EditorPointer {
     // release between two polls would otherwise read as "never pressed", and
     // the fastest clicks — the confident ones — would be the ones that go
     // missing.
-    return this.down || this.latched
+    return this.down || this.latched;
   }
 
   /** The hub has sampled us; a completed press can stop pretending now. */
   endPoll(): void {
-    if (!this.down) this.latched = false
+    if (!this.down) this.latched = false;
   }
 
   get secondary(): boolean {
-    return this.alt
+    return this.alt;
   }
 
   ray(): EditorRay | null {
-    const camera = this.scene.activeCamera
-    if (!camera || !this.canvas.isConnected) return null
-    const r = this.scene.createPickingRay(this.x, this.y, null, camera)
+    const camera = this.scene.activeCamera;
+    if (!camera || !this.canvas.isConnected) return null;
+    const r = this.scene.createPickingRay(this.x, this.y, null, camera);
     return {
       origin: [r.origin.x, r.origin.y, r.origin.z],
       direction: [r.direction.x, r.direction.y, r.direction.z],
-    }
+    };
   }
 
   /** A flat pointer is nowhere in the world, so it can never near-grab. */
   grip(): Vec3 | null {
-    return null
+    return null;
   }
 
   dispose(): void {
-    this.detach()
+    this.detach();
   }
 }

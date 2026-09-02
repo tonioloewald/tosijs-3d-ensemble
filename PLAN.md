@@ -4,14 +4,14 @@
 
 **The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
-An *ensemble* is a reusable, JSON-described arrangement of library meshes with
+An _ensemble_ is a reusable, JSON-described arrangement of library meshes with
 declared capabilities and relationships — a rig, a dome facility, a floating
 fortress of shields, platforms, lift units, turrets and generators. No code, no
 engine types: plain data a game loads, a tool authors, and a generator can emit.
 
 **`SPEC.md` is the specification.** It is the primary document: format, editor
 affordances, schema system, test scenarios, and five design questions answered
-with recommendations. This file is the *plan* — what to build, in what order,
+with recommendations. This file is the _plan_ — what to build, in what order,
 with what, and what "done" means at each step.
 
 ---
@@ -20,11 +20,11 @@ with what, and what "done" means at each step.
 
 Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 
-| | lives in | audience |
-|---|---|---|
-| ensemble **format** (types, defaults, validation) | `tosijs-3d-ensemble` | every consumer shipping levels |
-| ensemble **instantiator** (JSON → scene) | `tosijs-3d-ensemble` | every consumer shipping levels |
-| the **editor** | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only |
+|                                                   | lives in                                                 | audience                       |
+| ------------------------------------------------- | -------------------------------------------------------- | ------------------------------ |
+| ensemble **format** (types, defaults, validation) | `tosijs-3d-ensemble`                                     | every consumer shipping levels |
+| ensemble **instantiator** (JSON → scene)          | `tosijs-3d-ensemble`                                     | every consumer shipping levels |
+| the **editor**                                    | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only                   |
 
 > **Revised — see SPEC.md open question 5.** These first two used to sit in
 > tosijs-3d. The reason to move them is CADENCE, not layering: a format is only
@@ -33,9 +33,9 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 > revision a framework release, gated by a framework's compatibility promises,
 > while the format is still learning what it is.
 >
-> **ONE package, not two.** Owner: *"I don't think two packages is right, just
+> **ONE package, not two.** Owner: _"I don't think two packages is right, just
 > the editor should be thoroughly tree-shakeable if you just want to consume
-> ensembles."* The property that mattered — the editor writes exactly what the
+> ensembles."_ The property that mattered — the editor writes exactly what the
 > runtime reads, because it is the same code — is strongest this way: there is
 > no version at which the tool and the runtime can disagree. What a game must
 > not pay for is the EDITOR, and the mechanism that guarantees that is a
@@ -46,10 +46,10 @@ Three concerns, deliberately split (SPEC.md §"Where each piece lives"):
 > Promotion into tosijs-3d later remains the right end state if the format proves
 > universal; keeping it dependency-free is what keeps that cheap.
 
-The line, from the owner: *"The 'prefab' structure and the tool for instantiating
+The line, from the owner: _"The 'prefab' structure and the tool for instantiating
 it belong in tosijs-3d, the editor is simply a tool for creating those
-graphically."* — later refined to: *"it could be a lightweight and separable
-import from the editor library. Maybe the latter makes more sense."* The split
+graphically."_ — later refined to: _"it could be a lightweight and separable
+import from the editor library. Maybe the latter makes more sense."_ The split
 between format and editor is unchanged; only its address moved.
 
 A shipped game carries the format and the loader and **no editor at all** — the
@@ -60,12 +60,12 @@ than by discipline.
 
 ### Dependencies
 
-| | for |
-|---|---|
-| `tosijs-3d` | the scene, **and the SVG UI the editor's chrome is built on** |
-| `tosijs-ui` | the **build/doc system** (`tosijs-ui/site`), and DOM widgets where the editor is not |
-| `tosijs-schema` | schemas as JSON Schema → types + validation; tjs predicates later |
-| `tosijs` | state |
+|                 | for                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------ |
+| `tosijs-3d`     | the scene, **and the SVG UI the editor's chrome is built on**                        |
+| `tosijs-ui`     | the **build/doc system** (`tosijs-ui/site`), and DOM widgets where the editor is not |
+| `tosijs-schema` | schemas as JSON Schema → types + validation; tjs predicates later                    |
+| `tosijs`        | state                                                                                |
 
 ---
 
@@ -78,9 +78,9 @@ this project most:
 
 - **Use the tosijs-ui build and doc system.** Do not hand-roll a bundler, a dev
   server, or a docs page. The prototype's bench was raw HTML with a bespoke
-  stylesheet and that was a mistake the owner caught: *"I'm a bit puzzled why you
+  stylesheet and that was a mistake the owner caught: _"I'm a bit puzzled why you
   don't leverage the tosijs-ui build system and the actual tosijs-ui widget
-  library instead of rolling everything by hand."* One UI surface across the
+  library instead of rolling everything by hand."_ One UI surface across the
   ecosystem is a stated goal, and an authoring tool that looks foreign to the
   thing it authors for is a failure of that goal.
 - **The chrome is tosijs-3d's SVG UI, not DOM widgets — SPEC.md open question 5
@@ -90,7 +90,7 @@ this project most:
   implementation that renders BOTH as a DOM overlay and as an in-scene texture —
   so it buys the headset without giving up the browser. Editing a 3D arrangement
   is a spatial task, and a tool for arranging things in space that cannot be used
-  *in* that space is conceding its best affordance. Milestone 0a below is the
+  _in_ that space is conceding its best affordance. Milestone 0a below is the
   cheap falsifiable test of that answer; run it before the scaffold hardens.
   Either way: if a widget is missing, that is an issue for its owner, not a
   licence to write one here.
@@ -125,8 +125,6 @@ does not fire `onSelect` (see UPSTREAM.md), so selection currently works through
 the API and not through the pointer.
 
 Original framing, kept because the test is still the test:
-
-
 
 Before the scaffold hardens around a widget set, build the **piece list and one
 property panel** in tosijs-3d's SVG UI and **try them in a headset**. That is the
@@ -188,8 +186,6 @@ reads. Still to do: the library palette, camera re-fit as async models load,
 named angles, the ortho toggle, animation transport, and continuous shadow
 registration.
 
-
-
 Read-only, and useful on its own — this is the testbed the ecosystem has been
 missing (cf. tosijs-3d#20, which asked for exactly this kind of reference
 scene).
@@ -235,10 +231,11 @@ scene).
   mode — one tool whose enabled transforms are settings, every affordance drawn
   at once, and the grip you grab saying what the drag means. Shafts move along
   an axis, pads move in a plane, rings turn, cubes scale, and the secondary
-  button makes a cube scale the *other* two axes. Cheetah 3D's arrangement,
+  button makes a cube scale the _other_ two axes. Cheetah 3D's arrangement,
   which is the one everybody who has used it remembers.
 
   Two things fell out of building it that were not on this list:
+
   - **Per-axis scale**, because a per-axis grip that collapsed to uniform on
     release would be a control that lies. `Piece.scale` is `number | Vec3` now.
   - **Scale worked at all.** It never had: `b3d-destroyable`'s `size` is ignored
@@ -254,10 +251,11 @@ scene).
   > here instead, pointer-agnostic, and the ask is filed as tosijs-3d#38.
   > **Still unverified in a headset** — the near-grab path has never been used
   > by an actual hand.
+
 - Bounding box and wireframe toggles.
 - Add / delete / duplicate pieces from the palette.
 - **Schema-driven property panel** — the editor must not know what
-  `destroyable` *means*, only how to render an editor from a description
+  `destroyable` _means_, only how to render an editor from a description
   (SPEC.md §Part 3). Widgets: `number`, `boolean`, `string`, `enum`, `mesh`,
   `ref`, `point`, `zone`, `vec3`, `color`.
 - **Features come from the registry, not a hardcoded list.** A host registers

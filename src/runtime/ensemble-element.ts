@@ -1,5 +1,5 @@
 /*#
-# <tosi-ensemble>
+# `<tosi-ensemble>`
 
 Load an ensemble into a scene **in one line**, declaratively, as a child of
 `<tosi-b3d>`:
@@ -56,91 +56,91 @@ and — more to the point — never sees `shield` in a property panel.
 | `at` | where to put its local origin, `"x y z"`, default `"0 0 0"` |
 */
 /*{"parent":"Runtime","order":2}*/
-import { Component } from 'tosijs'
-import { buildEnsemble } from './build'
-import { placeMesh } from './place-mesh'
-import { mountLibraries } from './libraries'
-import type { BuiltEnsemble } from './build'
-import type { Ensemble as EnsembleData, Vec3 } from '../format/types'
-import type { SceneElement } from '../format/registry'
+import { Component } from "tosijs";
+import { buildEnsemble } from "./build";
+import { placeMesh } from "./place-mesh";
+import { mountLibraries } from "./libraries";
+import type { BuiltEnsemble } from "./build";
+import type { Ensemble as EnsembleData, Vec3 } from "../format/types";
+import type { SceneElement } from "../format/registry";
 
 export class TosiEnsemble extends Component {
-  static override preferredTagName = 'tosi-ensemble'
+  static override preferredTagName = "tosi-ensemble";
 
   static override initAttributes = {
-    src: '',
-    library: '',
+    src: "",
+    library: "",
     /** Where the ensemble's local origin sits in the world: `"x y z"`. */
-    at: '0 0 0',
-  }
+    at: "0 0 0",
+  };
 
-  declare src: string
-  declare library: string
-  declare at: string
+  declare src: string;
+  declare library: string;
+  declare at: string;
 
-  override content = null
+  override content = null;
 
   /** Assign to build from memory instead of fetching. */
   get ensemble(): EnsembleData | null {
-    return this._data
+    return this._data;
   }
   set ensemble(value: EnsembleData | null) {
-    this._data = value
-    this._rebuild()
+    this._data = value;
+    this._rebuild();
   }
-  private _data: EnsembleData | null = null
+  private _data: EnsembleData | null = null;
 
   /** The live build — pieces, handles and validation problems. */
   get built(): BuiltEnsemble | null {
-    return this._built
+    return this._built;
   }
-  private _built: BuiltEnsemble | null = null
+  private _built: BuiltEnsemble | null = null;
 
   override connectedCallback(): void {
-    super.connectedCallback()
-    if (this.src) void this.load(this.src)
+    super.connectedCallback();
+    if (this.src) void this.load(this.src);
   }
 
   override disconnectedCallback(): void {
-    this._built?.dispose()
-    this._built = null
-    super.disconnectedCallback?.()
+    this._built?.dispose();
+    this._built = null;
+    super.disconnectedCallback?.();
   }
 
   async load(url: string): Promise<void> {
-    const response = await fetch(url)
-    if (!response.ok) throw new Error(`ensemble "${url}": ${response.status}`)
-    const data = (await response.json()) as EnsembleData
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`ensemble "${url}": ${response.status}`);
+    const data = (await response.json()) as EnsembleData;
     // Mount what the FILE declares before building, so a page needs to know
     // nothing about the content it is showing beyond its address.
-    const scene = this.closest('tosi-b3d') as SceneElement | null
-    if (scene) await mountLibraries(data, scene)
-    this.ensemble = data
+    const scene = this.closest("tosi-b3d") as SceneElement | null;
+    if (scene) await mountLibraries(data, scene);
+    this.ensemble = data;
   }
 
   private _rebuild(): void {
-    this._built?.dispose()
-    this._built = null
-    if (!this._data) return
+    this._built?.dispose();
+    this._built = null;
+    if (!this._data) return;
 
     /*
       The scene is this element's PARENT, not a document-wide query. Several
       ensembles in one page, or an editor previewing one beside another, must
       not fight over `document.querySelector('tosi-b3d')`.
     */
-    const scene = this.closest('tosi-b3d') as SceneElement | null
-    if (!scene) return
+    const scene = this.closest("tosi-b3d") as SceneElement | null;
+    if (!scene) return;
 
-    const [x = 0, y = 0, z = 0] = this.at.split(/[\s,]+/).map(Number)
+    const [x = 0, y = 0, z = 0] = this.at.split(/[\s,]+/).map(Number);
     this._built = buildEnsemble(this._data, {
       scene,
       origin: [x, y, z] as Vec3,
       library: this.library,
       placePiece: placeMesh,
-    })
+    });
   }
 }
 
 export const ensemble = TosiEnsemble.elementCreator() as (
   ...args: unknown[]
-) => TosiEnsemble
+) => TosiEnsemble;

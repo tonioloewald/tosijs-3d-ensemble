@@ -4,14 +4,14 @@
 
 **The tosijs-3d ensemble format, and a graphical editor for authoring it.**
 
-An *ensemble* is a reusable, JSON-described arrangement with declared
+An _ensemble_ is a reusable, JSON-described arrangement with declared
 capabilities and relationships. No code, no engine types: plain data a game
 loads, a tool authors, and a generator can emit.
 
 **It is not a combat format, and that is the whole win.** An ensemble can be a
 floating fortress of shields and turrets — or tosijs-3d's own standard scene:
 sun, shadow rig, sky, ground plane, fog. Load that stack as data and a scene
-reads as *"the standard setup, plus the thing I am actually showing you"*,
+reads as _"the standard setup, plus the thing I am actually showing you"_,
 instead of burying the two interesting lines in boilerplate.
 
 ```html
@@ -27,8 +27,8 @@ disappears at 100 000 is a worse outcome than terrain that was never a
 combatant:
 
 ```js
-import { registerSceneFeatures } from 'tosijs-3d-ensemble'            // sun, sky, ground, terrain, water…
-import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat' // …only if you want it
+import { registerSceneFeatures } from "tosijs-3d-ensemble"; // sun, sky, ground, terrain, water…
+import { registerCombatPreset } from "tosijs-3d-ensemble/presets/combat"; // …only if you want it
 ```
 
 **Status:** the format, validation, the registry and the instantiator are built and
@@ -48,13 +48,17 @@ imports the first two; the editor is never reached and tree-shakes away.
 
 ```js
 // a game
-import { buildEnsemble, validate, registerBuiltInFeatures } from 'tosijs-3d-ensemble'
+import {
+  buildEnsemble,
+  validate,
+  registerBuiltInFeatures,
+} from "tosijs-3d-ensemble";
 
 // an author
-import { ensembleEditor } from 'tosijs-3d-ensemble'
+import { ensembleEditor } from "tosijs-3d-ensemble";
 ```
 
-One package, because that is what makes the editor and the game call the *same*
+One package, because that is what makes the editor and the game call the _same_
 instantiator — "what you author is what you get" holds by construction rather
 than by discipline. A shipped game still carries no editor, but that is
 guaranteed by **a test that bundles the game's imports and fails if any editor

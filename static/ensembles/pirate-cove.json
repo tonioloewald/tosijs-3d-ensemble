@@ -14,11 +14,7 @@
   "pieces": [
     {
       "id": "sun",
-      "at": [
-        -0.5,
-        1,
-        0.4
-      ],
+      "at": [-0.5, 1, 0.4],
       "features": {
         "sun": {
           "intensity": 1.1,
@@ -29,11 +25,7 @@
     },
     {
       "id": "fill",
-      "at": [
-        0,
-        1,
-        0
-      ],
+      "at": [0, 1, 0],
       "features": {
         "light": {
           "intensity": 0.55,
@@ -43,11 +35,7 @@
     },
     {
       "id": "sky",
-      "at": [
-        0,
-        0,
-        0
-      ],
+      "at": [0, 0, 0],
       "features": {
         "skybox": {
           "timeOfDay": 10,
@@ -57,11 +45,7 @@
     },
     {
       "id": "sea",
-      "at": [
-        0,
-        0,
-        0
-      ],
+      "at": [0, 0, 0],
       "features": {
         "water": {
           "waterSize": 600,
@@ -72,11 +56,7 @@
     },
     {
       "id": "view",
-      "at": [
-        0,
-        1,
-        0
-      ],
+      "at": [0, 1, 0],
       "features": {
         "camera": {
           "distance": 26,
@@ -88,228 +68,120 @@
     {
       "id": "island",
       "mesh": "patch-sand",
-      "at": [
-        -6,
-        0.02,
-        0
-      ]
+      "at": [-6, 0.02, 0]
     },
     {
       "id": "island-north",
       "mesh": "patch-sand-foliage",
-      "at": [
-        -6,
-        0.02,
-        4
-      ]
+      "at": [-6, 0.02, 4]
     },
     {
       "id": "island-south",
       "mesh": "patch-grass",
-      "at": [
-        -9,
-        0.02,
-        -3
-      ]
+      "at": [-9, 0.02, -3]
     },
     {
       "id": "dock",
       "mesh": "structure-platform-dock",
-      "at": [
-        -2,
-        0,
-        0
-      ]
+      "at": [-2, 0, 0]
     },
     {
       "id": "dock-end",
       "mesh": "structure-platform-dock-small",
-      "at": [
-        0,
-        0,
-        0
-      ]
+      "at": [0, 0, 0]
     },
     {
       "id": "flagship",
       "mesh": "ship-pirate-large",
-      "at": [
-        5,
-        0,
-        1
-      ],
-      "rot": [
-        0,
-        -90,
-        0
-      ]
+      "at": [5, 0, 1],
+      "rot": [0, -90, 0]
     },
     {
       "id": "tender",
       "mesh": "boat-row-small",
-      "at": [
-        1,
-        0,
-        -3
-      ],
-      "rot": [
-        0,
-        30,
-        0
-      ]
+      "at": [1, 0, -3],
+      "rot": [0, 30, 0]
     },
     {
       "id": "wreck",
       "mesh": "ship-wreck",
-      "at": [
-        10,
-        0,
-        -9
-      ],
-      "rot": [
-        0,
-        140,
-        0
-      ]
+      "at": [10, 0, -9],
+      "rot": [0, 140, 0]
     },
     {
       "id": "watchtower",
       "mesh": "tower-complete-large",
-      "at": [
-        -10,
-        0,
-        2
-      ]
+      "at": [-10, 0, 2]
     },
     {
       "id": "gate",
       "mesh": "castle-gate",
-      "at": [
-        -8,
-        0,
-        -1
-      ]
+      "at": [-8, 0, -1]
     },
     {
       "id": "wall-west",
       "mesh": "castle-wall",
-      "at": [
-        -11,
-        0,
-        -1
-      ]
+      "at": [-11, 0, -1]
     },
     {
       "id": "palm-a",
       "mesh": "palm-detailed-bend",
-      "at": [
-        -5,
-        0,
-        3
-      ]
+      "at": [-5, 0, 3]
     },
     {
       "id": "palm-b",
       "mesh": "palm-straight",
-      "at": [
-        -8,
-        0,
-        4
-      ]
+      "at": [-8, 0, 4]
     },
     {
       "id": "rocks",
       "mesh": "rocks-sand-a",
-      "at": [
-        -3,
-        0,
-        -4
-      ]
+      "at": [-3, 0, -4]
     },
     {
       "id": "cargo",
       "mesh": "crate",
-      "at": [
-        -2,
-        0.4,
-        1
-      ]
+      "at": [-2, 0.4, 1]
     },
     {
       "id": "grog",
       "mesh": "barrel",
-      "at": [
-        -1,
-        0.4,
-        -1
-      ]
+      "at": [-1, 0.4, -1]
     },
     {
       "id": "spoils",
       "mesh": "chest",
-      "at": [
-        -6,
-        0.3,
-        1
-      ]
+      "at": [-6, 0.3, 1]
     },
     {
       "id": "gun",
       "mesh": "cannon-mobile",
-      "at": [
-        -9,
-        0,
-        1
-      ],
-      "rot": [
-        0,
-        90,
-        0
-      ]
+      "at": [-9, 0, 1],
+      "rot": [0, 90, 0]
     },
     {
       "id": "colours",
       "mesh": "flag-pirate-high",
-      "at": [
-        -2,
-        0,
-        2
-      ]
+      "at": [-2, 0, 2]
     }
   ],
   "points": [
     {
       "id": "mooring",
-      "at": [
-        2,
-        0,
-        0
-      ],
+      "at": [2, 0, 0],
       "kind": "dock",
-      "facing": [
-        0,
-        -90,
-        0
-      ]
+      "facing": [0, -90, 0]
     },
     {
       "id": "landing",
-      "at": [
-        -4,
-        0,
-        0
-      ],
+      "at": [-4, 0, 0],
       "kind": "entrance"
     }
   ],
   "zones": [
     {
       "id": "anchorage",
-      "at": [
-        5,
-        0,
-        0
-      ],
+      "at": [5, 0, 0],
       "radius": 12,
       "kind": "harbour",
       "values": {

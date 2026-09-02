@@ -1,13 +1,29 @@
 {
   "name": "outpost",
-  "libraries": [{ "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }],
+  "libraries": [
+    { "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }
+  ],
   "kind": "settlement",
   "scale": 1,
   "values": { "faction": "neutral" },
   "pieces": [
-    { "id": "sun", "at": [-0.4, 1, 0.3], "features": { "sun": { "intensity": 1, "shadowDarkness": 0.4 } } },
-    { "id": "sky", "at": [0, 0, 0], "features": { "skybox": { "timeOfDay": 9 } } },
-    { "id": "view", "at": [0, 2, 0], "features": { "camera": { "distance": 26, "heading": -50, "elevation": 24 } } },
+    {
+      "id": "sun",
+      "at": [-0.4, 1, 0.3],
+      "features": { "sun": { "intensity": 1, "shadowDarkness": 0.4 } }
+    },
+    {
+      "id": "sky",
+      "at": [0, 0, 0],
+      "features": { "skybox": { "timeOfDay": 9 } }
+    },
+    {
+      "id": "view",
+      "at": [0, 2, 0],
+      "features": {
+        "camera": { "distance": 26, "heading": -50, "elevation": 24 }
+      }
+    },
 
     { "id": "hall", "mesh": "building", "at": [0, 0, 0] },
     { "id": "watch-tower", "mesh": "pillar", "at": [8, 0, -6] },

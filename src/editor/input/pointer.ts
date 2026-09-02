@@ -35,12 +35,12 @@ object along a path with one hand while the other drops keyframes — without a
 left/right special case in every tool.
 */
 /*{"parent":"Internals","order":1}*/
-import type { Vec3 } from '../../format/types'
+import type { Vec3 } from "../../format/types";
 
 /** A world-space ray. Plain numbers: the engine does not belong in this contract. */
 export interface EditorRay {
-  origin: Vec3
-  direction: Vec3
+  origin: Vec3;
+  direction: Vec3;
 }
 
 /**
@@ -49,19 +49,19 @@ export interface EditorRay {
  * `primary` is the flat pointer — deliberately not called "mouse", because a
  * trackpad, a pen and a touch all arrive through it.
  */
-export type PointerId = 'primary' | 'left' | 'right'
+export type PointerId = "primary" | "left" | "right";
 
 export interface EditorPointer {
-  readonly id: PointerId
-  readonly kind: 'flat' | 'xr'
+  readonly id: PointerId;
+  readonly kind: "flat" | "xr";
   /** World ray for FAR interaction, or null when this source has no aim yet. */
-  ray(): EditorRay | null
+  ray(): EditorRay | null;
   /** World position of the hand for NEAR interaction. Null when there is no hand. */
-  grip(): Vec3 | null
+  grip(): Vec3 | null;
   /** Primary action held (trigger, main button). */
-  readonly active: boolean
+  readonly active: boolean;
   /** Secondary action held (squeeze, alt button) — the modifier. */
-  readonly secondary: boolean
+  readonly secondary: boolean;
   /**
    * Called by the hub once per poll, AFTER it has read this pointer.
    *
@@ -71,7 +71,7 @@ export interface EditorPointer {
    * faster than the frame rate latches its press and clears it here — which it
    * can only do safely once it knows the hub has seen it.
    */
-  endPoll?(): void
+  endPoll?(): void;
 }
 
 /**
@@ -82,18 +82,18 @@ export interface EditorPointer {
  * the wrong hand halfway through a drag.
  */
 export interface Gesture {
-  readonly primary: EditorPointer
-  readonly helper: EditorPointer | null
+  readonly primary: EditorPointer;
+  readonly helper: EditorPointer | null;
   /** Where the primary's ray was when this started. */
-  readonly startRay: EditorRay | null
+  readonly startRay: EditorRay | null;
   /** Where the primary's hand was when this started, if it had one. */
-  readonly startGrip: Vec3 | null
+  readonly startGrip: Vec3 | null;
 }
 
 export interface GestureHandlers {
-  onStart?(gesture: Gesture): void
-  onMove?(gesture: Gesture): void
-  onEnd?(gesture: Gesture): void
+  onStart?(gesture: Gesture): void;
+  onMove?(gesture: Gesture): void;
+  onEnd?(gesture: Gesture): void;
 }
 
 /**
@@ -105,70 +105,70 @@ export interface GestureHandlers {
  * never learns which one it is talking to.
  */
 export class PointerHub {
-  private readonly pointers: EditorPointer[] = []
-  private active: Gesture | null = null
-  private handlers: GestureHandlers = {}
+  private readonly pointers: EditorPointer[] = [];
+  private active: Gesture | null = null;
+  private handlers: GestureHandlers = {};
 
   add(pointer: EditorPointer): () => void {
-    this.pointers.push(pointer)
+    this.pointers.push(pointer);
     return () => {
-      const i = this.pointers.indexOf(pointer)
-      if (i >= 0) this.pointers.splice(i, 1)
-    }
+      const i = this.pointers.indexOf(pointer);
+      if (i >= 0) this.pointers.splice(i, 1);
+    };
   }
 
   /** Route gestures to a tool. Replacing handlers ends any gesture in flight —
    *  switching tools mid-drag must not leave the old one half-way through. */
   setHandlers(handlers: GestureHandlers): void {
-    this.endGesture()
-    this.handlers = handlers
+    this.endGesture();
+    this.handlers = handlers;
   }
 
   get current(): Gesture | null {
-    return this.active
+    return this.active;
   }
 
   /** Call once per frame. */
   update(): void {
     if (this.active) {
-      if (this.active.primary.active) this.handlers.onMove?.(this.active)
-      else this.endGesture()
-      this.endPoll()
-      return
+      if (this.active.primary.active) this.handlers.onMove?.(this.active);
+      else this.endGesture();
+      this.endPoll();
+      return;
     }
     // First pointer to go active owns the gesture; everyone else is its helper.
-    const starter = this.pointers.find((p) => p.active)
+    const starter = this.pointers.find((p) => p.active);
     if (!starter) {
-      this.endPoll()
-      return
+      this.endPoll();
+      return;
     }
-    const helper = this.pointers.find((p) => p !== starter) ?? null
+    const helper = this.pointers.find((p) => p !== starter) ?? null;
     this.active = {
       primary: starter,
       helper,
       startRay: starter.ray(),
       startGrip: starter.grip(),
-    }
-    this.handlers.onStart?.(this.active)
-    this.endPoll()
+    };
+    this.handlers.onStart?.(this.active);
+    this.endPoll();
   }
 
   private endPoll(): void {
-    for (const pointer of this.pointers) pointer.endPoll?.()
+    for (const pointer of this.pointers) pointer.endPoll?.();
   }
 
   /** End any gesture in flight. Safe to call when there is none. */
   endGesture(): void {
-    if (!this.active) return
-    const gesture = this.active
-    this.active = null
-    this.handlers.onEnd?.(gesture)
+    if (!this.active) return;
+    const gesture = this.active;
+    this.active = null;
+    this.handlers.onEnd?.(gesture);
   }
 }
 
 /** Distance between two points. Used for the near-grab test. */
 export function distance(a: Vec3, b: Vec3): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
 /**
@@ -178,11 +178,14 @@ export function distance(a: Vec3, b: Vec3): number {
  * intersects a plane, and both start here.
  */
 export function closestPointOnRay(ray: EditorRay, point: Vec3): number {
-  const [ox, oy, oz] = ray.origin
-  const [dx, dy, dz] = ray.direction
-  const lengthSquared = dx * dx + dy * dy + dz * dz
-  if (lengthSquared === 0) return 0
-  return ((point[0] - ox) * dx + (point[1] - oy) * dy + (point[2] - oz) * dz) / lengthSquared
+  const [ox, oy, oz] = ray.origin;
+  const [dx, dy, dz] = ray.direction;
+  const lengthSquared = dx * dx + dy * dy + dz * dz;
+  if (lengthSquared === 0) return 0;
+  return (
+    ((point[0] - ox) * dx + (point[1] - oy) * dy + (point[2] - oz) * dz) /
+    lengthSquared
+  );
 }
 
 /** Point at `t` along a ray. */
@@ -191,5 +194,5 @@ export function pointOnRay(ray: EditorRay, t: number): Vec3 {
     ray.origin[0] + ray.direction[0] * t,
     ray.origin[1] + ray.direction[1] * t,
     ray.origin[2] + ray.direction[2] * t,
-  ]
+  ];
 }

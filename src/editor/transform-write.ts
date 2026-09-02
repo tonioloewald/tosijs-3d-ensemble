@@ -42,43 +42,43 @@ So rotating a node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
 /*{"parent":"Internals","order":8}*/
-import { applyEuler, applyScale } from '../runtime/node-transform'
-import type { TransformableNode } from '../runtime/node-transform'
-import type { Euler, Vec3 } from '../format/types'
+import { applyEuler, applyScale } from "../runtime/node-transform";
+import type { TransformableNode } from "../runtime/node-transform";
+import type { Euler, Vec3 } from "../format/types";
 
-const DEG_TO_RAD = Math.PI / 180
+const DEG_TO_RAD = Math.PI / 180;
 
 export interface ElementBody {
-  x?: number
-  y?: number
-  z?: number
-  rx?: number
-  ry?: number
-  rz?: number
-  size?: number
+  x?: number;
+  y?: number;
+  z?: number;
+  rx?: number;
+  ry?: number;
+  rz?: number;
+  size?: number;
   /** The managed node. Present once the library has instantiated — see below. */
-  mesh?: TransformableNode | null
+  mesh?: TransformableNode | null;
 }
 
 export interface NodeBody {
-  position?: { x: number; y: number; z: number }
-  rotation?: { x: number; y: number; z: number }
-  rotationQuaternion?: unknown
-  scaling?: { x: number; y: number; z: number }
+  position?: { x: number; y: number; z: number };
+  rotation?: { x: number; y: number; z: number };
+  rotationQuaternion?: unknown;
+  scaling?: { x: number; y: number; z: number };
 }
 
 export interface Transform {
   /** World position. */
-  at?: Vec3
+  at?: Vec3;
   /** Euler DEGREES, as the format stores them. */
-  rot?: Euler
+  rot?: Euler;
   /** Uniform when a number, per-axis when a triple. */
-  scale?: number | Vec3
+  scale?: number | Vec3;
 }
 
 export interface WritableBody {
-  element?: ElementBody | null
-  node?: unknown
+  element?: ElementBody | null;
+  node?: unknown;
 }
 
 /**
@@ -88,23 +88,29 @@ export interface WritableBody {
  * trust that the right branch ran — this is a fork whose wrong branch is
  * invisible at runtime.
  */
-export function writeTransform(body: WritableBody, transform: Transform): 'element' | 'node' | 'none' {
+export function writeTransform(
+  body: WritableBody,
+  transform: Transform
+): "element" | "node" | "none" {
   if (body.element) {
-    writeElement(body.element, transform)
-    return 'element'
+    writeElement(body.element, transform);
+    return "element";
   }
   if (body.node) {
-    writeNode(body.node as NodeBody, transform)
-    return 'node'
+    writeNode(body.node as NodeBody, transform);
+    return "node";
   }
-  return 'none'
+  return "none";
 }
 
-function writeElement(element: ElementBody, { at, rot, scale }: Transform): void {
+function writeElement(
+  element: ElementBody,
+  { at, rot, scale }: Transform
+): void {
   if (at) {
-    element.x = at[0]
-    element.y = at[1]
-    element.z = at[2]
+    element.x = at[0];
+    element.y = at[1];
+    element.z = at[2];
   }
   if (rot) {
     /*
@@ -113,34 +119,32 @@ function writeElement(element: ElementBody, { at, rot, scale }: Transform): void
       position to `library.instantiate`, so `rx`/`ry`/`rz` never reach the
       instance. Measured: `element.ry = 90` left the node at rotation 0,0,0.
     */
-    element.rx = rot[0]
-    element.ry = rot[1]
-    element.rz = rot[2]
-    applyEuler(element.mesh, rot)
+    element.rx = rot[0];
+    element.ry = rot[1];
+    element.rz = rot[2];
+    applyEuler(element.mesh, rot);
   }
   /*
     NOT `element.size` — that is the placeholder-cube attribute and it is
     ignored for a library-backed piece. The node is the only thing that
     actually scales. See the note at the top; this was measured, not reasoned.
   */
-  applyScale(element.mesh, scale)
+  applyScale(element.mesh, scale);
 }
-
-
 
 function writeNode(node: NodeBody, { at, rot, scale }: Transform): void {
   if (at && node.position) {
-    node.position.x = at[0]
-    node.position.y = at[1]
-    node.position.z = at[2]
+    node.position.x = at[0];
+    node.position.y = at[1];
+    node.position.z = at[2];
   }
   if (rot && node.rotation) {
     // CLEAR THE QUATERNION FIRST — see the note above. While one is present the
     // node ignores `.rotation` entirely and the drag does nothing.
-    node.rotationQuaternion = null
-    node.rotation.x = rot[0] * DEG_TO_RAD
-    node.rotation.y = rot[1] * DEG_TO_RAD
-    node.rotation.z = rot[2] * DEG_TO_RAD
+    node.rotationQuaternion = null;
+    node.rotation.x = rot[0] * DEG_TO_RAD;
+    node.rotation.y = rot[1] * DEG_TO_RAD;
+    node.rotation.z = rot[2] * DEG_TO_RAD;
   }
-  applyScale(node, scale)
+  applyScale(node, scale);
 }

@@ -10,8 +10,8 @@
   remembering. It does NOT make these browser tests: there is no renderer and no
   layout, so a test that needs a scene still belongs in the browser.
 */
-import { GlobalRegistrator } from '@happy-dom/global-registrator'
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
-if (typeof globalThis.HTMLElement === 'undefined') {
-  GlobalRegistrator.register()
+if (typeof globalThis.HTMLElement === "undefined") {
+  GlobalRegistrator.register();
 }

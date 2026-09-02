@@ -21,20 +21,20 @@ Without it that piece renders differently depending on which library finished
 loading first — a bug that reproduces on one machine and not another.
 */
 /*{"parent":"Internals","order":10}*/
-import type { Ensemble, Piece } from '../format/types'
-import type { SceneElement } from '../format/registry'
+import type { Ensemble, Piece } from "../format/types";
+import type { SceneElement } from "../format/registry";
 
 interface LibraryElement extends Element {
-  ready?: Promise<void>
-  getNames?: () => string[]
-  instantiate?: (name: string, options?: Record<string, unknown>) => unknown
+  ready?: Promise<void>;
+  getNames?: () => string[];
+  instantiate?: (name: string, options?: Record<string, unknown>) => unknown;
 }
 
 interface SceneWithLibraries {
-  getLibrary?: (type: string) => LibraryElement | null
-  querySelector?: (selector: string) => Element | null
-  appendChild?: (node: Node) => void
-  ownerDocument?: Document
+  getLibrary?: (type: string) => LibraryElement | null;
+  querySelector?: (selector: string) => Element | null;
+  appendChild?: (node: Node) => void;
+  ownerDocument?: Document;
 }
 
 /**
@@ -44,15 +44,18 @@ interface SceneWithLibraries {
  * twice, so rebuilding — which the editor does on every edit — does not
  * re-download a multi-megabyte glb each time.
  */
-export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): Promise<void> {
-  const host = scene as unknown as SceneWithLibraries
-  const declared = ensemble.libraries ?? []
-  if (!declared.length) return
+export async function mountLibraries(
+  ensemble: Ensemble,
+  scene: SceneElement
+): Promise<void> {
+  const host = scene as unknown as SceneWithLibraries;
+  const declared = ensemble.libraries ?? [];
+  if (!declared.length) return;
 
-  const mounted: LibraryElement[] = []
+  const mounted: LibraryElement[] = [];
   for (const { name, url } of declared) {
-    if (!name || !url) continue
-    let element = host.getLibrary?.(name) ?? null
+    if (!name || !url) continue;
+    let element = host.getLibrary?.(name) ?? null;
     /*
       IDEMPOTENT BY NAME **AND URL**.
 
@@ -66,20 +69,22 @@ export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): P
       `pirate-kit.glb` left all 19 meshes unknown and the palette showing the
       previous library's 383 entries.
     */
-    if (element && element.getAttribute('url') !== url) {
-      element.remove()
-      element = null
+    if (element && element.getAttribute("url") !== url) {
+      element.remove();
+      element = null;
     }
     if (!element) {
-      const doc = host.ownerDocument ?? (typeof document === 'undefined' ? null : document)
-      if (!doc) continue
-      const created = doc.createElement('tosi-b3d-library') as LibraryElement
-      created.setAttribute('url', url)
-      created.setAttribute('type', name)
-      host.appendChild?.(created)
-      element = created
+      const doc =
+        host.ownerDocument ??
+        (typeof document === "undefined" ? null : document);
+      if (!doc) continue;
+      const created = doc.createElement("tosi-b3d-library") as LibraryElement;
+      created.setAttribute("url", url);
+      created.setAttribute("type", name);
+      host.appendChild?.(created);
+      element = created;
     }
-    mounted.push(element)
+    mounted.push(element);
   }
 
   /*
@@ -97,25 +102,25 @@ export async function mountLibraries(ensemble: Ensemble, scene: SceneElement): P
     rebuild from the console fixed it — the tell that this is a race, not a
     resolution failure.
   */
-  await whenLibrariesUpgrade()
+  await whenLibrariesUpgrade();
 
   // A library that fails to load must not reject the whole mount: the rest
   // still resolve, and the pieces that needed this one fall back to boxes.
-  await Promise.all(mounted.map((el) => el.ready?.catch(() => undefined)))
+  await Promise.all(mounted.map((el) => el.ready?.catch(() => undefined)));
 }
 
 /** Resolves once `<tosi-b3d-library>` is a defined custom element. */
 async function whenLibrariesUpgrade(): Promise<void> {
-  const registry = globalThis.customElements
-  if (!registry?.whenDefined) return
-  await registry.whenDefined('tosi-b3d-library').catch(() => undefined)
+  const registry = globalThis.customElements;
+  if (!registry?.whenDefined) return;
+  await registry.whenDefined("tosi-b3d-library").catch(() => undefined);
 }
 
 /** Names a scene can resolve meshes from, in declaration order. */
 export function libraryNames(ensemble: Ensemble, extra?: string): string[] {
-  const names = (ensemble.libraries ?? []).map((l) => l.name).filter(Boolean)
-  if (extra && !names.includes(extra)) names.push(extra)
-  return names
+  const names = (ensemble.libraries ?? []).map((l) => l.name).filter(Boolean);
+  if (extra && !names.includes(extra)) names.push(extra);
+  return names;
 }
 
 /**
@@ -130,31 +135,35 @@ export function resolveLibrary(
   libraries: string[],
   piece: Piece
 ): string | null {
-  if (piece.library) return piece.library
-  if (!piece.mesh) return null
-  const host = scene as unknown as SceneWithLibraries
+  if (piece.library) return piece.library;
+  if (!piece.mesh) return null;
+  const host = scene as unknown as SceneWithLibraries;
   for (const name of libraries) {
-    const names = host.getLibrary?.(name)?.getNames?.()
-    if (names?.includes(piece.mesh)) return name
+    const names = host.getLibrary?.(name)?.getNames?.();
+    if (names?.includes(piece.mesh)) return name;
   }
-  return libraries[0] ?? null
+  return libraries[0] ?? null;
 }
 
 /** What a library says about one of its models. */
 export interface CatalogueItem {
-  name: string
-  category?: string
-  tags?: string[]
-  clips?: string[]
+  name: string;
+  category?: string;
+  tags?: string[];
+  clips?: string[];
 }
 
 interface SourceNode {
-  name?: string
-  metadata?: { gltf?: { extras?: { category?: string; tags?: string[]; clips?: string[] } } }
+  name?: string;
+  metadata?: {
+    gltf?: {
+      extras?: { category?: string; tags?: string[]; clips?: string[] };
+    };
+  };
 }
 
 interface LibraryWithContainer {
-  container?: { transformNodes?: SourceNode[]; meshes?: SourceNode[] }
+  container?: { transformNodes?: SourceNode[]; meshes?: SourceNode[] };
 }
 
 /**
@@ -174,29 +183,37 @@ interface LibraryWithContainer {
  * Returns an empty array for a library that declares nothing, which is the
  * honest answer for the older un-annotated packs.
  */
-export function libraryCatalogue(scene: SceneElement, library: string): CatalogueItem[] {
-  const host = scene as unknown as SceneWithLibraries
-  const element = host.getLibrary?.(library) as unknown as LibraryWithContainer | null
-  const container = element?.container
-  if (!container) return []
-  const seen = new Set<string>()
-  const items: CatalogueItem[] = []
-  for (const node of [...(container.transformNodes ?? []), ...(container.meshes ?? [])]) {
-    const extras = node.metadata?.gltf?.extras
-    const name = node.name
+export function libraryCatalogue(
+  scene: SceneElement,
+  library: string
+): CatalogueItem[] {
+  const host = scene as unknown as SceneWithLibraries;
+  const element = host.getLibrary?.(
+    library
+  ) as unknown as LibraryWithContainer | null;
+  const container = element?.container;
+  if (!container) return [];
+  const seen = new Set<string>();
+  const items: CatalogueItem[] = [];
+  for (const node of [
+    ...(container.transformNodes ?? []),
+    ...(container.meshes ?? []),
+  ]) {
+    const extras = node.metadata?.gltf?.extras;
+    const name = node.name;
     // Only nodes the pipeline ANNOTATED are exports. That is what separates a
     // model from a sub-part: `getNames()` lists a chest's `lid` and a ship's
     // `sail-a` alongside the chest and the ship, and a palette should not.
-    if (!name || !extras?.category || seen.has(name)) continue
-    seen.add(name)
+    if (!name || !extras?.category || seen.has(name)) continue;
+    seen.add(name);
     items.push({
       name,
       category: extras.category,
       ...(extras.tags ? { tags: extras.tags } : {}),
       ...(extras.clips ? { clips: extras.clips } : {}),
-    })
+    });
   }
-  return items
+  return items;
 }
 
 /** Every mesh name each mounted library exposes — for validation and palettes. */
@@ -204,11 +221,11 @@ export function meshesByLibrary(
   scene: SceneElement,
   libraries: string[]
 ): Map<string, Set<string>> {
-  const host = scene as unknown as SceneWithLibraries
-  const out = new Map<string, Set<string>>()
+  const host = scene as unknown as SceneWithLibraries;
+  const out = new Map<string, Set<string>>();
   for (const name of libraries) {
-    const names = host.getLibrary?.(name)?.getNames?.()
-    if (names?.length) out.set(name, new Set(names))
+    const names = host.getLibrary?.(name)?.getNames?.();
+    if (names?.length) out.set(name, new Set(names));
   }
-  return out
+  return out;
 }

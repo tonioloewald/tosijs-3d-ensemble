@@ -57,19 +57,19 @@ becomes a `b3d-box` at the same spot. The ARRANGEMENT is most of what an author
 is judging, so cubes in the right places beat an empty scene.
 */
 /*{"parent":"Internals","order":9}*/
-import { b3dBox, b3dDestroyable, b3dRadarBlip } from 'tosijs-3d'
-import { applyEuler, applyScale } from './node-transform'
-import type { TransformableNode } from './node-transform'
-import type { SceneElement } from '../format/registry'
-import type { Piece, Vec3 } from '../format/types'
-import type { PlaceContext, Placement } from './build'
+import { b3dBox, b3dDestroyable, b3dRadarBlip } from "tosijs-3d";
+import { applyEuler, applyScale } from "./node-transform";
+import type { TransformableNode } from "./node-transform";
+import type { SceneElement } from "../format/registry";
+import type { Piece, Vec3 } from "../format/types";
+import type { PlaceContext, Placement } from "./build";
 
 interface LibraryElement {
-  getNames?: () => string[]
+  getNames?: () => string[];
 }
 
 interface SceneWithLibraries {
-  getLibrary?: (type: string) => LibraryElement | null
+  getLibrary?: (type: string) => LibraryElement | null;
 }
 
 export function placeMesh(
@@ -80,12 +80,12 @@ export function placeMesh(
 ): Placement | null {
   // No mesh is legitimate: an environment primitive (terrain, sun, sky, water)
   // IS its feature, and there is nothing to instantiate.
-  if (!piece.mesh) return null
+  if (!piece.mesh) return null;
 
   const library = ctx.library
     ? (ctx.scene as unknown as SceneWithLibraries).getLibrary?.(ctx.library)
-    : null
-  const has = library?.getNames?.().includes(piece.mesh) ?? false
+    : null;
+  const has = library?.getNames?.().includes(piece.mesh) ?? false;
 
   const rotation = {
     // DEGREES. tosijs-3d takes euler degrees; Babylon is radians, and a bare
@@ -93,12 +93,12 @@ export function placeMesh(
     rx: piece.rot?.[0] ?? 0,
     ry: piece.rot?.[1] ?? 0,
     rz: piece.rot?.[2] ?? 0,
-  }
+  };
 
   if (has) {
     const combat = ctx.features.destroyable as
       | { hp?: number; armor?: number; explode?: boolean }
-      | undefined
+      | undefined;
     const element = b3dDestroyable({
       library: ctx.library,
       meshName: piece.mesh,
@@ -115,34 +115,34 @@ export function placeMesh(
         attribute written later is silently inert — measured by manta-recon, and
         the reason `setChain()` exists at all.
       */
-      destroyable: combat ? 'on' : 'off',
+      destroyable: combat ? "on" : "off",
       ...(combat
         ? {
             capacity: combat.hp ?? 12,
             armor: combat.armor ?? 0,
-            explode: combat.explode === false ? 'off' : 'on',
+            explode: combat.explode === false ? "off" : "on",
           }
         : {}),
-    }) as unknown as SceneElement
+    }) as unknown as SceneElement;
 
     // Creating an element does not add it. This is the step whose absence
     // produces no errors, no pieces, and nothing in the console.
-    ctx.scene.appendChild(element)
+    ctx.scene.appendChild(element);
     const stopWaiting = whenMeshed(ctx.scene, element, (node) => {
       // BOTH, and both for the same reason: the element forwards neither to the
       // library instance. `rx`/`ry`/`rz` are dropped by `instantiate`, and
       // `size` is the placeholder cube's edge. Only position survives the trip.
-      applyEuler(node, [rotation.rx, rotation.ry, rotation.rz])
-      applyScale(node, scale)
-    })
+      applyEuler(node, [rotation.rx, rotation.ry, rotation.rz]);
+      applyScale(node, scale);
+    });
     return {
       element,
       dispose: () => {
-        stopWaiting()
-        element.remove()
-        reapOrphan(ctx.scene, element)
+        stopWaiting();
+        element.remove();
+        reapOrphan(ctx.scene, element);
       },
-    }
+    };
   }
 
   const box = b3dBox({
@@ -153,10 +153,10 @@ export function placeMesh(
     y: at[1],
     z: at[2],
     ...rotation,
-    color: '#8a6a52',
-  }) as unknown as SceneElement
-  ctx.scene.appendChild(box)
-  return { element: box, dispose: () => box.remove() }
+    color: "#8a6a52",
+  }) as unknown as SceneElement;
+  ctx.scene.appendChild(box);
+  return { element: box, dispose: () => box.remove() };
 }
 
 /**
@@ -182,40 +182,40 @@ function whenMeshed(
   apply: (node: TransformableNode) => void,
   frameBudget = 240
 ): () => void {
-  const host = element as unknown as { mesh?: TransformableNode | null }
+  const host = element as unknown as { mesh?: TransformableNode | null };
   if (host.mesh) {
-    apply(host.mesh)
-    return () => {}
+    apply(host.mesh);
+    return () => {};
   }
-  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene
-  const observable = scene?.onBeforeRenderObservable
-  if (!observable?.add) return () => {}
-  let frames = 0
-  let observer: unknown = null
+  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene;
+  const observable = scene?.onBeforeRenderObservable;
+  if (!observable?.add) return () => {};
+  let frames = 0;
+  let observer: unknown = null;
   const stop = () => {
-    if (observer) observable.remove?.(observer)
-    observer = null
-  }
+    if (observer) observable.remove?.(observer);
+    observer = null;
+  };
   observer = observable.add(() => {
     try {
       if (host.mesh) {
-        apply(host.mesh)
-        stop()
-        return
+        apply(host.mesh);
+        stop();
+        return;
       }
-      if (++frames > frameBudget) stop()
+      if (++frames > frameBudget) stop();
     } catch {
-      stop()
+      stop();
     }
-  })
-  return stop
+  });
+  return stop;
 }
 
 interface BabylonScene {
   onBeforeRenderObservable?: {
-    add?: (fn: () => void) => unknown
-    remove?: (observer: unknown) => void
-  }
+    add?: (fn: () => void) => unknown;
+    remove?: (observer: unknown) => void;
+  };
 }
 
 /**
@@ -237,33 +237,39 @@ interface BabylonScene {
  * instantiate, or should dispose what it instantiated. Until then this watches
  * for the orphan and reaps it.
  */
-function reapOrphan(sceneElement: SceneElement, element: SceneElement, frameBudget = 240): void {
-  const host = element as unknown as { mesh?: { dispose?: () => void; isDisposed?: () => boolean } | null }
-  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene
-  const observable = scene?.onBeforeRenderObservable
+function reapOrphan(
+  sceneElement: SceneElement,
+  element: SceneElement,
+  frameBudget = 240
+): void {
+  const host = element as unknown as {
+    mesh?: { dispose?: () => void; isDisposed?: () => boolean } | null;
+  };
+  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene;
+  const observable = scene?.onBeforeRenderObservable;
   const reap = () => {
-    const node = host.mesh
-    if (!node || node.isDisposed?.()) return false
+    const node = host.mesh;
+    if (!node || node.isDisposed?.()) return false;
     // Only ever an orphan: if the element came back, it owns this again.
-    if (element.isConnected) return true
-    node.dispose?.()
-    return true
-  }
-  if (reap() || !observable?.add) return
-  let frames = 0
-  let observer: unknown = null
+    if (element.isConnected) return true;
+    node.dispose?.();
+    return true;
+  };
+  if (reap() || !observable?.add) return;
+  let frames = 0;
+  let observer: unknown = null;
   const stop = () => {
-    if (observer) observable.remove?.(observer)
-    observer = null
-  }
+    if (observer) observable.remove?.(observer);
+    observer = null;
+  };
   observer = observable.add(() => {
     // A throw inside a render observer kills the loop permanently — guard it.
     try {
-      if (reap() || ++frames > frameBudget) stop()
+      if (reap() || ++frames > frameBudget) stop();
     } catch {
-      stop()
+      stop();
     }
-  })
+  });
 }
 
 /** `b3dRadarBlip` as a child of the piece — it travels with what it marks. */
@@ -272,9 +278,9 @@ export function attachBlip(
   cfg: { faction?: string; profile?: number }
 ): () => void {
   const blip = b3dRadarBlip({
-    faction: cfg.faction ?? 'hostile',
+    faction: cfg.faction ?? "hostile",
     profile: cfg.profile ?? 1,
-  }) as unknown as SceneElement
-  element.appendChild(blip)
-  return () => blip.remove()
+  }) as unknown as SceneElement;
+  element.appendChild(blip);
+  return () => blip.remove();
 }

@@ -30,31 +30,31 @@ which is the √2 a square turns into. Filed as tosijs-3d#47 (scale) and #48
 (rotation); when they land this module retires.
 */
 /*{"parent":"Runtime","order":7}*/
-import { scaleVector } from '../format/scale'
-import type { Euler, Vec3 } from '../format/types'
+import { scaleVector } from "../format/scale";
+import type { Euler, Vec3 } from "../format/types";
 
-const DEG_TO_RAD = Math.PI / 180
+const DEG_TO_RAD = Math.PI / 180;
 
 /** A Babylon node, as much of one as writing a transform needs. */
 export interface TransformableNode {
-  rotation?: { x: number; y: number; z: number }
-  rotationQuaternion?: unknown
-  scaling?: { x: number; y: number; z: number }
+  rotation?: { x: number; y: number; z: number };
+  rotationQuaternion?: unknown;
+  scaling?: { x: number; y: number; z: number };
 }
 
 /** Back-compat alias: this module was `node-scale.ts` when scale was all it did. */
-export type ScalableNode = TransformableNode
+export type ScalableNode = TransformableNode;
 
 /** Write a scale onto a node, if there is one and a scale was given. */
 export function applyScale(
   node: TransformableNode | null | undefined,
   scale?: number | Vec3
 ): void {
-  if (scale === undefined || !node?.scaling) return
-  const [x, y, z] = scaleVector(scale)
-  node.scaling.x = x
-  node.scaling.y = y
-  node.scaling.z = z
+  if (scale === undefined || !node?.scaling) return;
+  const [x, y, z] = scaleVector(scale);
+  node.scaling.x = x;
+  node.scaling.y = y;
+  node.scaling.z = z;
 }
 
 /**
@@ -65,10 +65,13 @@ export function applyScale(
  * without this the write is accepted and does nothing, which is the exact bug
  * that made `library.instantiate()`'s rotation inert until tosijs-3d 0.7.0.
  */
-export function applyEuler(node: TransformableNode | null | undefined, rot?: Euler): void {
-  if (!rot || !node?.rotation) return
-  node.rotationQuaternion = null
-  node.rotation.x = rot[0] * DEG_TO_RAD
-  node.rotation.y = rot[1] * DEG_TO_RAD
-  node.rotation.z = rot[2] * DEG_TO_RAD
+export function applyEuler(
+  node: TransformableNode | null | undefined,
+  rot?: Euler
+): void {
+  if (!rot || !node?.rotation) return;
+  node.rotationQuaternion = null;
+  node.rotation.x = rot[0] * DEG_TO_RAD;
+  node.rotation.y = rot[1] * DEG_TO_RAD;
+  node.rotation.z = rot[2] * DEG_TO_RAD;
 }

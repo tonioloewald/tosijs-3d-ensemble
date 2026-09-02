@@ -15,18 +15,18 @@ tree-shakes away.
 
 Three concerns, and they do **not** all have the same audience.
 
-| | | audience |
-|---|---|---|
-| **The ensemble FORMAT** (types, defaults, validation) | `tosijs-3d-ensemble` | every consumer that ships levels |
-| **The INSTANTIATOR** (JSON → live scene objects) | `tosijs-3d-ensemble` | every consumer that ships levels |
-| **The EDITOR** | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only |
+|                                                       |                                                          | audience                         |
+| ----------------------------------------------------- | -------------------------------------------------------- | -------------------------------- |
+| **The ensemble FORMAT** (types, defaults, validation) | `tosijs-3d-ensemble`                                     | every consumer that ships levels |
+| **The INSTANTIATOR** (JSON → live scene objects)      | `tosijs-3d-ensemble`                                     | every consumer that ships levels |
+| **The EDITOR**                                        | `tosijs-3d-ensemble`, tree-shaken out of a game's bundle | authors only                     |
 
 > **This decision moved three times; this is where it landed.** An early draft
 > put everything in the editor project. A correction moved the format and the
 > instantiator **into tosijs-3d**. A second correction split them into two
-> published packages from one repo. The owner settled it: *"I don't think two
+> published packages from one repo. The owner settled it: _"I don't think two
 > packages is right, just the editor should be thoroughly tree-shakeable if you
-> just want to consume ensembles."*
+> just want to consume ensembles."_
 >
 > That is the better answer for the reason the two-package version was reaching
 > for anyway. What a game must not pay for is the EDITOR — and the mechanism
@@ -46,10 +46,10 @@ Three concerns, and they do **not** all have the same audience.
 > learning what it is, and enriching it should not cost a tosijs-3d minor
 > version each time.
 
-Owner: *"The 'prefab' structure and the tool for instantiating it belong in
-tosijs-3d, the editor is simply a tool for creating those graphically."* —
-later refined to: *"it could be a lightweight and separable import from the
-editor library. Maybe the latter makes more sense."*
+Owner: _"The 'prefab' structure and the tool for instantiating it belong in
+tosijs-3d, the editor is simply a tool for creating those graphically."_ —
+later refined to: _"it could be a lightweight and separable import from the
+editor library. Maybe the latter makes more sense."_
 
 What survives every revision is the SPLIT OF CONCERNS, not its address:
 
@@ -79,8 +79,8 @@ instantiator and the bench.
 
 ## Naming
 
-"Prefab" carries Unity baggage (a prefab there is a serialized *scene object
-with components and code*). What we have is smaller and stricter: **data
+"Prefab" carries Unity baggage (a prefab there is a serialized _scene object
+with components and code_). What we have is smaller and stricter: **data
 describing an arrangement of library meshes, with declared capabilities and
 relationships, and no code**.
 
@@ -88,8 +88,8 @@ relationships, and no code**.
 "ensemble editor", "ensembles/ocean-rig.json", `buildEnsemble()`,
 `tosijs-3d-ensemble` — and it says something true that the alternatives do not.
 
-Owner: *"ensemble is great for a bunch of reasons. It suggests a theater troupe
-or similar and it's really an assembly targeting a performance."*
+Owner: _"ensemble is great for a bunch of reasons. It suggests a theater troupe
+or similar and it's really an assembly targeting a performance."_
 
 That is the argument. A rig is not inert scenery: its turrets fire, its
 launchpads spawn, its zones steer AI, and its reactor takes down a shield when it
@@ -102,28 +102,28 @@ ensemble is a troupe, an encounter is a performance of it.
 
 It was the working name through most of this document's life, and it is accurate
 — but on **npm, "assembly" primes WebAssembly**, not "assembled from parts".
-`assemblyscript` is *"a TypeScript-like language for WebAssembly"*, and a
+`assemblyscript` is _"a TypeScript-like language for WebAssembly"_, and a
 package called `tosijs-3d-assembly` sitting in a JavaScript registry invites
 exactly that misread. The `tosijs-3d-` prefix mitigates it; it does not remove
 it. ".NET assembly" (a compiled binary) is a second, weaker collision in the same
-direction: both make the word mean *build output* rather than *arrangement*.
+direction: both make the word mean _build output_ rather than _arrangement_.
 
 ### Alternatives considered
 
-| | why not |
-|---|---|
-| `prefab` | Unity baggage — there, a serialized scene object **with code**. And **tosijs-3d already exports `prefab`** for something else entirely: a registered `(ctx) => Element[]` factory for wrecks, debris and spawns (`definePrefab`/`spawnPrefab`). Our root term is `ensemble`; `prefab` is Unity's word for the neighbouring idea, and upstream's is a third thing again |
-| `assembly` | primes WebAssembly on npm; ".NET assembly" pulls the same way |
-| `schematic` | closest conceptual fit (components + connections, and Minecraft made it legible) but **tosijs-3d already uses "schematic"** in `MinSimApi` — an in-ecosystem collision is worse than an external one |
-| `blueprint` | collides with tosijs's own blueprint concept |
-| `site` / `emplacement` | both imply PLACEMENT, which is precisely what open question 4 says the format must not — an ensemble is what a thing IS, an encounter is where it is |
-| `rig` | "rigging" already means a skeleton in 3D, and `rig` is one of our own `kind` values |
-| `composition` | vague |
-| `fixture` | test connotation |
-| `construct` | overloaded |
-| `set-piece` | theatrical (right idea) but hyphenated and awkward in code |
-| `kit` | implies the parts, not the arrangement |
-| `assemblage` | precise, and fussy to type and to say |
+|                        | why not                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefab`               | Unity baggage — there, a serialized scene object **with code**. And **tosijs-3d already exports `prefab`** for something else entirely: a registered `(ctx) => Element[]` factory for wrecks, debris and spawns (`definePrefab`/`spawnPrefab`). Our root term is `ensemble`; `prefab` is Unity's word for the neighbouring idea, and upstream's is a third thing again |
+| `assembly`             | primes WebAssembly on npm; ".NET assembly" pulls the same way                                                                                                                                                                                                                                                                                                          |
+| `schematic`            | closest conceptual fit (components + connections, and Minecraft made it legible) but **tosijs-3d already uses "schematic"** in `MinSimApi` — an in-ecosystem collision is worse than an external one                                                                                                                                                                   |
+| `blueprint`            | collides with tosijs's own blueprint concept                                                                                                                                                                                                                                                                                                                           |
+| `site` / `emplacement` | both imply PLACEMENT, which is precisely what open question 4 says the format must not — an ensemble is what a thing IS, an encounter is where it is                                                                                                                                                                                                                   |
+| `rig`                  | "rigging" already means a skeleton in 3D, and `rig` is one of our own `kind` values                                                                                                                                                                                                                                                                                    |
+| `composition`          | vague                                                                                                                                                                                                                                                                                                                                                                  |
+| `fixture`              | test connotation                                                                                                                                                                                                                                                                                                                                                       |
+| `construct`            | overloaded                                                                                                                                                                                                                                                                                                                                                             |
+| `set-piece`            | theatrical (right idea) but hyphenated and awkward in code                                                                                                                                                                                                                                                                                                             |
+| `kit`                  | implies the parts, not the arrangement                                                                                                                                                                                                                                                                                                                                 |
+| `assemblage`           | precise, and fussy to type and to say                                                                                                                                                                                                                                                                                                                                  |
 
 The rest of this document uses **ensemble**.
 
@@ -137,23 +137,23 @@ fortification vocabulary as built-ins: `power`/`shield`/`critical` roles, a
 `destroyable` feature, and a shield-reachability rule inside `validate` itself.
 That quietly turned a scene format into a combat format.
 
-Owner: *"This thing shouldn't be assuming combat use. Just being able to
+Owner: _"This thing shouldn't be assuming combat use. Just being able to
 describe an ensemble and consume it anywhere is a huge win. E.g. the standard
 demo scene in tosijs-3d could easily be an ensemble (sun, shadow system, ground
-plane, camera setup, etc.) and it can be embedded with a single line of code."*
+plane, camera setup, etc.) and it can be embedded with a single line of code."_
 
-And the goal that follows: *"almost any tosijs-3d setup would be very easy to
+And the goal that follows: _"almost any tosijs-3d setup would be very easy to
 understand because it would just be loading some ensembles and then maybe wiring
 in special case stuff unique to that scene, versus tediously building out
 boilerplate for everything and making it hard to see what makes this setup
-special."*
+special."_
 
 So the split is:
 
-| | |
-|---|---|
-| **the format** | ids, references, positions, features, links — no domain |
-| **scene features** | sun, sky, ground, terrain, water, clouds, ambient, fog |
+|                      |                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| **the format**       | ids, references, positions, features, links — no domain                                               |
+| **scene features**   | sun, sky, ground, terrain, water, clouds, ambient, fog                                                |
 | **`presets/combat`** | destroyable, turret, launcher, protector, blip, the roles, and the one rule about unreachable shields |
 
 Three consequences worth stating, because each was a mistake first:
@@ -189,13 +189,21 @@ mission compiler.
 ```jsonc
 {
   "name": "ocean-rig",
-  "kind": "rig",                    // free-form; consumers group by it
-  "scale": 2.5,                     // multiplies every offset and piece scale
+  "kind": "rig", // free-form; consumers group by it
+  "scale": 2.5, // multiplies every offset and piece scale
   "values": { "targetValue": 3, "faction": "hostile" },
-  "pieces": [ /* … */ ],
-  "links":  [ /* … */ ],
-  "points": [ /* … */ ],
-  "zones":  [ /* … */ ]
+  "pieces": [
+    /* … */
+  ],
+  "links": [
+    /* … */
+  ],
+  "points": [
+    /* … */
+  ],
+  "zones": [
+    /* … */
+  ]
 }
 ```
 
@@ -203,17 +211,26 @@ mission compiler.
 
 ```jsonc
 {
-  "id": "rig",                      // stable handle; defaults to `${mesh}#${i}`
-  "mesh": "Pump Station",           // PUBLIC library name
-  "at": [0, 0, 0],                  // ensemble-local metres
-  "rot": [0, 0, 0],                 // euler degrees, optional
-  "scale": 1,                       // multiplies the ensemble scale
-  "role": "structure",              // preset (see below)
-  "features": { /* … */ },          // explicit capabilities; override the preset
-  "subsystems": [                   // named parts INSIDE a composite mesh
-    { "match": "Pump$", "label": "pump", "features": { "destroyable": { "hp": 18 } } }
+  "id": "rig", // stable handle; defaults to `${mesh}#${i}`
+  "mesh": "Pump Station", // PUBLIC library name
+  "at": [0, 0, 0], // ensemble-local metres
+  "rot": [0, 0, 0], // euler degrees, optional
+  "scale": 1, // multiplies the ensemble scale
+  "role": "structure", // preset (see below)
+  "features": {
+    /* … */
+  }, // explicit capabilities; override the preset
+  "subsystems": [
+    // named parts INSIDE a composite mesh
+    {
+      "match": "Pump$",
+      "label": "pump",
+      "features": { "destroyable": { "hp": 18 } }
+    }
   ],
-  "points": [], "zones": [], "values": {}
+  "points": [],
+  "zones": [],
+  "values": {}
 }
 ```
 
@@ -243,8 +260,8 @@ Three things this buys:
 
 1. **One object, many capabilities** — a pump station that shoots back is one
    piece with two features, not two overlapping entities.
-2. **Features can interact.** "A radar improves nearby turrets" is a rule *about
-   features* and has nowhere to live if every capability is its own object. It
+2. **Features can interact.** "A radar improves nearby turrets" is a rule _about
+   features_ and has nowhere to live if every capability is its own object. It
    also gives a defence a soft spot, which is a design affordance.
 3. **It stays serializable** — every feature is a flat object of numbers,
    strings and booleans, so the editor can render it from a schema.
@@ -327,28 +344,32 @@ Ships as a configurable component, not an application:
 
 ```javascript
 ensembleEditor({
-  libraries: [{ url: '/enemies.glb', type: 'enemies' }],
-  schema: MANTA_SCHEMA,        // see Part 3
-  scenarios: MANTA_SCENARIOS,  // see Part 4
-  onSave: async (ensemble) => { /* consumer owns persistence */ },
-  load: async (name) => { /* consumer owns loading */ },
-})
+  libraries: [{ url: "/enemies.glb", type: "enemies" }],
+  schema: MANTA_SCHEMA, // see Part 3
+  scenarios: MANTA_SCENARIOS, // see Part 4
+  onSave: async (ensemble) => {
+    /* consumer owns persistence */
+  },
+  load: async (name) => {
+    /* consumer owns loading */
+  },
+});
 ```
 
 ### Required affordances
 
-| | |
-|---|---|
-| **Library palette** | every mesh the loaded libraries expose, by public name |
-| **Select** | click in viewport *or* list; picking walks UP to the owning piece, so clicking a turret barrel selects the turret |
-| **Manipulate** | **fused with Select** — one tool, and which transforms it offers is a setting rather than a mode. A universal widget in Cheetah 3D's sense: shafts for one axis, pads for two, rings to turn, cubes to scale (the secondary button scaling the *other* two axes), all on screen together, with the grip you grab saying what the drag means. Writes back to the JSON **on drag release** (not per frame) in ensemble-local coordinates. All three transforms default OFF, so the default tool is a plain selector with nothing drawn over what you are pointing at |
-| **Bounding box + wireframe** | toggles; wireframe is how you read a fortress's interior |
-| **Placement** | `land` (ground at 0) and `aquatic` (water at 0, seabed at a variable depth). Both planes **pinned to the origin** — a bench looks at one thing from many angles, so the world holds still and the camera moves |
-| **Camera** | fit-to-bounds (re-fitting as async models load), named angles, and **orthographic as a toggle independent of angle** — ortho for judging alignment, perspective for judging how it reads |
-| **Animation** | play / pause / scrub / speed. Library animation groups arrive **stopped**; an editor that does not start them hides what it exists to show |
-| **Shadows** | the ground receives; ensemble pieces cast. Runtime-added meshes must be registered as casters continuously, not once |
-| **Validation** | live, non-blocking, visible |
-| **Persistence** | load, save, import file, export file. The component owns none of it — it calls the consumer's handlers |
+|                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Library palette**          | every mesh the loaded libraries expose, by public name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Select**                   | click in viewport _or_ list; picking walks UP to the owning piece, so clicking a turret barrel selects the turret                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Manipulate**               | **fused with Select** — one tool, and which transforms it offers is a setting rather than a mode. A universal widget in Cheetah 3D's sense: shafts for one axis, pads for two, rings to turn, cubes to scale (the secondary button scaling the _other_ two axes), all on screen together, with the grip you grab saying what the drag means. Writes back to the JSON **on drag release** (not per frame) in ensemble-local coordinates. All three transforms default OFF, so the default tool is a plain selector with nothing drawn over what you are pointing at |
+| **Bounding box + wireframe** | toggles; wireframe is how you read a fortress's interior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Placement**                | `land` (ground at 0) and `aquatic` (water at 0, seabed at a variable depth). Both planes **pinned to the origin** — a bench looks at one thing from many angles, so the world holds still and the camera moves                                                                                                                                                                                                                                                                                                                                                     |
+| **Camera**                   | fit-to-bounds (re-fitting as async models load), named angles, and **orthographic as a toggle independent of angle** — ortho for judging alignment, perspective for judging how it reads                                                                                                                                                                                                                                                                                                                                                                           |
+| **Animation**                | play / pause / scrub / speed. Library animation groups arrive **stopped**; an editor that does not start them hides what it exists to show                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Shadows**                  | the ground receives; ensemble pieces cast. Runtime-added meshes must be registered as casters continuously, not once                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Validation**               | live, non-blocking, visible                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Persistence**              | load, save, import file, export file. The component owns none of it — it calls the consumer's handlers                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### Explicitly out of scope for v1
 
@@ -365,8 +386,8 @@ description**.
 
 ### Schemas are JSON Schema, via tosijs-schema
 
-Owner: *"We should leverage tosijs-schema to define the schemas as json-schema
-extending to tjs predicates when the time comes."*
+Owner: _"We should leverage tosijs-schema to define the schemas as json-schema
+extending to tjs predicates when the time comes."_
 
 `tosijs-schema`'s premise is exactly the one this needs — **JSON Schema →
 types + validation, single source of truth** (as opposed to Zod's
@@ -399,12 +420,25 @@ roles a reference may target.
   "type": "object",
   "title": "Turret",
   "properties": {
-    "range":    { "type": "number", "minimum": 20, "maximum": 2000,
-                  "default": 260, "x-unit": "m" },
-    "fireRate": { "type": "number", "minimum": 0.1, "maximum": 20,
-                  "default": 1.1, "x-unit": "/s" },
-    "smart":    { "type": "boolean", "default": false,
-                  "description": "leads its target instead of firing where you are" }
+    "range": {
+      "type": "number",
+      "minimum": 20,
+      "maximum": 2000,
+      "default": 260,
+      "x-unit": "m"
+    },
+    "fireRate": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 20,
+      "default": 1.1,
+      "x-unit": "/s"
+    },
+    "smart": {
+      "type": "boolean",
+      "default": false,
+      "description": "leads its target instead of firing where you are"
+    }
   }
 }
 ```
@@ -424,62 +458,76 @@ therefore a table of **widgets**, not of types.
 const MANTA_SCHEMA = {
   features: {
     destroyable: {
-      label: 'Destroyable',
+      label: "Destroyable",
       fields: {
-        hp:      { type: 'number', min: 1, max: 9999, default: 12 },
-        armor:   { type: 'number', min: 0, max: 100000, default: 0 },
-        explode: { type: 'boolean', default: true },
+        hp: { type: "number", min: 1, max: 9999, default: 12 },
+        armor: { type: "number", min: 0, max: 100000, default: 0 },
+        explode: { type: "boolean", default: true },
       },
     },
     turret: {
-      label: 'Turret',
+      label: "Turret",
       fields: {
-        range:    { type: 'number', min: 20, max: 2000, default: 260, unit: 'm' },
-        fireRate: { type: 'number', min: 0.1, max: 20, default: 1.1, unit: '/s' },
-        damage:   { type: 'number', min: 1, max: 200, default: 4 },
-        smart:    { type: 'boolean', default: false,
-                    help: 'leads its target instead of firing where you are' },
+        range: { type: "number", min: 20, max: 2000, default: 260, unit: "m" },
+        fireRate: {
+          type: "number",
+          min: 0.1,
+          max: 20,
+          default: 1.1,
+          unit: "/s",
+        },
+        damage: { type: "number", min: 1, max: 200, default: 4 },
+        smart: {
+          type: "boolean",
+          default: false,
+          help: "leads its target instead of firing where you are",
+        },
       },
     },
     launchpad: {
-      label: 'Launch pad',
+      label: "Launch pad",
       fields: {
-        craft:    { type: 'mesh', library: 'enemies' },   // pick list from library
-        interval: { type: 'number', min: 1, max: 300, unit: 's' },
+        craft: { type: "mesh", library: "enemies" }, // pick list from library
+        interval: { type: "number", min: 1, max: 300, unit: "s" },
       },
     },
     protector: {
-      label: 'Shield field',
+      label: "Shield field",
       fields: {
-        protection: { type: 'number', min: 0, max: 200, default: 12 },
-        source:     { type: 'ref', roles: ['power', 'generator'] },  // ref to a PIECE
+        protection: { type: "number", min: 0, max: 200, default: 12 },
+        source: { type: "ref", roles: ["power", "generator"] }, // ref to a PIECE
       },
     },
   },
 
   roles: {
-    power: { label: 'Power source', features: { destroyable: { hp: 16 }, blip: {} } },
+    power: {
+      label: "Power source",
+      features: { destroyable: { hp: 16 }, blip: {} },
+    },
     // …consumer-defined
   },
 
-  zones:  { escort: { label: 'Escort zone', fields: { capacity: { type: 'number' } } } },
-  points: { spawn:  { label: 'Spawn', fields: { craft: { type: 'mesh' } } } },
-}
+  zones: {
+    escort: { label: "Escort zone", fields: { capacity: { type: "number" } } },
+  },
+  points: { spawn: { label: "Spawn", fields: { craft: { type: "mesh" } } } },
+};
 ```
 
 ### Field types the editor must support
 
-| `x-widget` | renders as | notes |
-|---|---|---|
-| `number` | numeric field / slider | `min`, `max`, `step`, `unit` |
-| `boolean` | toggle | |
-| `string` | text field | |
-| `enum` | pick list | `options: [{value,label}]` |
-| `mesh` | pick list of library meshes | scoped by `library` |
-| `ref` | pick list of **pieces in this ensemble** | filtered by `roles` or `features` |
-| `point` / `zone` | pick list of this ensemble's points/zones | for "launch from here" |
-| `vec3` | three numeric fields | positions, rotations |
-| `color` | colour input | |
+| `x-widget`       | renders as                                | notes                             |
+| ---------------- | ----------------------------------------- | --------------------------------- |
+| `number`         | numeric field / slider                    | `min`, `max`, `step`, `unit`      |
+| `boolean`        | toggle                                    |                                   |
+| `string`         | text field                                |                                   |
+| `enum`           | pick list                                 | `options: [{value,label}]`        |
+| `mesh`           | pick list of library meshes               | scoped by `library`               |
+| `ref`            | pick list of **pieces in this ensemble**  | filtered by `roles` or `features` |
+| `point` / `zone` | pick list of this ensemble's points/zones | for "launch from here"            |
+| `vec3`           | three numeric fields                      | positions, rotations              |
+| `color`          | colour input                              |                                   |
 
 `ref`, `point` and `zone` are the ones that make this more than a property grid:
 they are how an ensemble expresses **internal relationships** — this shield is
@@ -488,8 +536,8 @@ typing ids.
 
 ### The feature registry — open for extension
 
-Owner: *"it's going to depend on tosijs-3d no matter what and a consumer should
-be able to bind properties to locally defined behaviors."*
+Owner: _"it's going to depend on tosijs-3d no matter what and a consumer should
+be able to bind properties to locally defined behaviors."_
 
 This corrects an earlier draft that said the binding "is not a consumer
 concern." It plainly is. Manta already has features tosijs-3d will never know
@@ -502,15 +550,23 @@ So a feature is a **registration**, not a case in a switch:
 
 ```javascript
 registerFeature({
-  name: 'turret',
-  schema: turretSchema,               // JSON Schema (+ x- UI annotations)
-  bind(piece, cfg, ctx) {             // JSON -> live behaviour
-    const t = b3dTurret({ ...cfg, x: piece.at.x, y: piece.at.y, z: piece.at.z })
-    ctx.scene.appendChild(t)
-    ctx.onDispose(() => t.remove())
-    return { /* optional handle for other features / scenarios */ }
+  name: "turret",
+  schema: turretSchema, // JSON Schema (+ x- UI annotations)
+  bind(piece, cfg, ctx) {
+    // JSON -> live behaviour
+    const t = b3dTurret({
+      ...cfg,
+      x: piece.at.x,
+      y: piece.at.y,
+      z: piece.at.z,
+    });
+    ctx.scene.appendChild(t);
+    ctx.onDispose(() => t.remove());
+    return {
+      /* optional handle for other features / scenarios */
+    };
   },
-})
+});
 ```
 
 **tosijs-3d ships registrations** for the components it already has —
@@ -527,15 +583,15 @@ saved and loaded like any other.
 
 #### What the registry must give a feature
 
-| | |
-|---|---|
-| `name` | the key in `features` |
-| `schema` | JSON Schema; drives both validation and the property panel |
-| `bind(piece, cfg, ctx)` | attach behaviour; return an optional handle |
-| `ctx.scene` | the scene element, for appending components |
-| `ctx.onDispose` | teardown, so rebuilding an ensemble in the editor leaks nothing |
+|                                         |                                                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `name`                                  | the key in `features`                                                                                  |
+| `schema`                                | JSON Schema; drives both validation and the property panel                                             |
+| `bind(piece, cfg, ctx)`                 | attach behaviour; return an optional handle                                                            |
+| `ctx.scene`                             | the scene element, for appending components                                                            |
+| `ctx.onDispose`                         | teardown, so rebuilding an ensemble in the editor leaks nothing                                        |
 | `ctx.piecesByRole()` / `ctx.handle(id)` | reach other pieces — how `radar` boosts nearby `turret`s, and how a `protector` finds its power source |
-| `ctx.simTime` | the time source, so effects honour pause and time scale |
+| `ctx.simTime`                           | the time source, so effects honour pause and time scale                                                |
 
 `ctx.handle(id)` is the important one: it is what lets features **interact**
 without knowing about each other's implementations, which is the property that
@@ -557,7 +613,7 @@ made "a radar improves nearby turrets" expressible at all.
 > **Rebuilding must be idempotent.** The editor rebuilds an ensemble on every
 > edit, so `bind`/`link`/`onDispose` runs hundreds of times per session where a
 > game runs it once. `onDispose` is necessary and not sufficient: the test worth
-> writing is *build → dispose → build*, asserting the scene's mesh, observer and
+> writing is _build → dispose → build_, asserting the scene's mesh, observer and
 > material counts return to where they started. A leak that a game never notices
 > will eat an editing session.
 
@@ -583,10 +639,11 @@ Consumer-supplied:
 
 ```javascript
 const MANTA_SCENARIOS = {
-  'escort — 3 idle fighters': (ctx) => ctx.spawn('Light Fighter', 3, { radius: 320 }),
-  'kill the reactor':          (ctx) => ctx.damageRole('power', 9999),
-  'player pass at 200m':       (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
-}
+  "escort — 3 idle fighters": (ctx) =>
+    ctx.spawn("Light Fighter", 3, { radius: 320 }),
+  "kill the reactor": (ctx) => ctx.damageRole("power", 9999),
+  "player pass at 200m": (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
+};
 ```
 
 The context object needs, at minimum: `spawn`, `damage`/`damageRole`,
@@ -628,7 +685,7 @@ Working code to lift, and lessons that cost real time:
   root has no vertex data)
 - **library materials are shared** — clone before modifying, or every instance
   changes
-- **the water mesh is `water_nocast`**, not `water`; libraries expose *public*
+- **the water mesh is `water_nocast`**, not `water`; libraries expose _public_
   names (`Drone`, not `Drone_collideBox.model`) — **list what is there rather
   than guessing names**
 - **an editor must render content at the game's scale**, or it teaches you the
@@ -641,7 +698,7 @@ built. It is here so the format decisions each one implies get made once, and
 early, rather than four times under deadline — and because three of the four
 turn out to need the SAME two things.
 
-**What they share.** Every item below is a *rule that produces pieces* rather
+**What they share.** Every item below is a _rule that produces pieces_ rather
 than a piece: a rectangle that becomes tiles, a light that carries geometry, a
 station whose position is relative to a formation, a base that reshapes ground
 before it sits on it. Two consequences, and they are the whole design:
@@ -657,9 +714,9 @@ before it sits on it. Two consequences, and they are the whole design:
 
 ### Procedural tile sets — roads, rooms, plateaus, water
 
-> **Owner:** *"the ability to define procedural tile sets such as roads, terrain
+> **Owner:** _"the ability to define procedural tile sets such as roads, terrain
 > plateaus, and rooms… drag out a rectangle on a grid and have it turn into
-> tiled water or rooms or terrain."*
+> tiled water or rooms or terrain."_
 
 The affordance is a rectangle drag. The content behind it is a **tile set**: a
 named group of meshes with the roles a tiler needs — for a road, `straight`,
@@ -684,8 +741,8 @@ kit that did not fit it.
 
 ### Placeable lights, and primitives that carry geometry
 
-> **Owner:** *"primitives we want to have from tosijs-3d such as placeable lights
-> with default geometry (that can have meshes attached)."*
+> **Owner:** _"primitives we want to have from tosijs-3d such as placeable lights
+> with default geometry (that can have meshes attached)."_
 
 A light is a piece with no mesh today: the `light` feature IS its body. What is
 missing is that a light in an editor needs to be **visible and grabbable when it
@@ -702,16 +759,20 @@ elements it represents, or every consumer draws its own lamp.
 
 ### Points and zones with consumer-defined types
 
-> **Owner:** *"labeled points and zones with types and names… you might want to
+> **Owner:** _"labeled points and zones with types and names… you might want to
 > create a Carrier group formation and place locations where picket ships and
-> combat air patrols should hang out relative to the formation."*
+> combat air patrols should hang out relative to the formation."_
 
 **The format is already right for this**, which is worth saying because it was
 not obvious when `kind` was made a free string rather than a union:
 
 ```json
-{"id": "picket-north", "at": [0, 0, 900], "kind": "station",
- "meta": {"label": "Picket N", "role": "picket"}}
+{
+  "id": "picket-north",
+  "at": [0, 0, 900],
+  "kind": "station",
+  "meta": { "label": "Picket N", "role": "picket" }
+}
 ```
 
 `Point.kind`, `Zone.kind`, `meta` and `Zone.values` are all open. A carrier
@@ -732,9 +793,9 @@ What is missing is entirely editor-side, and it is two things:
 
 ### Provinces: authoring onto terrain, and reshaping it
 
-> **Owner:** *"author things that get placed on terrain such as provinces with
+> **Owner:** _"author things that get placed on terrain such as provinces with
 > associated carve outs… a base that can be dropped onto terrain, sculpts the
-> terrain locally to suit its purposes and then places meshes on it."*
+> terrain locally to suit its purposes and then places meshes on it."_
 
 The hardest of the four and the most valuable, because it is the one that makes
 an ensemble a thing you drop onto a world rather than a thing that owns its
@@ -751,8 +812,8 @@ Three decisions to make before any of it is built:
    the general answer, and the owner is adding a **curves editor upstream** so
    the curve is authorable rather than typed as numbers.
 
-   > **Owner: *"an authorable curve turns four features into lemmas of one
-   > killer feature."*** — and that decides the data. Flatten, plateau, ramp and
+   > **Owner: _"an authorable curve turns four features into lemmas of one
+   > killer feature."_** — and that decides the data. Flatten, plateau, ramp and
    > crater are **not four carve types**; they are one curve with four shapes.
    >
    > So the format stores the CURVE, and the preset names live in the editor as
@@ -769,18 +830,18 @@ Three decisions to make before any of it is built:
    > the model grew a third part in the process. A province is a **footprint**
    > plus **one curve per layer**:
    >
-   > | part | maps | the natural setting |
-   > |---|---|---|
-   > | **footprint** | direction → extent | a polygon; `ngon(6)`, a 16-gon for a circle |
-   > | **shape** (map/profile) | height sample → height | a line going **up** — identity, terrain unchanged |
-   > | **falloff** | 0 at centre → 1 at edge | a slope **down** from 1 to 0 |
+   > | part                    | maps                    | the natural setting                               |
+   > | ----------------------- | ----------------------- | ------------------------------------------------- |
+   > | **footprint**           | direction → extent      | a polygon; `ngon(6)`, a 16-gon for a circle       |
+   > | **shape** (map/profile) | height sample → height  | a line going **up** — identity, terrain unchanged |
+   > | **falloff**             | 0 at centre → 1 at edge | a slope **down** from 1 to 0                      |
    >
    > Three constraints upstream chose, each of which is a bug it declines to
    > have:
    >
    > - **The range is closed.** A curve maps `[0,1]` to `[0,1]` and a drag
    >   clamps rather than stretching the range, because a profile returning 1.4
-   >   silently changes the height a province occupies — it fails as *geometry*
+   >   silently changes the height a province occupies — it fails as _geometry_
    >   while reporting nothing. Amplitude belongs to the block, shape to the
    >   curve.
    > - **A falloff is pinned to 0 at its edge; a profile is not.** A province
@@ -833,8 +894,8 @@ runtime complexity, and leaves room to make instances live later. Ids must be
 namespaced from the start (`rig-a/pump`) or nothing later can reference into a
 nested ensemble.
 
-> **Owner: *"I assume ensembles are recursive — so you can assemble an ensemble
-> out of ensembles etc."*** Yes, and the name makes it read correctly: a troupe
+> **Owner: _"I assume ensembles are recursive — so you can assemble an ensemble
+> out of ensembles etc."_** Yes, and the name makes it read correctly: a troupe
 > of troupes. Recursion is the intended end state; **flattening at load is how
 > v1 delivers it without live instances**, not a substitute for it.
 >
@@ -876,10 +937,10 @@ nested ensemble.
 
 #### Nesting is a BLACK BOX, and that decides the coordinate systems
 
-> **Owner: *"The ensemble however can be a 'black box' inside a scene, and to do
+> **Owner: _"The ensemble however can be a 'black box' inside a scene, and to do
 > stuff internal to it you would switch context (drill into it) and then pop back
-> out."*** — and, following from it, *"you're always scaling in the object's
-> coordinate system and rotating and translating in global space."*
+> out."_** — and, following from it, _"you're always scaling in the object's
+> coordinate system and rotating and translating in global space."_
 
 A nested ensemble is opaque from outside. You move, turn and scale it as one
 piece; to touch what is inside you **drill in**, and everything is then relative
@@ -892,11 +953,11 @@ identical to global here**, because the only parent you can ever be looking at
 is the ensemble you have drilled into. So there is nothing to choose between,
 and the frames are fixed by what each operation can actually express:
 
-| | frame | why it is not a preference |
-|---|---|---|
-| translate | global | `at` is a position in the current ensemble's space |
-| rotate | global | `rot` is euler in the same space |
-| scale | **the object's own** | `node.scaling` is local; non-uniform world scale needs shear, which a transform cannot hold |
+|           | frame                | why it is not a preference                                                                  |
+| --------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| translate | global               | `at` is a position in the current ensemble's space                                          |
+| rotate    | global               | `rot` is euler in the same space                                                            |
+| scale     | **the object's own** | `node.scaling` is local; non-uniform world scale needs shear, which a transform cannot hold |
 
 So the editor ships **no orientation picker**. It also explains why `scale` is
 its own mode rather than a toggle alongside the other two: it is permanently in
@@ -914,18 +975,18 @@ namespacing from day one is in the list above.
 ### 2. Terrain and environment — **revised: primitives you can author with**
 
 The original answer here was "a different thing; give them join points": an
-ensemble sits *on* a world, a bridge *is* the world, and making terrain an
+ensemble sits _on_ a world, a bridge _is_ the world, and making terrain an
 ensemble would drag streaming, LOD and collision meshes into a format whose
 whole virtue is being small JSON.
 
 **The owner reversed it, and the reversal is right:**
 
-> *"being able to author using terrain meshes and medium layers / water /
+> _"being able to author using terrain meshes and medium layers / water /
 > clouds / ambient etc as primitives is hugely useful. E.g. just being able to
 > edit a province using a sample terrain and being able to drag it around to see
 > how it interacts would be amazing. This would allow you ultimately to do
 > things like build a province that changes a landform and sticks a procedural
-> city or other tilemap into a location on an arbitrary underlying terrain."*
+> city or other tilemap into a location on an arbitrary underlying terrain."_
 
 Two distinct things are named there, and keeping them apart is what makes this
 cheap rather than the LOD-and-streaming swamp the original answer feared.
@@ -938,7 +999,7 @@ the two interact. It is an editor affordance (`backdrop` on
 plan already had, and it never reaches the file.
 
 **2. Environment primitives — CONTENT, and they are already expressible.** A
-province that *changes* a landform carries that landform. This needs **no format
+province that _changes_ a landform carries that landform. This needs **no format
 change at all**, which is the argument for it: `features` was always an open map
 bound by registrations, so an environment primitive is simply a piece whose
 feature IS its body, with no library mesh to instantiate.
@@ -967,7 +1028,7 @@ right.
 
 Nothing here needs to change. Plain JSON with **stable, author-assigned ids** is
 exactly what a networked authority needs to refer to "that pump on that rig"
-without transmitting geometry. The risk to avoid is *derived* ids — if a piece's
+without transmitting geometry. The risk to avoid is _derived_ ids — if a piece's
 identity depends on its array index, every insertion renumbers the world.
 
 **Recommendation:** make `id` mandatory in v1 rather than defaulting to
@@ -991,7 +1052,7 @@ scaling, which pieces are objectives, which zones are active. Three reasons:
   would get subtly wrong.
 - **It is where Ariosto binds.** Mission facts ("the refinery was destroyed
   before the treaty") attach to the encounter, not to the ensemble — the
-  ensemble is a *kind of place*, the encounter is *this place, in this story*.
+  ensemble is a _kind of place_, the encounter is _this place, in this story_.
 
 Concretely: `ensemble` = what a thing IS, `encounter` = what it is DOING HERE.
 That line also settles Part 1's `values`: `targetValue` and `faction` are
@@ -1000,28 +1061,28 @@ per encounter.
 
 ### 5. Which UI stack — **the decision this document was making implicitly**
 
-Owner, mid-review: *"It could make sense as a tosijs-3d project if it leveraged
-our svg ui work (which would allow scene editing in VR...)"*
+Owner, mid-review: _"It could make sense as a tosijs-3d project if it leveraged
+our svg ui work (which would allow scene editing in VR...)"_
 
 PLAN.md currently says "use tosijs-ui widgets", which is a reasonable default and
 also a **silent commitment to flat-only, browser-only editing**. It deserves to
 be an argued decision, because the two options lead to different projects.
 
-| | **A — tosijs-ui DOM widgets** | **B — tosijs-3d SVG UI** |
-|---|---|---|
-| where it can live | its own project (as planned) | plausibly **inside tosijs-3d** |
-| where it runs | a browser page | a browser page **and a headset** |
-| forms | mature: `tosiForm`, `data-table`, `code-editor` | `widgets3d` + `box`/`surface`/`table`; no code editor |
-| text entry | the OS keyboard | `keyboard.ts` (built for exactly this) |
-| file I/O | native dialogs | **unsolved in a session** |
-| gizmos | Babylon `GizmoManager` (mouse-shaped) | **does not exist yet, either flat or in XR** |
+|                   | **A — tosijs-ui DOM widgets**                   | **B — tosijs-3d SVG UI**                              |
+| ----------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| where it can live | its own project (as planned)                    | plausibly **inside tosijs-3d**                        |
+| where it runs     | a browser page                                  | a browser page **and a headset**                      |
+| forms             | mature: `tosiForm`, `data-table`, `code-editor` | `widgets3d` + `box`/`surface`/`table`; no code editor |
+| text entry        | the OS keyboard                                 | `keyboard.ts` (built for exactly this)                |
+| file I/O          | native dialogs                                  | **unsolved in a session**                             |
+| gizmos            | Babylon `GizmoManager` (mouse-shaped)           | **does not exist yet, either flat or in XR**          |
 
 **The case for B is stronger than "VR would be nice", and it is worth stating
 plainly: editing a 3D arrangement is a spatial task performed at arm's length.**
 Judging whether a fortress reads, whether a turret covers the approach, whether a
 gap is flyable — those are the questions an ensemble editor exists to answer, and
 they are exactly the questions a flat viewport answers badly. A tool for
-arranging things in space that cannot be used *in* that space is conceding its
+arranging things in space that cannot be used _in_ that space is conceding its
 best affordance.
 
 The reason B is now practical rather than aspirational is that tosijs-3d's SVG UI
@@ -1049,8 +1110,8 @@ panels, modals), `gamepad-focus` (traversal without a pointer), `xr-frames` +
 
 #### The editor is the SVG UI's hardest customer, and that is a REASON
 
-Owner: *"As a complex consumer of the SVG 3d ui system it would generate a lot
-of battle testing that a game won't."*
+Owner: _"As a complex consumer of the SVG 3d ui system it would generate a lot
+of battle testing that a game won't."_
 
 This is the argument that settles it, and it runs the opposite way to the usual
 one. Normally you ask what a dependency gives the project; here the project
@@ -1090,7 +1151,7 @@ bundled together, and only the first one has a strong answer:
 
 - **Widgets: B.** It buys the headset, it buys flat for free, and a tool that
   looks foreign to the thing it authors for is the failure PLAN.md already names.
-- **Repo: still separate.** tosijs-3d is a *framework*; an editor is an
+- **Repo: still separate.** tosijs-3d is a _framework_; an editor is an
   application-shaped thing with file I/O, schema machinery and its own release
   cadence. Putting it inside would make every consumer's dependency tree carry an
   authoring tool, which is precisely the "a shipped game must not pay for
@@ -1100,9 +1161,9 @@ bundled together, and only the first one has a strong answer:
 #### Where the FORMAT lives — reopened, and the answer changed
 
 This document's Part 1 puts the format and instantiator in tosijs-3d. The owner's
-refinement: *"The 'ensemble' format could make sense as a core piece of tosijs-3d
+refinement: _"The 'ensemble' format could make sense as a core piece of tosijs-3d
 OR it could be a lightweight and separable import from the editor library. Maybe
-the latter makes more sense."*
+the latter makes more sense."_
 
 The latter does make more sense, and the reason is release cadence rather than
 layering. **A format is only finished when something has generated content with
@@ -1112,8 +1173,8 @@ gated against a framework's compatibility promises, while the format is still
 learning what it is. Put it in the editor package as a **separable entry point**
 and it iterates at the speed of the tool discovering what it needs, then settles.
 
-The property that mattered — *"the editor writes exactly what the runtime reads,
-because it is the same code"* — is preserved either way. It comes from **one
+The property that mattered — _"the editor writes exactly what the runtime reads,
+because it is the same code"_ — is preserved either way. It comes from **one
 implementation with two importers**, not from which repo hosts it:
 
 ```jsonc

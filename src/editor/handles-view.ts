@@ -29,22 +29,28 @@ the mesh it manipulates cannot be clicked at all — and the piece an author mos
 wants to move is usually the one embedded in something else.
 */
 /*{"parent":"Internals","order":5}*/
-import { Color3, MeshBuilder, Quaternion, StandardMaterial, Vector3 } from '@babylonjs/core'
-import { axisIndex, otherAxes } from './handles'
-import type { Axis, Grip, TransformSet } from './handles'
-import type { Euler, Vec3 } from '../format/types'
+import {
+  Color3,
+  MeshBuilder,
+  Quaternion,
+  StandardMaterial,
+  Vector3,
+} from "@babylonjs/core";
+import { axisIndex, otherAxes } from "./handles";
+import type { Axis, Grip, TransformSet } from "./handles";
+import type { Euler, Vec3 } from "../format/types";
 
-const DEG = Math.PI / 180
+const DEG = Math.PI / 180;
 
 /** A vector turned by a quaternion, as plain numbers. */
 function rotated(v: Vec3, q: Quaternion): Vec3 {
-  const out = Vector3.Zero()
-  new Vector3(v[0], v[1], v[2]).rotateByQuaternionToRef(q, out)
-  return [out.x, out.y, out.z]
+  const out = Vector3.Zero();
+  new Vector3(v[0], v[1], v[2]).rotateByQuaternionToRef(q, out);
+  return [out.x, out.y, out.z];
 }
 
 /** Marks a mesh as ours, so picking can tell a handle from the scene. */
-export const HANDLE_TAG = 'ensemble-editor-handle'
+export const HANDLE_TAG = "ensemble-editor-handle";
 
 /**
  * Marks the mesh you can SEE, as opposed to its fat invisible twin.
@@ -57,41 +63,41 @@ export const HANDLE_TAG = 'ensemble-editor-handle'
  * mesh's centre was worse, because a torus is centred on the widget origin and
  * so never wins against anything.
  */
-export const DRAWN_TAG = 'ensemble-editor-handle-drawn'
+export const DRAWN_TAG = "ensemble-editor-handle-drawn";
 
 interface HandleMesh {
-  grip: Grip
+  grip: Grip;
   /** Where this part sits, in unit-scale local space. */
-  offset: Vec3
+  offset: Vec3;
   /** How this part is turned onto its axis, in radians. */
-  spin: Vec3
+  spin: Vec3;
   mesh: {
-    position: { x: number; y: number; z: number }
-    rotation: { x: number; y: number; z: number }
-    scaling: { x: number; y: number; z: number }
-    rotationQuaternion: Quaternion | null
-    isVisible: boolean
-    isDisposed: () => boolean
-    visibility: number
-    metadata: unknown
-    dispose: () => void
-    computeWorldMatrix: (force: boolean) => void
-    renderingGroupId: number
-    material: unknown
-    isPickable: boolean
-  }
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scaling: { x: number; y: number; z: number };
+    rotationQuaternion: Quaternion | null;
+    isVisible: boolean;
+    isDisposed: () => boolean;
+    visibility: number;
+    metadata: unknown;
+    dispose: () => void;
+    computeWorldMatrix: (force: boolean) => void;
+    renderingGroupId: number;
+    material: unknown;
+    isPickable: boolean;
+  };
 }
 
 const AXIS_COLOR: Record<Axis, [number, number, number]> = {
   x: [0.9, 0.25, 0.3],
   y: [0.35, 0.85, 0.4],
   z: [0.3, 0.5, 0.95],
-}
+};
 
-const NEUTRAL: [number, number, number] = [0.85, 0.85, 0.88]
+const NEUTRAL: [number, number, number] = [0.85, 0.85, 0.88];
 
 /** How close a HAND has to be, in metres, to grab a handle directly. */
-export const NEAR_RADIUS = 0.18
+export const NEAR_RADIUS = 0.18;
 
 /**
  * How much fatter the INVISIBLE pick target is than the handle you see.
@@ -106,7 +112,7 @@ export const NEAR_RADIUS = 0.18
  * picked. Mouse users benefit too: aiming at a 3 px cylinder was never good,
  * it was merely possible.
  */
-const PICK_FATNESS = 5
+const PICK_FATNESS = 5;
 
 /**
  * Where each grip sits, at unit scale. One table, so the layout can be read.
@@ -137,17 +143,17 @@ const PICK_FATNESS = 5
   Its pick target stays generous, so aiming at the line still works; it just no
   longer ADVERTISES itself as the target.
 */
-const SHAFT_LENGTH = 0.8
-const SHAFT_DIAMETER = 0.032
-const SHAFT_PICK_FATNESS = 11
-const SHAFT_OFFSET = 0.55
-const PAD_OFFSET = 0.3
-const PAD_SIZE = 0.28
-const RING_DIAMETER = 3.3
-const RING_THICKNESS = 0.09
-const CUBE_SIZE = 0.17
-const CUBE_OFFSET = 2.15
-const CENTRE_SIZE = 0.2
+const SHAFT_LENGTH = 0.8;
+const SHAFT_DIAMETER = 0.032;
+const SHAFT_PICK_FATNESS = 11;
+const SHAFT_OFFSET = 0.55;
+const PAD_OFFSET = 0.3;
+const PAD_SIZE = 0.28;
+const RING_DIAMETER = 3.3;
+const RING_THICKNESS = 0.09;
+const CUBE_SIZE = 0.17;
+const CUBE_OFFSET = 2.15;
+const CENTRE_SIZE = 0.2;
 
 /**
  * The arrowhead, and why a shaft alone was not enough.
@@ -162,9 +168,9 @@ const CENTRE_SIZE = 0.2
  * It is a separate PART of the same grip, not a grip of its own — grabbing the
  * head and grabbing the shaft mean the same drag.
  */
-const HEAD_LENGTH = 0.4
-const HEAD_DIAMETER = 0.3
-const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2
+const HEAD_LENGTH = 0.4;
+const HEAD_DIAMETER = 0.3;
+const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2;
 
 /**
  * The rings get a THINNER pick tube than everything else.
@@ -179,12 +185,12 @@ const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2
  * to be caught side-on, and "I couldn't rotate anything, but that's with touch"
  * is what too little tube feels like.
  */
-const RING_PICK_FATNESS = 3
+const RING_PICK_FATNESS = 3;
 
 export interface HandlesView {
   /** Rebuild for a new transform set. Cheap no-op when nothing changed. */
-  setTransforms(transforms: TransformSet): void
-  moveTo(position: Vec3): void
+  setTransforms(transforms: TransformSet): void;
+  moveTo(position: Vec3): void;
   /**
    * Resize the handles so they stay a constant size ON SCREEN.
    *
@@ -195,7 +201,7 @@ export interface HandlesView {
    * the manipulator is very hit and mostly miss". A manipulator you cannot
    * reliably hit is not a manipulator.
    */
-  setScale(scale: number): void
+  setScale(scale: number): void;
   /**
    * The piece's own rotation, for the grips that work in its frame.
    *
@@ -208,21 +214,21 @@ export interface HandlesView {
    *
    * Translate stays world-aligned, because `at` is a world position.
    */
-  setOrientation(rot: Euler | null): void
-  setVisible(visible: boolean): void
+  setOrientation(rot: Euler | null): void;
+  setVisible(visible: boolean): void;
   /** The grip within `NEAR_RADIUS` of a hand, if any. */
-  nearestGrip(hand: Vec3): Grip | null
+  nearestGrip(hand: Vec3): Grip | null;
   /** The grip a handle mesh belongs to, for resolving a ray pick. */
-  gripOf(mesh: unknown): Grip | null
+  gripOf(mesh: unknown): Grip | null;
   /**
    * Is this one of the DRAWN handles, rather than a fat invisible pick target?
    *
    * The two are picked in separate passes — see the note on `add`.
    */
-  isDrawn(mesh: unknown): boolean
+  isDrawn(mesh: unknown): boolean;
   /** Are these meshes still in a live scene? See [[The selection marker]]. */
-  alive(): boolean
-  dispose(): void
+  alive(): boolean;
+  dispose(): void;
 }
 
 /**
@@ -233,52 +239,68 @@ export interface HandlesView {
  * be absurd, and `setTransforms` is the only thing that should ever rebuild.
  */
 export function createHandles(scene: unknown, scale = 1): HandlesView {
-  const s = scene as never
-  const handles: HandleMesh[] = []
-  const materials: Array<{ dispose: () => void }> = []
-  let position: Vec3 = [0, 0, 0]
-  let transforms: TransformSet = { translate: true, rotate: false, scale: false }
+  const s = scene as never;
+  const handles: HandleMesh[] = [];
+  const materials: Array<{ dispose: () => void }> = [];
+  let position: Vec3 = [0, 0, 0];
+  let transforms: TransformSet = {
+    translate: true,
+    rotate: false,
+    scale: false,
+  };
   /** Null means "not turned", and world axes are used as they are. */
-  let orientation: Quaternion | null = null
+  let orientation: Quaternion | null = null;
 
-  const material = (key: string, colour: [number, number, number], alpha = 1) => {
+  const material = (
+    key: string,
+    colour: [number, number, number],
+    alpha = 1
+  ) => {
     const m = new StandardMaterial(`${HANDLE_TAG}-${key}`, s) as unknown as {
-      emissiveColor: Color3
-      disableLighting: boolean
-      alpha: number
-      backFaceCulling: boolean
-      dispose: () => void
-    }
-    const [r, g, b] = colour
+      emissiveColor: Color3;
+      disableLighting: boolean;
+      alpha: number;
+      backFaceCulling: boolean;
+      dispose: () => void;
+    };
+    const [r, g, b] = colour;
     // Emissive and unlit: a handle must read the same against a bright sky and
     // a dark hull, and it is UI rather than part of the scene.
-    m.emissiveColor = new Color3(r, g, b)
-    m.disableLighting = true
-    m.alpha = alpha
+    m.emissiveColor = new Color3(r, g, b);
+    m.disableLighting = true;
+    m.alpha = alpha;
     // A plane pad is a flat quad and gets looked at from both sides; without
     // this it vanishes from half the orbit, which reads as a missing handle.
-    m.backFaceCulling = false
-    materials.push(m)
-    return m
-  }
+    m.backFaceCulling = false;
+    materials.push(m);
+    return m;
+  };
 
   interface PartSpec {
     /** Distinguishes parts of one grip in mesh names — `translate-x-head`. */
-    part?: string
-    make: (name: string, fatness: number) => unknown
-    colour: [number, number, number]
-    alpha?: number
-    offset?: Vec3
-    spin?: Vec3
+    part?: string;
+    make: (name: string, fatness: number) => unknown;
+    colour: [number, number, number];
+    alpha?: number;
+    offset?: Vec3;
+    spin?: Vec3;
   }
 
   /** The drawn mesh and its fat invisible twin, both tagged with the grip. */
   const add = (grip: Grip, spec: PartSpec) => {
-    const { make, colour, alpha = 1, offset = [0, 0, 0], spin = [0, 0, 0] } = spec
-    const key = `${grip.kind}-${grip.axis ?? 'all'}${spec.part ? `-${spec.part}` : ''}`
-    const mesh = make(`${HANDLE_TAG}-${key}`, 1) as HandleMesh['mesh']
-    mesh.material = material(key, colour, alpha)
-    mesh.renderingGroupId = 1
+    const {
+      make,
+      colour,
+      alpha = 1,
+      offset = [0, 0, 0],
+      spin = [0, 0, 0],
+    } = spec;
+    const key = `${grip.kind}-${grip.axis ?? "all"}${
+      spec.part ? `-${spec.part}` : ""
+    }`;
+    const mesh = make(`${HANDLE_TAG}-${key}`, 1) as HandleMesh["mesh"];
+    mesh.material = material(key, colour, alpha);
+    mesh.renderingGroupId = 1;
     /*
       The drawn handle IS pickable, and is picked FIRST.
 
@@ -287,23 +309,26 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       piece instead. A hit on drawn geometry is unambiguous: it is the thing you
       could see and aimed at. The fat targets remain for everything else.
     */
-    mesh.isPickable = true
-    mesh.metadata = { [HANDLE_TAG]: grip, [DRAWN_TAG]: true }
-    handles.push({ grip, mesh, offset, spin })
+    mesh.isPickable = true;
+    mesh.metadata = { [HANDLE_TAG]: grip, [DRAWN_TAG]: true };
+    handles.push({ grip, mesh, offset, spin });
 
-    const target = make(`${HANDLE_TAG}-${key}-pick`, PICK_FATNESS) as HandleMesh['mesh']
+    const target = make(
+      `${HANDLE_TAG}-${key}-pick`,
+      PICK_FATNESS
+    ) as HandleMesh["mesh"];
     /*
       `visibility = 0`, not `isVisible = false`: Babylon's picking skips meshes
       that are not visible, so hiding it the obvious way would make the pick
       target unpickable — which is the only thing it exists for.
     */
-    target.visibility = 0
-    target.isPickable = true
-    target.metadata = { [HANDLE_TAG]: grip }
-    handles.push({ grip, mesh: target, offset, spin })
-  }
+    target.visibility = 0;
+    target.isPickable = true;
+    target.metadata = { [HANDLE_TAG]: grip };
+    handles.push({ grip, mesh: target, offset, spin });
+  };
 
-  const HALF = Math.PI / 2
+  const HALF = Math.PI / 2;
 
   /**
    * Turn a shape built along +Y onto an axis, pointing OUTWARD.
@@ -313,36 +338,36 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
    * tell. A cone can tell: it would point back at the piece.
    */
   const alongAxis = (axis: Axis): Vec3 =>
-    axis === 'x' ? [0, 0, -HALF] : axis === 'z' ? [HALF, 0, 0] : [0, 0, 0]
+    axis === "x" ? [0, 0, -HALF] : axis === "z" ? [HALF, 0, 0] : [0, 0, 0];
 
   /** Turn a torus (lying in XZ, normal +Y) so its normal is `axis`. */
   const ringOn = (axis: Axis): Vec3 =>
-    axis === 'x' ? [0, 0, HALF] : axis === 'z' ? [HALF, 0, 0] : [0, 0, 0]
+    axis === "x" ? [0, 0, HALF] : axis === "z" ? [HALF, 0, 0] : [0, 0, 0];
 
   /** Turn a plane (facing +Z) so it faces `axis`. */
   const facing = (axis: Axis): Vec3 =>
-    axis === 'x' ? [0, HALF, 0] : axis === 'y' ? [HALF, 0, 0] : [0, 0, 0]
+    axis === "x" ? [0, HALF, 0] : axis === "y" ? [HALF, 0, 0] : [0, 0, 0];
 
   /** A vector that is `distance` along one axis and zero elsewhere. */
   const along = (axis: Axis, distance: number): Vec3 => {
-    const v: Vec3 = [0, 0, 0]
-    v[axisIndex(axis)] = distance
-    return v
-  }
+    const v: Vec3 = [0, 0, 0];
+    v[axisIndex(axis)] = distance;
+    return v;
+  };
 
   const build = () => {
-    for (const h of handles) h.mesh.dispose()
-    for (const m of materials) m.dispose()
-    handles.length = 0
-    materials.length = 0
+    for (const h of handles) h.mesh.dispose();
+    for (const m of materials) m.dispose();
+    handles.length = 0;
+    materials.length = 0;
 
-    for (const axis of ['x', 'y', 'z'] as Axis[]) {
-      const colour = AXIS_COLOR[axis]
-      const grip = (kind: Grip['kind']): Grip => ({ kind, axis })
+    for (const axis of ["x", "y", "z"] as Axis[]) {
+      const colour = AXIS_COLOR[axis];
+      const grip = (kind: Grip["kind"]): Grip => ({ kind, axis });
 
       if (transforms.translate) {
-        add(grip('translate'), {
-          part: 'shaft',
+        add(grip("translate"), {
+          part: "shaft",
           colour,
           offset: along(axis, SHAFT_OFFSET),
           spin: alongAxis(axis),
@@ -356,11 +381,11 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
               },
               s
             ),
-        })
+        });
         // The arrowhead: same grip, fatter target, and the part that says
         // "drag along this axis" without anyone having to be told.
-        add(grip('translate'), {
-          part: 'head',
+        add(grip("translate"), {
+          part: "head",
           colour,
           offset: along(axis, HEAD_OFFSET),
           spin: alongAxis(axis),
@@ -378,25 +403,29 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
               },
               s
             ),
-        })
+        });
         // The plane pad's axis is the plane's NORMAL, so this one reads as
         // "the pad you slide across while that axis stays put".
-        const [u, v] = otherAxes(axis)
-        const pad: Vec3 = [0, 0, 0]
-        pad[axisIndex(u)] = PAD_OFFSET
-        pad[axisIndex(v)] = PAD_OFFSET
-        add(grip('planar'), {
+        const [u, v] = otherAxes(axis);
+        const pad: Vec3 = [0, 0, 0];
+        pad[axisIndex(u)] = PAD_OFFSET;
+        pad[axisIndex(v)] = PAD_OFFSET;
+        add(grip("planar"), {
           colour,
           alpha: 0.35,
           offset: pad,
           spin: facing(axis),
           make: (name, fat) =>
-            MeshBuilder.CreatePlane(name, { size: PAD_SIZE * (fat > 1 ? 1.6 : 1) }, s),
-        })
+            MeshBuilder.CreatePlane(
+              name,
+              { size: PAD_SIZE * (fat > 1 ? 1.6 : 1) },
+              s
+            ),
+        });
       }
 
       if (transforms.rotate) {
-        add(grip('rotate'), {
+        add(grip("rotate"), {
           colour,
           spin: ringOn(axis),
           make: (name, fat) =>
@@ -409,32 +438,40 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
               },
               s
             ),
-        })
+        });
       }
 
       if (transforms.scale) {
-        add(grip('scale'), {
+        add(grip("scale"), {
           colour,
           offset: along(axis, CUBE_OFFSET),
           make: (name, fat) =>
-            MeshBuilder.CreateBox(name, { size: CUBE_SIZE * (fat > 1 ? 2.2 : 1) }, s),
-        })
+            MeshBuilder.CreateBox(
+              name,
+              { size: CUBE_SIZE * (fat > 1 ? 2.2 : 1) },
+              s
+            ),
+        });
       }
     }
 
     if (transforms.scale) {
       add(
-        { kind: 'uniform' },
+        { kind: "uniform" },
         {
           colour: NEUTRAL,
           make: (name, fat) =>
-            MeshBuilder.CreateBox(name, { size: CENTRE_SIZE * (fat > 1 ? 2 : 1) }, s),
+            MeshBuilder.CreateBox(
+              name,
+              { size: CENTRE_SIZE * (fat > 1 ? 2 : 1) },
+              s
+            ),
         }
-      )
+      );
     }
 
-    place()
-  }
+    place();
+  };
 
   /*
     Position and orientation are decided at BUILD time and simply applied here.
@@ -446,33 +483,32 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   */
   const place = () => {
     for (const { grip, mesh, offset, spin } of handles) {
-      mesh.scaling.x = scale
-      mesh.scaling.y = scale
-      mesh.scaling.z = scale
-      mesh.rotation.x = spin[0]
-      mesh.rotation.y = spin[1]
-      mesh.rotation.z = spin[2]
+      mesh.scaling.x = scale;
+      mesh.scaling.y = scale;
+      mesh.scaling.z = scale;
+      mesh.rotation.x = spin[0];
+      mesh.rotation.y = spin[1];
+      mesh.rotation.z = spin[2];
       /*
         Scale cubes and rotation rings ride the PIECE's frame — those are the
         axes they actually act on. Translate shafts and pads stay world-aligned,
         because a move is a world move.
       */
-      const local = orientation && (grip.kind === 'scale' || grip.kind === 'rotate')
-      const along: Vec3 = local
-        ? rotated(offset, orientation!)
-        : offset
+      const local =
+        orientation && (grip.kind === "scale" || grip.kind === "rotate");
+      const along: Vec3 = local ? rotated(offset, orientation!) : offset;
       if (local) {
         // A quaternion, not euler: composing the piece's turn with the grip's
         // own turn in euler would mean re-deriving Babylon's order by hand.
         mesh.rotationQuaternion = orientation!.multiply(
           Quaternion.RotationYawPitchRoll(spin[1], spin[0], spin[2])
-        )
+        );
       } else {
-        mesh.rotationQuaternion = null
+        mesh.rotationQuaternion = null;
       }
-      mesh.position.x = position[0] + along[0] * scale
-      mesh.position.y = position[1] + along[1] * scale
-      mesh.position.z = position[2] + along[2] * scale
+      mesh.position.x = position[0] + along[0] * scale;
+      mesh.position.y = position[1] + along[1] * scale;
+      mesh.position.z = position[2] + along[2] * scale;
 
       /*
         FORCE THE WORLD MATRIX. A mesh that has been positioned but not yet
@@ -485,11 +521,11 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
         scene is paused. Measured, not assumed: without this, the handles picked
         as though they were at 0,0,0 while drawing correctly at the selection.
       */
-      mesh.computeWorldMatrix(true)
+      mesh.computeWorldMatrix(true);
     }
-  }
+  };
 
-  build()
+  build();
 
   return {
     setTransforms(next) {
@@ -498,45 +534,51 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
         next.rotate === transforms.rotate &&
         next.scale === transforms.scale
       ) {
-        return
+        return;
       }
-      transforms = { ...next }
-      build()
+      transforms = { ...next };
+      build();
     },
     moveTo(next) {
-      position = next
-      place()
+      position = next;
+      place();
     },
     setOrientation(rot) {
       const next =
         rot && (rot[0] !== 0 || rot[1] !== 0 || rot[2] !== 0)
-          ? Quaternion.RotationYawPitchRoll(rot[1] * DEG, rot[0] * DEG, rot[2] * DEG)
-          : null
+          ? Quaternion.RotationYawPitchRoll(
+              rot[1] * DEG,
+              rot[0] * DEG,
+              rot[2] * DEG
+            )
+          : null;
       const same =
         (next === null && orientation === null) ||
-        (next !== null && orientation !== null && Quaternion.AreClose(next, orientation, 1e-4))
+        (next !== null &&
+          orientation !== null &&
+          Quaternion.AreClose(next, orientation, 1e-4));
       // Per frame, like `setScale`: re-placing every mesh for an orientation
       // that has not changed is waste on the one loop that must not stutter.
-      if (same) return
-      orientation = next
-      place()
+      if (same) return;
+      orientation = next;
+      place();
     },
     setScale(next) {
       // Same guard as `setTransforms`: this runs per frame, and re-placing every
       // mesh (each forcing a world matrix) for a scale that has not moved is
       // pure waste on the one loop that must never stutter.
-      if (Math.abs(next - scale) < 1e-3) return
-      scale = next
-      place()
+      if (Math.abs(next - scale) < 1e-3) return;
+      scale = next;
+      place();
     },
     setVisible(visible) {
       // Pick targets stay at visibility 0 either way; only the drawn ones toggle.
       for (const { mesh } of handles) {
-        if (mesh.visibility !== 0) mesh.isVisible = visible
+        if (mesh.visibility !== 0) mesh.isVisible = visible;
       }
     },
     nearestGrip(hand) {
-      let best: Grip | null = null
+      let best: Grip | null = null;
       /*
         A hand is a fixed size; the handles are not, since they track the camera
         to stay constant on screen. So reach is the LARGER of what a hand needs
@@ -544,38 +586,38 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
         handle would shrink the grab volume to a centimetre exactly when you are
         close enough to reach for it.
       */
-      let bestDistance = Math.max(NEAR_RADIUS, 0.5 * scale)
+      let bestDistance = Math.max(NEAR_RADIUS, 0.5 * scale);
       for (const { grip, mesh } of handles) {
         const d = Math.hypot(
           mesh.position.x - hand[0],
           mesh.position.y - hand[1],
           mesh.position.z - hand[2]
-        )
+        );
         if (d <= bestDistance) {
-          bestDistance = d
-          best = grip
+          bestDistance = d;
+          best = grip;
         }
       }
-      return best
+      return best;
     },
     gripOf(mesh) {
-      const meta = (mesh as { metadata?: Record<string, Grip> } | null)?.metadata
-      return meta?.[HANDLE_TAG] ?? null
+      const meta = (mesh as { metadata?: Record<string, Grip> } | null)
+        ?.metadata;
+      return meta?.[HANDLE_TAG] ?? null;
     },
     isDrawn(mesh) {
-      const meta = (mesh as { metadata?: Record<string, unknown> } | null)?.metadata
-      return meta?.[DRAWN_TAG] === true
+      const meta = (mesh as { metadata?: Record<string, unknown> } | null)
+        ?.metadata;
+      return meta?.[DRAWN_TAG] === true;
     },
     alive() {
-      return handles.length > 0 && !handles[0]!.mesh.isDisposed()
+      return handles.length > 0 && !handles[0]!.mesh.isDisposed();
     },
     dispose() {
-      for (const { mesh } of handles) mesh.dispose()
-      for (const m of materials) m.dispose()
-      handles.length = 0
-      materials.length = 0
+      for (const { mesh } of handles) mesh.dispose();
+      for (const m of materials) m.dispose();
+      handles.length = 0;
+      materials.length = 0;
     },
-  }
+  };
 }
-
-

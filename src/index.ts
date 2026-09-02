@@ -49,38 +49,48 @@ export type {
   Role,
   Vec3,
   Euler,
-} from './format/types'
-export { featuresOf, registerRole, roleFeatures, roleNames } from './format/roles'
+} from "./format/types";
+export {
+  featuresOf,
+  registerRole,
+  roleFeatures,
+  roleNames,
+} from "./format/roles";
 export {
   registerFeature,
   featureRegistration,
   registeredFeatures,
   unregisterFeature,
-} from './format/registry'
+} from "./format/registry";
 export type {
   FeatureContext,
   FeatureRegistration,
   FeatureSchema,
   SceneElement,
-} from './format/registry'
-export { validate, registerCheck } from './format/validate'
-export type { Problem, Severity, ValidateOptions } from './format/validate'
+} from "./format/registry";
+export { validate, registerCheck } from "./format/validate";
+export type { Problem, Severity, ValidateOptions } from "./format/validate";
 
 // ── The instantiator: needs tosijs-3d, needs no UI ──────────────────────────
-export { buildEnsemble, loadEnsemble } from './runtime/build'
+export { buildEnsemble, loadEnsemble } from "./runtime/build";
 export type {
   BuildOptions,
   BuiltEnsemble,
   BuiltPiece,
   PlaceContext,
   Placement,
-} from './runtime/build'
-export { placeMesh, attachBlip } from './runtime/place-mesh'
-export { mountLibraries, libraryNames, resolveLibrary, meshesByLibrary } from './runtime/libraries'
-export { registerSceneFeatures } from './runtime/features-scene'
+} from "./runtime/build";
+export { placeMesh, attachBlip } from "./runtime/place-mesh";
+export {
+  mountLibraries,
+  libraryNames,
+  resolveLibrary,
+  meshesByLibrary,
+} from "./runtime/libraries";
+export { registerSceneFeatures } from "./runtime/features-scene";
 // The one-line embed. A RUNTIME affordance, not an editor one: a game that
 // loads a scene as data wants this and nothing else in this file's last section.
-export { TosiEnsemble, ensemble } from './runtime/ensemble-element'
+export { TosiEnsemble, ensemble } from "./runtime/ensemble-element";
 
 // Neither vocabulary is re-exported here. Both are domains and the format has
 // none, so a consumer names the one it wants:
@@ -89,5 +99,5 @@ export { TosiEnsemble, ensemble } from './runtime/ensemble-element'
 //   import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat'
 
 // ── The editor: an author's tool ────────────────────────────────────────────
-export { EnsembleEditor, ensembleEditor } from './editor/ensemble-editor'
-export type { Backdrop } from './editor/ensemble-editor'
+export { EnsembleEditor, ensembleEditor } from "./editor/ensemble-editor";
+export type { Backdrop } from "./editor/ensemble-editor";

@@ -18,13 +18,13 @@ manipulator, because tosijs-3d has none (see `UPSTREAM.md`).
 The markdown files carry decisions reached by argument, several of them by
 correcting a wrong first answer. Read them before writing code:
 
-| | |
-|---|---|
-| `SPEC.md` | **the specification** — format, editor affordances, schema system, scenarios, and five design questions answered with recommendations. The primary document |
-| `PLAN.md` | the plan — what to build, in what order, and what "done" means per milestone |
-| `README.md` | the elevator pitch and the package story |
-| `UPSTREAM.md` | gaps in tosijs-3d found while building. **File, don't fix** |
-| `AGENTS.md` | the practices pointer, and this project's divergences |
+|               |                                                                                                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SPEC.md`     | **the specification** — format, editor affordances, schema system, scenarios, and five design questions answered with recommendations. The primary document |
+| `PLAN.md`     | the plan — what to build, in what order, and what "done" means per milestone                                                                                |
+| `README.md`   | the elevator pitch and the package story                                                                                                                    |
+| `UPSTREAM.md` | gaps in tosijs-3d found while building. **File, don't fix**                                                                                                 |
+| `AGENTS.md`   | the practices pointer, and this project's divergences                                                                                                       |
 
 When SPEC.md and PLAN.md disagree, SPEC.md's later sections usually win —
 "Open questions" reopened and reversed decisions made in its own Part 1. Check
@@ -59,7 +59,7 @@ Non-negotiables from that repo:
 
   ⚠️ **Never pin a tosijs-3d PRERELEASE range.** `0.7.0-rc.1` was published
   before the betas, and semver sorts beta below rc — so `^0.7.0-beta.6`
-  resolved *backwards* to rc.1, silently, with `bun update` reporting the
+  resolved _backwards_ to rc.1, silently, with `bun update` reporting the
   downgrade as an upgrade. `^0.7.0` is above every prerelease and is what to use.
 
 ## One package, tree-shakeable — the decision that reversed twice
@@ -69,16 +69,16 @@ The format, the instantiator AND the editor ship from here as **one package**,
 away.
 
 ```js
-import { buildEnsemble, validate } from 'tosijs-3d-ensemble' // a game
-import { ensembleEditor } from 'tosijs-3d-ensemble'          // an author
+import { buildEnsemble, validate } from "tosijs-3d-ensemble"; // a game
+import { ensembleEditor } from "tosijs-3d-ensemble"; // an author
 ```
 
 ⚠️ **Two earlier answers are still readable in the git history and partly in
 SPEC.md's older paragraphs.** The format was going to live upstream in
 tosijs-3d (`b3d-ensemble`); then it was going to be two packages from one repo.
-Both are superseded. Owner: *"I don't think two packages is right, just the
+Both are superseded. Owner: _"I don't think two packages is right, just the
 editor should be thoroughly tree-shakeable if you just want to consume
-ensembles."*
+ensembles."_
 
 The property that matters — the editor writes exactly what the runtime reads,
 because it is the same code — is strongest this way: there is no version at
@@ -95,12 +95,12 @@ that will notice.
 
 ### Dependencies
 
-| | |
-|---|---|
-| `tosijs-3d` | the scene, **and the SVG UI the editor's chrome is built on** |
-| `tosijs-ui` | the **build/doc system** (`tosijs-ui/site`). Its DOM widgets are not the editor's chrome — see below |
-| `tosijs-schema` | schemas as JSON Schema; tjs predicates later |
-| `tosijs` | state, not ad-hoc module globals |
+|                 |                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| `tosijs-3d`     | the scene, **and the SVG UI the editor's chrome is built on**                                        |
+| `tosijs-ui`     | the **build/doc system** (`tosijs-ui/site`). Its DOM widgets are not the editor's chrome — see below |
+| `tosijs-schema` | schemas as JSON Schema; tjs predicates later                                                         |
+| `tosijs`        | state, not ad-hoc module globals                                                                     |
 
 ## The UI stack: tosijs-3d's SVG UI, not DOM widgets
 
@@ -109,7 +109,7 @@ SPEC.md open question 5 is answered: **build the chrome on tosijs-3d's SVG UI**
 which is one implementation rendering both as a DOM overlay and as an in-scene
 texture — so it buys the headset without giving up the browser. Editing a 3D
 arrangement is a spatial task; a tool for arranging things in space that cannot
-be used *in* that space concedes its best affordance. The repo stays separate
+be used _in_ that space concedes its best affordance. The repo stays separate
 regardless.
 
 Two consequences that change the schedule:
@@ -117,7 +117,7 @@ Two consequences that change the schedule:
 - **Milestone 0a is a falsifiable test, and it comes first.** Build the piece
   list and ONE property panel in the SVG UI and try them in a headset before the
   scaffold hardens. Forms are the SVG UI's weakest area (no form layer; a
-  schema-driven property panel *is* a form generator) and that is cheap to
+  schema-driven property panel _is_ a form generator) and that is cheap to
   discover now, expensive in milestone 3.
 - **No manipulator exists — flat or XR.** `b3d-panel`'s coloured axes are a
   debug READOUT that looks exactly like Babylon's position gizmo, and has
@@ -170,10 +170,10 @@ Cheap now, painful to retrofit:
   reordering pieces in the editor silently changes behaviour.
 - **Rebuilding must be idempotent.** The editor rebuilds on every edit —
   hundreds of times a session where a game runs it once. The test worth writing
-  is *build → dispose → build*, asserting scene mesh, observer and material
+  is _build → dispose → build_, asserting scene mesh, observer and material
   counts return to where they started.
 - **Features are a registry**, not a switch. `registerFeature({name, schema,
-  bind})`; a consumer's feature must be indistinguishable from a built-in in the
+bind})`; a consumer's feature must be indistinguishable from a built-in in the
   format, the editor and the file.
 - **Regex lives as a source string**, compiled at load — a `RegExp` makes the
   format unserializable.
@@ -184,7 +184,7 @@ Cheap now, painful to retrofit:
   uniform. `src/format/scale.ts` holds the two functions that let everything
   else stop caring which it got, and a drag writes back the NARROW spelling so
   a uniform scale round-trips as the number the author typed.
-- **`FeatureContext.scale` stays a single number**, defined as the *enclosing*
+- **`FeatureContext.scale` stays a single number**, defined as the _enclosing_
   component (the max) — a feature uses it to size a radius, and a mean would put
   that radius inside the geometry it is meant to cover. `BuiltPiece.scale3` is
   the honest triple.
@@ -195,11 +195,11 @@ Cheap now, painful to retrofit:
 rewrites `mesh.position` from `x`/`y`/`z` every frame, which is why moving a
 piece has always worked. Nothing else gets through:
 
-| written | result |
-|---|---|
-| `piece.scale` 1 → 2 → 4 | rendered width 5.273 every time (`size` is the placeholder cube's edge, ignored once `library` is set) |
-| `element.ry = 90` | node rotation `0,0,0`, quaternion null, unchanged |
-| authored `rot: [0, 45, 0]` | footprint 3.63 × 3.63, identical to no rotation — `instantiate` is called with position only |
+| written                    | result                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `piece.scale` 1 → 2 → 4    | rendered width 5.273 every time (`size` is the placeholder cube's edge, ignored once `library` is set) |
+| `element.ry = 90`          | node rotation `0,0,0`, quaternion null, unchanged                                                      |
+| authored `rot: [0, 45, 0]` | footprint 3.63 × 3.63, identical to no rotation — `instantiate` is called with position only           |
 
 So `piece.scale` and `piece.rot` were documented format fields that moved
 nothing. The editor shipped controls against both, and a test asserted
@@ -223,16 +223,16 @@ attribute on a tosijs-3d element, measure the rendered result.**
 A working prototype exists in **`../manta-recon`** (a game; the editor grew
 inside it and was extracted for exactly the reasons in SPEC.md):
 
-| file | what it is |
-|---|---|
-| `src/prefab.ts` | format types + `validatePrefab` |
-| `src/prefab-runtime.ts` | the instantiator (features → components) |
-| `src/bench-gizmo.ts` | Babylon `GizmoManager` binding; writes back to JSON on drag release |
-| `src/bench-view.ts` | placement modes, camera fit, ortho toggle, shadow casters |
-| `src/zones.ts` | live zone registry (escort volumes AI reads) |
-| `src/prefab-editor.ts` | the bench itself |
-| `static/prefab.html` | its page |
-| `EDITOR-SPEC.md` | the ancestor of `SPEC.md` here |
+| file                    | what it is                                                          |
+| ----------------------- | ------------------------------------------------------------------- |
+| `src/prefab.ts`         | format types + `validatePrefab`                                     |
+| `src/prefab-runtime.ts` | the instantiator (features → components)                            |
+| `src/bench-gizmo.ts`    | Babylon `GizmoManager` binding; writes back to JSON on drag release |
+| `src/bench-view.ts`     | placement modes, camera fit, ortho toggle, shadow casters           |
+| `src/zones.ts`          | live zone registry (escort volumes AI reads)                        |
+| `src/prefab-editor.ts`  | the bench itself                                                    |
+| `static/prefab.html`    | its page                                                            |
+| `EDITOR-SPEC.md`        | the ancestor of `SPEC.md` here                                      |
 
 Read these for the traps they encode, listed in SPEC.md §"What Manta contributes
 back". Several cost hours: attributes captured at attach are not live, library
@@ -247,7 +247,7 @@ happen before the editor is built on top of it.
 
 ## What "verified" means here, and what it does not
 
-The project's own rule is *verify the OUTPUT, not the mechanism*, so be precise
+The project's own rule is _verify the OUTPUT, not the mechanism_, so be precise
 about which claims have been checked:
 
 - **Checked in a browser:** the editor mounts, the backdrop renders, all placed

@@ -30,13 +30,13 @@ a long drag. Quantising the resulting absolute value instead means a snapped
 piece is always exactly on the grid, however it got there.
 */
 /*{"parent":"Internals","order":4}*/
-import type { Vec3 } from '../format/types'
-import type { EditorRay } from './input/pointer'
+import type { Vec3 } from "../format/types";
+import type { EditorRay } from "./input/pointer";
 
-export type Axis = 'x' | 'y' | 'z'
+export type Axis = "x" | "y" | "z";
 
 /** What a grip does when you drag it. */
-export type GripKind = 'translate' | 'planar' | 'rotate' | 'scale' | 'uniform'
+export type GripKind = "translate" | "planar" | "rotate" | "scale" | "uniform";
 
 /**
  * One grabbable part of the manipulator.
@@ -48,40 +48,46 @@ export type GripKind = 'translate' | 'planar' | 'rotate' | 'scale' | 'uniform'
  * drag record cover all five kinds. `uniform` has no axis.
  */
 export interface Grip {
-  kind: GripKind
-  axis?: Axis
+  kind: GripKind;
+  axis?: Axis;
 }
 
 /** Which transforms the widget offers. All off is a pure selection tool. */
 export interface TransformSet {
-  translate: boolean
-  rotate: boolean
-  scale: boolean
+  translate: boolean;
+  rotate: boolean;
+  scale: boolean;
 }
 
-export const NO_TRANSFORMS: TransformSet = { translate: false, rotate: false, scale: false }
+export const NO_TRANSFORMS: TransformSet = {
+  translate: false,
+  rotate: false,
+  scale: false,
+};
 
 /** True when the widget would draw nothing. */
-export const noTransforms = (t: TransformSet): boolean => !t.translate && !t.rotate && !t.scale
+export const noTransforms = (t: TransformSet): boolean =>
+  !t.translate && !t.rotate && !t.scale;
 
 /** The two axes that are not this one, in cyclic order. */
 export function otherAxes(axis: Axis): [Axis, Axis] {
-  return axis === 'x' ? ['y', 'z'] : axis === 'y' ? ['z', 'x'] : ['x', 'y']
+  return axis === "x" ? ["y", "z"] : axis === "y" ? ["z", "x"] : ["x", "y"];
 }
 
 /** Index of an axis into a `Vec3`. */
-export const axisIndex = (axis: Axis): 0 | 1 | 2 => (axis === 'x' ? 0 : axis === 'y' ? 1 : 2)
+export const axisIndex = (axis: Axis): 0 | 1 | 2 =>
+  axis === "x" ? 0 : axis === "y" ? 1 : 2;
 
 const AXIS_VECTOR: Record<Axis, Vec3> = {
   x: [1, 0, 0],
   y: [0, 1, 0],
   z: [0, 0, 1],
-}
+};
 
-export const axisVector = (axis: Axis): Vec3 => AXIS_VECTOR[axis]
+export const axisVector = (axis: Axis): Vec3 => AXIS_VECTOR[axis];
 
-const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
 /**
  * Closest point, along an infinite axis line, to a ray.
@@ -96,17 +102,17 @@ export function axisClosestApproach(
   axis: Vec3,
   ray: EditorRay
 ): number | null {
-  const w = sub(origin, ray.origin)
-  const a = dot(axis, axis)
-  const b = dot(axis, ray.direction)
-  const c = dot(ray.direction, ray.direction)
-  const d = dot(axis, w)
-  const e = dot(ray.direction, w)
-  const denominator = a * c - b * b
+  const w = sub(origin, ray.origin);
+  const a = dot(axis, axis);
+  const b = dot(axis, ray.direction);
+  const c = dot(ray.direction, ray.direction);
+  const d = dot(axis, w);
+  const e = dot(ray.direction, w);
+  const denominator = a * c - b * b;
   // Parallel within floating-point reach. The threshold is relative, not
   // absolute, so it holds for a scene measured in metres or in kilometres.
-  if (Math.abs(denominator) < 1e-9 * a * c) return null
-  return (b * e - c * d) / denominator
+  if (Math.abs(denominator) < 1e-9 * a * c) return null;
+  return (b * e - c * d) / denominator;
 }
 
 /**
@@ -125,17 +131,17 @@ export function angleAboutAxis(
   v: Vec3,
   ray: EditorRay
 ): number | null {
-  const denominator = dot(normal, ray.direction)
-  if (Math.abs(denominator) < 1e-9) return null // ray runs along the plane
-  const t = dot(normal, sub(origin, ray.origin)) / denominator
-  if (t < 0) return null // the plane is behind the pointer
+  const denominator = dot(normal, ray.direction);
+  if (Math.abs(denominator) < 1e-9) return null; // ray runs along the plane
+  const t = dot(normal, sub(origin, ray.origin)) / denominator;
+  if (t < 0) return null; // the plane is behind the pointer
   const hit: Vec3 = [
     ray.origin[0] + ray.direction[0] * t,
     ray.origin[1] + ray.direction[1] * t,
     ray.origin[2] + ray.direction[2] * t,
-  ]
-  const local = sub(hit, origin)
-  return (Math.atan2(dot(local, v), dot(local, u)) * 180) / Math.PI
+  ];
+  const local = sub(hit, origin);
+  return (Math.atan2(dot(local, v), dot(local, u)) * 180) / Math.PI;
 }
 
 /**
@@ -146,10 +152,10 @@ export function angleAboutAxis(
  * rather than a sign.
  */
 export const RING_BASIS: Record<Axis, [Axis, Axis]> = {
-  x: ['z', 'y'],
-  y: ['x', 'z'],
-  z: ['x', 'y'],
-}
+  x: ["z", "y"],
+  y: ["x", "z"],
+  z: ["x", "y"],
+};
 
 /**
  * Where a ray crosses the plane through `origin` whose normal is `axis`.
@@ -158,17 +164,21 @@ export const RING_BASIS: Record<Axis, [Axis, Axis]> = {
  * crossing) or when the plane is behind the pointer, which is a drag reaching
  * round the back of the widget.
  */
-export function rayPlanePoint(origin: Vec3, axis: Axis, ray: EditorRay): Vec3 | null {
-  const normal = AXIS_VECTOR[axis]
-  const denominator = dot(normal, ray.direction)
-  if (Math.abs(denominator) < 1e-9) return null
-  const t = dot(normal, sub(origin, ray.origin)) / denominator
-  if (t < 0) return null
+export function rayPlanePoint(
+  origin: Vec3,
+  axis: Axis,
+  ray: EditorRay
+): Vec3 | null {
+  const normal = AXIS_VECTOR[axis];
+  const denominator = dot(normal, ray.direction);
+  if (Math.abs(denominator) < 1e-9) return null;
+  const t = dot(normal, sub(origin, ray.origin)) / denominator;
+  if (t < 0) return null;
   return [
     ray.origin[0] + ray.direction[0] * t,
     ray.origin[1] + ray.direction[1] * t,
     ray.origin[2] + ray.direction[2] * t,
-  ]
+  ];
 }
 
 /**
@@ -180,17 +190,17 @@ export function rayPlanePoint(origin: Vec3, axis: Axis, ray: EditorRay): Vec3 | 
  * "screen space" to fall back on.
  */
 export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
-  const w = sub(origin, ray.origin)
-  const dd = dot(ray.direction, ray.direction)
-  if (dd < 1e-12) return 0
-  const t = dot(w, ray.direction) / dd
+  const w = sub(origin, ray.origin);
+  const dd = dot(ray.direction, ray.direction);
+  if (dd < 1e-12) return 0;
+  const t = dot(w, ray.direction) / dd;
   const closest: Vec3 = [
     ray.origin[0] + ray.direction[0] * t,
     ray.origin[1] + ray.direction[1] * t,
     ray.origin[2] + ray.direction[2] * t,
-  ]
-  const d = sub(origin, closest)
-  return Math.hypot(d[0], d[1], d[2])
+  ];
+  const d = sub(origin, closest);
+  return Math.hypot(d[0], d[1], d[2]);
 }
 
 /**
@@ -199,13 +209,13 @@ export function rayPerpendicularDistance(origin: Vec3, ray: EditorRay): number {
  * Applied to the absolute value rather than the delta — see the note above.
  */
 export function snap(value: number, step: number): number {
-  if (!Number.isFinite(step) || step <= 0) return value
-  return Math.round(value / step) * step
+  if (!Number.isFinite(step) || step <= 0) return value;
+  return Math.round(value / step) * step;
 }
 
 /** Snap each component of a position. */
 export function snapVec3(value: Vec3, step: number): Vec3 {
-  return [snap(value[0], step), snap(value[1], step), snap(value[2], step)]
+  return [snap(value[0], step), snap(value[1], step), snap(value[2], step)];
 }
 
 /**
@@ -215,8 +225,8 @@ export function snapVec3(value: Vec3, step: number): Vec3 {
  * there is a 359° jump — the piece spins the long way round for one frame.
  */
 export function wrapDegrees(angle: number): number {
-  const wrapped = ((angle + 180) % 360 + 360) % 360 - 180
-  return wrapped === -180 ? 180 : wrapped
+  const wrapped = ((((angle + 180) % 360) + 360) % 360) - 180;
+  return wrapped === -180 ? 180 : wrapped;
 }
 
 /**
@@ -233,14 +243,17 @@ export function wrapDegrees(angle: number): number {
  * 360 normalises to 0, which is the same orientation spelled shorter.
  */
 export function normaliseDegrees(angle: number): number {
-  if (!Number.isFinite(angle)) return 0
-  return ((angle % 360) + 360) % 360
+  if (!Number.isFinite(angle)) return 0;
+  return ((angle % 360) + 360) % 360;
 }
 
 /** Scale factor from a drag along an axis, clamped so a piece cannot invert. */
-export function scaleFactor(startDistance: number, currentDistance: number): number {
-  if (Math.abs(startDistance) < 1e-6) return 1
+export function scaleFactor(
+  startDistance: number,
+  currentDistance: number
+): number {
+  if (Math.abs(startDistance) < 1e-6) return 1;
   // Negative or near-zero scale mirrors or annihilates the mesh, and neither is
   // ever what a drag past the origin meant.
-  return Math.max(0.01, currentDistance / startDistance)
+  return Math.max(0.01, currentDistance / startDistance);
 }

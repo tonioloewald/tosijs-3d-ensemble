@@ -19,29 +19,29 @@ walk up a short parent chain with a hash lookup at each step — and it stays th
 way with a thousand pieces.
 */
 /*{"parent":"Internals","order":6}*/
-import type { BuiltEnsemble } from '../runtime/build'
-import type { EditorRay } from './input/pointer'
+import type { BuiltEnsemble } from "../runtime/build";
+import type { EditorRay } from "./input/pointer";
 
 interface NodeLike {
-  parent?: NodeLike | null
-  isPickable?: boolean
+  parent?: NodeLike | null;
+  isPickable?: boolean;
 }
 
 interface PickResult {
-  hit?: boolean
-  pickedMesh?: NodeLike | null
+  hit?: boolean;
+  pickedMesh?: NodeLike | null;
 }
 
 interface PickingSceneLike {
   pickWithRay: (
     ray: { origin: unknown; direction: unknown },
     predicate?: (mesh: NodeLike) => boolean
-  ) => PickResult | null
+  ) => PickResult | null;
 }
 
 /** Element bodies expose their mesh; node bodies ARE the node. */
 interface ElementWithMesh {
-  mesh?: NodeLike | null
+  mesh?: NodeLike | null;
 }
 
 /**
@@ -51,14 +51,14 @@ interface ElementWithMesh {
  * afterwards, and a stale map silently selects nothing.
  */
 export function bodyIndex(built: BuiltEnsemble | null): Map<unknown, string> {
-  const index = new Map<unknown, string>()
-  if (!built) return index
+  const index = new Map<unknown, string>();
+  if (!built) return index;
   for (const [id, piece] of built.pieces) {
-    const element = piece.element as unknown as ElementWithMesh | null
-    if (element?.mesh) index.set(element.mesh, id)
-    if (piece.node) index.set(piece.node, id)
+    const element = piece.element as unknown as ElementWithMesh | null;
+    if (element?.mesh) index.set(element.mesh, id);
+    if (piece.node) index.set(piece.node, id);
   }
-  return index
+  return index;
 }
 
 /**
@@ -73,13 +73,13 @@ export function owningPiece(
   hit: NodeLike | null | undefined,
   maxDepth = 32
 ): string | null {
-  let node: NodeLike | null | undefined = hit
+  let node: NodeLike | null | undefined = hit;
   for (let depth = 0; node && depth < maxDepth; depth++) {
-    const id = index.get(node)
-    if (id !== undefined) return id
-    node = node.parent
+    const id = index.get(node);
+    if (id !== undefined) return id;
+    node = node.parent;
   }
-  return null
+  return null;
 }
 
 /**
@@ -95,9 +95,10 @@ export function pickPiece(
   ray: EditorRay,
   toEngineRay: (ray: EditorRay) => { origin: unknown; direction: unknown }
 ): string | null {
-  const result = scene.pickWithRay(toEngineRay(ray), (mesh) =>
-    mesh.isPickable !== false && owningPiece(index, mesh) !== null
-  )
-  if (!result?.hit) return null
-  return owningPiece(index, result.pickedMesh)
+  const result = scene.pickWithRay(
+    toEngineRay(ray),
+    (mesh) => mesh.isPickable !== false && owningPiece(index, mesh) !== null
+  );
+  if (!result?.hit) return null;
+  return owningPiece(index, result.pickedMesh);
 }

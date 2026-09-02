@@ -43,13 +43,13 @@ It marks the selection; it is not a control, and anything that LOOKS grabbable
 but is not is worse than nothing.
 */
 /*{"parent":"Internals","order":6}*/
-import { Color3, Color4, MeshBuilder, StandardMaterial } from '@babylonjs/core'
-import type { Vec3 } from '../format/types'
+import { Color3, Color4, MeshBuilder, StandardMaterial } from "@babylonjs/core";
+import type { Vec3 } from "../format/types";
 
 /** Marks a mesh as ours, so picking can tell a marker from the scene. */
-export const MARKER_TAG = 'ensemble-editor-selection'
+export const MARKER_TAG = "ensemble-editor-selection";
 
-const BOX_COLOR: [number, number, number] = [0.18, 0.62, 0.56]
+const BOX_COLOR: [number, number, number] = [0.18, 0.62, 0.56];
 
 /**
  * Edge width in PIXELS, which is the point of using edge rendering at all.
@@ -58,17 +58,17 @@ const BOX_COLOR: [number, number, number] = [0.18, 0.62, 0.56]
  * quads and hold their width. Four is legible on a phone without reading as a
  * control you could grab.
  */
-const EDGE_WIDTH = 4
+const EDGE_WIDTH = 4;
 
 export interface Bounds {
-  centre: Vec3
+  centre: Vec3;
   /** HALF-extents, so a 2 m cube is `[1, 1, 1]`. */
-  extents: Vec3
+  extents: Vec3;
 }
 
 export interface SelectionView {
-  show(bounds: Bounds): void
-  hide(): void
+  show(bounds: Bounds): void;
+  hide(): void;
   /**
    * Are these meshes still in a live scene?
    *
@@ -79,41 +79,48 @@ export interface SelectionView {
    * with the marker object present, zero of its meshes in the scene, and no
    * selection feedback for the rest of the run.
    */
-  alive(): boolean
-  dispose(): void
+  alive(): boolean;
+  dispose(): void;
 }
 
 interface Marker {
-  position: { x: number; y: number; z: number }
-  scaling: { x: number; y: number; z: number }
-  isVisible: boolean
-  isPickable: boolean
-  isDisposed: () => boolean
-  renderingGroupId: number
-  material?: unknown
-  rotation: { x: number; y: number; z: number }
-  enableEdgesRendering?: () => void
-  edgesWidth?: number
-  edgesColor?: Color4
-  dispose: () => void
-  computeWorldMatrix: (force: boolean) => void
+  position: { x: number; y: number; z: number };
+  scaling: { x: number; y: number; z: number };
+  isVisible: boolean;
+  isPickable: boolean;
+  isDisposed: () => boolean;
+  renderingGroupId: number;
+  material?: unknown;
+  rotation: { x: number; y: number; z: number };
+  enableEdgesRendering?: () => void;
+  edgesWidth?: number;
+  edgesColor?: Color4;
+  dispose: () => void;
+  computeWorldMatrix: (force: boolean) => void;
 }
 
 export function createSelectionView(scene: unknown): SelectionView {
-  const s = scene as never
-  const parts: Marker[] = []
-  const materials: Array<{ dispose: () => void }> = []
+  const s = scene as never;
+  const parts: Marker[] = [];
+  const materials: Array<{ dispose: () => void }> = [];
 
-  const box = MeshBuilder.CreateBox(`${MARKER_TAG}-box`, { size: 1 }, s) as unknown as Marker
-  const outline = new StandardMaterial(`${MARKER_TAG}-box-mat`, s) as unknown as {
-    emissiveColor: Color3
-    disableLighting: boolean
-    wireframe: boolean
-    alpha: number
-    dispose: () => void
-  }
-  outline.emissiveColor = new Color3(...BOX_COLOR)
-  outline.disableLighting = true
+  const box = MeshBuilder.CreateBox(
+    `${MARKER_TAG}-box`,
+    { size: 1 },
+    s
+  ) as unknown as Marker;
+  const outline = new StandardMaterial(
+    `${MARKER_TAG}-box-mat`,
+    s
+  ) as unknown as {
+    emissiveColor: Color3;
+    disableLighting: boolean;
+    wireframe: boolean;
+    alpha: number;
+    dispose: () => void;
+  };
+  outline.emissiveColor = new Color3(...BOX_COLOR);
+  outline.disableLighting = true;
   /*
     Invisible faces, visible edges. NOT `wireframe`: that draws the
     triangulation, so every face gets a diagonal across it — "the triangles
@@ -121,20 +128,20 @@ export function createSelectionView(scene: unknown): SelectionView {
     A fully transparent solid still renders, which is all the edge renderer
     needs, and tints nothing.
   */
-  outline.wireframe = false
-  outline.alpha = 0
-  box.material = outline
-  box.enableEdgesRendering?.()
-  box.edgesWidth = EDGE_WIDTH
-  box.edgesColor = new Color4(...BOX_COLOR, 1)
-  parts.push(box)
+  outline.wireframe = false;
+  outline.alpha = 0;
+  box.material = outline;
+  box.enableEdgesRendering?.();
+  box.edgesWidth = EDGE_WIDTH;
+  box.edgesColor = new Color4(...BOX_COLOR, 1);
+  parts.push(box);
 
   for (const part of parts) {
-    part.isPickable = false
+    part.isPickable = false;
     // Draw on top, with the manipulator. A marker hidden inside the mesh it
     // marks tells you nothing, and interior geometry is the common case.
-    part.renderingGroupId = 1
-    part.isVisible = false
+    part.renderingGroupId = 1;
+    part.isVisible = false;
   }
 
   return {
@@ -145,29 +152,28 @@ export function createSelectionView(scene: unknown): SelectionView {
         Math.max(extents[0], 0.05),
         Math.max(extents[1], 0.05),
         Math.max(extents[2], 0.05),
-      ]
-      box.position.x = centre[0]
-      box.position.y = centre[1]
-      box.position.z = centre[2]
-      box.scaling.x = size[0] * 2
-      box.scaling.y = size[1] * 2
-      box.scaling.z = size[2] * 2
-      box.isVisible = true
-      box.computeWorldMatrix(true)
-
+      ];
+      box.position.x = centre[0];
+      box.position.y = centre[1];
+      box.position.z = centre[2];
+      box.scaling.x = size[0] * 2;
+      box.scaling.y = size[1] * 2;
+      box.scaling.z = size[2] * 2;
+      box.isVisible = true;
+      box.computeWorldMatrix(true);
     },
     hide() {
-      for (const part of parts) part.isVisible = false
+      for (const part of parts) part.isVisible = false;
     },
     alive() {
-      return parts.length > 0 && !box.isDisposed()
+      return parts.length > 0 && !box.isDisposed();
     },
     dispose() {
-      for (const part of parts) part.dispose()
-      for (const m of materials) m.dispose()
-      outline.dispose()
-      parts.length = 0
-      materials.length = 0
+      for (const part of parts) part.dispose();
+      for (const m of materials) m.dispose();
+      outline.dispose();
+      parts.length = 0;
+      materials.length = 0;
     },
-  }
+  };
 }

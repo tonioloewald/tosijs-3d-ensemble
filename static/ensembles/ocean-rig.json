@@ -1,30 +1,90 @@
 {
   "name": "ocean-rig",
-  "libraries": [{ "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }],
+  "libraries": [
+    { "name": "sample", "url": "https://3d.tosijs.net/test-3.glb" }
+  ],
   "kind": "fortification",
   "scale": 1,
   "values": { "targetValue": 3, "faction": "hostile" },
   "pieces": [
-    { "id": "sun", "at": [-0.4, 1, 0.3], "features": { "sun": { "intensity": 0.9, "shadowDarkness": 0.5 } } },
-    { "id": "sky", "at": [0, 0, 0], "features": { "skybox": { "timeOfDay": 17 } } },
-    { "id": "view", "at": [0, 4, 0], "features": { "camera": { "distance": 34, "heading": -60, "elevation": 20 } } },
+    {
+      "id": "sun",
+      "at": [-0.4, 1, 0.3],
+      "features": { "sun": { "intensity": 0.9, "shadowDarkness": 0.5 } }
+    },
+    {
+      "id": "sky",
+      "at": [0, 0, 0],
+      "features": { "skybox": { "timeOfDay": 17 } }
+    },
+    {
+      "id": "view",
+      "at": [0, 4, 0],
+      "features": {
+        "camera": { "distance": 34, "heading": -60, "elevation": 20 }
+      }
+    },
 
-    { "id": "platform", "mesh": "building", "at": [0, 0, 0], "role": "structure" },
+    {
+      "id": "platform",
+      "mesh": "building",
+      "at": [0, 0, 0],
+      "role": "structure"
+    },
     { "id": "reactor", "mesh": "cube", "at": [-9, 0, 0], "role": "power" },
-    { "id": "projector", "mesh": "pillar", "at": [9, 0, 0], "role": "generator" },
+    {
+      "id": "projector",
+      "mesh": "pillar",
+      "at": [9, 0, 0],
+      "role": "generator"
+    },
     { "id": "field", "mesh": "spire", "at": [0, 0, -9], "role": "shield" },
-    { "id": "gun-north", "mesh": "pillar", "at": [7, 0, 9], "role": "target", "features": { "turret": { "range": 260, "fireRate": 1.1 } } },
-    { "id": "gun-south", "mesh": "pillar", "at": [-7, 0, 9], "role": "target", "features": { "turret": { "range": 260, "fireRate": 1.1 } } },
+    {
+      "id": "gun-north",
+      "mesh": "pillar",
+      "at": [7, 0, 9],
+      "role": "target",
+      "features": { "turret": { "range": 260, "fireRate": 1.1 } }
+    },
+    {
+      "id": "gun-south",
+      "mesh": "pillar",
+      "at": [-7, 0, 9],
+      "role": "target",
+      "features": { "turret": { "range": 260, "fireRate": 1.1 } }
+    },
     { "id": "objective", "mesh": "table", "at": [0, 0, 5], "role": "critical" }
   ],
   "links": [
-    { "from": "reactor", "to": "projector", "kind": "power", "values": { "delay": 0.3, "beam": true } },
-    { "from": "projector", "to": "field", "kind": "power", "values": { "delay": 0.2 } }
+    {
+      "from": "reactor",
+      "to": "projector",
+      "kind": "power",
+      "values": { "delay": 0.3, "beam": true }
+    },
+    {
+      "from": "projector",
+      "to": "field",
+      "kind": "power",
+      "values": { "delay": 0.2 }
+    }
   ],
   "points": [
-    { "id": "pad", "at": [0, 1, 12], "kind": "spawn", "facing": [0, 180, 0], "meta": { "craft": "Light Fighter" } }
+    {
+      "id": "pad",
+      "at": [0, 1, 12],
+      "kind": "spawn",
+      "facing": [0, 180, 0],
+      "meta": { "craft": "Light Fighter" }
+    }
   ],
   "zones": [
-    { "id": "escort", "at": [0, 14, 0], "radius": 24, "kind": "escort", "values": { "capacity": 3 } }
+    {
+      "id": "escort",
+      "at": [0, 14, 0],
+      "radius": 24,
+      "kind": "escort",
+      "values": { "capacity": 3 }
+    }
   ]
 }

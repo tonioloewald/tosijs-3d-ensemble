@@ -61,16 +61,16 @@ a plateau.
  */
 export interface LibraryRef {
   /** How pieces refer to it, and the `type` of the mounted library element. */
-  name: string
+  name: string;
   /** Where to fetch the `.glb`. */
-  url: string
+  url: string;
 }
 
 /** Ensemble-local offset in metres: `[x, y, z]`. */
-export type Vec3 = [number, number, number]
+export type Vec3 = [number, number, number];
 
 /** Euler rotation in DEGREES: `[rx, ry, rz]`. Not radians. */
-export type Euler = [number, number, number]
+export type Euler = [number, number, number];
 
 /**
  * Roles are PRESETS, not categories — each expands to a feature set that
@@ -80,7 +80,7 @@ export type Euler = [number, number, number]
  * feature carries MECHANISM ("destroyable, 16 hp"). A designer means the first;
  * the runtime needs the second. Consumers may register their own.
  */
-export type Role = string
+export type Role = string;
 
 /**
  * A named part INSIDE a composite mesh, matched by sub-mesh name.
@@ -92,11 +92,11 @@ export type Role = string
  */
 export interface Subsystem {
   /** Regex **source string** (anchored is safer), compiled at load. */
-  match: string
-  label: string
+  match: string;
+  label: string;
   /** Capabilities of this part. `{ destroyable: { hp: 18 } }` in a combat game. */
-  features?: Features
-  values?: Values
+  features?: Features;
+  values?: Values;
 }
 
 /**
@@ -112,15 +112,15 @@ export interface Subsystem {
  * says it is (see `registerFeature`), and a consumer's feature must be
  * indistinguishable from a built-in one.
  */
-export type Features = Record<string, Record<string, unknown>>
+export type Features = Record<string, Record<string, unknown>>;
 
 /** A named place with no geometry: a spawn, a waypoint, a dock, a join point. */
 export interface Point {
-  id: string
+  id: string;
   /** Local to the ensemble, or to its piece when declared inside one. */
-  at: Vec3
+  at: Vec3;
   /** Euler DEGREES — a spawn usually cares which way it faces. */
-  facing?: Euler
+  facing?: Euler;
   /**
    * What this place IS, as a free string.
    *
@@ -129,8 +129,8 @@ export interface Point {
    * a gun into the core format and meant a consumer's own kind was a type error
    * — the same mistake as shipping roles.
    */
-  kind?: string
-  meta?: Record<string, string | number | boolean>
+  kind?: string;
+  meta?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -141,23 +141,23 @@ export interface Point {
  * correctly, because killing the carrier removes the zone.
  */
 export interface Zone {
-  id: string
-  at: Vec3
+  id: string;
+  at: Vec3;
   /** Sphere for now; box/cylinder can follow when something needs them. */
-  radius: number
+  radius: number;
   /**
    * What the volume MEANS, as a free string — `escort`, `patrol`, `no-fly`,
    * `quiet`, `wifi`. Conventions, not a closed union.
    */
-  kind?: string
+  kind?: string;
   /**
    * Whatever the consuming rules layer needs: `faction`, `capacity`, `dwell`.
    *
    * These were named fields, which is how "who may enter" ended up meaning
    * FACTION in a format that also has to describe a garden.
    */
-  values?: Values
-  meta?: Record<string, string | number | boolean>
+  values?: Values;
+  meta?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -167,12 +167,12 @@ export interface Zone {
  * and the consumer that cares is a rules layer, not the renderer.
  */
 export interface Values {
-  [key: string]: string | number | boolean | undefined
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface Piece {
   /** Stable handle. MANDATORY — never derived from array position. */
-  id: string
+  id: string;
   /**
    * Which declared library this piece's `mesh` comes from.
    *
@@ -181,7 +181,7 @@ export interface Piece {
    * that cannot say which one it meant is a piece that renders differently
    * depending on load order.
    */
-  library?: string
+  library?: string;
   /**
    * PUBLIC library mesh name. Mutually exclusive with `ensemble`.
    *
@@ -189,7 +189,7 @@ export interface Piece {
    * piece whose `features` ARE its body (terrain, water, clouds, ambient life,
    * a medium layer). Those stand at `at` and instantiate no library mesh.
    */
-  mesh?: string
+  mesh?: string;
   /**
    * Nested ensemble by name, INSTEAD of `mesh`.
    *
@@ -198,10 +198,10 @@ export interface Piece {
    * reports it. See PLAN.md's non-goals — recursion is the intended end state,
    * flattening at load is how it arrives without live instances.
    */
-  ensemble?: string
-  at: Vec3
+  ensemble?: string;
+  at: Vec3;
   /** Euler DEGREES, optional. */
-  rot?: Euler
+  rot?: Euler;
   /**
    * Multiplies the ensemble scale for this piece alone.
    *
@@ -210,16 +210,16 @@ export interface Piece {
    * says when the scale IS uniform, and writing `[2, 2, 2]` everywhere would
    * make the common case the noisy one.
    */
-  scale?: number | Vec3
+  scale?: number | Vec3;
   /** Preset that expands to features; explicit `features` win. */
-  role?: Role
-  features?: Features
-  subsystems?: Subsystem[]
+  role?: Role;
+  features?: Features;
+  subsystems?: Subsystem[];
   /** Points attached to THIS piece, in piece-local space. */
-  points?: Point[]
+  points?: Point[];
   /** Zones attached to THIS piece; they move and die with it. */
-  zones?: Zone[]
-  values?: Values
+  zones?: Zone[];
+  values?: Values;
 }
 
 /**
@@ -235,20 +235,20 @@ export interface Piece {
  * concern, both wearing the costume of a data structure.
  */
 export interface Link {
-  from: string
-  to: string
+  from: string;
+  to: string;
   /** What kind of relationship — `power`, `feeds`, `controls`. Free string. */
-  kind?: string
+  kind?: string;
   /** Whatever the domain needs: `delay`, `amount`, `beam`. */
-  values?: Values
+  values?: Values;
 }
 
 export interface Ensemble {
-  name: string
+  name: string;
   /** Libraries this ensemble's meshes come from. */
-  libraries?: LibraryRef[]
+  libraries?: LibraryRef[];
   /** Free-form, for consumers to group by: `rig`, `dome-facility`, `fortress`. */
-  kind?: string
+  kind?: string;
   /**
    * Multiplies every offset and piece scale.
    *
@@ -256,10 +256,10 @@ export interface Ensemble {
    * an arrangement shears every piece that carries a rotation, so a "stretched"
    * ensemble would silently deform its own contents. Stretch the pieces.
    */
-  scale?: number
-  pieces: Piece[]
-  links?: Link[]
-  points?: Point[]
-  zones?: Zone[]
-  values?: Values
+  scale?: number;
+  pieces: Piece[];
+  links?: Link[];
+  points?: Point[];
+  zones?: Zone[];
+  values?: Values;
 }

@@ -39,37 +39,42 @@ why loading at runtime is where it bites: no error, no pieces, nothing in the
 console. Every element this module creates is appended explicitly.
 */
 /*{"parent":"Runtime","order":1}*/
-import { featuresOf } from '../format/roles'
-import { featureRegistration } from '../format/registry'
-import { scaleVector, uniformScale } from '../format/scale'
-import { validate } from '../format/validate'
-import { libraryNames, meshesByLibrary, mountLibraries, resolveLibrary } from './libraries'
-import type { FeatureContext, SceneElement } from '../format/registry'
-import type { Problem } from '../format/validate'
-import type { Ensemble, Piece, Vec3 } from '../format/types'
+import { featuresOf } from "../format/roles";
+import { featureRegistration } from "../format/registry";
+import { scaleVector, uniformScale } from "../format/scale";
+import { validate } from "../format/validate";
+import {
+  libraryNames,
+  meshesByLibrary,
+  mountLibraries,
+  resolveLibrary,
+} from "./libraries";
+import type { FeatureContext, SceneElement } from "../format/registry";
+import type { Problem } from "../format/validate";
+import type { Ensemble, Piece, Vec3 } from "../format/types";
 
 export interface BuildOptions {
   /** The `<tosi-b3d>` element to append into. */
-  scene: SceneElement
+  scene: SceneElement;
   /** Where the ensemble's local origin sits in the world. Default `[0,0,0]`. */
-  origin?: Vec3
+  origin?: Vec3;
   /**
    * Extra library to resolve meshes against, beyond the ones the ensemble
    * declares. A host forcing its own content; usually unnecessary now that an
    * ensemble says what it needs.
    */
-  library?: string
+  library?: string;
   /**
    * Mesh names, when known, so validation can check them. Derived from the
    * mounted libraries when omitted.
    */
-  meshes?: Set<string> | Map<string, Set<string>>
+  meshes?: Set<string> | Map<string, Set<string>>;
   /**
    * Time source for features that animate. Defaults to `performance.now()/1000`.
    * See the caveat on `FeatureContext.simTime`: this scales EFFECT timing, not
    * craft motion.
    */
-  simTime?: () => number
+  simTime?: () => number;
   /**
    * Give the piece a body. Defaults to `placeMesh` from `./place-mesh`, the
    * only part of this module that knows about tosijs-3d — swap it in a test, or
@@ -78,7 +83,12 @@ export interface BuildOptions {
    * Not called when a **body feature** already claimed the piece (see
    * `FeatureRegistration.body`).
    */
-  placePiece?: (piece: Piece, at: Vec3, scale: Vec3, ctx: PlaceContext) => Placement | null
+  placePiece?: (
+    piece: Piece,
+    at: Vec3,
+    scale: Vec3,
+    ctx: PlaceContext
+  ) => Placement | null;
 }
 
 /**
@@ -90,23 +100,23 @@ export interface BuildOptions {
  * participant in systems it has no business in.
  */
 export interface Placement {
-  element?: SceneElement | null
-  node?: unknown
-  dispose?: () => void
+  element?: SceneElement | null;
+  node?: unknown;
+  dispose?: () => void;
 }
 
 export interface PlaceContext {
-  scene: SceneElement
+  scene: SceneElement;
   /** The library this piece resolves to, or `''` when there is none. */
-  library: string
+  library: string;
   /** Effective features, role preset already merged in. */
-  features: Record<string, Record<string, unknown>>
+  features: Record<string, Record<string, unknown>>;
 }
 
 export interface BuiltPiece {
-  piece: Piece
+  piece: Piece;
   /** World position: origin + `at` × ensemble scale. */
-  at: Vec3
+  at: Vec3;
   /**
    * Ensemble scale × piece scale, as the ENCLOSING scalar.
    *
@@ -114,23 +124,23 @@ export interface BuiltPiece {
    * what a feature sizing a radius or a range wants. `scale3` is the honest
    * triple — see [[Scale, uniform or per axis]].
    */
-  scale: number
+  scale: number;
   /** Ensemble scale × piece scale, per axis. */
-  scale3: Vec3
+  scale3: Vec3;
   /** The element carrying this piece's body, if its body is an element. */
-  element: SceneElement | null
+  element: SceneElement | null;
   /** The Babylon node carrying this piece's body, if it is not an element. */
-  node: unknown
+  node: unknown;
   /** Handles returned by each feature's `bind`, keyed by feature name. */
-  handles: Map<string, unknown>
+  handles: Map<string, unknown>;
 }
 
 export interface BuiltEnsemble {
-  ensemble: Ensemble
-  pieces: Map<string, BuiltPiece>
-  problems: Problem[]
+  ensemble: Ensemble;
+  pieces: Map<string, BuiltPiece>;
+  problems: Problem[];
   /** Tear everything down. Safe to call twice. */
-  dispose(): void
+  dispose(): void;
 }
 
 /**
@@ -140,47 +150,61 @@ export interface BuiltEnsemble {
  * malformed fortress should be reported and half-built in an editor, not
  * silently absent. A generator that wants to refuse checks `problems` itself.
  */
-export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnsemble {
+export function buildEnsemble(
+  ensemble: Ensemble,
+  opts: BuildOptions
+): BuiltEnsemble {
   const {
     scene,
     origin = [0, 0, 0] as Vec3,
-    library = '',
+    library = "",
     meshes,
     simTime = () => performance.now() / 1000,
     placePiece,
-  } = opts
+  } = opts;
 
-  const libraries = libraryNames(ensemble, library || undefined)
-  const known = meshes ?? (libraries.length ? meshesByLibrary(scene, libraries) : undefined)
-  const problems = validate(ensemble, known && (known as Map<string, Set<string>>).size !== 0 ? { meshes: known } : {})
-  const ensembleScale = ensemble.scale ?? 1
-  const pieces = new Map<string, BuiltPiece>()
-  const disposers: Array<() => void> = []
-  const onDispose = (fn: () => void) => disposers.push(fn)
+  const libraries = libraryNames(ensemble, library || undefined);
+  const known =
+    meshes ??
+    (libraries.length ? meshesByLibrary(scene, libraries) : undefined);
+  const problems = validate(
+    ensemble,
+    known && (known as Map<string, Set<string>>).size !== 0
+      ? { meshes: known }
+      : {}
+  );
+  const ensembleScale = ensemble.scale ?? 1;
+  const pieces = new Map<string, BuiltPiece>();
+  const disposers: Array<() => void> = [];
+  const onDispose = (fn: () => void) => disposers.push(fn);
 
   // Phase 1 — bind. Nothing here may reach for another piece.
-  const bound: Array<{ built: BuiltPiece; feature: string; ctx: FeatureContext }> = []
+  const bound: Array<{
+    built: BuiltPiece;
+    feature: string;
+    ctx: FeatureContext;
+  }> = [];
 
   for (const piece of ensemble.pieces) {
-    if (!piece.id || piece.ensemble) continue // reported by validate; not buildable
-    const pieceScale = scaleVector(piece.scale)
+    if (!piece.id || piece.ensemble) continue; // reported by validate; not buildable
+    const pieceScale = scaleVector(piece.scale);
     const scale3: Vec3 = [
       ensembleScale * pieceScale[0],
       ensembleScale * pieceScale[1],
       ensembleScale * pieceScale[2],
-    ]
+    ];
     // The scalar features see. Max rather than mean: a feature using it to size
     // a radius wants the extent that ENCLOSES the piece.
-    const scale = ensembleScale * uniformScale(piece.scale)
+    const scale = ensembleScale * uniformScale(piece.scale);
     const at: Vec3 = [
       origin[0] + piece.at[0] * ensembleScale,
       origin[1] + piece.at[1] * ensembleScale,
       origin[2] + piece.at[2] * ensembleScale,
-    ]
-    const features = featuresOf(piece)
+    ];
+    const features = featuresOf(piece);
     // Resolved PER PIECE: a piece may name its own library, and otherwise the
     // first mounted one that actually has the mesh wins.
-    const pieceLibrary = resolveLibrary(scene, libraries, piece) ?? ''
+    const pieceLibrary = resolveLibrary(scene, libraries, piece) ?? "";
     const built: BuiltPiece = {
       piece,
       at,
@@ -189,8 +213,8 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       element: null,
       node: null,
       handles: new Map(),
-    }
-    pieces.set(piece.id, built)
+    };
+    pieces.set(piece.id, built);
 
     /*
       A BODY feature creates the piece's body; every other feature decorates one.
@@ -202,21 +226,28 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
       decorator conceptually; this is an upstream constraint, not a claim that
       being destroyable is how things exist.
     */
-    const entries = Object.entries(features)
-    const isBody = (name: string) => featureRegistration(name)?.body === true
-    const ordered = [...entries.filter(([n]) => isBody(n)), ...entries.filter(([n]) => !isBody(n))]
+    const entries = Object.entries(features);
+    const isBody = (name: string) => featureRegistration(name)?.body === true;
+    const ordered = [
+      ...entries.filter(([n]) => isBody(n)),
+      ...entries.filter(([n]) => !isBody(n)),
+    ];
 
     for (const [name, cfg] of ordered) {
-      const reg = featureRegistration(name)
-      if (!reg?.bind) continue
+      const reg = featureRegistration(name);
+      if (!reg?.bind) continue;
 
       // Once the body features have run, a plain piece still needs a body.
       if (!isBody(name) && !built.element && !built.node) {
         applyPlacement(
           built,
-          placePiece?.(piece, at, scale3, { scene, library: pieceLibrary, features }),
+          placePiece?.(piece, at, scale3, {
+            scene,
+            library: pieceLibrary,
+            features,
+          }),
           onDispose
-        )
+        );
       }
 
       const ctx = makeContext({
@@ -230,22 +261,22 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
         onDispose,
         simTime,
         pieces,
-      })
+      });
       // A feature that throws must not take the rest of the ensemble with it —
       // in the editor the author is mid-edit, and a half-built scene they can
       // see beats an empty one they cannot diagnose.
       try {
-        const handle = reg.bind(piece, cfg, ctx)
-        built.handles.set(name, handle)
-        if (isBody(name) && isElement(handle)) built.element = handle
-        bound.push({ built, feature: name, ctx })
+        const handle = reg.bind(piece, cfg, ctx);
+        built.handles.set(name, handle);
+        if (isBody(name) && isElement(handle)) built.element = handle;
+        bound.push({ built, feature: name, ctx });
       } catch (err) {
         problems.push({
-          severity: 'error',
-          code: 'bind-failed',
+          severity: "error",
+          code: "bind-failed",
           message: `feature "${name}" failed to bind: ${String(err)}`,
           path: `/pieces/${ensemble.pieces.indexOf(piece)}/features/${name}`,
-        })
+        });
       }
     }
 
@@ -253,54 +284,60 @@ export function buildEnsemble(ensemble: Ensemble, opts: BuildOptions): BuiltEnse
     if (!built.element && !built.node) {
       applyPlacement(
         built,
-        placePiece?.(piece, at, scale3, { scene, library: pieceLibrary, features }),
+        placePiece?.(piece, at, scale3, {
+          scene,
+          library: pieceLibrary,
+          features,
+        }),
         onDispose
-      )
+      );
     }
   }
 
   // Phase 2 — link. Every piece is present, so reaching sideways is legal now.
   for (const { built, feature, ctx } of bound) {
-    const reg = featureRegistration(feature)
-    if (!reg?.link) continue
+    const reg = featureRegistration(feature);
+    if (!reg?.link) continue;
     try {
-      reg.link(built.handles.get(feature) as never, ctx)
+      reg.link(built.handles.get(feature) as never, ctx);
     } catch (err) {
       problems.push({
-        severity: 'error',
-        code: 'link-failed',
+        severity: "error",
+        code: "link-failed",
         message: `feature "${feature}" failed to link: ${String(err)}`,
-        path: `/pieces/${ensemble.pieces.indexOf(built.piece)}/features/${feature}`,
-      })
+        path: `/pieces/${ensemble.pieces.indexOf(
+          built.piece
+        )}/features/${feature}`,
+      });
     }
   }
 
-  let disposed = false
+  let disposed = false;
   return {
     ensemble,
     pieces,
     problems,
     dispose() {
-      if (disposed) return
-      disposed = true
+      if (disposed) return;
+      disposed = true;
       // Reverse order: a teardown that depends on something registered earlier
       // must run before that thing goes.
       for (const fn of disposers.reverse()) {
         try {
-          fn()
+          fn();
         } catch {
           /* one bad teardown must not strand the rest */
         }
       }
-      disposers.length = 0
-      pieces.clear()
+      disposers.length = 0;
+      pieces.clear();
     },
-  }
+  };
 }
 
 /** A body feature returns its element; anything else it returns is not a body. */
 function isElement(value: unknown): value is SceneElement {
-  return typeof value === 'object' && value !== null && 'appendChild' in value
+  return typeof value === "object" && value !== null && "appendChild" in value;
 }
 
 function applyPlacement(
@@ -308,33 +345,33 @@ function applyPlacement(
   placement: Placement | null | undefined,
   onDispose: (fn: () => void) => void
 ): void {
-  if (!placement) return
-  built.element = placement.element ?? null
-  built.node = placement.node ?? null
-  if (placement.dispose) onDispose(placement.dispose)
+  if (!placement) return;
+  built.element = placement.element ?? null;
+  built.node = placement.node ?? null;
+  if (placement.dispose) onDispose(placement.dispose);
 }
 
 function makeContext(a: {
-  scene: SceneElement
-  built: BuiltPiece
-  ensemble: Ensemble
-  piece: Piece
-  at: Vec3
-  scale: number
-  library: string
-  onDispose: (fn: () => void) => void
-  simTime: () => number
-  pieces: Map<string, BuiltPiece>
+  scene: SceneElement;
+  built: BuiltPiece;
+  ensemble: Ensemble;
+  piece: Piece;
+  at: Vec3;
+  scale: number;
+  library: string;
+  onDispose: (fn: () => void) => void;
+  simTime: () => number;
+  pieces: Map<string, BuiltPiece>;
 }): FeatureContext {
   return {
     scene: a.scene,
     get element() {
       // A getter, not a snapshot: a body feature may set this AFTER a decorator
       // has already been handed its context.
-      return a.built.element
+      return a.built.element;
     },
     get node() {
-      return a.built.node
+      return a.built.node;
     },
     ensemble: a.ensemble,
     piece: a.piece,
@@ -344,15 +381,16 @@ function makeContext(a: {
     onDispose: a.onDispose,
     simTime: a.simTime,
     handle: (id: string) => {
-      const built = a.pieces.get(id)
-      if (!built) return undefined
+      const built = a.pieces.get(id);
+      if (!built) return undefined;
       // The piece's own body is the useful default; a named feature handle is
       // reachable through `pieces` for anything finer.
-      return built.element ?? built.node ?? built
+      return built.element ?? built.node ?? built;
     },
-    piecesByRole: (role: string) => a.ensemble.pieces.filter((p) => p.role === role),
+    piecesByRole: (role: string) =>
+      a.ensemble.pieces.filter((p) => p.role === role),
     feature: (name: string) => a.built.handles.get(name),
-  }
+  };
 }
 
 /** Fetch and build. Ensembles are content, so they load like content. */
@@ -360,17 +398,19 @@ export async function loadEnsemble(
   url: string,
   opts: BuildOptions
 ): Promise<BuiltEnsemble> {
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`ensemble "${url}": ${response.status} ${response.statusText}`)
+    throw new Error(
+      `ensemble "${url}": ${response.status} ${response.statusText}`
+    );
   }
-  const ensemble = (await response.json()) as Ensemble
+  const ensemble = (await response.json()) as Ensemble;
   /*
     MOUNT WHAT THE FILE ASKS FOR, then build. This is what makes an ensemble
     loadable anywhere: the consumer supplies a scene, and the content declares
     its own dependencies rather than relying on the caller to have mounted the
     right libraries first.
   */
-  await mountLibraries(ensemble, opts.scene)
-  return buildEnsemble(ensemble, opts)
+  await mountLibraries(ensemble, opts.scene);
+  return buildEnsemble(ensemble, opts);
 }

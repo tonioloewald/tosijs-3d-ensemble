@@ -48,35 +48,35 @@ import {
   b3dSun,
   b3dTerrain,
   b3dWater,
-} from 'tosijs-3d'
-import { registerFeature } from '../format/registry'
-import type { FeatureContext, SceneElement } from '../format/registry'
+} from "tosijs-3d";
+import { registerFeature } from "../format/registry";
+import type { FeatureContext, SceneElement } from "../format/registry";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
-  type: 'number',
+  type: "number",
   minimum: min,
   maximum: max,
   ...(def === undefined ? {} : { default: def }),
-  ...(unit ? { 'x-unit': unit } : {}),
-})
+  ...(unit ? { "x-unit": unit } : {}),
+});
 
 /** Append an element to the scene and tear it down on dispose. */
 export function add(ctx: FeatureContext, el: unknown): SceneElement {
-  const element = el as SceneElement
-  ctx.scene.appendChild(element)
-  ctx.onDispose(() => element.remove())
-  return element
+  const element = el as SceneElement;
+  ctx.scene.appendChild(element);
+  ctx.onDispose(() => element.remove());
+  return element;
 }
 
 interface ArcCamera {
-  radius: number
-  alpha: number
-  beta: number
-  target: { x: number; y: number; z: number }
-  lowerRadiusLimit?: number | null
-  upperRadiusLimit?: number | null
-  lowerBetaLimit?: number | null
-  upperBetaLimit?: number | null
+  radius: number;
+  alpha: number;
+  beta: number;
+  target: { x: number; y: number; z: number };
+  lowerRadiusLimit?: number | null;
+  upperRadiusLimit?: number | null;
+  lowerBetaLimit?: number | null;
+  upperBetaLimit?: number | null;
 }
 
 /**
@@ -92,37 +92,37 @@ function whenCamera(
   ctx: { scene: SceneElement },
   apply: (camera: ArcCamera) => void
 ): () => void {
-  const scene = ctx.scene as unknown as { camera?: ArcCamera }
+  const scene = ctx.scene as unknown as { camera?: ArcCamera };
   if (scene.camera?.target) {
-    apply(scene.camera)
-    return () => {}
+    apply(scene.camera);
+    return () => {};
   }
-  let cancelled = false
-  const deadline = 120 // frames — about two seconds, then give up quietly
-  let frames = 0
+  let cancelled = false;
+  const deadline = 120; // frames — about two seconds, then give up quietly
+  let frames = 0;
   const tick = () => {
-    if (cancelled) return
+    if (cancelled) return;
     if (scene.camera?.target) {
       // A throw here would land inside a rAF callback, not the render loop, but
       // guard anyway: the editor rebuilds constantly and one bad frame should
       // not take the session.
       try {
-        apply(scene.camera)
+        apply(scene.camera);
       } catch {
         /* the scene keeps its own camera */
       }
-      return
+      return;
     }
-    if (++frames > deadline) return
-    requestAnimationFrame(tick)
-  }
-  requestAnimationFrame(tick)
+    if (++frames > deadline) return;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
   return () => {
-    cancelled = true
-  }
+    cancelled = true;
+  };
 }
 
-let registered = false
+let registered = false;
 
 /**
  * Register the scene primitives. Idempotent.
@@ -132,83 +132,83 @@ let registered = false
  * it, because "the fog is at (3, 0, 12)" means nothing.
  */
 export function registerSceneFeatures(): void {
-  if (registered) return
-  registered = true
+  if (registered) return;
+  registered = true;
 
   registerFeature({
-    name: 'light',
+    name: "light",
     schema: {
-      type: 'object',
-      title: 'Light',
+      type: "object",
+      title: "Light",
       properties: {
         intensity: num(0, 10, 0.9),
-        diffuse: { type: 'string', 'x-widget': 'color' },
-        specular: { type: 'string', 'x-widget': 'color' },
+        diffuse: { type: "string", "x-widget": "color" },
+        specular: { type: "string", "x-widget": "color" },
       },
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dLight({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
-  })
+  });
 
   registerFeature({
-    name: 'sun',
+    name: "sun",
     schema: {
-      type: 'object',
-      title: 'Sun and shadows',
+      type: "object",
+      title: "Sun and shadows",
       properties: {
         intensity: num(0, 10, 1),
         shadowDarkness: num(0, 1, 0.4),
         shadowTextureSize: num(256, 4096, 1024),
         numCascades: num(1, 4, 2),
-        activeDistance: num(10, 20000, 400, 'm'),
+        activeDistance: num(10, 20000, 400, "m"),
       },
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dSun({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
-  })
+  });
 
   registerFeature({
-    name: 'skybox',
+    name: "skybox",
     schema: {
-      type: 'object',
-      title: 'Sky',
+      type: "object",
+      title: "Sky",
       properties: {
-        timeOfDay: num(0, 24, 11, 'h'),
+        timeOfDay: num(0, 24, 11, "h"),
         turbidity: num(0, 40, 10),
         luminance: num(0, 2, 1),
-        latitude: num(-90, 90, 0, '°'),
-        applyFog: { type: 'boolean', default: true },
+        latitude: num(-90, 90, 0, "°"),
+        applyFog: { type: "boolean", default: true },
       },
     },
     bind: (_piece, cfg, ctx) => add(ctx, b3dSkybox({ ...cfg })),
-  })
+  });
 
   registerFeature({
-    name: 'ground',
+    name: "ground",
     schema: {
-      type: 'object',
-      title: 'Ground plane',
+      type: "object",
+      title: "Ground plane",
       properties: {
-        width: num(1, 100000, 400, 'm'),
-        height: num(1, 100000, 400, 'm'),
-        color: { type: 'string', 'x-widget': 'color' },
-        texture: { type: 'string', default: 'checker' },
+        width: num(1, 100000, 400, "m"),
+        height: num(1, 100000, 400, "m"),
+        color: { type: "string", "x-widget": "color" },
+        texture: { type: "string", default: "checker" },
         textureTiles: num(1, 400, 20),
       },
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dGround({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
-  })
+  });
 
   registerFeature({
-    name: 'camera',
+    name: "camera",
     schema: {
-      type: 'object',
-      title: 'Camera',
+      type: "object",
+      title: "Camera",
       properties: {
-        distance: num(0.1, 20000, 12, 'm'),
-        heading: num(-360, 360, -60, '°'),
-        elevation: num(-89, 89, 20, '°'),
+        distance: num(0.1, 20000, 12, "m"),
+        heading: num(-360, 360, -60, "°"),
+        elevation: num(-89, 89, 20, "°"),
         minDistance: num(0.1, 20000),
         maxDistance: num(0.1, 20000),
         minElevation: num(-89, 89),
@@ -231,57 +231,63 @@ export function registerSceneFeatures(): void {
       grey rectangle that looks exactly like a broken scene.
     */
     bind: (_piece, cfg, ctx) => {
-      const deg = (n: number) => (n * Math.PI) / 180
+      const deg = (n: number) => (n * Math.PI) / 180;
       const stop = whenCamera(ctx, (camera) => {
         const before = {
           radius: camera.radius,
           alpha: camera.alpha,
           beta: camera.beta,
-          target: { x: camera.target.x, y: camera.target.y, z: camera.target.z },
-        }
-        camera.radius = (cfg.distance as number) ?? 12
-        camera.alpha = deg((cfg.heading as number) ?? -60)
+          target: {
+            x: camera.target.x,
+            y: camera.target.y,
+            z: camera.target.z,
+          },
+        };
+        camera.radius = (cfg.distance as number) ?? 12;
+        camera.alpha = deg((cfg.heading as number) ?? -60);
         // Babylon's beta is measured from straight DOWN, so an elevation of 0°
         // (level with the target) is beta = 90°, not 0.
-        camera.beta = deg(90 - ((cfg.elevation as number) ?? 20))
-        camera.target.x = ctx.at[0]
-        camera.target.y = ctx.at[1]
-        camera.target.z = ctx.at[2]
-        if (cfg.minDistance !== undefined) camera.lowerRadiusLimit = cfg.minDistance as number
-        if (cfg.maxDistance !== undefined) camera.upperRadiusLimit = cfg.maxDistance as number
+        camera.beta = deg(90 - ((cfg.elevation as number) ?? 20));
+        camera.target.x = ctx.at[0];
+        camera.target.y = ctx.at[1];
+        camera.target.z = ctx.at[2];
+        if (cfg.minDistance !== undefined)
+          camera.lowerRadiusLimit = cfg.minDistance as number;
+        if (cfg.maxDistance !== undefined)
+          camera.upperRadiusLimit = cfg.maxDistance as number;
         if (cfg.maxElevation !== undefined) {
-          camera.lowerBetaLimit = deg(90 - (cfg.maxElevation as number))
+          camera.lowerBetaLimit = deg(90 - (cfg.maxElevation as number));
         }
         if (cfg.minElevation !== undefined) {
-          camera.upperBetaLimit = deg(90 - (cfg.minElevation as number))
+          camera.upperBetaLimit = deg(90 - (cfg.minElevation as number));
         }
         ctx.onDispose(() => {
-          camera.radius = before.radius
-          camera.alpha = before.alpha
-          camera.beta = before.beta
-          camera.target.x = before.target.x
-          camera.target.y = before.target.y
-          camera.target.z = before.target.z
-        })
-      })
-      ctx.onDispose(stop)
-      return null
+          camera.radius = before.radius;
+          camera.alpha = before.alpha;
+          camera.beta = before.beta;
+          camera.target.x = before.target.x;
+          camera.target.y = before.target.y;
+          camera.target.z = before.target.z;
+        });
+      });
+      ctx.onDispose(stop);
+      return null;
     },
-  })
+  });
 
   registerFeature({
-    name: 'sound',
+    name: "sound",
     schema: {
-      type: 'object',
-      title: 'Sound',
+      type: "object",
+      title: "Sound",
       properties: {
-        url: { type: 'string', title: 'Audio file' },
-        loop: { type: 'boolean', default: true },
-        autoplay: { type: 'boolean', default: true },
+        url: { type: "string", title: "Audio file" },
+        loop: { type: "boolean", default: true },
+        autoplay: { type: "boolean", default: true },
         volume: num(0, 1, 1),
-        spatialSound: { type: 'boolean', default: true },
-        refDistance: num(0.1, 100, 1, 'm'),
-        maxDistance: num(1, 2000, 60, 'm'),
+        spatialSound: { type: "boolean", default: true },
+        refDistance: num(0.1, 100, 1, "m"),
+        maxDistance: num(1, 2000, 60, "m"),
         rolloffFactor: num(0, 10, 1),
       },
     },
@@ -292,38 +298,42 @@ export function registerSceneFeatures(): void {
     */
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dSound({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
-  })
+  });
 
   registerFeature({
-    name: 'reflections',
+    name: "reflections",
     schema: {
-      type: 'object',
-      title: 'Reflection probe',
+      type: "object",
+      title: "Reflection probe",
       properties: {
         probeSize: num(16, 1024, 128),
         refreshRate: num(0, 60, 1),
-        maxDistance: num(1, 10000, 200, 'm'),
+        maxDistance: num(1, 10000, 200, "m"),
       },
     },
     bind: (_piece, cfg, ctx) => add(ctx, b3dReflections({ ...cfg })),
-  })
+  });
 
   registerFeature({
-    name: 'terrain',
+    name: "terrain",
     schema: {
-      type: 'object',
-      title: 'Terrain',
+      type: "object",
+      title: "Terrain",
       properties: {
-        biome: { type: 'string', default: 'temperate' },
+        biome: { type: "string", default: "temperate" },
         seed: num(0, 1e9, 1),
-        surfaceType: { type: 'string', enum: ['plane', 'sphere', 'cylinder', 'torus'], default: 'plane' },
-        radius: num(100, 1e7, 6000, 'm'),
-        grossScale: num(1, 1e6, 4000, 'm'),
-        grossAmplitude: num(0, 20000, 600, 'm'),
-        detailScale: num(1, 10000, 200, 'm'),
-        detailAmplitude: num(0, 2000, 30, 'm'),
-        baseHeight: num(-10000, 10000, 0, 'm'),
-        wireframe: { type: 'boolean', default: false },
+        surfaceType: {
+          type: "string",
+          enum: ["plane", "sphere", "cylinder", "torus"],
+          default: "plane",
+        },
+        radius: num(100, 1e7, 6000, "m"),
+        grossScale: num(1, 1e6, 4000, "m"),
+        grossAmplitude: num(0, 20000, 600, "m"),
+        detailScale: num(1, 10000, 200, "m"),
+        detailAmplitude: num(0, 2000, 30, "m"),
+        baseHeight: num(-10000, 10000, 0, "m"),
+        wireframe: { type: "boolean", default: false },
       },
     },
     /*
@@ -334,74 +344,78 @@ export function registerSceneFeatures(): void {
     */
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dTerrain({ baseHeight: ctx.at[1], ...cfg })),
-  })
+  });
 
   registerFeature({
-    name: 'water',
+    name: "water",
     schema: {
-      type: 'object',
-      title: 'Water',
+      type: "object",
+      title: "Water",
       properties: {
-        waterSize: num(10, 100000, 2000, 'm'),
-        waveHeight: num(0, 10, 0.3, 'm'),
+        waterSize: num(10, 100000, 2000, "m"),
+        waveHeight: num(0, 10, 0.3, "m"),
         waveLength: num(0.01, 10, 0.1),
         windForce: num(0, 100, 6),
-        waterColor: { type: 'string', 'x-widget': 'color', default: '#0a3d5c' },
-        underwaterFog: { type: 'boolean', default: true },
+        waterColor: { type: "string", "x-widget": "color", default: "#0a3d5c" },
+        underwaterFog: { type: "boolean", default: true },
       },
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dWater({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
-  })
+  });
 
   registerFeature({
-    name: 'clouds',
+    name: "clouds",
     schema: {
-      type: 'object',
-      title: 'Clouds',
+      type: "object",
+      title: "Clouds",
       properties: {
         count: num(0, 500, 40),
-        altitude: num(0, 20000, 900, 'm'),
-        thickness: num(0, 5000, 200, 'm'),
-        spread: num(100, 100000, 4000, 'm'),
+        altitude: num(0, 20000, 900, "m"),
+        thickness: num(0, 5000, 200, "m"),
+        spread: num(100, 100000, 4000, "m"),
         coverage: num(0, 1, 0.5),
         opacity: num(0, 1, 0.8),
-        castShadows: { type: 'boolean', default: false },
+        castShadows: { type: "boolean", default: false },
       },
     },
     bind: (_piece, cfg, ctx) => add(ctx, b3dClouds({ ...cfg })),
-  })
+  });
 
   registerFeature({
-    name: 'ambient',
+    name: "ambient",
     schema: {
-      type: 'object',
-      title: 'Ambient life',
+      type: "object",
+      title: "Ambient life",
       properties: {
-        preset: { type: 'string', default: 'birds' },
-        where: { type: 'string', default: 'air' },
+        preset: { type: "string", default: "birds" },
+        where: { type: "string", default: "air" },
         count: num(0, 500, 20),
-        radius: num(10, 20000, 400, 'm'),
-        color: { type: 'string', 'x-widget': 'color' },
+        radius: num(10, 20000, 400, "m"),
+        color: { type: "string", "x-widget": "color" },
       },
     },
     bind: (_piece, cfg, ctx) => add(ctx, b3dAmbient({ ...cfg })),
-  })
+  });
 
   registerFeature({
-    name: 'fog',
+    name: "fog",
     schema: {
-      type: 'object',
-      title: 'Fog',
+      type: "object",
+      title: "Fog",
       properties: {
-        mode: { type: 'string', enum: ['none', 'linear', 'exp', 'exp2'], default: 'exp2' },
-        color: { type: 'string', 'x-widget': 'color', default: '#8fa6b2' },
+        mode: {
+          type: "string",
+          enum: ["none", "linear", "exp", "exp2"],
+          default: "exp2",
+        },
+        color: { type: "string", "x-widget": "color", default: "#8fa6b2" },
         density: num(0, 0.1, 0.002),
-        start: num(0, 100000, 100, 'm'),
-        end: num(0, 100000, 4000, 'm'),
-        syncSkybox: { type: 'boolean', default: true },
+        start: num(0, 100000, 100, "m"),
+        end: num(0, 100000, 4000, "m"),
+        syncSkybox: { type: "boolean", default: true },
       },
     },
     bind: (_piece, cfg, ctx) => add(ctx, b3dFog({ ...cfg })),
-  })
+  });
 }

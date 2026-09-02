@@ -171,6 +171,16 @@ const PAD_SIZE = 0.2;
   overlap at any orientation, the arc goes back to a fixed spoke, and a
   per-frame computation and its explanation both disappear.
 
+  ⚠️ The break in the shaft is LOAD-BEARING. It looks like an arbitrary gap and
+  it is the only reason arcs and arrows cannot collide, so closing it up to make
+  the arrow "whole" reintroduces the bug at every orientation but the identity.
+
+  It is also frame-AGNOSTIC, which is the property worth keeping. Arrows are
+  world-aligned and arcs ride the piece today, and a radial band that no arrow
+  occupies clears them whatever their relative orientation — so if a coordinate
+  system picker ever lands and puts translation in the piece's frame too, the
+  axes still work and none of this needs revisiting.
+
   Two things I had wrong and the model settled. The rings are FULL circles
   centred on the origin, in the plane they rotate in — not quarters, and not
   offset along the axis, which put them in the wrong plane as well as the wrong

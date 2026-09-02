@@ -972,6 +972,20 @@ nobody asked for. Global rotation is a composition, not an addition.
 editing, and how do I get back), and ids that are already paths — which is why
 namespacing from day one is in the list above.
 
+**A picker stays cheap to add later, and one detail is why.** Rotation ended up
+in the object's own frame after all (see the git log — the table above records
+the earlier answer), so the widget already draws two frames at once: arrows
+world-aligned, arcs riding the piece. That only reads because the arrow is
+BROKEN between 0.6 and 0.8 and the arc occupies exactly that band, so the two
+cannot collide whatever their relative orientation.
+
+That separation is frame-agnostic rather than a fix for the current pairing. If
+a picker lands and puts translation in the piece's frame too, the axes still
+work and the widget needs no geometry changes — owner: _"later we can maybe
+force local coordinate system if the user wants and the axes will still work"_.
+The cost of keeping the option open is one gap in a shaft, which is why
+`handles-view.ts` marks it load-bearing.
+
 ### 2. Terrain and environment — **revised: primitives you can author with**
 
 The original answer here was "a different thing; give them join points": an

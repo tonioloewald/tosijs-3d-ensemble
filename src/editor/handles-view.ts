@@ -145,12 +145,12 @@ const PICK_FATNESS = 5;
   Its pick target stays generous, so aiming at the line still works; it just no
   longer ADVERTISES itself as the target.
 */
-const SHAFT_LENGTH = 0.7;
+const SHAFT_LENGTH = 0.5;
 // Circumscribed circle: a square 0.05 across the flats measures 0.0707 corner
 // to corner, and `diameter` is the corners.
 const SHAFT_DIAMETER = 0.0707;
 const SHAFT_PICK_FATNESS = 11;
-const SHAFT_OFFSET = 0.45;
+const SHAFT_OFFSET = 0.35;
 const PAD_SIZE = 0.2;
 /*
   PROPORTIONS TAKEN FROM THE OWNER'S REFERENCE MODEL, not invented here.
@@ -162,6 +162,15 @@ const PAD_SIZE = 0.2;
     ring     FLAT annulus, inner 0.8, outer 1.0, centred on the origin
     pad      flat plate 0.2 × 0.2, centred 0.2 along one of its plane's axes
 
+  One deliberate departure, and it replaced a cleverer fix. The arc used to be
+  rolled at draw time into whichever gap between the arrows was widest, because
+  rings ride the PIECE's frame while arrows stay world-aligned, so on a turned
+  piece a fixed quarter swings over them. The owner's answer was better: give the
+  ring a radial band the arrow does not occupy. The shaft now stops at 0.6 and
+  the head starts at 0.8, leaving a hole for the ring at 0.6 → 0.8. Nothing can
+  overlap at any orientation, the arc goes back to a fixed spoke, and a
+  per-frame computation and its explanation both disappear.
+
   Two things I had wrong and the model settled. The rings are FULL circles
   centred on the origin, in the plane they rotate in — not quarters, and not
   offset along the axis, which put them in the wrong plane as well as the wrong
@@ -172,12 +181,17 @@ const PAD_SIZE = 0.2;
   The ring is a zero-thickness ribbon where the model has a 0.05 slab: it reads
   the same from any angle a manipulator is used at, and costs half the triangles.
 */
-const RING_INNER = 0.8;
-const RING_OUTER = 1.0;
+const RING_INNER = 0.6;
+const RING_OUTER = 0.8;
 /** Extra band width per edge on the invisible pick ring. */
-const RING_PICK_MARGIN = 0.14;
+/*
+  Modest, on purpose: the pick band must not reach the arrowhead at 0.8. Where
+  it does graze, the two-pass pick settles it — drawn handles are tried before
+  fat invisible targets, so the head you aimed at wins over the ring you nearly
+  reached.
+*/
+const RING_PICK_MARGIN = 0.08;
 const RING_SEGMENTS = 32;
-const TAU = Math.PI * 2;
 /** Centre distance of a plane pad along its offset axis. */
 const PAD_OFFSET = 0.2;
 const CUBE_SIZE = 0.17;
@@ -200,7 +214,12 @@ const CENTRE_SIZE = 0.2;
  */
 const HEAD_LENGTH = 0.3;
 const HEAD_DIAMETER = 0.283;
-const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2;
+/*
+  NOT derived from the shaft any more. The arrow is deliberately BROKEN between
+  0.6 and 0.8 so the ring can pass through the hole, so the head is positioned
+  absolutely: 0.8 → 1.1, centred at 0.95.
+*/
+const HEAD_OFFSET = 0.95;
 
 export interface HandlesView {
   /** Rebuild for a new transform set. Cheap no-op when nothing changed. */
@@ -573,66 +592,6 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     the same grip sitting at a different offset, and a switch on `kind` has no
     way to tell the two apart.
   */
-  /**
-   * Roll a rotation arc around its own ring so it does not sit under an arrow.
-   *
-   * The arc is generated at a fixed angle, which clears the arrows only while
-   * the piece is unrotated: rings ride the PIECE's frame and arrows stay
-   * world-aligned, so on a turned piece the quarter swings over them and you
-   * cannot tell which control you are aiming at. "Can we spin the rings so they
-   * don't overlap the arrows? That's the real problem."
-   *
-   * So the quarter is placed in the widest GAP between the arrows, measured in
-   * the ring's own plane. Each world arrow direction is projected onto that
-   * plane and reduced to an angle in the frame the arc was generated in; the
-   * arc then centres in the largest arc-free span. Purely cosmetic — every
-   * point on the ring measures the same angle, so which quarter you grab cannot
-   * change what the drag does.
-   *
-   * Returns a roll in RADIANS about the ring's normal, or 0 when there are no
-   * arrows to dodge.
-   */
-  const arcRoll = (axis: Axis, ringToWorld: Quaternion): number => {
-    if (!transforms.translate) return 0;
-    // The arc's generation frame: local X and Z span the ring's plane.
-    const u = rotated([1, 0, 0], ringToWorld);
-    const v = rotated([0, 0, 1], ringToWorld);
-    const angles: number[] = [];
-    for (const arrow of [
-      [1, 0, 0],
-      [0, 1, 0],
-      [0, 0, 1],
-    ] as Vec3[]) {
-      const x = dot(arrow, u);
-      const y = dot(arrow, v);
-      // An arrow perpendicular to this ring projects to nothing and constrains
-      // nothing — that is the ring's own axis.
-      if (Math.hypot(x, y) < 1e-3) continue;
-      angles.push(Math.atan2(y, x));
-    }
-    if (!angles.length) return 0;
-    angles.sort((a, b) => a - b);
-    let bestGap = -1;
-    let bestMid = 0;
-    for (let i = 0; i < angles.length; i++) {
-      const from = angles[i]!;
-      const to = i + 1 < angles.length ? angles[i + 1]! : angles[0]! + TAU;
-      const gap = to - from;
-      if (gap > bestGap) {
-        bestGap = gap;
-        bestMid = from + gap / 2;
-      }
-    }
-    // Where the arc's centre sits before rolling, in the same frame.
-    const start = (arcStart(axis) * Math.PI) / 180;
-    const centre = start + Math.PI / 4;
-    // Rolling by φ about the normal moves a generated angle t to t + φ.
-    return bestMid - centre;
-  };
-
-  const dot = (a: Vec3, b: Vec3): number =>
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-
   const place = () => {
     for (const { grip, mesh, offset, spin } of handles) {
       mesh.scaling.x = scale;
@@ -649,22 +608,11 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       const local =
         orientation && (grip.kind === "scale" || grip.kind === "rotate");
       const along: Vec3 = local ? rotated(offset, orientation!) : offset;
-      const aim = Quaternion.RotationYawPitchRoll(spin[1], spin[0], spin[2]);
       if (local) {
         // A quaternion, not euler: composing the piece's turn with the grip's
         // own turn in euler would mean re-deriving Babylon's order by hand.
-        let q = orientation!.multiply(aim);
-        if (grip.kind === "rotate" && grip.axis) {
-          // Innermost, so it spins the arc within its own ring rather than
-          // tilting the ring.
-          q = q.multiply(
-            Quaternion.RotationAxis(Vector3.Up(), arcRoll(grip.axis, q))
-          );
-        }
-        mesh.rotationQuaternion = q;
-      } else if (grip.kind === "rotate" && grip.axis) {
-        mesh.rotationQuaternion = aim.multiply(
-          Quaternion.RotationAxis(Vector3.Up(), arcRoll(grip.axis, aim))
+        mesh.rotationQuaternion = orientation!.multiply(
+          Quaternion.RotationYawPitchRoll(spin[1], spin[0], spin[2])
         );
       } else {
         mesh.rotationQuaternion = null;

@@ -282,6 +282,49 @@ failures**. Recorded here because they will recur:
   hours went to `getMeshByName('water')` and `Drone` vs
   `Drone_collideBox.model`.
 
+## Do NOT build the scene inside somebody else's render frame (2026-09-02)
+
+**The single worst bug this project has had, and it wore four different faces.**
+Dark sky, white meshes, empty scene, half-loaded scene — one cause. The doc
+system creates this element from inside a `requestAnimationFrame` render pass:
+
+```
+connectedCallback   ensemble-editor.ts
+render              doc-system.js:489
+requestAnimationFrame
+queueRender
+```
+
+so building a Babylon engine in `connectedCallback` happens DURING another
+component's frame, and materials and shader programs come out bound to the
+wrong thing. About 70% of page loads. `connectedCallback` now defers the whole
+mount with `setTimeout(…, 0)`; `disconnectedCallback` cancels it. Verified by
+the owner across many refreshes AND SPA navigations: zero bad loads.
+
+**How it was finally found, after a day of wrong answers:** put a WORKING
+reference beside the broken one, in the same page, at the same moment.
+`<tosi-ensemble>` in a plain `<tosi-b3d>` rendered perfectly while the editor
+beside it was dark — which cleared the format, the instantiator, the ensemble
+data and tosijs-3d in one step. Then an editor mounted by hand into a panel was
+also perfect, which left only WHEN it was mounted.
+
+**The failure mode to avoid repeating** is mine, and it happened three times in
+one day: on an INTERMITTENT bug, one confirming observation is not a result. A
+bug that fails 70% of the time hands you a clean pass 30% of the time. Two of
+today's confident conclusions — "a shared SkyMaterial program deleted by
+material churn" and "the chrome breaks the scene" — were single samples, and
+both were wrong, and one of them was filed upstream on somebody else's tracker
+before being retracted. Take n≥4 before believing a fix, and prefer a
+side-by-side control over a before/after.
+
+Related, all cheap to get wrong the same way:
+
+- `gl.isProgram()` and `gl.readPixels()` both gave FALSE readings during this
+  hunt — readPixels reported `[1,1,1]` on a frame the screenshot showed as red.
+  A screenshot is the ground truth for anything visual.
+- The owner's `realtimeScale` default of 10 means an unattended sky cycles
+  day→night every 40 minutes. "Is it night time?" was literal, not a symptom.
+
 ## Traps this project will hit, from the tosijs-3d side (2026-08-21)
 
 Found while building 0.7.0. Each cost real time there and would cost it again

@@ -50,7 +50,18 @@ export interface ToolContext {
    * insert, delete, a panel field — so that undo, dirty-tracking and autosave
    * are one change each rather than an archaeology exercise across the editor.
    */
-  edit(describe: string, mutate: (ensemble: Ensemble) => void): void;
+  /**
+   * Mutate the ensemble, recording one undo step.
+   *
+   * `rebuild: false` for an edit the scene is already showing — a drag release,
+   * where the body was written live and re-instantiating it only produces a
+   * visible flash. Omit it for anything structural.
+   */
+  edit(
+    describe: string,
+    mutate: (ensemble: Ensemble) => void,
+    options?: { rebuild?: boolean }
+  ): void;
   /** Current options for the active tool, already defaulted from its schema. */
   readonly options: Record<string, unknown>;
   /**

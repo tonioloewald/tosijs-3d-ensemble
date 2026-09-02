@@ -73,7 +73,14 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     selection: ensemble.pieces.find((p) => p.id === selectedId) ?? null,
     select: (id: string | null) => (selectedId = id),
     scene: {} as never,
-    edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
+    edit: (
+      _d: string,
+      mutate: (e: Ensemble) => void,
+      opts?: { rebuild?: boolean }
+    ) => {
+      editOptions.push(opts);
+      mutate(ensemble);
+    },
     options: {
       cells: [SELECT_CELL, MOVE_CELL, TURN_CELL, SCALE_CELL],
       gridSnap: 0,
@@ -121,6 +128,7 @@ const withGrip = (grip: Grip | null) => {
 };
 
 beforeEach(() => {
+  editOptions = [];
   ensemble = {
     name: "test",
     pieces: [{ id: "rock", mesh: "Rock", at: [0, 0, 0] }],
@@ -143,6 +151,8 @@ beforeEach(() => {
 });
 
 afterEach(() => unregisterTool("select"));
+
+let editOptions: Array<{ rebuild?: boolean } | undefined> = [];
 
 const tool = () => getTool("select")!;
 const run = (
@@ -554,5 +564,32 @@ describe("a drag freezes the frame it measures against", () => {
     // Three reads at the grab — one per axis — and nothing during the moves.
     expect(atGrab).toBe(3);
     expect(reads).toBe(atGrab);
+  });
+});
+
+/*
+  A DRAG RELEASE MUST NOT REBUILD THE SCENE.
+
+  Rebuilding disposes every piece element and instantiates it again, which for a
+  transform commit lands back exactly where the body already is — visible as
+  "a slight flash on release". Adding a piece is a different matter and still
+  rebuilds.
+*/
+describe("committing a drag", () => {
+  it("does not rebuild, because the body already shows the value", () => {
+    withGrip({ kind: "translate", axis: "x" });
+    const c = ctx();
+    c.select({ id: "a" } as never);
+    run([rayAtX(0), rayAtX(3)], c);
+    expect(editOptions).toEqual([{ rebuild: false }]);
+  });
+
+  it("DOES rebuild when the drag adds a piece", () => {
+    withGrip({ kind: "translate", axis: "x" });
+    const c = ctx({ duplicate: true });
+    c.select({ id: "a" } as never);
+    run([rayAtX(0), rayAtX(3)], c);
+    // Structural: the new piece has no body until something builds it.
+    expect(editOptions).toEqual([undefined]);
   });
 });

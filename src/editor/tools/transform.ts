@@ -445,16 +445,30 @@ export function registerTransformTool(hooks: TransformHooks): void {
           return;
         }
 
-        ctx.edit(`${kind} ${finished.pieceId}`, (ensemble) => {
-          const piece = ensemble.pieces.find((p) => p.id === finished.pieceId);
-          if (!piece) return;
-          // Write only what this grip actually dragged. Writing all three would
-          // stamp a `rot: [0,0,0]` and a `scale: 1` onto every piece an author
-          // ever nudged, turning a hand-written file into a generated one.
-          if (kind === "translate" || kind === "planar") piece.at = at;
-          if (kind === "rotate") piece.rot = rot;
-          if (kind === "scale" || kind === "uniform") piece.scale = scale;
-        });
+        ctx.edit(
+          `${kind} ${finished.pieceId}`,
+          (ensemble) => {
+            const piece = ensemble.pieces.find(
+              (p) => p.id === finished.pieceId
+            );
+            if (!piece) return;
+            // Write only what this grip actually dragged. Writing all three
+            // would stamp a `rot: [0,0,0]` and a `scale: 1` onto every piece an
+            // author ever nudged, turning a hand-written file into a generated
+            // one.
+            if (kind === "translate" || kind === "planar") piece.at = at;
+            if (kind === "rotate") piece.rot = rot;
+            if (kind === "scale" || kind === "uniform") piece.scale = scale;
+          },
+          /*
+            The scene already shows this. The drag wrote the body live and the
+            values committed here are the ones on screen, so rebuilding would
+            destroy and re-instantiate the piece to arrive back where it is —
+            visible as a flash on release. Duplicate above adds a piece, which
+            IS structural, so it rebuilds.
+          */
+          { rebuild: false }
+        );
       },
     },
   });

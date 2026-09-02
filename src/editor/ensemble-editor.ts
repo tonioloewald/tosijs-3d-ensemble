@@ -566,7 +566,7 @@ export class EnsembleEditor extends Component {
       selection: this.selection,
       select: (id) => (id === null ? this._clearSelection() : this.select(id)),
       scene: this._scene as SceneElement,
-      edit: (describe, mutate) => this.edit(describe, mutate),
+      edit: (describe, mutate, options) => this.edit(describe, mutate, options),
       options: this._toolOptions,
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
@@ -586,7 +586,11 @@ export class EnsembleEditor extends Component {
    * Undo is still a v1 non-goal, but one path is what makes adding it a single
    * change rather than an archaeology exercise across the editor.
    */
-  edit(describe: string, mutate: (ensemble: Ensemble) => void): void {
+  edit(
+    describe: string,
+    mutate: (ensemble: Ensemble) => void,
+    options?: { rebuild?: boolean }
+  ): void {
     /*
       SNAPSHOT BEFORE, not a diff.
 
@@ -599,6 +603,33 @@ export class EnsembleEditor extends Component {
     */
     this._history.record(describe, this._ensemble);
     mutate(this._ensemble);
+
+    /*
+      A DRAG RELEASE HAS NOTHING TO REBUILD.
+
+      Rebuilding disposes every piece element and instantiates it again, and for
+      a transform commit that work is not merely wasted — you can SEE it. The
+      piece the drag just placed blinks out and back as its library instance is
+      destroyed and re-adopted: "there's a slight flash on release which is a
+      bit ugly".
+
+      Nothing structural changed, and the body is ALREADY showing the committed
+      value because the drag wrote it there live. So the JSON is updated, the
+      chrome and the selection views are refreshed, and the scene is left alone.
+      This is what PLAN.md asked for originally — "write the ensemble JSON
+      without a full rebuild, since the body already holds the value. Rebuild
+      stays for structural changes" — and it went in as an unconditional rebuild
+      because one path was simpler than two.
+
+      Structural edits — insert, delete, a feature change — still rebuild, and
+      say so by omitting the option.
+    */
+    if (options?.rebuild === false) {
+      this._syncSelection();
+      this._syncHandles();
+      this._renderChrome();
+      return;
+    }
     this.rebuild();
   }
 

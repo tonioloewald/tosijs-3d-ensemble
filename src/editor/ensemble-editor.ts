@@ -109,6 +109,7 @@ import { registerSceneFeatures } from "../runtime/features-scene";
 import { validate } from "../format/validate";
 import type { BuiltEnsemble } from "../runtime/build";
 import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types";
+import { narrowScale, scaleVector } from "../format/scale";
 import {
   fileNameFor,
   parseEnsemble,
@@ -173,11 +174,6 @@ const GRID_METRES = 10;
 /*
   THE MENU STRINGS, so the picker and the handler cannot disagree about them.
 */
-const TO_BROWSER = "To this browser";
-const TO_FILE = "Download file";
-const FROM_FILE = "From file…";
-const SAVE_ACTIONS = [TO_BROWSER, TO_FILE];
-
 /**
  * Hand the browser a file to save.
  *
@@ -940,67 +936,30 @@ export class EnsembleEditor extends Component {
       clearTimeout(this._deferredMount);
       this._deferredMount = null;
     }
-    // The editor rebuilds constantly; leaving one build behind per session is
-    // how an editing session ends up eating a machine.
     /*
-      THE SCENE IS NOT READY ANY MORE, AND SAYING SO IS THE POINT.
+      A MOVE IS NOT A REMOVAL, AND WE STOPPED PRETENDING IT WAS.
 
-      tosijs-3d guarantees a full teardown on disconnect and a rebuild on
-      connect — deliberately, because holding an engine and a WebGL CONTEXT
-      open across a disconnect that may never come back leaks a hard-capped
-      resource (tosijs-3d#58). So after a re-parent the element we re-adopt has
-      a BRAND NEW scene, and everything we hold from the old one is rubbish.
+      This used to tear down everything scene-shaped here — the build, the
+      handles, the marker, `_sceneReady` — and then dispose the `<tosi-b3d>`
+      itself on a deferred task if we were still gone. All of that was standing
+      in for a signal we did not have.
 
-      This flag used to be cleared only in the deferred disposal below, which is
-      skipped precisely when we reconnect — so a rebuild could run against a
-      scene that no longer exists. `_onSceneReady` sets it true again when the
-      new scene reports ready.
+      tosijs-3d 0.7.7 gives us the signal. A move now REUSES the engine (its
+      teardown is deferred and a reconnect cancels it), so a re-parent costs
+      nothing and everything we hold stays valid — tearing it down here would
+      throw away a live scene and rebuild it for no reason. A genuine removal
+      disposes the engine, and `whenDisposed` tells us so.
+
+      What is left here is what is genuinely OURS and DOM-shaped: the pending
+      mount, the pointer, the keyboard shortcuts, the frame loop. Scene-derived
+      state is dropped in `_onSceneDisposed`, wired once in `_onSceneReady`.
     */
-    this._sceneReady = false;
-    this._built?.dispose();
-    this._built = null;
     this._stopFrames?.();
     this._stopFrames = null;
-    this._handles?.dispose();
-    this._handles = null;
-    this._marker?.dispose();
-    this._marker = null;
     this._pointer?.dispose();
     this._pointer = null;
     this._detachShortcuts?.();
     this._detachShortcuts = null;
-
-    /*
-      AND THE SCENE ITSELF, IF WE ARE REALLY GONE.
-
-      Everything above is bookkeeping inside the scene; the scene was never let
-      go of. A doc-browser SPA constructs this element more than once per page,
-      and a discarded instance took its `<tosi-b3d>` — and that scene's Babylon
-      ENGINE and WebGL context — with it into the void, still alive. Measured on
-      one initial page load: two webgl2 contexts, created 207ms apart.
-
-      That is the shape of the symptoms left: meshes that render white and a sky
-      whose uniforms all read correctly while its GL program is not a program.
-      Both are what you get when geometry lands in one scene and its materials
-      belong to another.
-
-      Deferred by a turn because `disconnectedCallback` ALSO fires when the
-      element is merely moved, which the doc system does on navigation — and
-      `_mountScene` exists to adopt that scene back. Disposing eagerly would
-      throw away the scene we are about to re-adopt, which is the bug that
-      produced "19 bodies built, 0 meshes rendered".
-    */
-    const scene = this._scene;
-    if (scene) {
-      setTimeout(() => {
-        if (this.isConnected || this._scene !== scene) return;
-        (scene as unknown as { dispose?: () => void }).dispose?.();
-        scene.remove();
-        this._scene = null;
-        this._sceneReady = false;
-        this._backdrop.clear();
-      }, 0);
-    }
     super.disconnectedCallback?.();
   }
 
@@ -1173,6 +1132,27 @@ export class EnsembleEditor extends Component {
   }
 
   /**
+   * Drop everything that points INTO the scene, because the scene is gone.
+   *
+   * Not a move — `whenDisposed` fires only on a genuine disposal. Anything held
+   * here would otherwise point at a dead scene, and Babylon's failure mode for
+   * that is a material that renders black while still reporting `isReady()`:
+   * silent, not loud. That is the bug that cost this project a day.
+   */
+  private _onSceneDisposed(): void {
+    this._sceneReady = false;
+    this._built?.dispose();
+    this._built = null;
+    this._handles?.dispose();
+    this._handles = null;
+    this._marker?.dispose();
+    this._marker = null;
+    this._backdrop.clear();
+  }
+
+  private _stopWatchingDisposal: (() => void) | null = null;
+
+  /**
    * Everything that touches the scene, held until there IS one.
    *
    * `whenReady` runs its callback immediately when the scene is already up, so
@@ -1183,6 +1163,18 @@ export class EnsembleEditor extends Component {
     const go = () => {
       if (!this.isConnected) return;
       this._sceneReady = true;
+      /*
+        Register ONCE, and keep the unsubscribe. `whenDisposed` is durable
+        across rebuilds by design — "subscriptions are durable, scene state is
+        not" — so re-registering on every ready would stack duplicates.
+      */
+      if (!this._stopWatchingDisposal) {
+        const watchable = scene as unknown as {
+          whenDisposed?: (cb: () => void) => () => void;
+        };
+        this._stopWatchingDisposal =
+          watchable.whenDisposed?.(() => this._onSceneDisposed()) ?? null;
+      }
       this._syncBackdrop();
       if (this._rebuildPending) {
         this._rebuildPending = false;
@@ -1826,30 +1818,36 @@ export class EnsembleEditor extends Component {
     );
   }
 
-  /** Write to a `localStorage` slot, or download a file. */
-  saveAs(choice: string): void {
-    const name = this._ensemble.name?.trim() || "untitled";
-    if (choice === TO_FILE) {
-      download(fileNameFor(name), serialise(this._ensemble));
-      return;
-    }
-    if (choice === TO_BROWSER && typeof localStorage !== "undefined") {
-      writeSaved(localStorage, name, this._ensemble);
-      this._renderChrome();
-    }
+  /** The name a save uses, for both destinations. */
+  private _saveName(): string {
+    return this._ensemble.name?.trim() || "untitled";
   }
 
-  /** Load a saved slot, or open the file picker. */
-  loadChoice(choice: string): void {
-    if (choice === FROM_FILE) {
-      pickFile((text) => {
-        const parsed = parseEnsemble(text);
-        if (parsed) this.ensemble = parsed;
-      });
-      return;
-    }
+  /** Keep it in this browser: survives a reload, and nothing else. */
+  saveLocal(): void {
     if (typeof localStorage === "undefined") return;
-    const saved = readSaved(localStorage, choice);
+    writeSaved(localStorage, this._saveName(), this._ensemble);
+    // The Load picker only exists once there is something to load.
+    this._renderChrome();
+  }
+
+  /** Keep it properly: `[name].ensemble.json`, which outlives the browser. */
+  saveFile(): void {
+    download(fileNameFor(this._saveName()), serialise(this._ensemble));
+  }
+
+  /** Replace the ensemble from a file the author picks. */
+  openFile(): void {
+    pickFile((text) => {
+      const parsed = parseEnsemble(text);
+      if (parsed) this.ensemble = parsed;
+    });
+  }
+
+  /** Replace the ensemble from a saved browser slot. */
+  openSaved(name: string): void {
+    if (typeof localStorage === "undefined") return;
+    const saved = readSaved(localStorage, name);
     if (saved) this.ensemble = saved;
   }
 
@@ -1896,6 +1894,7 @@ export class EnsembleEditor extends Component {
       So the tool decides. Insert shows the library; everything else shows the
       scene graph.
     */
+    this._renderFilePanel();
     if (this._tool === "insert") this._renderLibraryPalette();
     else this._renderPieceList();
     this._renderProperties();
@@ -2117,6 +2116,44 @@ export class EnsembleEditor extends Component {
     );
   }
 
+  /*
+    THE FILE PANEL IS SEPARATE FROM THE SCENE GRAPH.
+
+    These lived in the piece-list panel and ate it: the list is bounded by
+    `maxHeight`, so four controls above it left one row of pieces visible on a
+    24-piece ensemble. They are also a different KIND of thing — the ensemble as
+    a document, rather than what is in it — and the name belongs with them
+    because it is the save slot and the filename, not a caption for the list.
+  */
+  private _renderFilePanel(): void {
+    this._addPanel(
+      "left",
+      panel3d(
+        { width: 150, padding: 8, gap: 4 },
+        ui.inputField({
+          value: this._ensemble.name ?? "",
+          placeholder: "untitled",
+          onChange: (value: string) => this.rename(value),
+        }) as never,
+        /*
+          TWO BUTTONS, UNTIL THERE ARE MENUS.
+
+          Saving to a browser slot and opening one both work — `saveLocal`,
+          `openSaved` and `savedEnsembles` are here and tested — but each needs
+          a LIST, and the only list control available is `select3d`, which is a
+          stepper first and a menu second: "the save button only saves to file
+          AFAICT, it doesn't show more than one option". Four half-working
+          controls are worse than two that do exactly what they say.
+
+          When an icon grid can open a menu (tosijs-3d#59) these become two
+          icons with a menu apiece, and the slots come back.
+        */
+        button3d({ label: "Download", onClick: () => this.saveFile() }),
+        button3d({ label: "Open file…", onClick: () => this.openFile() })
+      )
+    );
+  }
+
   private _renderPieceList(): void {
     const problems = this.problems;
     const errors = problems.filter((p) => p.severity === "error").length;
@@ -2124,42 +2161,6 @@ export class EnsembleEditor extends Component {
       "left",
       panel3d(
         { width: 150, maxHeight: 340, padding: 8, gap: 4 },
-        /*
-          The name is EDITABLE, because it is not a caption — it is the
-          ensemble's identity, the localStorage slot it saves into and the file
-          it downloads as. A label here would be the one field you had to leave
-          the editor to change.
-        */
-        ui.inputField({
-          value: this._ensemble.name ?? "",
-          placeholder: "untitled",
-          onChange: (value: string) => this.rename(value),
-        }) as never,
-        label3d({
-          text: `${this._ensemble.pieces.length} · ${errors}✕ · ${
-            problems.length - errors
-          }⚠`,
-          muted: true,
-        }),
-        /*
-          Two pickers rather than four buttons, and reading slightly wrong for
-          it: these are one-shot ACTIONS, and a `select3d` lingers on the value
-          you chose. An icon grid is the right shape and cannot open a menu
-          today — asked for as tosijs-3d#59; when it lands these collapse into
-          two icons.
-        */
-        select3d({
-          label: "",
-          value: "Save…",
-          options: ["Save…", ...SAVE_ACTIONS],
-          onChange: (value: string | number) => this.saveAs(String(value)),
-        }),
-        select3d({
-          label: "",
-          value: "Load…",
-          options: ["Load…", FROM_FILE, ...this.savedEnsembles()],
-          onChange: (value: string | number) => this.loadChoice(String(value)),
-        }),
         list3d<{ label: string; id: string }>({
           items: this._ensemble.pieces.map((p) => ({ label: p.id, id: p.id })),
           onSelect: (item) => this.select(item.id),
@@ -2219,6 +2220,39 @@ export class EnsembleEditor extends Component {
       fields.push(
         label3d({ text: "rotation", muted: true, compact: true }),
         rotation
+      );
+
+      /*
+        SCALE, SHOWN AS THREE, WRITTEN AS WHAT THE AUTHOR MEANT.
+
+        `scale` is `number | Vec3` and BOTH spellings are canonical — a number
+        is not sugar the loader rewrites, it is what a file says when the scale
+        genuinely IS uniform. So the panel reads through `scaleVector` (three
+        numbers, whichever way it was written) and writes through
+        `narrowScale`, which puts a uniform scale back as the single number the
+        author typed rather than silently converting their file to `[2, 2, 2]`.
+
+        A `vector3d` rather than one field, because non-uniform scale is a
+        thing you can author here; the narrowing is what keeps the common case
+        from looking like a triple.
+      */
+      const s3 = scaleVector(selected.scale);
+      const scale = vector3d({
+        value: { x: s3[0], y: s3[1], z: s3[2] },
+        step: 0.25,
+        scrub: 0.01,
+        // A scale of zero collapses the mesh and cannot be scrubbed back out
+        // of, since every later factor multiplies it.
+        min: 0.01,
+        onChange: (v) =>
+          this.update(selected.id, {
+            scale: narrowScale([v.x, v.y, v.z]),
+          }),
+      });
+      inputs.push(scale as unknown as { fields: unknown[] });
+      fields.push(
+        label3d({ text: "scale", muted: true, compact: true }),
+        scale
       );
     }
     /*

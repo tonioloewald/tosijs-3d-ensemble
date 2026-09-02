@@ -161,6 +161,21 @@ export function addSingleton(
  * claim is released and this would remove the sky the next line recreates,
  * which is the churn it exists to prevent.
  */
+/**
+ * Sky config with the clock stopped unless the ensemble asked otherwise.
+ *
+ * Pure, and separate from the feature, because the element does NOT expose
+ * creator props synchronously — a test that read `el.realtimeScale` straight
+ * after `b3dSkybox(...)` got the CLASS DEFAULT back and would have passed for
+ * entirely the wrong reason. What matters is the config handed over, so that is
+ * what is testable.
+ */
+export function stillSky(
+  cfg: Record<string, unknown>
+): Record<string, unknown> {
+  return { realtimeScale: 0, ...cfg };
+}
+
 export function reapUnclaimedSingletons(scene: unknown): void {
   const claims = singletons.get(scene as object);
   if (!claims) return;
@@ -283,10 +298,33 @@ export function registerSceneFeatures(): void {
         luminance: num(0, 2, 1),
         latitude: num(-90, 90, 0, "°"),
         applyFog: { type: "boolean", default: true },
+        /*
+          TIME OF DAY MUST STAND STILL UNLESS ASKED NOT TO.
+
+          `b3d-skybox` defaults `realtimeScale` to 10 and advances `timeOfDay`
+          on a 100 ms interval, which works out at a full day/night cycle every
+          FORTY MINUTES. An ensemble is a static description of an arrangement,
+          so a file that says `timeOfDay: 11` and renders dusk is simply wrong —
+          and leaving the editor open walked the sky into night, reported as
+          "is it night time?" after a long session. Measured across this
+          session: 10.06 → 10.23 → 10.29 with nothing touching it.
+
+          So the format defaults it to 0 — a still sky — and a scene that wants
+          a moving one opts in by saying so. That also makes an ensemble
+          REPRODUCIBLE: load the same file twice and get the same light.
+        */
+        realtimeScale: num(0, 1000, 0),
       },
     },
-    bind: (_piece, cfg, ctx) =>
-      addSingleton(ctx, "tosi-b3d-skybox", () => b3dSkybox({ ...cfg }), cfg),
+    bind: (_piece, cfg, ctx) => {
+      const still = stillSky(cfg);
+      return addSingleton(
+        ctx,
+        "tosi-b3d-skybox",
+        () => b3dSkybox({ ...still }),
+        still
+      );
+    },
   });
 
   registerFeature({

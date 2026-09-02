@@ -875,7 +875,9 @@ export class EnsembleEditor extends Component {
     this._backdropPart(
       "skybox",
       on && !used.has("skybox"),
-      () => b3dSkybox({ timeOfDay: 11 }),
+      // Still, like the format default: an authoring backdrop that drifts into
+      // night while you work is a light meter that will not hold still.
+      () => b3dSkybox({ timeOfDay: 11, realtimeScale: 0 }),
       used.has("skybox")
     );
     this._backdropPart("water", on && aquatic && !used.has("water"), () =>

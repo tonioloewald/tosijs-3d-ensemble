@@ -69,6 +69,7 @@ import {
   panel3d,
   select3d,
   euler3d,
+  iconGrid3d,
   slider3d,
   textBlock3d,
   ui,
@@ -455,6 +456,24 @@ export class EnsembleEditor extends Component {
    * so two-finger drag is the ONLY way to pan there. A pan that zooms instead
    * leaves a tablet with no way to move the view sideways at all.
    */
+  /**
+   * Open the on-screen keyboard when a field takes focus.
+   *
+   * A shared preference in tosijs-3d, exposed here because the editor is a
+   * component and its HOST is what knows the answer: a headset wants it on, a
+   * desk with a real keyboard does not. The device cannot be asked — a laptop
+   * docked to a screen across the room and a headset over a desk look identical
+   * to any sniffing you could do, which is why the ⌨ affordance is always drawn
+   * and this stays a choice.
+   */
+  set onScreenKeyboard(on: boolean) {
+    ui.setAutoKeyboard(on === true)
+  }
+
+  get onScreenKeyboard(): boolean {
+    return ui.autoKeyboardEnabled()
+  }
+
   private _configureTouchCamera(scene: { activeCamera?: unknown }): void {
     const camera = scene.activeCamera as
       | {
@@ -1330,48 +1349,58 @@ export class EnsembleEditor extends Component {
     const tools = registeredTools()
     const commands = registeredCommands()
     const ctx = this._toolContext()
+    /*
+      TWO GRIDS, because they are two kinds of thing.
+
+      A tool is MODAL — picking it changes what a gesture means, and exactly one
+      is current, which is `radio`. A command runs once and returns you to what
+      you were doing, which is `buttons`: it fires and nothing stays lit. They
+      were one stack of identical buttons before, so nothing on screen said
+      which of them would still be true a second later.
+
+      Icons rather than words: four cells fit where four labelled rows did not,
+      and a palette is the one place where recognition beats reading.
+    */
+    const current = Math.max(0, tools.findIndex((tool) => tool.name === this._tool))
     this._addPanel(
       'left',
       panel3d(
-        /*
-          `height: 'fit'` — the default in tosijs-3d 0.7.5, and the end of a
-          recurring bug. Height used to be a hand-tuned BUDGET, and a short one
-          silently drops whatever is last: `Delete` fell off this palette twice,
-          `Duplicate` once, and the property panel clipped its rotation row.
-          A panel too short for its content looks exactly like a panel missing
-          its last control, which is why it kept coming back.
-
-          The hint still goes last, because ordering by importance costs nothing
-          and a `maxHeight` scroll would put the same question back.
-        */
-        { width: 168, padding: 8, gap: 4 },
+        { width: 184, padding: 8, gap: 6 },
         label3d({ text: 'Tools', bold: true }),
-        ...(tools.map((tool) =>
-          button3d({
-            // The current tool is marked in its label rather than by colour
-            // alone — a headset at low resolution loses a subtle tint.
-            label: tool.name === this._tool ? `▸ ${tool.label}` : tool.label,
-            onClick: () => this.setTool(tool.name),
-          })
-        ) as never[]),
-        ...(commands.map((command) =>
-          button3d({
-            label: command.enabled?.(ctx) === false ? `${command.label} —` : command.label,
-            onClick: () => {
-              if (command.enabled?.(ctx) === false) return
-              command.run(this._toolContext())
-            },
-          })
-        ) as never[]),
+        iconGrid3d({
+          mode: 'radio',
+          selected: current,
+          // TWO columns, not four. A caption forces a narrow column, and at
+          // four "Delete" and "Duplicate" ran into each other — a label that
+          // collides with its neighbour is worse than no label, because it
+          // reads as a different word.
+          columns: 2,
+          items: tools.map((tool) => ({ icon: tool.icon ?? 'square', label: tool.label })),
+          handleSelect: ([index]) => {
+            const picked = tools[index ?? 0]
+            if (picked) this.setTool(picked.name)
+          },
+        }) as never,
+        iconGrid3d({
+          mode: 'buttons',
+          columns: 2,
+          items: commands.map((command) => ({
+            icon: command.icon ?? 'square',
+            label: command.label,
+            // A command that cannot run says so by being greyed, rather than by
+            // running and doing nothing.
+            disabled: command.enabled?.(ctx) === false,
+          })),
+          handleActivate: (index) => {
+            const command = commands[index]
+            if (!command || command.enabled?.(this._toolContext()) === false) return
+            command.run(this._toolContext())
+          },
+        }) as never,
         /*
           Navigation is discoverable nowhere else: the camera's gestures are
           Babylon's defaults, and an editor that does not say so leaves you
           unable to move the view at all.
-
-          `textBlock3d`, not `label3d`: a label is one line and CLIPS at the
-          panel edge without a mark, so this shipped for a while reading
-          "drag orbit · ⌃dra" — advice truncated mid-word, which is worse than
-          no advice. A text block measures and wraps to the panel width.
         */
         textBlock3d({
           // ⌃drag is named second on purpose: a touch device has no ctrl key,

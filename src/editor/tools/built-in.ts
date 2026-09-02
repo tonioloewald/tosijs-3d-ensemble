@@ -76,7 +76,7 @@ export function registerEditorTools(): void {
   registerCommand({
     name: 'undo',
     label: 'Undo',
-    icon: 'undo',
+    icon: 'cornerUpLeft',
     enabled: (ctx) => ctx.canUndo(),
     run: (ctx) => ctx.undo(),
   })
@@ -84,7 +84,7 @@ export function registerEditorTools(): void {
   registerCommand({
     name: 'redo',
     label: 'Redo',
-    icon: 'redo',
+    icon: 'cornerUpRight',
     enabled: (ctx) => ctx.canRedo(),
     run: (ctx) => ctx.redo(),
   })

@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { registerTransformTool, resolveGrab, transformsOf } from './transform'
+import {
+  MOVE_CELL,
+  SCALE_CELL,
+  SELECT_CELL,
+  TURN_CELL,
+  registerTransformTool,
+  resolveGrab,
+  resolveToolCells,
+  transformsOf,
+} from './transform'
 import { getTool, unregisterTool } from './tool-registry'
 import type { ToolContext } from './tool-registry'
 import type { Grip } from '../handles'
@@ -56,7 +65,13 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     select: (id: string | null) => (selectedId = id),
     scene: {} as never,
     edit: (_d: string, mutate: (e: Ensemble) => void) => mutate(ensemble),
-    options: { mode: 'move + turn', gridSnap: 0, angleSnap: 0, duplicate: false, ...options },
+    options: {
+      cells: [SELECT_CELL, MOVE_CELL, TURN_CELL, SCALE_CELL],
+      gridSnap: 0,
+      angleSnap: 0,
+      duplicate: false,
+      ...options,
+    },
     pick: () => picked,
     pickPoint: () => null,
     captureCamera: () => {},
@@ -124,36 +139,79 @@ const run = (rays: EditorRay[], c: ToolContext, hand: Vec3 | null = null, second
 }
 
 describe('transformsOf', () => {
-  it('offers nothing in select mode', () => {
-    expect(transformsOf({})).toEqual({ translate: false, rotate: false, scale: false })
-    expect(transformsOf({ mode: 'select' })).toEqual({
+  it('reads the lit cells', () => {
+    expect(transformsOf({ cells: [SELECT_CELL] })).toEqual({
       translate: false,
       rotate: false,
       scale: false,
     })
-  })
-
-  it('gives each mode exactly its own grips', () => {
-    expect(transformsOf({ mode: 'move' })).toEqual({ translate: true, rotate: false, scale: false })
-    expect(transformsOf({ mode: 'turn' })).toEqual({ translate: false, rotate: true, scale: false })
-    expect(transformsOf({ mode: 'move + turn' })).toEqual({
+    expect(transformsOf({ cells: [SELECT_CELL, MOVE_CELL] })).toEqual({
+      translate: true,
+      rotate: false,
+      scale: false,
+    })
+    expect(transformsOf({ cells: [SELECT_CELL, MOVE_CELL, TURN_CELL] })).toEqual({
       translate: true,
       rotate: true,
       scale: false,
     })
-  })
-
-  it('keeps SCALE to itself', () => {
-    /*
-      Not fussiness: `node.scaling` is local, so scale grips ride the piece's
-      axes while translate and rotate ride the world's. Showing them together
-      means one widget drawn in two frames at once.
-    */
-    expect(transformsOf({ mode: 'scale' })).toEqual({
+    expect(transformsOf({ cells: [SELECT_CELL, SCALE_CELL] })).toEqual({
       translate: false,
       rotate: false,
       scale: true,
     })
+  })
+
+  it('lights select, move and turn when nothing has been chosen', () => {
+    expect(transformsOf({})).toEqual({ translate: true, rotate: true, scale: false })
+  })
+})
+
+describe('resolveToolCells — scale is exclusive, the other two compose', () => {
+  /*
+    Not a preference. `node.scaling` is local, so scale grips ride the piece's
+    axes while move and turn ride the world's; a widget showing both draws two
+    frames at once and can only mislead.
+  */
+  it('turns move and turn off when scale goes on', () => {
+    expect(
+      resolveToolCells({ index: SCALE_CELL, selection: [SELECT_CELL, MOVE_CELL, TURN_CELL, SCALE_CELL] })
+    ).toEqual([SELECT_CELL, SCALE_CELL])
+  })
+
+  it('turns scale off when move goes on', () => {
+    expect(resolveToolCells({ index: MOVE_CELL, selection: [SELECT_CELL, SCALE_CELL, MOVE_CELL] })).toEqual([
+      SELECT_CELL,
+      MOVE_CELL,
+    ])
+  })
+
+  it('turns scale off when turn goes on', () => {
+    expect(resolveToolCells({ index: TURN_CELL, selection: [SELECT_CELL, SCALE_CELL, TURN_CELL] })).toEqual([
+      SELECT_CELL,
+      TURN_CELL,
+    ])
+  })
+
+  it('lets move and turn coexist', () => {
+    expect(resolveToolCells({ index: TURN_CELL, selection: [SELECT_CELL, MOVE_CELL, TURN_CELL] })).toEqual([
+      SELECT_CELL,
+      MOVE_CELL,
+      TURN_CELL,
+    ])
+  })
+
+  it('does not fight a cell being turned OFF', () => {
+    // Un-lighting scale must not resurrect move and turn — the rule is about
+    // what cannot be on together, not about keeping something on.
+    expect(resolveToolCells({ index: SCALE_CELL, selection: [SELECT_CELL] })).toEqual([SELECT_CELL])
+  })
+
+  it('leaves select alone whatever else happens', () => {
+    // Select is what a press means when it grabs no handle, which stays true.
+    for (const index of [MOVE_CELL, TURN_CELL, SCALE_CELL]) {
+      expect(resolveToolCells({ index, selection: [SELECT_CELL, index] })).toContain(SELECT_CELL)
+    }
   })
 })
 

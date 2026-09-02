@@ -35,7 +35,8 @@ Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
 */
 /*{"parent":"Internals","order":7}*/
-import { label3d, panel3d, select3d, slider3d, toggle3d, ui } from 'tosijs-3d'
+import { iconGrid3d, label3d, panel3d, select3d, slider3d, toggle3d, ui } from 'tosijs-3d'
+import { DEFAULT_TOOL_CELLS, TOOL_CELLS, resolveToolCells } from './tools/transform'
 import type { FeatureSchema } from '../format/registry'
 
 interface PropertySpec {
@@ -51,8 +52,9 @@ interface PropertySpec {
   /**
    * Show this property only while the other options match.
    *
-   * `{'x-requires': {mode: 'turn'}}` hides a field unless `mode` is `turn`; an
-   * ARRAY means one of, so `{mode: ['turn', 'move + turn']}` covers both.
+   * `{'x-requires': {cell: 2}}` hides a field unless cell 2 is lit;
+   * `{anyCell: [1, 2, 3]}` needs any of them. Plain keys still compare against
+   * the option's value, and an ARRAY there means one of.
    *
    * Without it a panel contradicts itself. The select tool showed "Move: on"
    * beside "Mode: select", so an author switched a control that could not act,
@@ -83,9 +85,33 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
 
   for (const [key, spec] of Object.entries(properties)) {
     const requires = spec['x-requires']
-    const satisfied = (k: string, v: unknown) =>
-      Array.isArray(v) ? v.includes(values[k]) : values[k] === v
+    const lit = Array.isArray(values.cells) ? (values.cells as number[]) : []
+    const satisfied = (k: string, v: unknown) => {
+      // `cell` / `anyCell` read the lit tool cells rather than a named option,
+      // because the grid's value IS a set and "is this one on" is the question
+      // every dependent field actually asks.
+      if (k === 'cell') return lit.includes(v as number)
+      if (k === 'anyCell') return (v as number[]).some((c) => lit.includes(c))
+      return Array.isArray(v) ? v.includes(values[k]) : values[k] === v
+    }
     if (requires && !Object.entries(requires).every(([k, v]) => satisfied(k, v))) continue
+
+    if (spec['x-widget'] === 'tool-cells') {
+      widgets.push(
+        iconGrid3d({
+          mode: 'checkbox',
+          items: TOOL_CELLS as unknown as Array<{ icon: string; label?: string }>,
+          selected: (values[key] as number[]) ?? DEFAULT_TOOL_CELLS,
+          columns: 4,
+          // The rule lives in the tool, not here — the grid asks what SHOULD
+          // happen and this hands back the answer, or `previous` to veto.
+          handleChange: (change: { index: number; selection: number[] }) =>
+            resolveToolCells(change),
+          handleSelect: (selection: number[]) => onChange(key, selection),
+        }) as never
+      )
+      continue
+    }
     const unit = spec['x-unit'] ? ` (${spec['x-unit']})` : ''
     const label = `${spec.title ?? key}${unit}`
     const value = values[key] ?? spec.default

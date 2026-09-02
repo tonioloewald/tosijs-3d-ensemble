@@ -123,32 +123,65 @@ interface Drag {
 let drag: Drag | null = null
 
 
-/** What the tool does, in the order an author cycles through them. */
-export const MODES = ['select', 'move', 'turn', 'move + turn', 'scale'] as const
+/**
+ * The grid's cells, in order. Index IS the identity — `handleChange` speaks in
+ * indices, so this array and `GRIP_FOR` are the only place the mapping lives.
+ */
+export const TOOL_CELLS = [
+  { icon: 'mousePointer', label: 'select' },
+  { icon: 'move', label: 'move' },
+  { icon: 'rotateCw', label: 'turn' },
+  { icon: 'resize', label: 'scale' },
+] as const
 
-export type TransformMode = (typeof MODES)[number]
+export const SELECT_CELL = 0
+export const MOVE_CELL = 1
+export const TURN_CELL = 2
+export const SCALE_CELL = 3
+
+/**
+ * Scale is exclusive of move and turn; those two compose.
+ *
+ * Not a preference — `node.scaling` is local, so scale grips ride the piece's
+ * axes while move and turn ride the world's. A widget showing both draws two
+ * frames at once and can only mislead. Select is not exclusive of anything: it
+ * is what a press means when it grabs no handle, which stays true whatever else
+ * is on.
+ *
+ * Written as a pure function so the rule is testable without a grid.
+ */
+export function resolveToolCells(change: { index: number; selection: number[] }): number[] {
+  const next = new Set(change.selection)
+  if (change.index === SCALE_CELL && next.has(SCALE_CELL)) {
+    next.delete(MOVE_CELL)
+    next.delete(TURN_CELL)
+  }
+  if ((change.index === MOVE_CELL || change.index === TURN_CELL) && next.has(change.index)) {
+    next.delete(SCALE_CELL)
+  }
+  return [...next].sort((a, b) => a - b)
+}
+
+/** The cells lit when nothing has been chosen: select, move and turn. */
+export const DEFAULT_TOOL_CELLS = [SELECT_CELL, MOVE_CELL, TURN_CELL]
 
 export const TRANSFORM_SCHEMA = {
   type: 'object',
   title: 'Select',
   properties: {
     /*
-      ONE MODE, not a mode plus three toggles.
+      The mode lives in an ICON GRID, not in this schema.
 
-      Scale earns its own entry rather than composing with the others, because
-      it is a different KIND of operation: `node.scaling` is local, so a scale
-      widget has to sit on the piece's axes while translate and rotate sit on
-      the world's. Offering them together means one widget drawn in two frames
-      at once, which is unreadable and was already confusing at the data level.
-
-      The two that DO compose get a combined entry, because "nudge it over and
-      turn it a bit" is one job.
+      A cycler made you read a word and step to the next one; four icons show
+      every affordance at once and say which are live. `x-widget: 'tool-cells'`
+      tells the panel to render the grid instead of a field, and the value is
+      the lit indices — see `resolveToolCells` for the one rule.
     */
-    mode: {
-      type: 'string',
-      title: 'Mode',
-      enum: MODES,
-      default: 'select',
+    cells: {
+      type: 'array',
+      title: '',
+      default: DEFAULT_TOOL_CELLS,
+      'x-widget': 'tool-cells',
     },
     /*
       Each setting appears only where it applies. A grid snap has nothing to say
@@ -162,7 +195,7 @@ export const TRANSFORM_SCHEMA = {
       default: 1,
       'x-unit': 'm',
       description: '0 to move freely',
-      'x-requires': { mode: ['move', 'move + turn'] },
+      'x-requires': { cell: MOVE_CELL },
     },
     angleSnap: {
       type: 'number',
@@ -170,24 +203,24 @@ export const TRANSFORM_SCHEMA = {
       enum: [0, 5, 15, 22.5, 30, 45, 90],
       default: 15,
       'x-unit': '°',
-      'x-requires': { mode: ['turn', 'move + turn'] },
+      'x-requires': { cell: TURN_CELL },
     },
     duplicate: {
       type: 'boolean',
       title: 'Copy on drag',
       default: false,
-      'x-requires': { mode: ['move', 'turn', 'move + turn', 'scale'] },
+      'x-requires': { anyCell: [MOVE_CELL, TURN_CELL, SCALE_CELL] },
     },
   },
 }
 
-/** Which grips a mode puts on screen. */
+/** Which grips the lit cells put on screen. */
 export function transformsOf(options: Record<string, unknown>): TransformSet {
-  const mode = options.mode as TransformMode | undefined
+  const cells = Array.isArray(options.cells) ? (options.cells as number[]) : DEFAULT_TOOL_CELLS
   return {
-    translate: mode === 'move' || mode === 'move + turn',
-    rotate: mode === 'turn' || mode === 'move + turn',
-    scale: mode === 'scale',
+    translate: cells.includes(MOVE_CELL),
+    rotate: cells.includes(TURN_CELL),
+    scale: cells.includes(SCALE_CELL),
   }
 }
 
@@ -247,7 +280,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
   registerTool({
     name: 'select',
     label: 'Select',
-    icon: 'pointer',
+    icon: 'mousePointer',
     optionsSchema: TRANSFORM_SCHEMA,
     onGesture: {
       start(gesture, ctx) {

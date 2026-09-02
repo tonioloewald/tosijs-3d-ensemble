@@ -613,7 +613,7 @@ export class EnsembleEditor extends Component {
     return {
       ensemble: this._ensemble,
       selection: this.selection,
-      select: (id) => (id === null ? this._clearSelection() : this.select(id)),
+      select: (id) => this.select(id),
       scene: this._scene as SceneElement,
       edit: (describe, mutate, options) => this.edit(describe, mutate, options),
       /*
@@ -735,11 +735,6 @@ export class EnsembleEditor extends Component {
       this._selected = null;
     }
     this.rebuild();
-  }
-
-  private _clearSelection(): void {
-    this._selected = null;
-    this._renderChrome();
   }
 
   /*
@@ -1415,7 +1410,17 @@ export class EnsembleEditor extends Component {
     return this._ensemble.pieces.find((p) => p.id === this._selected) ?? null;
   }
 
-  select(id: string): void {
+  /**
+   * Select a piece, or `null` to select nothing.
+   *
+   * ONE path, including the null case. There used to be a separate
+   * `_clearSelection` that set the id and re-rendered the chrome without
+   * syncing anything, so clicking empty space left the widget standing: the
+   * marker vanished (the per-frame sync hides it), the handles did not, and
+   * because the editor still owned them they were visible and inert. Selecting
+   * nothing IS selecting; it does not get its own half-implemented path.
+   */
+  select(id: string | null): void {
     this._selected = id;
     this._syncSelection();
     this._syncHandles();

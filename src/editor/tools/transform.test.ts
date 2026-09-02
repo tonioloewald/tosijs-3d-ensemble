@@ -594,3 +594,37 @@ describe("committing a drag", () => {
     expect(editOptions).toEqual([undefined]);
   });
 });
+
+/*
+  DESELECTING IS SELECTING, AND MUST TAKE THE SAME PATH.
+
+  A separate `_clearSelection` set the id and re-rendered the chrome without
+  syncing the marker or the handles, so clicking empty space left the widget
+  standing — visible, still owned by the editor, and inert, because nothing was
+  selected for it to act on. The element's own `select(null)` was fine; only the
+  path a TOOL reached was not, which is why it looked like a picking bug.
+
+  Pinned at the seam a tool actually uses: `ctx.select` must be handed the null,
+  not routed somewhere else, so whatever `select` does for a piece it also does
+  for nothing.
+*/
+describe("clicking empty space", () => {
+  it("passes the null through ctx.select rather than a side path", () => {
+    const seen: Array<string | null> = [];
+    const c = ctx();
+    const spy = {
+      ...c,
+      select: (id: string | null) => {
+        seen.push(id);
+        return c.select(id);
+      },
+    };
+    withGrip(null); // the ray grabs no handle: this gesture is a click
+    picked = null; // and it hits nothing
+    spy.select("rock" as never);
+    seen.length = 0;
+    tool().onGesture!.start!(gestureWith(rayAtX(0)), spy as never);
+    tool().onGesture!.end!(gestureWith(rayAtX(0)), spy as never);
+    expect(seen).toEqual([null]);
+  });
+});

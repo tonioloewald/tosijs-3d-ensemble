@@ -195,7 +195,9 @@ export class EnsembleEditor extends Component {
       control. Tool MODES stay per-tool and sticky — that is genuinely per-tool
       — but a snap distance is a property of the workspace.
     */
-    gridSnap: 1,
+    // 0.25m, not 1m: a metre is coarser than the things being arranged, so the
+    // default fought the author instead of helping.
+    gridSnap: 0.25,
     angleSnap: 5,
     /** Sample world to author against — authoring context, never saved. */
     backdrop: "land" as Backdrop,
@@ -458,6 +460,24 @@ export class EnsembleEditor extends Component {
   private readonly _toolSettings = new Map<string, Record<string, unknown>>();
 
   /** Set one option on the current tool. */
+  /**
+   * What the current tool's options ARE — its own, with the workspace's snaps
+   * laid over the top.
+   *
+   * One accessor because there are two readers and they must agree: the tools,
+   * and the panel that draws the controls. The panel was reading
+   * `_toolOptions` alone, so once the snaps moved to the element the controls
+   * showed a schema default and never reflected a change — "I can't change them
+   * any more". The value was being written; nothing was reading it back.
+   */
+  private _optionValues(): Record<string, unknown> {
+    return {
+      ...this._toolOptions,
+      gridSnap: this.gridSnap,
+      angleSnap: this.angleSnap,
+    };
+  }
+
   setToolOption(key: string, value: unknown): void {
     // The snaps belong to the workspace; everything else to the current tool.
     if (key === "gridSnap" || key === "angleSnap") {
@@ -638,11 +658,7 @@ export class EnsembleEditor extends Component {
         Tools keep reading `ctx.options.gridSnap`, so none of them had to learn
         where the value now lives.
       */
-      options: {
-        ...this._toolOptions,
-        gridSnap: this.gridSnap,
-        angleSnap: this.angleSnap,
-      },
+      options: this._optionValues(),
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
       captureCamera: (capture) => this.captureCamera(capture),
@@ -1848,7 +1864,7 @@ export class EnsembleEditor extends Component {
     if (!tool?.optionsSchema) return;
     const widgets = schemaWidgets({
       schema: tool.optionsSchema,
-      values: this._toolOptions,
+      values: this._optionValues(),
       onChange: (key, value) => this.setToolOption(key, value),
     });
     this._addPanel(

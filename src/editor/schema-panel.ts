@@ -28,7 +28,8 @@ someone added a case for it.
 | `string` with `enum` | `select3d` |
 | `string` | `inputField` (an SVG keyboard, so it works in a headset) |
 
-`x-unit` is appended to the label, because a number without its unit is how a
+`x-unit` joins the VALUE for a picker and the label otherwise, because a number
+without its unit is how a
 range of 260 metres gets typed into a field that wanted kilometres.
 
 Anything unrecognised renders as a **disabled label showing the value**, not
@@ -140,7 +141,17 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       );
       continue;
     }
-    const unit = spec["x-unit"] ? ` (${spec["x-unit"]})` : "";
+    /*
+      THE UNIT BELONGS TO THE VALUE, NOT THE CAPTION.
+
+      "Grid snap (m) … 1" makes the reader carry the unit across the row and
+      reassemble it; "Grid snap … 1m" is the quantity as anyone would write it.
+      So for a picker the unit goes on each option, and only a control that has
+      no options keeps it in the label.
+    */
+    const rawUnit = spec["x-unit"] ?? "";
+    const picker = Array.isArray(spec.enum) && spec.enum.length > 0;
+    const unit = rawUnit && !picker ? ` (${rawUnit})` : "";
     const label = `${spec.title ?? key}${unit}`;
     const value = values[key] ?? spec.default;
 
@@ -162,9 +173,11 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           value: (value as string | number) ?? spec.enum[0]!,
           options: spec.enum.map((option) => {
             const named = spec["x-labels"]?.[String(option)];
-            return named === undefined
-              ? option
-              : { label: named, value: option };
+            // A named value is a word, not a quantity — "Off" takes no unit.
+            if (named !== undefined) return { label: named, value: option };
+            return rawUnit
+              ? { label: `${option}${rawUnit}`, value: option }
+              : option;
           }),
           onChange: (v: string | number) => onChange(key, v),
         })

@@ -75,14 +75,6 @@ export function registerEditorTools(): void {
         // pick list from the library instead of a text field.
         mesh: { type: "string", title: "Mesh", "x-widget": "mesh" },
         library: { type: "string", title: "Library" },
-        gridSnap: {
-          type: "number",
-          title: "Grid snap",
-          minimum: 0,
-          maximum: 10,
-          default: 1,
-          "x-unit": "m",
-        },
       },
     },
     onGesture: {

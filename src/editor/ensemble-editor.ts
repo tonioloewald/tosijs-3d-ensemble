@@ -71,7 +71,6 @@ import {
   euler3d,
   iconGrid3d,
   slider3d,
-  textBlock3d,
   ui,
   vector3d,
 } from "tosijs-3d";
@@ -186,6 +185,18 @@ export class EnsembleEditor extends Component {
     libraries: "",
     /** Ensemble JSON to load on connect. */
     src: "",
+    /*
+      SNAP IS THE EDITOR'S, NOT EACH TOOL'S.
+
+      Insert and the transform tool both used to carry their own `gridSnap`, so
+      the same idea had two values that drifted the moment either was touched:
+      set 0.25 while nudging, switch to Insert, and pieces landed on a 1m grid.
+      A control that quietly disagrees with the one beside it is worse than no
+      control. Tool MODES stay per-tool and sticky — that is genuinely per-tool
+      — but a snap distance is a property of the workspace.
+    */
+    gridSnap: 1,
+    angleSnap: 5,
     /** Sample world to author against — authoring context, never saved. */
     backdrop: "land" as Backdrop,
     /**
@@ -201,6 +212,8 @@ export class EnsembleEditor extends Component {
   declare library: string;
   declare libraryUrl: string;
   declare libraries: string;
+  declare gridSnap: number;
+  declare angleSnap: number;
   declare src: string;
   declare backdrop: Backdrop;
   declare hideChrome: boolean;
@@ -429,6 +442,13 @@ export class EnsembleEditor extends Component {
 
   /** Set one option on the current tool. */
   setToolOption(key: string, value: unknown): void {
+    // The snaps belong to the workspace; everything else to the current tool.
+    if (key === "gridSnap" || key === "angleSnap") {
+      this[key] = Number(value);
+      this._syncHandles();
+      this._renderChrome();
+      return;
+    }
     this._toolOptions = { ...this._toolOptions, [key]: value };
     this._toolSettings.set(this._tool, { ...this._toolOptions });
     // The mode option changes which handles exist, so they are rebuilt here
@@ -596,7 +616,16 @@ export class EnsembleEditor extends Component {
       select: (id) => (id === null ? this._clearSelection() : this.select(id)),
       scene: this._scene as SceneElement,
       edit: (describe, mutate, options) => this.edit(describe, mutate, options),
-      options: this._toolOptions,
+      /*
+        The tool's own options, with the workspace's snaps laid over the top.
+        Tools keep reading `ctx.options.gridSnap`, so none of them had to learn
+        where the value now lives.
+      */
+      options: {
+        ...this._toolOptions,
+        gridSnap: this.gridSnap,
+        angleSnap: this.angleSnap,
+      },
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
       captureCamera: (capture) => this.captureCamera(capture),
@@ -1060,22 +1089,6 @@ export class EnsembleEditor extends Component {
       if (this._rebuildPending) {
         this._rebuildPending = false;
         this.rebuild();
-      }
-      /*
-        Mount the author's shelf too. These are not the ensemble's libraries —
-        nothing in the file needs them — but their meshes have to be loaded
-        before the palette can list anything to insert.
-      */
-      const shelf = this._shelf();
-      if (shelf.length && this._scene) {
-        void mountLibraries(
-          { ...this._ensemble, libraries: shelf },
-          this._scene
-        )
-          .then(() => {
-            if (this.isConnected) this._renderChrome();
-          })
-          .catch(() => undefined);
       }
       void this._rebuildWhenLibraryReady();
     };
@@ -1786,22 +1799,7 @@ export class EnsembleEditor extends Component {
               return;
             command.run(this._toolContext());
           },
-        }) as never,
-        /*
-          Navigation is discoverable nowhere else: the camera's gestures are
-          Babylon's defaults, and an editor that does not say so leaves you
-          unable to move the view at all.
-        */
-        textBlock3d({
-          // ⌃drag is named second on purpose: a touch device has no ctrl key,
-          // so two fingers is the pan a tablet actually has.
-          lines: [
-            "orbit: drag",
-            "pan: 2 fingers",
-            "or ⌃drag · wheel/pinch: zoom",
-          ],
-          muted: true,
-        })
+        }) as never
       )
     );
   }
@@ -1846,7 +1844,31 @@ export class EnsembleEditor extends Component {
    * resolves to whichever loaded first — a bug that reproduces on one machine
    * and not another.
    */
+  /**
+   * Load the author's shelf, once, the first time it is actually wanted.
+   *
+   * It used to mount at scene-ready, alongside the ensemble's own build — which
+   * is megabytes of kits nobody asked for on a page someone may only be
+   * looking at, AND new contention in exactly the window that produces a night
+   * sky or blank materials. The shelf is only reachable through the Insert
+   * palette, so that is when it loads.
+   */
+  private _mountShelf(): void {
+    if (this._shelfMounted || !this._scene) return;
+    const shelf = this._shelf();
+    if (!shelf.length) return;
+    this._shelfMounted = true;
+    void mountLibraries({ ...this._ensemble, libraries: shelf }, this._scene)
+      .then(() => {
+        if (this.isConnected) this._renderChrome();
+      })
+      .catch(() => undefined);
+  }
+
+  private _shelfMounted = false;
+
   private _renderLibraryPalette(): void {
+    this._mountShelf();
     const catalog = this.meshCatalog();
     if (!catalog.length) return;
 

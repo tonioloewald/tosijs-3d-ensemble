@@ -77,6 +77,7 @@ import {
 } from "tosijs-3d";
 import { Quaternion, Ray, Vector3 } from "@babylonjs/core";
 import { buildEnsemble } from "../runtime/build";
+import { reapUnclaimedSingletons } from "../runtime/features-scene";
 import {
   libraryCatalogue,
   libraryNames,
@@ -871,8 +872,11 @@ export class EnsembleEditor extends Component {
       on && !used.has("light") && !used.has("sun"),
       () => b3dLight({ y: 1, intensity: 0.9 })
     );
-    this._backdropPart("skybox", on && !used.has("skybox"), () =>
-      b3dSkybox({ timeOfDay: 11 })
+    this._backdropPart(
+      "skybox",
+      on && !used.has("skybox"),
+      () => b3dSkybox({ timeOfDay: 11 }),
+      used.has("skybox")
     );
     this._backdropPart("water", on && aquatic && !used.has("water"), () =>
       b3dWater({ waterSize: 4000 })
@@ -905,7 +909,15 @@ export class EnsembleEditor extends Component {
   private _backdropPart(
     name: string,
     wanted: boolean,
-    make: () => unknown
+    make: () => unknown,
+    /*
+      Only pass this for a part an ensemble FEATURE adopts through
+      `addSingleton` — today that is the skybox alone. Ceding a part nothing
+      adopts simply leaks it: ceding `ground` left the grid plane under a cove
+      that supplies its own sea, which is the coincident-surface bug the
+      `wanted` test exists to prevent, reintroduced from the other side.
+    */
+    cededToEnsemble = false
   ): void {
     const existing = this._backdrop.get(name);
     if (wanted && !existing) {
@@ -915,7 +927,26 @@ export class EnsembleEditor extends Component {
       return;
     }
     if (!wanted && existing) {
-      existing.remove();
+      /*
+        HAND IT OVER, DO NOT DESTROY IT.
+
+        There is only one sky, and by the time this runs the ensemble's own
+        `skybox` feature has already ADOPTED this very element — `addSingleton`
+        discovers it with `querySelector`, so the backdrop's sky and the
+        ensemble's sky are the same element by design.
+
+        Removing it here therefore destroyed the element the build had just
+        claimed, and the next rebuild made a fresh one. That is the residue that
+        survived the first fix: ONE sky element but TWO SkyMaterials, the older
+        orphaned, still holding the shared GL program both depended on.
+        Measured across the two fixes — five materials, then two, then one.
+
+        So when the ensemble supplies this part, the backdrop stops OWNING it
+        rather than deleting it. `reapUnclaimedSingletons` removes it if the
+        ensemble later drops the feature; that runs after a build rather than
+        during one, so it can tell "nobody wants this" from "this is mid-rebuild".
+      */
+      if (!cededToEnsemble) existing.remove();
       this._backdrop.delete(name);
     }
   }
@@ -942,6 +973,17 @@ export class EnsembleEditor extends Component {
       placePiece: placeMesh,
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     });
+    /*
+      Reap AFTER the build, never between dispose and build.
+
+      Dispose releases every singleton's claim; the build immediately re-claims
+      what the ensemble still wants. Reaping here removes only what nothing
+      asked for — so deleting the `sky` piece removes the sky, while an ordinary
+      edit leaves the same sky element standing and simply updates it. Reaping
+      before the build would destroy and recreate it, which is the churn that
+      deleted the skybox's shader program in the first place.
+    */
+    reapUnclaimedSingletons(this._scene);
     this._syncBackdrop();
     this._syncSelection();
     this._syncHandles();

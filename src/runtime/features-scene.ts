@@ -68,6 +68,109 @@ export function add(ctx: FeatureContext, el: unknown): SceneElement {
   return element;
 }
 
+/*
+  THERE CAN ONLY BE ONE SKY.
+
+  A scene-wide feature — sky, sun, fog, ambient, clouds, reflections — is not a
+  thing you place, it is a property of the scene. Two of them is not "two
+  skies", it is a bug: the owner's rule is that whoever wants sky should
+  "create it if needed and modify what's there otherwise".
+
+  Getting this wrong cost a day. `add` removes its element on dispose, and the
+  editor rebuilds by disposing then building, so every rebuild destroyed the
+  skybox element and made a new one. `b3d-skybox` builds a
+  `new SkyMaterial('skybox', scene)` in `sceneReady` and never disposes it, so
+  they accumulated — MEASURED: five SkyMaterials, four orphaned, on a fresh page
+  load with no edits at all. They share a name, so Babylon's effect cache gives
+  them one shared GL program, and disposing any one of them DELETES that program
+  for the survivor. The survivor keeps answering `isReady() === true`, because
+  Babylon never revalidates the GL object, and draws pure black.
+
+  That is the black sky, and the reason it was intermittent — roughly one load
+  in three or four came up blue — is that it depended on which of the five got
+  disposed last. Filed as tosijs-3d#51; this side of it is ours.
+
+  So a singleton is DISCOVERED, not tracked: `querySelector` finds a sky
+  whichever layer made it, including the editor's backdrop, so the two can never
+  both create one.
+*/
+interface Claim {
+  element: SceneElement;
+  /** Did the build that just ran still want this? Cleared on dispose. */
+  claimed: boolean;
+}
+
+const singletons = new WeakMap<object, Map<string, Claim>>();
+
+/**
+ * Create a scene-wide element, or update the one already there.
+ *
+ * Never removed on dispose — that is the whole point, since dispose-then-build
+ * is exactly what churns it. Dispose only releases the CLAIM;
+ * `reapUnclaimedSingletons` removes what the following build did not re-claim,
+ * so deleting the `sky` piece still removes the sky.
+ */
+export function addSingleton(
+  ctx: FeatureContext,
+  tag: string,
+  make: () => unknown,
+  cfg: Record<string, unknown>
+): SceneElement {
+  const scene = ctx.scene as unknown as object;
+  let claims = singletons.get(scene);
+  if (!claims) {
+    claims = new Map();
+    singletons.set(scene, claims);
+  }
+
+  // Discover rather than trust the map: a scene can be torn down under us, and
+  // the backdrop appends its own sky without going through here.
+  let claim = claims.get(tag);
+  if (!claim?.element.isConnected) {
+    const found = (
+      ctx.scene as unknown as {
+        querySelector?: (sel: string) => SceneElement | null;
+      }
+    ).querySelector?.(tag);
+    claim = found ? { element: found, claimed: true } : undefined;
+  }
+
+  if (claim) {
+    // Modify what's there. These are tosijs elements, so assigning properties
+    // is the reactive path — no teardown, no new material, no dead program.
+    Object.assign(claim.element, cfg);
+    claim.claimed = true;
+  } else {
+    const element = make() as SceneElement;
+    ctx.scene.appendChild(element);
+    claim = { element, claimed: true };
+  }
+
+  claims.set(tag, claim);
+  const held = claim;
+  ctx.onDispose(() => {
+    held.claimed = false;
+  });
+  return claim.element;
+}
+
+/**
+ * Remove scene-wide elements the latest build did not ask for.
+ *
+ * Call AFTER a rebuild, never between dispose and build — in between, every
+ * claim is released and this would remove the sky the next line recreates,
+ * which is the churn it exists to prevent.
+ */
+export function reapUnclaimedSingletons(scene: unknown): void {
+  const claims = singletons.get(scene as object);
+  if (!claims) return;
+  for (const [tag, claim] of [...claims]) {
+    if (claim.claimed) continue;
+    claim.element.remove();
+    claims.delete(tag);
+  }
+}
+
 interface ArcCamera {
   radius: number;
   alpha: number;
@@ -163,8 +266,10 @@ export function registerSceneFeatures(): void {
         activeDistance: num(10, 20000, 400, "m"),
       },
     },
-    bind: (_piece, cfg, ctx) =>
-      add(ctx, b3dSun({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
+    bind: (_piece, cfg, ctx) => {
+      const placed = { ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] };
+      return addSingleton(ctx, "tosi-b3d-sun", () => b3dSun(placed), placed);
+    },
   });
 
   registerFeature({
@@ -180,7 +285,8 @@ export function registerSceneFeatures(): void {
         applyFog: { type: "boolean", default: true },
       },
     },
-    bind: (_piece, cfg, ctx) => add(ctx, b3dSkybox({ ...cfg })),
+    bind: (_piece, cfg, ctx) =>
+      addSingleton(ctx, "tosi-b3d-skybox", () => b3dSkybox({ ...cfg }), cfg),
   });
 
   registerFeature({
@@ -311,7 +417,13 @@ export function registerSceneFeatures(): void {
         maxDistance: num(1, 10000, 200, "m"),
       },
     },
-    bind: (_piece, cfg, ctx) => add(ctx, b3dReflections({ ...cfg })),
+    bind: (_piece, cfg, ctx) =>
+      addSingleton(
+        ctx,
+        "tosi-b3d-reflections",
+        () => b3dReflections({ ...cfg }),
+        cfg
+      ),
   });
 
   registerFeature({
@@ -379,7 +491,8 @@ export function registerSceneFeatures(): void {
         castShadows: { type: "boolean", default: false },
       },
     },
-    bind: (_piece, cfg, ctx) => add(ctx, b3dClouds({ ...cfg })),
+    bind: (_piece, cfg, ctx) =>
+      addSingleton(ctx, "tosi-b3d-clouds", () => b3dClouds({ ...cfg }), cfg),
   });
 
   registerFeature({
@@ -395,7 +508,8 @@ export function registerSceneFeatures(): void {
         color: { type: "string", "x-widget": "color" },
       },
     },
-    bind: (_piece, cfg, ctx) => add(ctx, b3dAmbient({ ...cfg })),
+    bind: (_piece, cfg, ctx) =>
+      addSingleton(ctx, "tosi-b3d-ambient", () => b3dAmbient({ ...cfg }), cfg),
   });
 
   registerFeature({
@@ -416,6 +530,7 @@ export function registerSceneFeatures(): void {
         syncSkybox: { type: "boolean", default: true },
       },
     },
-    bind: (_piece, cfg, ctx) => add(ctx, b3dFog({ ...cfg })),
+    bind: (_piece, cfg, ctx) =>
+      addSingleton(ctx, "tosi-b3d-fog", () => b3dFog({ ...cfg }), cfg),
   });
 }

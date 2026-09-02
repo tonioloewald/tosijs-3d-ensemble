@@ -82,10 +82,28 @@ export function registerEditorTools(): void {
     },
   });
 
+  /*
+    UNDO POINTS THE WRONG WAY, ON PURPOSE.
+
+    `iconGlyph` — the texture path, which is what `iconGrid3d` draws with —
+    resolves neither composition suffixes nor MIRROR references, and every
+    left-facing arrow in the icon set is a mirror reference: `cornerUpLeft` is
+    literally the string `cornerUpRight0f`. So asking for it logged
+    `iconGlyph: unknown icon "cornerUpLeft"` on every render and drew the
+    fallback BOX — which is what the owner saw as an empty square where Undo
+    should be, plus a flood of warnings.
+
+    tosijs-3d already solved this for its keyboard, where a `KeyDef` carries
+    `iconFlipX` and flips the real `cornerDownRight` to make a return key.
+    `IconGridItem` has no such field, so there is no way to reach a left-facing
+    arrow from a grid cell. Asked for upstream; until it lands these are two
+    real glyphs that at least RENDER and read as opposites, and the labels carry
+    the meaning.
+  */
   registerCommand({
     name: "undo",
     label: "Undo",
-    icon: "cornerUpLeft",
+    icon: "cornerDownRight",
     enabled: (ctx) => ctx.canUndo(),
     run: (ctx) => ctx.undo(),
   });

@@ -859,6 +859,21 @@ export class EnsembleEditor extends Component {
     }
     // The editor rebuilds constantly; leaving one build behind per session is
     // how an editing session ends up eating a machine.
+    /*
+      THE SCENE IS NOT READY ANY MORE, AND SAYING SO IS THE POINT.
+
+      tosijs-3d guarantees a full teardown on disconnect and a rebuild on
+      connect — deliberately, because holding an engine and a WebGL CONTEXT
+      open across a disconnect that may never come back leaks a hard-capped
+      resource (tosijs-3d#58). So after a re-parent the element we re-adopt has
+      a BRAND NEW scene, and everything we hold from the old one is rubbish.
+
+      This flag used to be cleared only in the deferred disposal below, which is
+      skipped precisely when we reconnect — so a rebuild could run against a
+      scene that no longer exists. `_onSceneReady` sets it true again when the
+      new scene reports ready.
+    */
+    this._sceneReady = false;
     this._built?.dispose();
     this._built = null;
     this._stopFrames?.();

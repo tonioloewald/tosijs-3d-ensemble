@@ -302,8 +302,22 @@ b3dDomEvents  []            <- the element was never added or removed
 
 The disposed scene takes a shared shader program with it, and the survivor
 renders black while every uniform reads correct and `isReady()` returns true —
-`gl.isProgram()` false, `gl.getError()` 1282, and nothing in the console. Filed
-as tosijs-3d#58 and being fixed upstream.
+`gl.isProgram()` false, `gl.getError()` 1282, and nothing in the console.
+
+Filed as tosijs-3d#58. **The fix is the opposite of what I asked for, and it is
+better**: rather than reusing the engine and scene across a reconnect, tosijs-3d
+GUARANTEES a full teardown on disconnect and a rebuild on connect. Reuse would
+hold an engine and a WEBGL CONTEXT open across a disconnect that may never come
+back, and contexts are hard-capped per page. It also fixes the real fault more
+directly — the corruption came from the ORDER (scene 1 disposed after scene 2
+existed), and dispose-fully-then-build makes that interleave impossible.
+
+⚠️ **That puts a requirement on THIS code.** The `<tosi-b3d>` we re-adopt after
+a re-parent has a brand new scene, so everything cached from the old one is
+rubbish and must be dropped on disconnect. We had `_sceneReady` cleared only in
+the deferred disposal — a path that is skipped exactly when we reconnect — so a
+rebuild could run against a scene that no longer existed. Now cleared on
+disconnect, unconditionally.
 
 **Two things here are MITIGATIONS, not the fix**, and should be re-examined
 when #58 lands rather than trusted: the deferred mount below, and the lazy kit

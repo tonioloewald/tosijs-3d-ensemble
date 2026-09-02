@@ -273,13 +273,39 @@ export class EnsembleEditor extends Component {
     registerSceneFeatures();
     registerEditorTools();
     this._registerTransformTool();
-    this._mountScene();
-    this.setTool(this._tool);
-    // Draw the chrome even with nothing loaded. `rebuild` is otherwise the only
-    // caller, so an empty editor came up with no panel at all — which reads as
-    // a broken tool rather than an empty one.
-    this.rebuild();
-    if (this.src) void this.load(this.src);
+    /*
+      MOUNT OUT OF SOMEBODY ELSE'S RENDER FRAME.
+
+      The doc system creates this element from inside a `requestAnimationFrame`
+      render pass:
+
+          connectedCallback  ensemble-editor.ts
+          render             doc-system.js:489
+          requestAnimationFrame
+          queueRender
+
+      so building a Babylon engine here happens *during* another component's
+      frame. That is the one difference that has survived every test: an editor
+      mounted after the page settles renders correctly every time, while the one
+      the doc system mounts during initial load fails most of the time — dark
+      sky, white meshes, or no content, all three being materials and programs
+      resolving against the wrong thing.
+
+      A macrotask puts the whole mount after that frame completes. It is not a
+      delay for its own sake: it is the difference between the two populations
+      measured.
+    */
+    this._deferredMount = setTimeout(() => {
+      this._deferredMount = null;
+      if (!this.isConnected) return;
+      this._mountScene();
+      this.setTool(this._tool);
+      // Draw the chrome even with nothing loaded. `rebuild` is otherwise the
+      // only caller, so an empty editor came up with no panel at all — which
+      // reads as a broken tool rather than an empty one.
+      this.rebuild();
+      if (this.src) void this.load(this.src);
+    }, 0);
   }
 
   /*
@@ -737,6 +763,10 @@ export class EnsembleEditor extends Component {
   }
 
   override disconnectedCallback(): void {
+    if (this._deferredMount !== null) {
+      clearTimeout(this._deferredMount);
+      this._deferredMount = null;
+    }
     // The editor rebuilds constantly; leaving one build behind per session is
     // how an editing session ends up eating a machine.
     this._built?.dispose();
@@ -751,6 +781,38 @@ export class EnsembleEditor extends Component {
     this._pointer = null;
     this._detachShortcuts?.();
     this._detachShortcuts = null;
+
+    /*
+      AND THE SCENE ITSELF, IF WE ARE REALLY GONE.
+
+      Everything above is bookkeeping inside the scene; the scene was never let
+      go of. A doc-browser SPA constructs this element more than once per page,
+      and a discarded instance took its `<tosi-b3d>` — and that scene's Babylon
+      ENGINE and WebGL context — with it into the void, still alive. Measured on
+      one initial page load: two webgl2 contexts, created 207ms apart.
+
+      That is the shape of the symptoms left: meshes that render white and a sky
+      whose uniforms all read correctly while its GL program is not a program.
+      Both are what you get when geometry lands in one scene and its materials
+      belong to another.
+
+      Deferred by a turn because `disconnectedCallback` ALSO fires when the
+      element is merely moved, which the doc system does on navigation — and
+      `_mountScene` exists to adopt that scene back. Disposing eagerly would
+      throw away the scene we are about to re-adopt, which is the bug that
+      produced "19 bodies built, 0 meshes rendered".
+    */
+    const scene = this._scene;
+    if (scene) {
+      setTimeout(() => {
+        if (this.isConnected || this._scene !== scene) return;
+        (scene as unknown as { dispose?: () => void }).dispose?.();
+        scene.remove();
+        this._scene = null;
+        this._sceneReady = false;
+        this._backdrop.clear();
+      }, 0);
+    }
     super.disconnectedCallback?.();
   }
 
@@ -1134,6 +1196,8 @@ export class EnsembleEditor extends Component {
   */
   private _sceneReady = false;
   private _rebuildPending = false;
+  /** Pending mount, so a disconnect before it fires does not build into nothing. */
+  private _deferredMount: ReturnType<typeof setTimeout> | null = null;
 
   /** Set when a whole ensemble arrives, cleared by the rebuild that resolves it. */
   private _needsFraming = true;

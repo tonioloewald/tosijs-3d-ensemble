@@ -678,7 +678,9 @@ export class EnsembleEditor extends Component {
       getLibrary?: (name: string) => { getNames?: () => string[] } | null;
     };
     const answered = () =>
-      wanted.every((name) => (host.getLibrary?.(name)?.getNames?.() ?? []).length > 0);
+      wanted.every(
+        (name) => (host.getLibrary?.(name)?.getNames?.() ?? []).length > 0
+      );
 
     // ~6s: long enough for a cold CDN fetch, short enough that a library which
     // will never load still gets its honest box-shaped failure.
@@ -853,6 +855,7 @@ export class EnsembleEditor extends Component {
     if (existing) {
       this._scene = existing;
       this._attachPointers();
+      this._onSceneReady(existing);
       return;
     }
     const scene = b3d({
@@ -871,7 +874,48 @@ export class EnsembleEditor extends Component {
     }) as unknown as SceneElement;
     this._scene = scene;
     this._root.append(scene);
-    this._syncBackdrop();
+    /*
+      THE BACKDROP WAITS FOR A SCENE. "APPENDED" IS NOT "READY".
+
+      This called `_syncBackdrop()` on the very next line, so the sky, ground
+      and water elements were built while `<tosi-b3d>` was still constructing
+      its scene asynchronously — the same "created is not ready" trap the
+      `sceneCreated` note above describes, one line below the note.
+
+      It is not harmless. `b3d-skybox` builds its `SkyMaterial` in `sceneReady`,
+      and the one that comes out of this path is always the earliest material in
+      the scene — `uniqueId` 11 and 26 on two measured loads, where every
+      healthy material is in the hundreds. On the loads that render a dark sky
+      it is that early material whose GL program has been deleted:
+      `gl.isProgram(program) === false` with `glError` 1282, while every uniform
+      on it is correct.
+
+      `whenReady` is tosijs-3d's own answer — "now if it already is, else on
+      scene-ready" — so the backdrop is built against a scene that exists.
+    */
+    this._onSceneReady(scene);
+  }
+
+  /**
+   * Everything that touches the scene, held until there IS one.
+   *
+   * `whenReady` runs its callback immediately when the scene is already up, so
+   * this costs an adopted scene nothing.
+   */
+  private _onSceneReady(scene: SceneElement): void {
+    const host = scene as unknown as { whenReady?: (cb: () => void) => void };
+    const go = () => {
+      if (!this.isConnected) return;
+      this._sceneReady = true;
+      this._syncBackdrop();
+      if (this._rebuildPending) {
+        this._rebuildPending = false;
+        this.rebuild();
+      }
+      void this._rebuildWhenLibraryReady();
+    };
+    if (typeof host.whenReady === "function") host.whenReady(go);
+    else go();
   }
 
   /*
@@ -995,6 +1039,11 @@ export class EnsembleEditor extends Component {
    */
   rebuild(): void {
     if (!this._scene) return;
+    if (!this._sceneReady) {
+      // Not dropped — deferred. `_onSceneReady` replays it.
+      this._rebuildPending = true;
+      return;
+    }
     // Read the pose BEFORE anything is disposed: comparing it with the pose
     // afterwards is how the rebuild finds out whether the ensemble moved the
     // camera itself.
@@ -1066,6 +1115,25 @@ export class EnsembleEditor extends Component {
       (piece) => feature in (piece.features ?? {})
     );
   }
+
+  /*
+    "APPENDED" IS NOT "READY", AND BUILDING EARLY LEAVES A DEAD SKY.
+
+    `<tosi-b3d>` constructs its Babylon scene asynchronously. Building into it
+    before then does not fail loudly — it produces a scene whose earliest
+    objects are subtly wrong. The measurable one: `b3d-skybox` makes its
+    `SkyMaterial` in `sceneReady`, and the sky built by an early rebuild is
+    always the first material in the scene (`uniqueId` 11 and 26 across loads,
+    where healthy materials are in the hundreds). On a dark-sky load it is that
+    material whose GL program has been DELETED — `gl.isProgram(program)` false,
+    `glError` 1282 — while every uniform on it reads correctly.
+
+    So `rebuild` refuses to run until the scene says it is ready, and remembers
+    that it was asked. tosijs-3d's `whenReady` is the signal, and it fires
+    immediately if the scene is already up, so an adopted scene is not delayed.
+  */
+  private _sceneReady = false;
+  private _rebuildPending = false;
 
   /** Set when a whole ensemble arrives, cleared by the rebuild that resolves it. */
   private _needsFraming = true;

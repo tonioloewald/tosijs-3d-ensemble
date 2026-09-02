@@ -56,6 +56,15 @@ interface PropertySpec {
   title?: string;
   description?: string;
   enum?: Array<string | number>;
+  /**
+   * Display names for particular enum VALUES, keyed by the value as a string.
+   *
+   * For the cases where the number is not the word: a snap of `0` means "Off",
+   * and showing the digit invites the reader to wonder what zero-metre snapping
+   * does. Only the values named here are relabelled; the rest render as
+   * themselves, so a table stays readable as a table.
+   */
+  "x-labels"?: Record<string, string>;
   minimum?: number;
   maximum?: number;
   default?: unknown;
@@ -151,7 +160,12 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
         select3d({
           label,
           value: (value as string | number) ?? spec.enum[0]!,
-          options: spec.enum,
+          options: spec.enum.map((option) => {
+            const named = spec["x-labels"]?.[String(option)];
+            return named === undefined
+              ? option
+              : { label: named, value: option };
+          }),
           onChange: (v: string | number) => onChange(key, v),
         })
       );

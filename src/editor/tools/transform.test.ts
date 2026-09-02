@@ -507,3 +507,52 @@ describe("copy on drag", () => {
     expect(selectedId).toBe(ensemble.pieces[1]!.id); // the copy is now selected
   });
 });
+
+/*
+  THE MEASURING FRAME MUST NOT MOVE WHILE YOU DRAG.
+
+  `axisDirection` reads the piece's LIVE orientation off its node, so a rotate
+  drag that consults it every frame measures against a basis its own output just
+  turned: measure, apply, the frame has moved, measure again. That is a feedback
+  loop, and it presented as "a tiny movement spins the thing hundreds of
+  degrees" — not as instability at any particular viewing angle, which is what
+  sent me looking in the wrong place first.
+
+  Pinning the CALL COUNT rather than the resulting angle, because the angle is
+  Babylon's to compute and the hook exists precisely so these tests do not
+  re-implement it. Consulted once per drag is the whole property.
+*/
+describe("a drag freezes the frame it measures against", () => {
+  it("reads the piece's axes at the grab and never again", () => {
+    let reads = 0;
+    unregisterTool("select");
+    registerTransformTool({
+      nearGrip: () => null,
+      farGrip: () => ({ kind: "rotate", axis: "y" }),
+      bodyOf: () => body,
+      worldOrigin: () => [0, 0, 0],
+      axisDirection: (axis) => {
+        reads += 1;
+        return axis === "x" ? [1, 0, 0] : axis === "y" ? [0, 1, 0] : [0, 0, 1];
+      },
+      composeRotation: (start, axis, degrees) => {
+        const i = axis === "x" ? 0 : axis === "y" ? 1 : 2;
+        const out = [...start] as [number, number, number];
+        out[i] = start[i]! + degrees;
+        return out;
+      },
+    });
+
+    const c = ctx();
+    c.select({ id: "a" } as never);
+    tool().onGesture!.start!(gestureWith(rayAtX(0)), c);
+    const atGrab = reads;
+    for (const x of [1, 2, 3, 4, 5])
+      tool().onGesture!.move!(gestureWith(rayAtX(x)), c);
+    tool().onGesture!.end!(gestureWith(rayAtX(5)), c);
+
+    // Three reads at the grab — one per axis — and nothing during the moves.
+    expect(atGrab).toBe(3);
+    expect(reads).toBe(atGrab);
+  });
+});

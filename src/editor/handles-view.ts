@@ -120,7 +120,7 @@ const PICK_FATNESS = 5;
  * Ordered outward from the centre, and EVERY GRIP OWNS A BAND along the axis:
  *
  *   pads    0.02 – 0.58     shafts  0.15 – 0.95     cones  0.95 – 1.35
- *   rings   1.38 – 1.92     cubes   1.96 – 2.34
+ *   rings   1.40 – 1.50     cubes   1.69 – 1.87
  *
  * That separation is the point, and it was missing. A ring at radius 1.2 with
  * shafts reaching 1.3 physically CROSSES them, so at four points on every ring
@@ -149,10 +149,20 @@ const SHAFT_PICK_FATNESS = 11;
 const SHAFT_OFFSET = 0.55;
 const PAD_OFFSET = 0.3;
 const PAD_SIZE = 0.28;
-const RING_DIAMETER = 3.3;
-const RING_THICKNESS = 0.09;
+/*
+  SMALLER AND THINNER THAN THEY WERE.
+
+  At 3.3 across with a 0.09 tube the rings dominated the widget and, because the
+  whole thing is scaled to a constant SCREEN size, dwarfed whatever small piece
+  you had selected — "the rotation rings are ENORMOUS both in size and
+  fatness". The band separation below is what actually needed defending, not the
+  absolute size, so the rings came in and the cubes came in behind them and the
+  ordering is unchanged.
+*/
+const RING_DIAMETER = 2.9;
+const RING_THICKNESS = 0.05;
 const CUBE_SIZE = 0.17;
-const CUBE_OFFSET = 2.15;
+const CUBE_OFFSET = 1.78;
 const CENTRE_SIZE = 0.2;
 
 /**

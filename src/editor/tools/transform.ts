@@ -114,6 +114,21 @@ interface Drag {
    * trumps clicking on the transform affordances" happens on every small nudge.
    */
   dragged: boolean;
+  /**
+   * The piece's axes AS THEY WERE AT THE GRAB, and why they are frozen.
+   *
+   * `axisDirection` reads the piece's LIVE orientation off its node. During a
+   * rotate drag that is a feedback loop: measure the angle in the piece's
+   * current frame, apply it, and the frame has now turned by what we just
+   * applied — so the next sample measures against a basis our own output
+   * moved. Reported, exactly, as "a tiny movement spins the thing hundreds of
+   * degrees".
+   *
+   * A drag has to measure against a FIXED frame, the one the ring was drawn in
+   * when you grabbed it. Scale uses it too: it does not feed back, but a
+   * grip's meaning should not depend on when in the drag you ask.
+   */
+  frame: Record<Axis, Vec3>;
   /** The transform as it currently stands, in ensemble-local terms. */
   at: Vec3;
   rot: Euler;
@@ -199,15 +214,19 @@ export const TRANSFORM_SCHEMA = {
       enum: [0, 0.125, 0.25, 0.5, 1, 2, 4, 8],
       default: 1,
       "x-unit": "m",
-      description: "0 to move freely",
+      "x-labels": { "0": "Off" },
+      description: "Off to move freely",
       "x-requires": { cell: MOVE_CELL },
     },
     angleSnap: {
       type: "number",
       title: "Angle snap",
       enum: [0, 5, 15, 22.5, 30, 45, 90],
-      default: 15,
+      // 5°, not 15°: fine enough to nudge something into line without fighting
+      // the snap, and coarse enough that it still lands on round numbers.
+      default: 5,
       "x-unit": "°",
+      "x-labels": { "0": "Off" },
       "x-requires": { cell: TURN_CELL },
     },
     duplicate: {
@@ -300,7 +319,12 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const ray = gesture.primary.ray();
         if (!ray) return;
         const origin = hooks.worldOrigin();
-        const start = measure(grip, origin, ray, hooks.axisDirection);
+        const frame: Record<Axis, Vec3> = {
+          x: hooks.axisDirection("x"),
+          y: hooks.axisDirection("y"),
+          z: hooks.axisDirection("z"),
+        };
+        const start = measure(grip, origin, ray, (a) => frame[a]);
         if (start === null) return; // parallel or behind — not a usable drag
         // The camera must stop listening the moment a handle is grabbed, or
         // the drag moves the piece AND orbits the view under it.
@@ -316,6 +340,7 @@ export function registerTransformTool(hooks: TransformHooks): void {
           startScale,
           startValue: start,
           secondary: gesture.primary.secondary === true,
+          frame,
           dragged: false,
           at: [...piece.at] as Vec3,
           rot: [...(piece.rot ?? [0, 0, 0])] as Euler,
@@ -328,10 +353,16 @@ export function registerTransformTool(hooks: TransformHooks): void {
         const ray = gesture.primary.ray();
         if (!ray) return;
         const origin = hooks.worldOrigin();
-        const now = measure(drag.grip, origin, ray, hooks.axisDirection);
+        const now = measure(drag.grip, origin, ray, (a) => drag!.frame[a]);
         if (now === null) return;
-        apply(drag, now, hooks.composeRotation);
-        if (changed(drag)) drag.dragged = true;
+        apply(
+          drag,
+          now,
+          hooks.composeRotation,
+          Number(ctx.options.angleSnap ?? 0),
+          Number(ctx.options.gridSnap ?? 0)
+        );
+        if (pointerMoved(drag.startValue, now)) drag.dragged = true;
         const body = hooks.bodyOf(drag.pieceId);
         if (body) {
           writeTransform(body, {
@@ -430,13 +461,29 @@ export function registerTransformTool(hooks: TransformHooks): void {
 }
 
 /** Has the running transform left the one the drag started from? */
-function changed(state: Drag): boolean {
-  const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
-  return !(
-    state.at.every((v, i) => near(v, state.startAt[i]!)) &&
-    state.rot.every((v, i) => near(v, state.startRot[i]!)) &&
-    state.scale.every((v, i) => near(v, state.startScale[i]!))
-  );
+/**
+ * Did the POINTER move this grip, whatever the value did with it?
+ *
+ * `dragged` used to be inferred from the transform changing, which worked only
+ * because snapping happened on release: the live value moved freely, so any
+ * real drag changed it. Now that the grid quantises live, a nudge inside one
+ * grid step leaves the value exactly where it started — and inferring from that
+ * turns a real drag into a click, which hands the selection to whatever is
+ * behind the widget. Caught by the test that exists for precisely that case.
+ *
+ * So this reads the pointer, not the result: the reading this grip drags in,
+ * compared with the reading it started from.
+ */
+function pointerMoved(start: number | Vec3, now: number | Vec3): boolean {
+  const EPSILON = 1e-4;
+  if (typeof start === "number" || typeof now === "number") {
+    return (
+      typeof start === "number" &&
+      typeof now === "number" &&
+      Math.abs(now - start) > EPSILON
+    );
+  }
+  return start.some((v, i) => Math.abs((now[i] ?? v) - v) > EPSILON);
 }
 
 /**
@@ -495,7 +542,9 @@ function measure(
 function apply(
   state: Drag,
   now: number | Vec3,
-  composeRotation: (start: Euler, axis: Axis, degrees: number) => Euler
+  composeRotation: (start: Euler, axis: Axis, degrees: number) => Euler,
+  angleStep = 0,
+  gridStep = 0
 ): void {
   const { kind, axis } = state.grip;
 
@@ -512,9 +561,11 @@ function apply(
     state.at = [...state.startAt] as Vec3;
     for (const a of [u, v]) {
       const i = axisIndex(a);
-      state.at[i] =
+      state.at[i] = snap(
         state.startAt[i]! +
-        (now[i]! - state.startValue[i]!) / state.worldPerLocal;
+          (now[i]! - state.startValue[i]!) / state.worldPerLocal,
+        gridStep
+      );
     }
     return;
   }
@@ -525,9 +576,21 @@ function apply(
     if (!axis) return;
     const i = axisIndex(axis);
     state.at = [...state.startAt] as Vec3;
-    // World metres in, local units out — see `worldPerLocal`.
-    state.at[i] =
-      state.startAt[i]! + (now - state.startValue) / state.worldPerLocal;
+    /*
+      Snap the POSITION, live.
+
+      A grid snap means "pieces sit on the grid", so unlike the angle it is the
+      RESULT that quantises, not the delta — which is also what the release path
+      has always done (`snapVec3(finished.at, grid)`). Doing it only there left
+      the piece sliding freely under the hand and jumping on release, reported
+      alongside the same complaint about the angle.
+
+      World metres in, local units out — see `worldPerLocal`.
+    */
+    state.at[i] = snap(
+      state.startAt[i]! + (now - state.startValue) / state.worldPerLocal,
+      gridStep
+    );
     return;
   }
 
@@ -536,10 +599,20 @@ function apply(
     // From the rotation the drag STARTED with, every frame — composing onto the
     // running value would accumulate rounding over a long drag, and composing
     // onto the euler would not be a global rotation at all.
+    /*
+      Snap the DELTA, and snap it live.
+
+      Snapping only happened on release, so a turn ran perfectly free under the
+      hand and then jumped when you let go — "angle snap defaults to 15 degrees
+      but I don't see any snapping at all". Snapping the delta rather than the
+      resulting euler is also the correct axis to quantise: a 15° step about the
+      grabbed ring is what the setting promises, and it survives a start
+      rotation that is not itself on the grid.
+    */
     state.rot = composeRotation(
       state.startRot,
       axis,
-      wrapDegrees(now - state.startValue)
+      snap(wrapDegrees(now - state.startValue), angleStep)
     );
     return;
   }

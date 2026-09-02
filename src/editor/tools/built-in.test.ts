@@ -34,6 +34,7 @@ const ctx = (options: Record<string, unknown> = {}): ToolContext =>
     options,
     pick: () => null,
     captureCamera: () => {},
+    panCamera: () => {},
     undo: () => {},
     redo: () => {},
     canUndo: () => false,

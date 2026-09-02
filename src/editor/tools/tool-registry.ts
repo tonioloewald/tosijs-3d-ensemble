@@ -96,6 +96,14 @@ export interface ToolContext {
    * Babylon's own gizmos detach camera control for exactly this reason.
    */
   captureCamera(capture: boolean): void;
+  /**
+   * Shift the view by a WORLD vector — the camera and what it looks at, together.
+   *
+   * A world delta rather than screen pixels because a tool is written once for
+   * a mouse, a touch and a controller, and only one of those has pixels. The
+   * caller works out what the drag means; this only moves the view.
+   */
+  panCamera(delta: Vec3): void;
   /** Step back through `edit` calls. No-op with nothing to undo. */
   undo(): void;
   /** Step forward again, until the next edit forks the timeline. */

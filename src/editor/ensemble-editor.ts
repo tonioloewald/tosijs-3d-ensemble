@@ -109,7 +109,7 @@ import { placeMesh } from "../runtime/place-mesh";
 import { registerSceneFeatures } from "../runtime/features-scene";
 import { validate } from "../format/validate";
 import type { BuiltEnsemble } from "../runtime/build";
-import type { Ensemble, Euler, Piece, Vec3 } from "../format/types";
+import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types";
 import type { SceneElement } from "../format/registry";
 
 /** A sample world to author against. Never saved with the ensemble. */
@@ -175,6 +175,15 @@ export class EnsembleEditor extends Component {
     library: "",
     /** URL of a `.glb` library to load. Optional if the page loads its own. */
     libraryUrl: "",
+    /**
+     * Libraries an AUTHOR may insert from, as JSON: `[{"name","url"}]`.
+     *
+     * Distinct from the ensemble's own `libraries`, which are what the file
+     * NEEDS to render. These are what the editor OFFERS — a kit shelf. An
+     * ensemble that uses none of them still loads unchanged, and one that uses
+     * a mesh from one gains the declaration when the piece is inserted.
+     */
+    libraries: "",
     /** Ensemble JSON to load on connect. */
     src: "",
     /** Sample world to author against — authoring context, never saved. */
@@ -191,6 +200,7 @@ export class EnsembleEditor extends Component {
 
   declare library: string;
   declare libraryUrl: string;
+  declare libraries: string;
   declare src: string;
   declare backdrop: Backdrop;
   declare hideChrome: boolean;
@@ -511,6 +521,25 @@ export class EnsembleEditor extends Component {
    * than a remembered one — the editor can be moved in the DOM, and a camera
    * reattached to a stale canvas stops responding entirely.
    */
+  /**
+   * Move the view by a world vector, without turning it.
+   *
+   * An `ArcRotateCamera` orbits a target, so panning IS moving the target —
+   * position follows from radius, alpha and beta. Writing `position` instead
+   * would be undone on the next frame, which is the same trap as writing a
+   * managed mesh's transform.
+   */
+  panCamera(delta: Vec3): void {
+    const scene = (this._scene as unknown as { scene?: SceneWithCamera }).scene;
+    const camera = scene?.activeCamera as unknown as {
+      target?: { x: number; y: number; z: number };
+    } | null;
+    if (!camera?.target) return;
+    camera.target.x += delta[0];
+    camera.target.y += delta[1];
+    camera.target.z += delta[2];
+  }
+
   captureCamera(capture: boolean): void {
     /*
       Capturing the camera is also what marks the gesture EXCLUSIVE: a tool only
@@ -571,6 +600,7 @@ export class EnsembleEditor extends Component {
       pick: (ray) => this.pick(ray),
       pickPoint: (ray) => this.pickPoint(ray),
       captureCamera: (capture) => this.captureCamera(capture),
+      panCamera: (delta) => this.panCamera(delta),
       undo: () => this.undo(),
       redo: () => this.redo(),
       canUndo: () => this.canUndo(),
@@ -880,9 +910,35 @@ export class EnsembleEditor extends Component {
    * is the leading word of the name, which in these sets is a real taxonomy
    * (`commercial_*`, `car_debris-*`) rather than a hopeful guess.
    */
+  /**
+   * The author's kit shelf, parsed from the `libraries` attribute.
+   *
+   * Bad JSON returns nothing rather than throwing: an attribute is typed by
+   * hand, and a malformed one should cost you the palette, not the editor.
+   */
+  private _shelf(): LibraryRef[] {
+    if (!this.libraries.trim()) return [];
+    try {
+      const parsed = JSON.parse(this.libraries) as LibraryRef[];
+      return Array.isArray(parsed)
+        ? parsed.filter((l) => l && l.name && l.url)
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Every library the palette can offer: the ensemble's, plus the shelf. */
+  private _availableLibraries(): string[] {
+    const names = libraryNames(this._ensemble, this.library || undefined);
+    for (const ref of this._shelf())
+      if (!names.includes(ref.name)) names.push(ref.name);
+    return names;
+  }
+
   meshCatalog(): CatalogEntry[] {
     if (!this._scene) return [];
-    const libraries = libraryNames(this._ensemble, this.library || undefined);
+    const libraries = this._availableLibraries();
     const out: CatalogEntry[] = [];
     for (const library of libraries) {
       /*
@@ -1004,6 +1060,22 @@ export class EnsembleEditor extends Component {
       if (this._rebuildPending) {
         this._rebuildPending = false;
         this.rebuild();
+      }
+      /*
+        Mount the author's shelf too. These are not the ensemble's libraries —
+        nothing in the file needs them — but their meshes have to be loaded
+        before the palette can list anything to insert.
+      */
+      const shelf = this._shelf();
+      if (shelf.length && this._scene) {
+        void mountLibraries(
+          { ...this._ensemble, libraries: shelf },
+          this._scene
+        )
+          .then(() => {
+            if (this.isConnected) this._renderChrome();
+          })
+          .catch(() => undefined);
       }
       void this._rebuildWhenLibraryReady();
     };
@@ -1640,8 +1712,19 @@ export class EnsembleEditor extends Component {
 
     this._renderPalette();
     this._renderToolOptions();
-    this._renderPieceList();
-    this._renderLibraryPalette();
+    /*
+      THE SCENE GRAPH AND THE LIBRARY ARE THE SAME SLOT.
+
+      Both are long scrolling lists on the left, and only one of them is ever
+      the thing you are reaching for: selecting works on what is in the scene,
+      inserting works on what is not. Showing both halved each one's height and
+      made the panel a scroll hunt.
+
+      So the tool decides. Insert shows the library; everything else shows the
+      scene graph.
+    */
+    if (this._tool === "insert") this._renderLibraryPalette();
+    else this._renderPieceList();
     this._renderProperties();
   }
 
@@ -1767,17 +1850,28 @@ export class EnsembleEditor extends Component {
     const catalog = this.meshCatalog();
     if (!catalog.length) return;
 
-    // `library · category`, because two libraries can name a family the same
-    // thing and "commercial" alone would silently merge them.
+    /*
+      TWO PICKERS, NOT ONE COMPOUND ONE.
+
+      The family list used to read `library · category`, which meant choosing a
+      library and choosing a category were the same control — so a shelf of
+      several kits turned into one long list where the kit was a prefix you had
+      to read. Library first, then family within it, is how a kit is actually
+      navigated.
+    */
+    const libraries = [
+      ...new Set(catalog.map((entry) => entry.library)),
+    ].sort();
+    const currentLibrary =
+      (this._toolOptions.library as string) ?? libraries[0]!;
+    const inLibrary = catalog.filter(
+      (entry) => entry.library === currentLibrary
+    );
     const families = [
-      ...new Set(
-        catalog.map((entry) => `${entry.library} · ${entry.category}`)
-      ),
+      ...new Set(inLibrary.map((entry) => entry.category)),
     ].sort();
     const current = (this._toolOptions.family as string) ?? families[0]!;
-    const items = catalog.filter(
-      (entry) => `${entry.library} · ${entry.category}` === current
-    );
+    const items = inLibrary.filter((entry) => entry.category === current);
     const chosen =
       this._tool === "insert" ? (this._toolOptions.mesh as string) : null;
 
@@ -1787,7 +1881,23 @@ export class EnsembleEditor extends Component {
         // A LIST is the one case for a bound: it is arbitrarily long, and
         // `maxHeight` scrolls past it instead of growing off the screen.
         { width: 200, maxHeight: 320, padding: 8, gap: 4 },
-        label3d({ text: `Library (${catalog.length})`, bold: true }),
+        label3d({ text: `Library (${inLibrary.length})`, bold: true }),
+        // Only when there IS a choice: one library and this is a control that
+        // can only tell you what you already know.
+        ...(libraries.length > 1
+          ? [
+              select3d({
+                label: "",
+                value: currentLibrary,
+                options: libraries,
+                onChange: (value: string | number) => {
+                  this.setToolOption("library", String(value));
+                  // The old family belongs to the old library.
+                  this.setToolOption("family", undefined);
+                },
+              }),
+            ]
+          : []),
         select3d({
           label: "",
           value: current,

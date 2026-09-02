@@ -31,6 +31,7 @@ wants to move is usually the one embedded in something else.
 /*{"parent":"Internals","order":5}*/
 import {
   Color3,
+  Matrix,
   Mesh,
   MeshBuilder,
   Quaternion,
@@ -144,46 +145,43 @@ const PICK_FATNESS = 5;
   Its pick target stays generous, so aiming at the line still works; it just no
   longer ADVERTISES itself as the target.
 */
-const SHAFT_LENGTH = 0.8;
-const SHAFT_DIAMETER = 0.032;
+const SHAFT_LENGTH = 0.7;
+// Circumscribed circle: a square 0.05 across the flats measures 0.0707 corner
+// to corner, and `diameter` is the corners.
+const SHAFT_DIAMETER = 0.0707;
 const SHAFT_PICK_FATNESS = 11;
-const SHAFT_OFFSET = 0.55;
-const PAD_SIZE = 0.28;
+const SHAFT_OFFSET = 0.45;
+const PAD_SIZE = 0.2;
 /*
-  A FLAT QUARTER ANNULUS ON THE AXIS ROW, NOT A RING AROUND EVERYTHING.
+  PROPORTIONS TAKEN FROM THE OWNER'S REFERENCE MODEL, not invented here.
 
-  The rings used to encircle the whole widget — 3.3 across — so on a widget
-  scaled to a constant SCREEN size they dwarfed whatever piece was selected, and
-  three of them crossing made the thing hard to read at all.
+  `3d-manipulator.glb`, measured rather than eyeballed. Its parts, in the frame
+  each is authored in:
 
-  Now every axis is one ROW, which is the owner's layout:
+    arrow    shaft 0.1 → 0.8, square 0.05 across; head 0.8 → 1.1, base 0.2
+    ring     FLAT annulus, inner 0.8, outer 1.0, centred on the origin
+    pad      flat plate 0.2 × 0.2, centred 0.2 along one of its plane's axes
 
-      -X  (   []   +----->  +X
+  Two things I had wrong and the model settled. The rings are FULL circles
+  centred on the origin, in the plane they rotate in — not quarters, and not
+  offset along the axis, which put them in the wrong plane as well as the wrong
+  place. And the arrow cross-sections are squares standing on their CORNERS:
+  the model's vertices sit at (±0.1, ±0.1), where Babylon's 4-sided cylinder
+  puts them at 0°/90°/180°/270°. Hence the 45° roll, baked into the geometry.
 
-  the arc turns about that axis, the pad slides in the plane that axis is normal
-  to, and the arrow moves along it. Everything belonging to an axis sits on that
-  axis, and the three rows do not overlap.
-
-  FLAT, not tubular. A ribbon is a broad face pointed along the axis, which is a
-  much larger click target than the silhouette of a tube, and it is ~24
-  triangles against a torus's several hundred.
-
-  The arc is drawn OFFSET along the negative axis, while the drag still measures
-  in the plane through the widget's origin — the offset is cosmetic, and
-  `angleAboutAxis` does not care where along the normal the plane sits. That is
-  a deliberate separation of "what you grab" from "where it measures", and the
-  only one in the widget.
+  The ring is a zero-thickness ribbon where the model has a 0.05 slab: it reads
+  the same from any angle a manipulator is used at, and costs half the triangles.
 */
-const ARC_INNER = 0.4;
-const ARC_OUTER = 0.62;
-/** How much wider the invisible pick band is, per edge. */
-const ARC_PICK_MARGIN = 0.16;
-const ARC_OFFSET = 0.95;
-const ARC_SEGMENTS = 10;
-/** The pad sits between the arc and the origin, on the same row. */
-const PAD_ROW_OFFSET = 0.5;
+const RING_INNER = 0.8;
+const RING_OUTER = 1.0;
+/** Extra band width per edge on the invisible pick ring. */
+const RING_PICK_MARGIN = 0.14;
+const RING_SEGMENTS = 32;
+/** Centre distance of a plane pad along its offset axis. */
+const PAD_OFFSET = 0.2;
 const CUBE_SIZE = 0.17;
-const CUBE_OFFSET = 1.78;
+// Outside the ring and the arrowhead, both of which reach 1.1.
+const CUBE_OFFSET = 1.28;
 const CENTRE_SIZE = 0.2;
 
 /**
@@ -199,13 +197,8 @@ const CENTRE_SIZE = 0.2;
  * It is a separate PART of the same grip, not a grip of its own — grabbing the
  * head and grabbing the shaft mean the same drag.
  */
-const HEAD_LENGTH = 0.4;
-/*
-  Wider than the cone it replaces. `diameter` is the CIRCUMSCRIBED circle, so a
-  4-sided cross-section has sides of only d/√2 — keeping 0.3 would have quietly
-  shrunk the arrowhead by a third at the moment it stopped being round.
-*/
-const HEAD_DIAMETER = 0.42;
+const HEAD_LENGTH = 0.3;
+const HEAD_DIAMETER = 0.283;
 const HEAD_OFFSET = SHAFT_OFFSET + SHAFT_LENGTH / 2 + HEAD_LENGTH / 2;
 
 export interface HandlesView {
@@ -365,16 +358,25 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
    * A flat 90° annulus segment lying in XZ with normal +Y, so `ringOn` aims it
    * exactly as the torus it replaces was aimed.
    *
-   * Two arcs and a ribbon between them: `CreateDisc` would give a pie slice
-   * with no hole, and a torus is the thing being replaced. Double-sided,
-   * because a flat band seen from behind is otherwise both invisible and
-   * unpickable, and which side faces you is the camera's business.
+   * A ribbon between two arcs: `CreateDisc` has an `arc` option but gives a pie
+   * slice with no hole. Double-sided, because a flat band seen from the other
+   * face would otherwise be invisible AND unpickable, and which face you see is
+   * the camera's business.
+   *
+   * The reference model spans 135°–225° — a quarter centred on its local −X.
+   * `startDegrees` shifts that, because `ringOn` aims the NORMAL and takes the
+   * quarter wherever the rest of its rotation happens to put it.
    */
-  const quarterAnnulus = (name: string, inner: number, outer: number) => {
+  const quarterAnnulus = (
+    name: string,
+    inner: number,
+    outer: number,
+    startDegrees: number
+  ) => {
     const arc = (radius: number): Vector3[] => {
       const points: Vector3[] = [];
-      for (let i = 0; i <= ARC_SEGMENTS; i++) {
-        const t = (i / ARC_SEGMENTS) * HALF;
+      for (let i = 0; i <= RING_SEGMENTS; i++) {
+        const t = ((startDegrees + (i / RING_SEGMENTS) * 90) * Math.PI) / 180;
         points.push(new Vector3(Math.cos(t) * radius, 0, Math.sin(t) * radius));
       }
       return points;
@@ -389,6 +391,44 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
     );
   };
 
+  /**
+   * Where each axis's quarter starts, so it lands on the −`previousAxis` spoke.
+   *
+   * Measured off the reference model: rotate-about-Y sits on −X, about-X on −Z,
+   * about-Z on −Y — the SAME spoke as that axis's plane pad, which is what makes
+   * each axis read as one row. `ringOn` only fixes the normal; the roll within
+   * the plane is left over, and rather than composing a second rotation into
+   * `spin` the arc is simply generated at the right angle.
+   */
+  const arcStart = (axis: Axis): number =>
+    axis === "x" ? 225 : axis === "z" ? 45 : 135;
+
+  /**
+   * A 4-sided cylinder standing on its CORNERS, like the reference model's.
+   *
+   * Babylon puts the first vertex of a tessellated cylinder at angle 0, so a
+   * 4-sided one has flat faces facing the axes. The model has vertices there
+   * instead — "the arrow heads should be rotated by 45 degrees" — which is a
+   * cleaner silhouette and, being asymmetric under 90° turns, tells you how the
+   * piece is ORIENTED rather than just which way the axis runs.
+   *
+   * Baked into the vertices rather than set as a rotation, because `spin`
+   * already owns `mesh.rotation` and composing a roll into that euler is a
+   * worse way to say the same thing.
+   */
+  const squareTapered = (
+    name: string,
+    options: { height: number; diameterTop: number; diameterBottom: number }
+  ) => {
+    const mesh = MeshBuilder.CreateCylinder(
+      name,
+      { ...options, tessellation: 4 },
+      s
+    );
+    mesh.bakeTransformIntoVertices(Matrix.RotationY(Math.PI / 4));
+    return mesh;
+  };
+
   /** Turn a torus (lying in XZ, normal +Y) so its normal is `axis`. */
   const ringOn = (axis: Axis): Vec3 =>
     axis === "x" ? [0, 0, HALF] : axis === "z" ? [HALF, 0, 0] : [0, 0, 0];
@@ -396,6 +436,10 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
   /** Turn a plane (facing +Z) so it faces `axis`. */
   const facing = (axis: Axis): Vec3 =>
     axis === "x" ? [0, HALF, 0] : axis === "y" ? [HALF, 0, 0] : [0, 0, 0];
+
+  /** The axis before this one in x → y → z → x. */
+  const previousAxis = (axis: Axis): Axis =>
+    axis === "x" ? "z" : axis === "y" ? "x" : "y";
 
   /** A vector that is `distance` along one axis and zero elsewhere. */
   const along = (axis: Axis, distance: number): Vec3 => {
@@ -421,15 +465,12 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           offset: along(axis, SHAFT_OFFSET),
           spin: alongAxis(axis),
           make: (name, fat) =>
-            MeshBuilder.CreateCylinder(
-              name,
-              {
-                height: SHAFT_LENGTH,
-                diameter: SHAFT_DIAMETER * (fat > 1 ? SHAFT_PICK_FATNESS : 1),
-                tessellation: fat > 1 ? 8 : 10,
-              },
-              s
-            ),
+            squareTapered(name, {
+              height: SHAFT_LENGTH,
+              diameterTop: SHAFT_DIAMETER * (fat > 1 ? SHAFT_PICK_FATNESS : 1),
+              diameterBottom:
+                SHAFT_DIAMETER * (fat > 1 ? SHAFT_PICK_FATNESS : 1),
+            }),
         });
         // The arrowhead: same grip, fatter target, and the part that says
         // "drag along this axis" without anyone having to be told.
@@ -439,29 +480,13 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           offset: along(axis, HEAD_OFFSET),
           spin: alongAxis(axis),
           make: (name, fat) =>
-            MeshBuilder.CreateCylinder(
-              name,
-              {
-                height: HEAD_LENGTH * (fat > 1 ? 1.5 : 1),
-                diameterTop: 0,
-                // The pick cone is fattened much less than a shaft is: it is
-                // already the widest thing on the axis, and inflating it 5×
-                // would swallow the ring and the scale cube beside it.
-                diameterBottom: HEAD_DIAMETER * (fat > 1 ? 1.8 : 1),
-                /*
-                  FOUR SIDES, NOT A CONE.
-
-                  A square-based pyramid reads cleaner than a cone at this size,
-                  and its EDGES carry orientation: a cone is rotationally
-                  symmetric, so it tells you which way the axis points and
-                  nothing about how the piece is turned. The pyramid's silhouette
-                  changes as the widget turns, which is free feedback during a
-                  rotate drag.
-                */
-                tessellation: 4,
-              },
-              s
-            ),
+            squareTapered(name, {
+              height: HEAD_LENGTH * (fat > 1 ? 1.5 : 1),
+              diameterTop: 0,
+              // Fattened much less than a shaft: it is already the widest thing
+              // on the axis, and inflating it 5x would swallow the ring.
+              diameterBottom: HEAD_DIAMETER * (fat > 1 ? 1.8 : 1),
+            }),
         });
         /*
           The plane pad's axis is the plane's NORMAL, so this reads as "the pad
@@ -469,10 +494,20 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
           axis's row, between the arc and the origin, rather than diagonally out
           in the plane it slides in.
         */
+        /*
+          The pad lies IN the plane it slides across — `facing` points its
+          normal down the grip's axis — and is offset along one of that plane's
+          own two axes, which is where the reference model puts it.
+
+          Which one: the axis BEFORE the normal in x→y→z→x. That gives XZ→−X,
+          XY→−Y, YZ→−Z, matching the model and, more importantly, putting the
+          three pads on three DIFFERENT axes. Any rule that reuses an axis puts
+          two pads at the same point in different planes, intersecting.
+        */
         add(grip("planar"), {
           colour,
           alpha: 0.35,
-          offset: along(axis, -PAD_ROW_OFFSET),
+          offset: along(previousAxis(axis), -PAD_OFFSET),
           spin: facing(axis),
           make: (name, fat) =>
             MeshBuilder.CreatePlane(
@@ -486,13 +521,13 @@ export function createHandles(scene: unknown, scale = 1): HandlesView {
       if (transforms.rotate) {
         add(grip("rotate"), {
           colour,
-          offset: along(axis, -ARC_OFFSET),
           spin: ringOn(axis),
           make: (name, fat) =>
             quarterAnnulus(
               name,
-              fat > 1 ? ARC_INNER - ARC_PICK_MARGIN : ARC_INNER,
-              fat > 1 ? ARC_OUTER + ARC_PICK_MARGIN : ARC_OUTER
+              fat > 1 ? RING_INNER - RING_PICK_MARGIN : RING_INNER,
+              fat > 1 ? RING_OUTER + RING_PICK_MARGIN : RING_OUTER,
+              arcStart(axis)
             ),
         });
       }

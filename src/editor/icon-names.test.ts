@@ -1,30 +1,28 @@
 import { describe, expect, it } from "bun:test";
-import { iconData, iconNames } from "tosijs-3d";
+import { iconData } from "tosijs-3d";
 import { registerEditorTools } from "./tools/built-in";
 import { registeredCommands, registeredTools } from "./tools/tool-registry";
 
 /*
-  AN ICON NAME IS A STRING, AND A WRONG ONE FAILS SILENTLY-ISH.
+  AN ICON NAME IS A STRING, AND A WRONG ONE FAILS QUIETLY.
 
-  `iconGlyph` — the path `iconGrid3d` rasterises for in-scene panels — draws a
-  fallback BOX for a name it does not know and warns once per render. That is
-  how `cornerUpLeft` shipped: Undo appeared as an empty square and the console
-  filled with `iconGlyph: unknown icon`, thousands of lines, reported by the
-  owner twice before it was traced.
+  `iconGlyph` draws a fallback BOX for a name it cannot resolve. That is how
+  `cornerUpLeft` shipped as an empty square where Undo should be, with the
+  console filling up behind it, reported twice before it was traced.
 
-  It is not enough to check the name EXISTS. Every left-facing arrow in the set
-  is a MIRROR REFERENCE — `cornerUpLeft` is stored as the string
-  `cornerUpRight0f` — and `iconGlyph` resolves neither suffixes nor mirrors,
-  though the DOM path (`svgIcons`) does. So the test a typo cannot slip past is:
-  the name must resolve to real SVG MARKUP, not to another name.
+  The rule this pins CHANGED in tosijs-3d 0.7.6, so the test changed with it.
+  Before: only names stored as literal markup resolved, because every mirrored
+  name (`cornerUpLeft` is stored as the string `cornerUpRight0f`) failed to
+  parse on the texture path. Now the icon language works, and a name is good if
+  `icon-data` knows it — whether it holds markup or redirects to a variant.
+
+  Upstream exports `iconExists()` for exactly this question, which would be
+  better than reading `iconData` ourselves, but it is not re-exported from the
+  package barrel and the `exports` map does not expose the subpath. Asked for;
+  until then this is the reachable equivalent for plain (unsuffixed) names.
 */
 
-const REAL = new Set(
-  iconNames().filter((name) => {
-    const entry = (iconData as unknown as Record<string, string>)[name];
-    return typeof entry === "string" && entry.trimStart().startsWith("<svg");
-  })
-);
+const KNOWN = iconData as unknown as Record<string, string>;
 
 registerEditorTools();
 
@@ -40,23 +38,32 @@ const iconsInUse = (): Array<{ owner: string; icon: string }> => [
 ];
 
 describe("icon names", () => {
-  it("has a non-empty set of real glyphs to check against", () => {
-    // Guards the guard: if the upstream shape changes, REAL could silently
-    // empty out and every assertion below would pass vacuously.
-    expect(REAL.size).toBeGreaterThan(20);
-    expect(REAL.has("cornerUpRight")).toBe(true);
+  it("has a real icon table to check against", () => {
+    // Guards the guard: if the upstream shape changes, every assertion below
+    // could pass vacuously against an empty object.
+    expect(Object.keys(KNOWN).length).toBeGreaterThan(50);
+    expect("cornerUpRight" in KNOWN).toBe(true);
   });
 
-  it("uses only glyphs iconGlyph can actually draw", () => {
-    const broken = iconsInUse()
+  it("uses only names icon-data knows", () => {
+    const unknown = iconsInUse()
       .filter(({ icon }) => icon !== "")
-      .filter(({ icon }) => !REAL.has(icon));
-    expect(broken).toEqual([]);
+      .filter(({ icon }) => !(icon in KNOWN));
+    expect(unknown).toEqual([]);
   });
 
-  it("rejects mirror references, which render as a fallback box", () => {
-    // The exact mistake that shipped. If this ever passes, iconGlyph learned to
-    // resolve mirrors and the workaround in built-in.ts can go.
-    expect(REAL.has("cornerUpLeft")).toBe(false);
+  it("can reach a mirrored name, which 0.7.6 fixed", () => {
+    // Undo depends on this one. If it ever regresses, Undo silently becomes a
+    // box again — which is precisely how this started.
+    expect("cornerUpLeft" in KNOWN).toBe(true);
+  });
+
+  it("mirrors undo horizontally from redo", () => {
+    // `cornerUpLeft` is `cornerUpRight` mirrored — equivalently a 180° turn of
+    // `cornerDownRight`. Undo is the mirrored name, so if the icon language
+    // regresses upstream this is the assertion that catches it.
+    const by = (name: string) =>
+      iconsInUse().find((i) => i.owner === `command:${name}`)?.icon;
+    expect([by("undo"), by("redo")]).toEqual(["cornerUpLeft", "cornerUpRight"]);
   });
 });

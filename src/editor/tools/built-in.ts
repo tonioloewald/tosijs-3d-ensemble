@@ -82,28 +82,18 @@ export function registerEditorTools(): void {
     },
   });
 
-  /*
-    UNDO POINTS THE WRONG WAY, ON PURPOSE.
-
-    `iconGlyph` — the texture path, which is what `iconGrid3d` draws with —
-    resolves neither composition suffixes nor MIRROR references, and every
-    left-facing arrow in the icon set is a mirror reference: `cornerUpLeft` is
-    literally the string `cornerUpRight0f`. So asking for it logged
-    `iconGlyph: unknown icon "cornerUpLeft"` on every render and drew the
-    fallback BOX — which is what the owner saw as an empty square where Undo
-    should be, plus a flood of warnings.
-
-    tosijs-3d already solved this for its keyboard, where a `KeyDef` carries
-    `iconFlipX` and flips the real `cornerDownRight` to make a return key.
-    `IconGridItem` has no such field, so there is no way to reach a left-facing
-    arrow from a grid cell. Asked for upstream; until it lands these are two
-    real glyphs that at least RENDER and read as opposites, and the labels carry
-    the meaning.
-  */
   registerCommand({
     name: "undo",
     label: "Undo",
-    icon: "cornerDownRight",
+    /*
+      The horizontal mirror of redo's `cornerUpRight` — equivalently, a 180°
+      rotation of `cornerDownRight`. Reachable at all only because tosijs-3d
+      0.7.6 fixed the icon language on the texture path: every left-facing arrow
+      is stored as `<rightVariant>0f`, and a stray trailing space in `icon-data`
+      made that redirect unparseable, so the whole left-facing set drew a
+      fallback box and warned on every render.
+    */
+    icon: "cornerUpLeft",
     enabled: (ctx) => ctx.canUndo(),
     run: (ctx) => ctx.undo(),
   });

@@ -438,67 +438,22 @@ export class EnsembleEditor extends Component {
     return point ? [point.x, point.y, point.z] : null
   }
 
-  /**
-   * Make two fingers PAN and a pinch ZOOM, rather than both at once.
-   *
-   * Babylon's default is `multiTouchPanAndZoom`, which applies panning AND
-   * pinch-zoom to the same two-finger gesture. Fingers never travel exactly
-   * parallel, so a swipe meant as a pan carries a small distance change too and
-   * the view creeps in and out under it — reported as "two finger drag is just
-   * a weird zoom that works better vertically than horizontally".
-   *
-   * With it off, `pinchToPanMaxDistance` decides: a gesture whose finger
-   * separation changes by less than that is a pan, more is a pinch. The default
-   * 20px is tight for a deliberate swipe, so it is widened — a pan is the
-   * common gesture and a pinch is the emphatic one.
-   *
-   * This matters more than it looks: **⌃drag does not exist on a touch device**,
-   * so two-finger drag is the ONLY way to pan there. A pan that zooms instead
-   * leaves a tablet with no way to move the view sideways at all.
-   */
-  /**
-   * Open the on-screen keyboard when a field takes focus.
-   *
-   * A shared preference in tosijs-3d, exposed here because the editor is a
-   * component and its HOST is what knows the answer: a headset wants it on, a
-   * desk with a real keyboard does not. The device cannot be asked — a laptop
-   * docked to a screen across the room and a headset over a desk look identical
-   * to any sniffing you could do, which is why the ⌨ affordance is always drawn
-   * and this stays a choice.
-   */
-  set onScreenKeyboard(on: boolean) {
-    ui.setAutoKeyboard(on === true)
-  }
+  /*
+    THE CAMERA'S TOUCH GESTURES ARE NOT OURS TO TUNE.
 
-  get onScreenKeyboard(): boolean {
-    return ui.autoKeyboardEnabled()
-  }
+    There was a `_configureTouchCamera` here setting Babylon's
+    `multiTouchPanAndZoom`, `multiTouchPanning` and `pinchToPanMaxDistance`,
+    trying to make two fingers pan and a pinch zoom. It did not work — reported
+    from a real device as "two fingered drag (vertical) still scales, nothing
+    pans, pinch to zoom is broken" — and the second half of that is the
+    important part: it made pinch WORSE.
 
-  private _configureTouchCamera(scene: { activeCamera?: unknown }): void {
-    const camera = scene.activeCamera as
-      | {
-          pinchToPanMaxDistance?: number
-          inputs?: {
-            attached?: {
-              pointers?: {
-                multiTouchPanning?: boolean
-                multiTouchPanAndZoom?: boolean
-                pinchZoom?: boolean
-              }
-            }
-          }
-        }
-      | undefined
-    const pointers = camera?.inputs?.attached?.pointers
-    if (!pointers) return
-    pointers.multiTouchPanning = true
-    pointers.pinchZoom = true
-    // The one that matters: choose a gesture rather than doing both.
-    pointers.multiTouchPanAndZoom = false
-    if (camera && typeof camera.pinchToPanMaxDistance === 'number') {
-      camera.pinchToPanMaxDistance = 60
-    }
-  }
+    Removed rather than tuned further. The camera belongs to tosijs-3d, the
+    gesture map in Babylon 9 goes through `camera.movement.input`, and I was
+    setting legacy flags on a device I cannot test. Guessing at input mapping
+    from a machine with no touchscreen is how you ship a regression that only
+    the owner can see. Filed as tosijs-3d#51.
+  */
 
   /**
    * Detach or reattach the camera's own input.
@@ -684,7 +639,6 @@ export class EnsembleEditor extends Component {
     this._pointer = new FlatPointer(canvas, scene as never)
     this._hub.add(this._pointer)
     this._attachShortcuts()
-    this._configureTouchCamera(scene as never)
 
     /*
       THE INPUT LOOP IS NOT THE RENDER LOOP.
@@ -940,15 +894,6 @@ export class EnsembleEditor extends Component {
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     })
     this._syncBackdrop()
-    /*
-      Re-applied per rebuild, not once at mount: an ensemble's `camera` feature
-      creates the camera, so at `sceneCreated` there is nothing to configure —
-      and a rebuild can replace it. Setting it once left the flags at Babylon's
-      defaults, which is exactly the bug it was meant to fix.
-    */
-    this._configureTouchCamera(
-      (this._scene as unknown as { scene?: { activeCamera?: unknown } }).scene ?? {}
-    )
     this._syncSelection()
     this._syncHandles()
     this._renderChrome()

@@ -28,6 +28,8 @@ when it lands, and close the issue.
 | 12 | `b3d-destroyable` drops `rx`/`ry`/`rz` — `instantiate` is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored `rot: [0,45,0]` left the footprint identical | [#48](https://github.com/tonioloewald/tosijs-3d/issues/48) |
 | 13 | `b3d-destroyable` removed before its `lib.ready.then` instantiate resolves ORPHANS the node — nothing disposes it, ever. Measured: 4 rapid edits left 4 copies and 210 meshes where there were 81, and it never recovered | [#49](https://github.com/tonioloewald/tosijs-3d/issues/49) |
 | 14 | ✅ **RESOLVED** (tosijs-3d@0.7.4) — numeric fields scrub and type; `slider3d`'s `step` always quantised and is now documented. Our snap cyclers STAY: they carry a `0` sentinel plus a doubling series, which is a cycler's job, not a slider's | [#50](https://github.com/tonioloewald/tosijs-3d/issues/50) |
+| 15 | Sky renders black on SOME page loads — a scene-setup race. Same build: one load 127,153,169, the next 1,11,21. Survives rebuilding, refogging and replacing the skybox element | [#51](https://github.com/tonioloewald/tosijs-3d/issues/51) |
+| 16 | Touch camera: two-finger drag zooms instead of panning, and ⌃drag does not exist on touch — so a tablet cannot pan at all | [#52](https://github.com/tonioloewald/tosijs-3d/issues/52) |
 | 8 | ✅ **RESOLVED in part** (tosijs-3d@0.7.2) — `exports` is a map now, but it names `./demo-utils` explicitly rather than a `./*` pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works | [#42](https://github.com/tonioloewald/tosijs-3d/issues/42) |
 
 ### Stopgaps we own, and what retires them

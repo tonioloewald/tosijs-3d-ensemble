@@ -128,7 +128,7 @@ export function placeMesh(
     // Creating an element does not add it. This is the step whose absence
     // produces no errors, no pieces, and nothing in the console.
     ctx.scene.appendChild(element);
-    const stopWaiting = whenMeshed(ctx.scene, element, (node) => {
+    const stopWaiting = whenMeshed(element, (node) => {
       // BOTH, and both for the same reason: the element forwards neither to the
       // library instance. `rx`/`ry`/`rz` are dropped by `instantiate`, and
       // `size` is the placeholder cube's edge. Only position survives the trip.
@@ -140,7 +140,7 @@ export function placeMesh(
       dispose: () => {
         stopWaiting();
         element.remove();
-        reapOrphan(ctx.scene, element);
+        reapOrphan(element);
       },
     };
   }
@@ -159,63 +159,70 @@ export function placeMesh(
   return { element: box, dispose: () => box.remove() };
 }
 
+/** Poll interval for the setup waits below. */
+const TICK_MS = 50;
+
 /**
- * Run `apply` once the element has a node, now or on a later frame.
+ * ~12s of ticks. Bounded so a piece whose library never resolves cannot leave a
+ * timer running for the life of the session — the editor rebuilds hundreds of
+ * times and each rebuild arms these.
+ */
+const TICK_BUDGET = 240;
+
+/**
+ * Run `apply` once the element has a node, now or on a later tick.
  *
- * Returns a canceller. The frame budget is what keeps this honest: a piece
- * whose library never resolves would otherwise leave an observer running for
- * the life of the scene, and the editor rebuilds hundreds of times a session.
+ * Returns a canceller. The budget is what keeps this honest: a piece whose
+ * library never resolves would otherwise leave a timer running for the life of
+ * the scene, and the editor rebuilds hundreds of times a session.
  *
- * The observable comes from the SCENE element, not the piece — a
- * `b3d-destroyable` has no `.scene`, so reading it there returned undefined and
- * this bailed out silently, leaving the scale unapplied. Measured: the piece's
- * rendered size stayed put while `piece.scale` said `[4, 1, 1]`, which is the
- * same class of quiet nothing as the `size` attribute it replaced.
- *
- * ⚠️ The callback runs INSIDE a render observer, where Babylon has no isolation
- * and a throw kills the render loop permanently — the page goes black with no
- * error where anyone would look. Hence the guard.
+ * The guard around `apply` stays even though this no longer runs inside a
+ * render observer: the callback is consumer code reaching into Babylon, and
+ * swallowing its throw is what keeps one bad piece from stopping the rest.
  */
 function whenMeshed(
-  sceneElement: SceneElement,
   element: SceneElement,
   apply: (node: TransformableNode) => void,
-  frameBudget = 240
+  tickBudget = TICK_BUDGET
 ): () => void {
   const host = element as unknown as { mesh?: TransformableNode | null };
   if (host.mesh) {
     apply(host.mesh);
     return () => {};
   }
-  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene;
-  const observable = scene?.onBeforeRenderObservable;
-  if (!observable?.add) return () => {};
-  let frames = 0;
-  let observer: unknown = null;
+  /*
+    A TIMER, NOT A RENDER OBSERVER.
+
+    This waited on `scene.onBeforeRenderObservable` with a budget counted in
+    FRAMES. A backgrounded tab stops rAF entirely, so the observer never fires
+    and the budget never advances: come back to the tab and the pieces that had
+    not yet been meshed have no rotation and no scale, forever. Reported as
+    "daytime with partial content, and I ONLY ever see this when bringing the
+    editor back from background".
+
+    `setTimeout` is throttled in a hidden tab but it still RUNS, so this
+    converges whether or not anyone is watching — which is the property a
+    setup step needs and a per-frame effect does not.
+  */
+  let ticks = 0;
+  let timer: ReturnType<typeof setInterval> | null = null;
   const stop = () => {
-    if (observer) observable.remove?.(observer);
-    observer = null;
+    if (timer !== null) clearInterval(timer);
+    timer = null;
   };
-  observer = observable.add(() => {
+  timer = setInterval(() => {
     try {
       if (host.mesh) {
         apply(host.mesh);
         stop();
         return;
       }
-      if (++frames > frameBudget) stop();
+      if (++ticks > tickBudget) stop();
     } catch {
       stop();
     }
-  });
+  }, TICK_MS);
   return stop;
-}
-
-interface BabylonScene {
-  onBeforeRenderObservable?: {
-    add?: (fn: () => void) => unknown;
-    remove?: (observer: unknown) => void;
-  };
 }
 
 /**
@@ -237,16 +244,10 @@ interface BabylonScene {
  * instantiate, or should dispose what it instantiated. Until then this watches
  * for the orphan and reaps it.
  */
-function reapOrphan(
-  sceneElement: SceneElement,
-  element: SceneElement,
-  frameBudget = 240
-): void {
+function reapOrphan(element: SceneElement, tickBudget = TICK_BUDGET): void {
   const host = element as unknown as {
     mesh?: { dispose?: () => void; isDisposed?: () => boolean } | null;
   };
-  const scene = (sceneElement as unknown as { scene?: BabylonScene }).scene;
-  const observable = scene?.onBeforeRenderObservable;
   const reap = () => {
     const node = host.mesh;
     if (!node || node.isDisposed?.()) return false;
@@ -255,21 +256,22 @@ function reapOrphan(
     node.dispose?.();
     return true;
   };
-  if (reap() || !observable?.add) return;
-  let frames = 0;
-  let observer: unknown = null;
+  if (reap()) return;
+  // Timer, not a render observer — see `whenMeshed`. An orphan that arrives
+  // while the tab is hidden must still be reaped when it does arrive.
+  let ticks = 0;
+  let timer: ReturnType<typeof setInterval> | null = null;
   const stop = () => {
-    if (observer) observable.remove?.(observer);
-    observer = null;
+    if (timer !== null) clearInterval(timer);
+    timer = null;
   };
-  observer = observable.add(() => {
-    // A throw inside a render observer kills the loop permanently — guard it.
+  timer = setInterval(() => {
     try {
-      if (reap() || ++frames > frameBudget) stop();
+      if (reap() || ++ticks > tickBudget) stop();
     } catch {
       stop();
     }
-  });
+  }, TICK_MS);
 }
 
 /** `b3dRadarBlip` as a child of the piece — it travels with what it marks. */

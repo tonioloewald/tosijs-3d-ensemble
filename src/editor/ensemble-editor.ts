@@ -645,17 +645,48 @@ export class EnsembleEditor extends Component {
     right places beat an empty viewport while a library downloads.
   */
   private async _rebuildWhenLibraryReady(): Promise<void> {
-    const libraries = [
-      ...((this._scene?.querySelectorAll?.("tosi-b3d-library") ??
-        []) as unknown as Iterable<Element & { ready?: Promise<void> }>),
-    ];
-    const pending = libraries.map((l) => l.ready).filter(Boolean) as Array<
-      Promise<void>
-    >;
-    if (!pending.length) return;
-    // A library that fails to load leaves its pieces as boxes rather than
-    // stranding the ones that DID load.
-    await Promise.all(pending.map((p) => p.catch(() => undefined)));
+    /*
+      WAIT FOR THE ANSWER, NOT FOR A PROMISE.
+
+      This used to grab each library element's `ready` ONCE and rebuild when it
+      resolved. Two ways that leaves an editor full of placeholder cubes:
+
+      - `ready` is REPLACED when a library reloads. Measured on a dead load:
+        `loadGeneration: 3` — so the promise we awaited belonged to a load two
+        generations stale, and the rebuild it triggered ran against a library
+        that was empty again.
+      - `ready` resolving is not the same as the scene being able to ANSWER.
+        `placeMesh` asks `scene.getLibrary(name)`, which stays null until the
+        library registers itself; resolve-then-register is a window, and a
+        rebuild inside it makes every piece a box.
+
+      Both end identically and silently: 19 `tosi-b3d-box` elements where 19
+      `tosi-b3d-destroyable` should be, a library sitting there with all 72
+      names loaded, and nothing in the console.
+
+      So poll for the OUTCOME — can the scene name the meshes yet — and rebuild
+      once it can. On a TIMER, because a backgrounded tab stops rAF and this has
+      to converge whether or not anyone is looking at the page; that is the same
+      reason the transform waits in `place-mesh.ts` are timer-driven.
+    */
+    const scene = this._scene;
+    if (!scene) return;
+    const wanted = libraryNames(this._ensemble, this.library || undefined);
+    if (!wanted.length) return;
+
+    const host = scene as unknown as {
+      getLibrary?: (name: string) => { getNames?: () => string[] } | null;
+    };
+    const answered = () =>
+      wanted.every((name) => (host.getLibrary?.(name)?.getNames?.() ?? []).length > 0);
+
+    // ~6s: long enough for a cold CDN fetch, short enough that a library which
+    // will never load still gets its honest box-shaped failure.
+    for (let tick = 0; tick < 40; tick++) {
+      if (!this.isConnected) return;
+      if (answered()) break;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
     if (!this.isConnected) return;
     this.rebuild();
   }

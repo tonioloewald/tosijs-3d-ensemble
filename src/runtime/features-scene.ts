@@ -176,6 +176,59 @@ export function stillSky(
   return { realtimeScale: 0, ...cfg };
 }
 
+/*
+  A STILL SKY ONLY GETS ONE CHANCE, AND IT USUALLY MISSES.
+
+  `b3d-skybox` re-runs `updateSky` from its frame observer ONLY when
+  `timeOfDay` differs from the last value it drew:
+
+      if (attrs.timeOfDay !== this._lastSkyTime) { ...; this.updateSky() }
+
+  and `updateSky` writes `sunPosition`, `rayleigh` and `turbidity` only inside
+  `if (sunEl?.light != null)`. The sun is a SEPARATE element whose light appears
+  on its own schedule, so when that first call lands before it, the SkyMaterial
+  keeps its defaults and the sky renders dark — which reads as night, and was
+  reported as night.
+
+  With the upstream default `realtimeScale: 10` this healed itself by accident:
+  `timeOfDay` drifted every tick, the gate reopened constantly, and some later
+  pass caught the sun. Pinning the clock to 0 — to stop the sky wandering into
+  actual night — removed the accident, and four loads in five came up dark. One
+  fix uncovered the other.
+
+  So nudge it until the sun is really there. On TIMERS, not a render observer:
+  a backgrounded tab stops rAF entirely and this has to converge whether or not
+  anyone is watching. Filed upstream — `updateSky` should re-run when its INPUTS
+  change, not only when the clock does.
+*/
+function refreshSkyWhenSunExists(
+  element: SceneElement,
+  ctx: FeatureContext
+): void {
+  const sky = element as unknown as {
+    updateSky?: () => void;
+    sunEl?: { light?: unknown } | null;
+    isConnected?: boolean;
+  };
+  let ticks = 0;
+  const timer = setInterval(() => {
+    // Bounded: a scene with no sun at all must not poll for the whole session.
+    if (sky.isConnected === false || ++ticks > 30) {
+      clearInterval(timer);
+      return;
+    }
+    try {
+      sky.updateSky?.();
+    } catch {
+      clearInterval(timer);
+      return;
+    }
+    // The pass above ran WITH the light present, so the material is written.
+    if (sky.sunEl?.light != null) clearInterval(timer);
+  }, 100);
+  ctx.onDispose(() => clearInterval(timer));
+}
+
 export function reapUnclaimedSingletons(scene: unknown): void {
   const claims = singletons.get(scene as object);
   if (!claims) return;
@@ -318,12 +371,14 @@ export function registerSceneFeatures(): void {
     },
     bind: (_piece, cfg, ctx) => {
       const still = stillSky(cfg);
-      return addSingleton(
+      const element = addSingleton(
         ctx,
         "tosi-b3d-skybox",
         () => b3dSkybox({ ...still }),
         still
       );
+      refreshSkyWhenSunExists(element, ctx);
+      return element;
     },
   });
 

@@ -171,6 +171,16 @@ const GRID_TEXTURE = "/grid-10.svg";
  *  means one thing in the editor and another in the scene it authors. */
 const GRID_METRES = 10;
 
+/**
+ * One width for the whole left column.
+ *
+ * The palette, the file panel and the scene graph / library are a COLUMN, and a
+ * column of three different widths reads as three unrelated things that happen
+ * to be stacked. They were 184, 150 and 200 because each was sized to its own
+ * content as it was written.
+ */
+const LEFT_WIDTH = 320;
+
 /*
   THE MENU STRINGS, so the picker and the handler cannot disagree about them.
 */
@@ -1923,7 +1933,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: 184, padding: 8, gap: 6 },
+        { width: LEFT_WIDTH, padding: 8, gap: 6 },
         label3d({ text: "Tools", bold: true }),
         iconGrid3d({
           mode: "radio",
@@ -2061,7 +2071,7 @@ export class EnsembleEditor extends Component {
       panel3d(
         // A LIST is the one case for a bound: it is arbitrarily long, and
         // `maxHeight` scrolls past it instead of growing off the screen.
-        { width: 200, maxHeight: 320, padding: 8, gap: 4 },
+        { width: LEFT_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
         label3d({ text: `Library (${inLibrary.length})`, bold: true }),
         // Only when there IS a choice: one library and this is a control that
         // can only tell you what you already know.
@@ -2129,7 +2139,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: 150, padding: 8, gap: 4 },
+        { width: LEFT_WIDTH, padding: 8, gap: 4 },
         ui.inputField({
           value: this._ensemble.name ?? "",
           placeholder: "untitled",
@@ -2160,7 +2170,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: 150, maxHeight: 340, padding: 8, gap: 4 },
+        { width: LEFT_WIDTH, maxHeight: 340, padding: 8, gap: 4 },
         list3d<{ label: string; id: string }>({
           items: this._ensemble.pieces.map((p) => ({ label: p.id, id: p.id })),
           onSelect: (item) => this.select(item.id),

@@ -37,3 +37,7 @@ order: 2
 -->
 
 <tosi-ensemble-editor src="/ensembles/pirate-cove.json" libraries="[{&quot;name&quot;:&quot;pirate&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb&quot;},{&quot;name&quot;:&quot;roads&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-roads.glb&quot;},{&quot;name&quot;:&quot;commercial&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-commercial.glb&quot;},{&quot;name&quot;:&quot;suburban&quot;,&quot;url&quot;:&quot;https://cdn.tosijs.net/kenney/libraries/city-kit-suburban.glb&quot;}]" style="display:block;position:absolute;top:0;left:0;right:0;height:100%;min-height:30rem"></tosi-ensemble-editor>
+
+<!-- toc -->
+- [Saving and loading ensembles](/storage/)
+<!-- /toc -->

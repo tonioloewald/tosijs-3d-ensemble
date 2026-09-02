@@ -109,6 +109,14 @@ import { registerSceneFeatures } from "../runtime/features-scene";
 import { validate } from "../format/validate";
 import type { BuiltEnsemble } from "../runtime/build";
 import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types";
+import {
+  fileNameFor,
+  parseEnsemble,
+  readSaved,
+  savedNames,
+  serialise,
+  writeSaved,
+} from "./storage";
 import type { SceneElement } from "../format/registry";
 
 /** A sample world to author against. Never saved with the ensemble. */
@@ -161,6 +169,53 @@ const GRID_TEXTURE = "/grid-10.svg";
 /** Metres per tile. Keep this and the scene ensembles agreeing, or a cell
  *  means one thing in the editor and another in the scene it authors. */
 const GRID_METRES = 10;
+
+/*
+  THE MENU STRINGS, so the picker and the handler cannot disagree about them.
+*/
+const TO_BROWSER = "To this browser";
+const TO_FILE = "Download file";
+const FROM_FILE = "From file…";
+const SAVE_ACTIONS = [TO_BROWSER, TO_FILE];
+
+/**
+ * Hand the browser a file to save.
+ *
+ * A blob URL and a synthetic click is the whole of it, and the revoke matters:
+ * the URL pins the blob in memory until it is released, and an editor that
+ * saves often would otherwise accumulate every version it ever wrote.
+ */
+function download(fileName: string, text: string): void {
+  if (typeof document === "undefined") return;
+  const url = URL.createObjectURL(
+    new Blob([text], { type: "application/json" })
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Ask for a file, without leaving one behind.
+ *
+ * The input is never added to the document — `click()` works on a detached
+ * element, and an `<input type="file">` parked in the DOM is a stray control
+ * that can be tabbed to.
+ */
+function pickFile(onText: (text: string) => void): void {
+  if (typeof document === "undefined") return;
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    void file.text().then(onText);
+  });
+  input.click();
+}
 
 export class EnsembleEditor extends Component {
   static override preferredTagName = "tosi-ensemble-editor";
@@ -1748,6 +1803,56 @@ export class EnsembleEditor extends Component {
     );
   }
 
+  /** Saved slot names, for the Load picker. */
+  savedEnsembles(): string[] {
+    return typeof localStorage === "undefined" ? [] : savedNames(localStorage);
+  }
+
+  /**
+   * Rename the ensemble — which is also renaming its save slot and its file.
+   *
+   * Through `edit` so it is one undo step like everything else, and with
+   * `chrome: false` because the field being typed into is IN the chrome:
+   * redrawing it would take the focus away mid-word.
+   */
+  rename(name: string): void {
+    if (name === (this._ensemble.name ?? "")) return;
+    this.edit(
+      `rename ${name}`,
+      (ensemble) => {
+        ensemble.name = name;
+      },
+      { rebuild: false, chrome: false }
+    );
+  }
+
+  /** Write to a `localStorage` slot, or download a file. */
+  saveAs(choice: string): void {
+    const name = this._ensemble.name?.trim() || "untitled";
+    if (choice === TO_FILE) {
+      download(fileNameFor(name), serialise(this._ensemble));
+      return;
+    }
+    if (choice === TO_BROWSER && typeof localStorage !== "undefined") {
+      writeSaved(localStorage, name, this._ensemble);
+      this._renderChrome();
+    }
+  }
+
+  /** Load a saved slot, or open the file picker. */
+  loadChoice(choice: string): void {
+    if (choice === FROM_FILE) {
+      pickFile((text) => {
+        const parsed = parseEnsemble(text);
+        if (parsed) this.ensemble = parsed;
+      });
+      return;
+    }
+    if (typeof localStorage === "undefined") return;
+    const saved = readSaved(localStorage, choice);
+    if (saved) this.ensemble = saved;
+  }
+
   /*
     TWO panels, not one.
 
@@ -2019,12 +2124,41 @@ export class EnsembleEditor extends Component {
       "left",
       panel3d(
         { width: 150, maxHeight: 340, padding: 8, gap: 4 },
-        label3d({ text: this._ensemble.name || "untitled", bold: true }),
+        /*
+          The name is EDITABLE, because it is not a caption — it is the
+          ensemble's identity, the localStorage slot it saves into and the file
+          it downloads as. A label here would be the one field you had to leave
+          the editor to change.
+        */
+        ui.inputField({
+          value: this._ensemble.name ?? "",
+          placeholder: "untitled",
+          onChange: (value: string) => this.rename(value),
+        }) as never,
         label3d({
           text: `${this._ensemble.pieces.length} · ${errors}✕ · ${
             problems.length - errors
           }⚠`,
           muted: true,
+        }),
+        /*
+          Two pickers rather than four buttons, and reading slightly wrong for
+          it: these are one-shot ACTIONS, and a `select3d` lingers on the value
+          you chose. An icon grid is the right shape and cannot open a menu
+          today — asked for as tosijs-3d#59; when it lands these collapse into
+          two icons.
+        */
+        select3d({
+          label: "",
+          value: "Save…",
+          options: ["Save…", ...SAVE_ACTIONS],
+          onChange: (value: string | number) => this.saveAs(String(value)),
+        }),
+        select3d({
+          label: "",
+          value: "Load…",
+          options: ["Load…", FROM_FILE, ...this.savedEnsembles()],
+          onChange: (value: string | number) => this.loadChoice(String(value)),
         }),
         list3d<{ label: string; id: string }>({
           items: this._ensemble.pieces.map((p) => ({ label: p.id, id: p.id })),

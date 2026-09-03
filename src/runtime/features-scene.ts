@@ -814,29 +814,26 @@ export function registerSceneFeatures(): void {
       title: "Terrain",
       properties: {
         /*
-          A BOOLEAN, because upstream's `biome` is `'on' | 'off'` — and this
-          shipped as a free string defaulting to `"temperate"`, which is a
-          value that does not exist. Measured rather than reasoned about:
-          setting `biome="temperate"` on a live `tosi-b3d-terrain` leaves it
-          reading `"off"`, so the field has never done anything at all. The
-          author could not even turn biome shading on by accident, since the
-          one word that works was not discoverable from the panel.
+          ⚠️ THESE NUMBERS COME FROM tosijs-3d's OWN TERRAIN DEMO, not from us.
 
-          A control that does nothing is worse than no control, and this is the
-          second time that rule has caught something in this repo.
+          The previous set was invented, and every one was wrong — not merely
+          badly ranged. `grossScale` is a FREQUENCY, not a wavelength: the demo
+          runs it 0.005..0.3 with a default of 0.015, and the comment there
+          explains why ("at h-size 8 a grossScale of 0.015 means ~530m
+          features"). We had it as metres, 1..1,000,000, defaulting to 4000 —
+          a number four orders of magnitude outside the useful range, wearing a
+          unit it does not have.
+
+          Owner: "a whole bunch of the values do all their useful work between 0
+          and 1", which was literal and which I first read as a statement about
+          the SLIDER TRACK. It was about the values.
+
+          So these are lifted from `b3d-terrain`'s demo — its defaults and its
+          own slider bounds where it has them. It is a hand-copy and will drift
+          again, which is the argument for tosijs-3d#66 rather than a reason to
+          keep guessing in the meantime.
         */
         biome: { type: "boolean", default: false },
-        /*
-          Exposed BECAUSE the toggle is: upstream warns that the automatic
-          lapse rate "is a small-world number and renders a 340m world entirely
-          as snow", and that it must be scaled to the vertical relief
-          (`≈ baseTemperature / relief`). Shipping the switch without the two
-          knobs that make it usable is how you get a feature that is technically
-          available and practically a white screen.
-
-          `x-requires` hides them until biome shading is on, so the ordinary
-          terrain panel does not grow two fields that do nothing.
-        */
         biomeSeaLevel: {
           ...num(-10000, 10000, 0, "m"),
           "x-requires": { biome: true },
@@ -845,66 +842,42 @@ export function registerSceneFeatures(): void {
           ...num(0, 0.02, 0, undefined),
           "x-requires": { biome: true },
         },
-        // An integer you TYPE or step, not a track you drag: no seed is
-        // "near" another, so 0..1e9 made every value indistinguishable.
-        seed: { type: "integer", minimum: 0, maximum: 9999, default: 1 },
+        // A seed is typed or stepped, never dragged: no seed is near another.
+        seed: { type: "integer", minimum: 0, maximum: 9999, default: 111 },
         surfaceType: {
           type: "string",
           enum: ["plane", "sphere", "cylinder", "torus"],
           default: "plane",
         },
-        radius: decades(2, 7, 6000, "m"),
-        grossScale: decades(0, 6, 4000, "m"),
-        grossAmplitude: decades(-1, 5, 600, "m"),
-        detailScale: decades(-1, 5, 200, "m"),
-        detailAmplitude: decades(-2, 4, 30, "m"),
-        // LINEAR: it goes negative (a seabed), and log cannot.
+        // For the curved surfaces. The demo uses 1000 on a cylinder; what it
+        // does on a torus is an open question upstream (tosijs-3d#66).
+        radius: decades(1, 5, 1000, "m"),
+        /*
+          FREQUENCIES, divided by `horizScale`. Demo sliders exactly: gross
+          0.005..0.3, detail 0.02..1. Both do all their work below 1, which is
+          what a linear track over six decades destroyed.
+        */
+        grossScale: num(0.005, 0.3, 0.015),
+        detailScale: num(0.02, 1, 0.09),
+        horizScale: num(0.1, 64, 8),
+        // METRES of relief, and the demo's own slider bounds.
+        grossAmplitude: num(0, 400, 250, "m"),
+        detailAmplitude: num(0, 50, 45, "m"),
         baseHeight: num(-1000, 1000, 0, "m"),
         /*
-          HOW BIG THE WORLD IS — the three attributes that decide extent, and
-          the reason they belong in an authoring panel rather than a tuning one.
+          WORLD SHAPE. The demo's own comment calls `tileSize` / `lodLevels` /
+          `reach` "world-shape choices" and uses 128 / 3 / 5000 — "big tiles +
+          few levels keep the pool small and the meshes cheap".
 
-          A terrain is a grid of tiles: `tileSize` is the finest, `lodLevels`
-          doubles it k times, so the COARSEST tile is `tileSize × 2^lodLevels`
-          — 320m at the defaults. `reach` is the radius, and 0 means "auto from
-          the coarsest tile", which is the unbounded-ish streaming case.
-
-          Owner's model, and it is the right one: a terrain is *"either a single
-          tile, a fixed grid of tiles, or an unbounded grid, and each would have
-          implicit extent for purposes of framing"*. Those are reach values:
-
-            single tile      reach = coarsest / 2   (160 at the defaults)
-            3 × 3 grid       reach = coarsest × 1.5 (480)
-            unbounded        reach = 0 (auto, streams around the camera)
-
-          Exposed because framing needs them and an author needs framing —
-          `frame()` reads exactly these to decide how far back to stand. Left
-          unexposed they were the difference between seeing your level and
-          starting inside it.
+          ⚠️ Finest-level tiles go as `(2·reach / tileSize)²`, and these are two
+          separate sliders, so it is the PRODUCT that kills the tab. The demo's
+          own pairing is 6,100 tiles; 10m tiles with the same reach would be a
+          million. A schema cannot say "…unless tileSize is small", so the
+          floor on tileSize is doing the work the element should do itself.
         */
-        // Floor of 2m, not 1: the tile count is quadratic in 1/tileSize, and
-        // the bottom of a log track is exactly where a drag lands fastest.
-        tileSize: decades(0.3, 3, 10, "m"),
-        lodLevels: { type: "integer", minimum: 0, maximum: 12, default: 5 },
-        /*
-          ⚠️ REACH IS THE ONE CONTROL THAT CAN KILL THE TAB, so its range is a
-          safety rail rather than a preference.
-
-          Tiles at the finest level go as `(2·reach / tileSize)²`, and the two
-          are separate sliders, so the product is what bites: reach 5000 with
-          tileSize 10 is a MILLION tiles, and with tileSize 1 it is a hundred
-          million. Owner: "reach is bizarre and can kill the tab."
-
-          400m is ~6400 finest tiles at the default tileSize — a large authored
-          level — and the schema cannot express "…unless tileSize is small", so
-          the cap is set for the worst pairing rather than the typical one.
-          Bounding the actual work belongs in the element, which knows both
-          numbers; asked for upstream.
-
-          LINEAR, because 0 is not a small radius. It is "auto from the coarsest
-          tile" — a MODE, which a log scale cannot reach (tosijs-3d#62).
-        */
-        reach: num(0, 400, 0, "m"),
+        tileSize: decades(1.5, 2.7, 128, "m"),
+        lodLevels: { type: "integer", minimum: 1, maximum: 8, default: 3 },
+        reach: num(0, 8000, 0, "m"),
         wireframe: { type: "boolean", default: false },
       },
     },

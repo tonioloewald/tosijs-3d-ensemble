@@ -11,27 +11,36 @@
     {
       "id": "sun",
       "at": [-0.5, 1, 0.4],
-      "features": { "sun": { "intensity": 1.1 } }
+      "features": {
+        "sun": {
+          "intensity": 1.1
+        }
+      }
     },
     {
       "id": "sky",
       "at": [0, 0, 0],
-      "features": { "skybox": { "timeOfDay": 10 } }
+      "features": {
+        "skybox": {
+          "timeOfDay": 10
+        }
+      }
     },
     {
       "id": "land",
       "at": [0, 0, 0],
       "features": {
         "terrain": {
-          "seed": 7,
+          "seed": 111,
           "surfaceType": "plane",
-          "tileSize": 5,
-          "lodLevels": 5,
-          "reach": 80,
-          "grossScale": 220,
-          "grossAmplitude": 14,
-          "detailScale": 40,
-          "detailAmplitude": 1.5
+          "grossScale": 0.015,
+          "detailScale": 0.09,
+          "horizScale": 8,
+          "grossAmplitude": 250,
+          "detailAmplitude": 45,
+          "tileSize": 128,
+          "lodLevels": 3,
+          "reach": 2000
         }
       }
     },

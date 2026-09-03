@@ -1980,6 +1980,13 @@ export class EnsembleEditor extends Component {
       schema: tool.optionsSchema,
       values: this._optionValues(),
       onChange: (key, value) => this.setToolOption(key, value),
+      /*
+        A tool option is not a document edit, so there is nothing to record —
+        but the split still matters: a widget with a drag reports live AND on
+        release, and without an `onCommit` here it would write the option fifty
+        times per gesture, re-rendering the chrome each time.
+      */
+      onCommit: (key, value) => this.setToolOption(key, value),
     });
     this._addPanel(
       "right",

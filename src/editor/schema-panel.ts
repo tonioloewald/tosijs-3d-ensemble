@@ -44,6 +44,9 @@ import {
   slider3d,
   toggle3d,
   ui,
+  curve3d,
+  curveProgram3d,
+  lightEditor3d,
 } from "tosijs-3d";
 import {
   DEFAULT_TOOL_CELLS,
@@ -71,6 +74,8 @@ interface PropertySpec {
   default?: unknown;
   "x-unit"?: string;
   "x-widget"?: string;
+  /** Which domain a `curve` field is in: `profile`, `falloff` or `radial`. */
+  "x-curve-kind"?: string;
   /**
    * Show this property only while the other options match.
    *
@@ -92,6 +97,16 @@ export interface SchemaPanelOptions {
   schema: FeatureSchema | undefined;
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  /**
+   * A GESTURE finished — write it to the document, one undo step.
+   *
+   * Widgets with a drag report twice: `onChange` continuously so the scene can
+   * follow the hand, and this once at the end. Without the split, one drag of a
+   * curve point would be fifty entries in the history; without the live half,
+   * the 3D preview would only catch up when you let go. Falls back to
+   * `onChange` for widgets that have no gesture to end.
+   */
+  onCommit?: (key: string, value: unknown, describe?: string) => void;
   /** Panel heading. Omitted for an embedded group. */
   title?: string;
   width?: number;
@@ -101,7 +116,7 @@ export interface SchemaPanelOptions {
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, onChange } = options;
+  const { schema, values, onChange, onCommit } = options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 
@@ -154,6 +169,53 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
     const unit = rawUnit && !picker ? ` (${rawUnit})` : "";
     const label = `${spec.title ?? key}${unit}`;
     const value = values[key] ?? spec.default;
+
+    /*
+      WIDGETS THAT OWN A COMPOSITE, handed the whole field.
+
+      `light` is a lamp — power, colour, intensity and its four-curve program;
+      `light-program` is that program alone; `curve` is one curve. They nest,
+      and each is marked on the FIELD it edits rather than being assembled here
+      from parts, which is what lets the widget hold invariants our document
+      cannot express — a light program's attack and sustain splits are shared
+      across all four channels, and six sibling fields could not keep them so.
+
+      Commit-only to the document: these all report live as well, but a live
+      write here would rebuild the scene on every pointer-move.
+    */
+    const commit = onCommit ?? ((k, v) => onChange(k, v));
+    if (spec["x-widget"] === "light") {
+      widgets.push(
+        lightEditor3d({
+          value: value as never,
+          handleCommit: (settings, describe) => commit(key, settings, describe),
+        })
+      );
+      continue;
+    }
+    if (spec["x-widget"] === "light-program") {
+      widgets.push(
+        curveProgram3d({
+          value: value as never,
+          handleCommit: (program: unknown, describe?: string) =>
+            commit(key, program, describe),
+        } as never)
+      );
+      continue;
+    }
+    if (spec["x-widget"] === "curve") {
+      widgets.push(
+        curve3d({
+          value: value as never,
+          // The domain travels in its own key, so a falloff and a height
+          // profile can share one widget and still clamp differently.
+          kind: spec["x-curve-kind"] as never,
+          handleCommit: (points: unknown, describe?: string) =>
+            commit(key, points, describe),
+        } as never)
+      );
+      continue;
+    }
 
     if (spec.type === "boolean") {
       widgets.push(

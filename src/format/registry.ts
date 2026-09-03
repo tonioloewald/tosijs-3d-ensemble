@@ -181,6 +181,20 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   icon?: string;
   /**
+   * This feature puts a real thing at `at`, and that thing cannot be seen.
+   *
+   * A lamp is a light: it has a location, it can be moved, and there is no
+   * geometry anywhere to click. An editor supplies a beacon for it — see
+   * `beacon-view.ts` — and this is how it knows to.
+   *
+   * Declared rather than inferred, because "has no geometry" is not the same
+   * question. `skybox` is everywhere, `fog` and `ambient` are settings, and
+   * `sun`'s `at` is a DIRECTION — a dot at `[-0.5, 1, 0.4]` would be a
+   * confident lie about where the sun is. Inferring from "this piece has no
+   * body" puts three junk dots near the origin.
+   */
+  marker?: boolean;
+  /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game

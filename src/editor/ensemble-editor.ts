@@ -67,6 +67,7 @@ import {
   label3d,
   list3d,
   panel3d,
+  row3d,
   select3d,
   euler3d,
   iconGrid3d,
@@ -103,6 +104,7 @@ import type { HandlesView } from "./handles-view";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles";
 import type { Grip } from "./handles";
 import { schemaWidgets } from "./schema-panel";
+import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view";
 import { featureRegistration } from "../format/registry";
 import type { EditorRay } from "./input/pointer";
 import type { CatalogEntry, ToolContext } from "./tools/tool-registry";
@@ -596,6 +598,15 @@ export class EnsembleEditor extends Component {
       raycast it precedes.
     */
     this._index = bodyIndex(this._built);
+    /*
+      Beacons are pickable BODIES for picking purposes, not chrome to skip.
+      `pickPiece`'s predicate only accepts meshes that are in this index, so
+      adding them here is the whole of making a lamp clickable — and nothing
+      else in the editor has to learn what a beacon is.
+    */
+    for (const [mesh, id] of this._beacons?.index() ?? []) {
+      this._index.set(mesh, id);
+    }
     return pickPiece(
       scene as never,
       this._index,
@@ -956,6 +967,7 @@ export class EnsembleEditor extends Component {
       this._syncHandleScale();
       this._syncHandlePosition();
       this._syncMarker();
+      this._syncBeacons();
       this._hub.update();
       requestAnimationFrame(tick);
     };
@@ -1189,6 +1201,8 @@ export class EnsembleEditor extends Component {
     this._built = null;
     this._preview?.dispose();
     this._preview = null;
+    this._beacons?.dispose();
+    this._beacons = null;
     this._handles?.dispose();
     this._handles = null;
     this._marker?.dispose();
@@ -1887,6 +1901,76 @@ export class EnsembleEditor extends Component {
   }
 
   /** Saved slot names, for the Load picker. */
+  /**
+   * Rename a piece, re-pointing everything that referred to it.
+   *
+   * An id is not a label — it is the only thing anything else can hold onto,
+   * so renaming is a graph edit and a rename that only touched the piece would
+   * leave dangling references behind that `validate` reports and the author
+   * did not ask for.
+   *
+   * Two reference sites, and BOTH are declared rather than guessed:
+   *
+   * - `links[].from` / `links[].to`, which the format defines outright
+   * - any feature field whose schema says `"x-widget": "ref"`, which is how
+   *   `protector.source` says "this string is a piece id". A consumer's
+   *   feature gets this for free by marking its own field, which is the same
+   *   registry property that gives it an icon and a panel.
+   *
+   * Deliberately NOT touched: a string that merely happens to equal the old id.
+   * Re-pointing by value would rewrite a mesh name or a caption that coincided,
+   * and silently — the format says which strings are references and this
+   * follows it rather than pattern-matching.
+   *
+   * Refuses a duplicate rather than merging two pieces into one, and refuses
+   * an empty id: `id` is mandatory and every reference in the file depends on
+   * it being unique.
+   */
+  renamePiece(id: string, next: string): boolean {
+    const name = next.trim();
+    if (!name || name === id) return false;
+    if (this._ensemble.pieces.some((p) => p.id === name)) return false;
+
+    const refFields = (piece: Piece): Array<[string, string]> => {
+      const out: Array<[string, string]> = [];
+      for (const [feature, cfg] of Object.entries(piece.features ?? {})) {
+        const props = (
+          featureRegistration(feature)?.schema as
+            | { properties?: Record<string, { "x-widget"?: string }> }
+            | undefined
+        )?.properties;
+        for (const [key, spec] of Object.entries(props ?? {})) {
+          if (spec?.["x-widget"] === "ref") out.push([feature, key]);
+        }
+      }
+      return out;
+    };
+
+    /*
+      MOVE THE SELECTION FIRST. `edit` re-renders the chrome, and it does that
+      while the selection still holds the OLD id — which now matches no piece,
+      so the property panel disappears at the exact moment you finish typing
+      into it. The selection follows the piece, not the string it was called.
+    */
+    this._selected = name;
+    this.edit(`rename ${id} to ${name}`, (ensemble) => {
+      const piece = ensemble.pieces.find((p) => p.id === id);
+      if (piece) piece.id = name;
+      for (const link of ensemble.links ?? []) {
+        if (link.from === id) link.from = name;
+        if (link.to === id) link.to = name;
+      }
+      for (const other of ensemble.pieces) {
+        for (const [feature, key] of refFields(other)) {
+          const cfg = other.features?.[feature] as Record<string, unknown>;
+          if (cfg?.[key] === id) cfg[key] = name;
+        }
+      }
+    });
+    this._syncSelection();
+    return true;
+  }
+
   savedEnsembles(): string[] {
     return typeof localStorage === "undefined" ? [] : savedNames(localStorage);
   }
@@ -2392,6 +2476,46 @@ export class EnsembleEditor extends Component {
 
   private _preview: BuiltEnsemble | null = null;
 
+  private _beacons: BeaconView | null = null;
+
+  /**
+   * A collision cube for every piece whose body cannot be clicked.
+   *
+   * Which pieces those are is DECLARED — `marker: true` on the feature
+   * registration — not inferred from "this piece has no geometry". See
+   * `FeatureRegistration.marker`: inferring it puts a dot at the sun's
+   * direction vector and two more at the origin.
+   *
+   * Positions come from `_liveOrigin`, so a beacon tracks a drag rather than
+   * waiting for the rebuild that a transform deliberately skips.
+   */
+  private _syncBeacons(): void {
+    const scene = (this._scene as unknown as { scene?: unknown })?.scene;
+    if (!scene) return;
+    const wanted: Beacon[] = [];
+    for (const piece of this._ensemble.pieces) {
+      if (piece.enabled === false) continue;
+      const marked = Object.keys(piece.features ?? {}).some(
+        (name) => featureRegistration(name)?.marker
+      );
+      if (!marked) continue;
+      const built = this._built?.pieces.get(piece.id);
+      wanted.push({
+        id: piece.id,
+        at: built ? this._liveOrigin(built) : piece.at ?? [0, 0, 0],
+      });
+    }
+    if (!wanted.length && !this._beacons) return;
+    // A scene can be disposed out from under a view; rebuild rather than write
+    // to dead meshes forever after. Same hazard as `SelectionView.alive`.
+    if (this._beacons && !this._beacons.alive()) {
+      this._beacons.dispose();
+      this._beacons = null;
+    }
+    this._beacons ??= createBeaconView(scene);
+    this._beacons.sync(wanted);
+  }
+
   /** The piece list, split into environment primitives and placed content. */
   /**
    * The glyph for a row: what KIND of thing this piece is.
@@ -2614,18 +2738,59 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "right",
       panel3d(
-        // HEIGHT is sized by its content. The arithmetic that used to live
-        // here — 24 per caption, 54 per vector row — was measured in a browser
-        // and was still wrong the moment a row was added. Width is shared with
-        // every other panel, which is a layout decision rather than a fit.
-        { width: PANEL_WIDTH, padding: 10, gap: 4 },
-        label3d({ text: selected.id, bold: true }),
-        label3d({
-          text:
-            selected.mesh ??
-            `${Object.keys(selected.features ?? {}).join(", ") || "no body"}`,
-          muted: true,
-        }),
+        /*
+          Height is sized by its content UP TO the room left below the panels
+          above it. The arithmetic that used to live here — 24 per caption, 54
+          per vector row — was measured in a browser and was still wrong the
+          moment a row was added, so the panel measures itself; the cap only
+          stops it running off the screen. Width is shared with every other
+          panel, which is a layout decision rather than a fit.
+        */
+        {
+          width: PANEL_WIDTH,
+          maxHeight: this._spaceBelow("right"),
+          padding: 10,
+          gap: 4,
+        },
+        /*
+          ONE HEADING ROW: what KIND of thing this is, and its NAME, editable.
+
+          It was two lines and they said the same thing twice — `lantern`, then
+          `lamp`, then `lamp` again as the feature group's own heading right
+          below. For an environment primitive with a single feature the middle
+          line is pure repetition, and for anything else the kind is better
+          said by a glyph than by a word.
+
+          The name is a FIELD now rather than a label, so a piece can be
+          renamed where you read it. `renamePiece` re-points the references.
+        */
+        row3d(
+          { gap: 6, weights: [1, 8], align: "middle" },
+          label3d({ text: this._kindIcon(selected) }),
+          ui.inputField({
+            value: selected.id,
+            placeholder: "id",
+            onChange: (value: string) => {
+              this.renamePiece(selected.id, value);
+            },
+          }) as never
+        ),
+        /*
+          The mesh, when there is one, is information rather than a repeat: a
+          piece called `flagship` does not otherwise say it is a `ship-large`.
+          A bodiless piece's features are already the group headings below.
+        */
+        ...(selected.mesh
+          ? [
+              label3d({
+                text: selected.library
+                  ? `${selected.library} · ${selected.mesh}`
+                  : selected.mesh,
+                muted: true,
+                compact: true,
+              }),
+            ]
+          : []),
         ...(fields as never[])
       )
     );
@@ -2725,6 +2890,28 @@ export class EnsembleEditor extends Component {
   }
 
   private _stackTop: { left: number; right: number } = { left: 8, right: 8 };
+
+  /**
+   * How much room is left on this side, below whatever is already stacked.
+   *
+   * A property panel is as tall as the feature it shows, and one feature makes
+   * that unbounded: the lamp's light settings carry a power section, a type
+   * picker, hue and intensity, and a four-curve program with shared
+   * attack/sustain splits. Unconstrained it ran off the bottom of the window
+   * with no way to reach the end — "the object panel is unconstrained in size
+   * so the lamp is a disaster".
+   *
+   * Measured rather than guessed at, and it can be: `_stackTop` already holds
+   * the bottom edge of every panel added to this side before this one, because
+   * the stack is built in order. A constant would be wrong on the next window
+   * size, and wrong again the moment the tool options panel grows a row.
+   */
+  private _spaceBelow(side: "left" | "right"): number {
+    const total = this.getBoundingClientRect().height;
+    // A floor, so a panel is never so short it cannot be scrolled meaningfully
+    // — and so a zero height during layout does not collapse it to nothing.
+    return Math.max(220, total - this._stackTop[side] - 16);
+  }
 }
 
 export const ensembleEditor = EnsembleEditor.elementCreator() as (

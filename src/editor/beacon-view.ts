@@ -1,0 +1,153 @@
+/*#
+# Beacons — a collision cube for anything abstract that has a position
+
+A lamp is a LIGHT. It has a position, it can be moved, it appears in the piece
+list — and there is nothing in the scene to click, because a Babylon light has
+no geometry. Selecting the lantern meant finding it in the list every time, and
+the report was blunt: "I can't move the lantern (or select it by clicking on
+it)."
+
+Two different faults produced that one sentence, and only one of them is here.
+The other was that `lamp` never claimed its light as the piece's BODY, so the
+editor wrote a new position into the file with nothing in the scene to write it
+to — see `body` in `features-scene.ts`.
+
+## Only where a feature says so
+
+A beacon is not given to every bodiless piece. Most environment primitives have
+no location for one to mark: a skybox is everywhere, `fog` and `ambient` are
+settings, and `sun`'s `at` is a DIRECTION — a dot floating at `[-0.5, 1, 0.4]`
+would be a confident lie about where the sun is. Three junk dots near the origin
+is what the blanket rule produces.
+
+So the feature declares it, next to its icon and its schema: `marker: true`
+means "this puts a real thing at `at`, and it cannot be seen". A consumer's
+feature gets a beacon the same way it gets an icon, which is the property that
+makes the registry worth having.
+
+## Visible on purpose, and visible THROUGH things
+
+The selection marker is quiet because it decorates something you can already
+see. A beacon IS the thing you can see, so it is drawn plainly — and in
+rendering group 1, so a lamp mounted inside a lantern mesh is still clickable
+rather than sealed inside the geometry it lights.
+
+A CUBE, not a sphere: it reads as a stand-in for a thing rather than as a
+thing, which is what it is. Owner: *"really we should provide a simple
+collision cube for any abstract thing that has a position that we might need to
+select"* — and the generality is the point. Lamps are the case that surfaced
+it; positional sound, a placed camera, and later reference points and zones are
+the same shape of problem.
+*/
+/*{"parent":"Internals","order":7}*/
+import { Color3, MeshBuilder, StandardMaterial } from "@babylonjs/core";
+import type { Vec3 } from "../format/types";
+
+/** Where a beacon sits, and which piece it stands for. */
+export interface Beacon {
+  id: string;
+  at: Vec3;
+}
+
+const COLOR: [number, number, number] = [1, 0.82, 0.42];
+
+/**
+ * Big enough to hit on a phone, small enough not to read as scenery.
+ *
+ * It does NOT scale with the piece: a beacon marks a point, and a point has no
+ * size. Scaling it with the camera was tempting and wrong for the same reason
+ * the handles do it and the selection box does not — a handle is a control, a
+ * marker is a fact about the world.
+ */
+const SIZE = 0.45;
+
+export interface BeaconView {
+  /** Create, move and retire beacons to match. One call does all three. */
+  sync(beacons: Beacon[]): void;
+  /** Mesh → piece id, for the pick index. */
+  index(): Map<unknown, string>;
+  /** Are these meshes still in a live scene? See `SelectionView.alive`. */
+  alive(): boolean;
+  dispose(): void;
+}
+
+interface Dot {
+  position: { x: number; y: number; z: number };
+  isPickable: boolean;
+  isVisible: boolean;
+  renderingGroupId: number;
+  material?: unknown;
+  isDisposed: () => boolean;
+  dispose: () => void;
+  computeWorldMatrix: (force: boolean) => void;
+}
+
+export function createBeaconView(scene: unknown): BeaconView {
+  const s = scene as never;
+  const dots = new Map<string, Dot>();
+
+  const material = new StandardMaterial(
+    "ensemble-beacon-mat",
+    s
+  ) as unknown as {
+    emissiveColor: Color3;
+    diffuseColor: Color3;
+    disableLighting: boolean;
+    alpha: number;
+    dispose: () => void;
+  };
+  material.emissiveColor = new Color3(...COLOR);
+  material.diffuseColor = new Color3(0, 0, 0);
+  material.disableLighting = true;
+  material.alpha = 0.85;
+
+  return {
+    sync(beacons) {
+      const wanted = new Set(beacons.map((b) => b.id));
+      for (const [id, dot] of dots) {
+        if (!wanted.has(id)) {
+          dot.dispose();
+          dots.delete(id);
+        }
+      }
+      for (const { id, at } of beacons) {
+        let dot = dots.get(id);
+        if (!dot) {
+          dot = MeshBuilder.CreateBox(
+            `ensemble-beacon-${id}`,
+            { size: SIZE },
+            s
+          ) as unknown as Dot;
+          dot.material = material;
+          dot.isPickable = true;
+          // Through the fixture it is mounted in, or it cannot be clicked.
+          dot.renderingGroupId = 1;
+          dots.set(id, dot);
+        }
+        dot.position.x = at[0];
+        dot.position.y = at[1];
+        dot.position.z = at[2];
+        /*
+          A mesh positioned but never RENDERED has no world matrix, so a ray
+          cast in the same frame finds it at the ORIGIN and answers confidently
+          and wrongly. Clicking immediately after a rebuild is exactly that
+          case.
+        */
+        dot.computeWorldMatrix(true);
+      }
+    },
+    index() {
+      const map = new Map<unknown, string>();
+      for (const [id, dot] of dots) map.set(dot, id);
+      return map;
+    },
+    alive() {
+      return [...dots.values()].every((dot) => !dot.isDisposed());
+    },
+    dispose() {
+      for (const dot of dots.values()) dot.dispose();
+      dots.clear();
+      material.dispose();
+    },
+  };
+}

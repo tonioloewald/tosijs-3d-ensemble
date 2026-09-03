@@ -346,6 +346,20 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "lamp",
     icon: "💡",
+    marker: true,
+    /*
+      THE LIGHT IS THE PIECE'S BODY, and saying so is what makes a lamp
+      MOVABLE. Without this the element is just a handle: `built.element` stays
+      null, `placeMesh` finds no `mesh` and supplies nothing, and the piece ends
+      up with no body at all — so the editor writes a new position into the JSON
+      and there is nothing in the scene to write it to. Dragging the lantern
+      updated the file and moved no light.
+
+      This is the case `body` was always for and the registry doc says so: a
+      feature whose body is genuinely its own, rather than a decoration on a
+      placed mesh.
+    */
+    body: true,
     schema: {
       type: "object",
       title: "Lamp",
@@ -501,6 +515,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "camera",
     icon: "🎥",
+    marker: true,
     schema: {
       type: "object",
       title: "Camera",
@@ -577,6 +592,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "sound",
     icon: "🔊",
+    marker: true,
     schema: {
       type: "object",
       title: "Sound",

@@ -139,6 +139,20 @@ export interface FeatureRegistration<Handle = unknown> {
     cfg: Record<string, unknown>,
     ctx: FeatureContext
   ): Handle;
+  /**
+   * Apply a CHANGED config to the handle this feature already returned.
+   *
+   * Return true if it was applied. Return false, or omit this, and the caller
+   * rebuilds the whole ensemble instead — which is correct but expensive, and
+   * in an editor it is visible: a rebuild disposes and re-instantiates every
+   * piece, and `place-mesh` applies rotation on a RETRY over several frames, so
+   * rebuilding once per frame means no piece's rotation ever settles. Dragging
+   * a sky slider straightened every ship in the scene until the drag ended.
+   *
+   * Most features are a thin mapping onto an element's attributes, and for
+   * those this is one line — see `updateAttrs`.
+   */
+  update?(handle: Handle, cfg: Record<string, unknown>, piece: Piece): boolean;
   /** Reach for neighbours. Runs after every piece has bound. */
   link?(handle: Handle, ctx: FeatureContext): void;
   /**

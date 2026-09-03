@@ -66,6 +66,31 @@ const num = (min: number, max: number, def?: number, unit?: string) => ({
   ...(unit ? { "x-unit": unit } : {}),
 });
 
+/**
+ * Apply a feature's config to the element it created, without rebuilding.
+ *
+ * Every scene feature is a thin mapping from config onto element attributes, so
+ * "update" is just assignment — the transforms in the binds are DEFAULTS
+ * (`stillSky` supplies `realtimeScale: 0` when the config omits it) and
+ * placement (`x`/`y`/`z` from `ctx.at`), neither of which a feature-value edit
+ * changes.
+ *
+ * Assign only what DIFFERS. tosijs is observant: an element property write is a
+ * pin-point update and an unchanged write is skipped, but going through every
+ * key on every frame of a drag would still churn the ones nobody touched.
+ */
+export function updateAttrs(
+  handle: unknown,
+  cfg: Record<string, unknown>
+): boolean {
+  const element = handle as Record<string, unknown> | null;
+  if (!element || typeof element !== "object") return false;
+  for (const [key, value] of Object.entries(cfg)) {
+    if (element[key] !== value) element[key] = value;
+  }
+  return true;
+}
+
 /** Append an element to the scene and tear it down on dispose. */
 export function add(ctx: FeatureContext, el: unknown): SceneElement {
   const element = el as SceneElement;
@@ -315,6 +340,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "light",
     icon: "🔦",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Light",
@@ -346,6 +372,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "lamp",
     icon: "💡",
+    update: updateAttrs,
     marker: true,
     /*
       THE LIGHT IS THE PIECE'S BODY, and saying so is what makes a lamp
@@ -407,6 +434,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "sun",
     icon: "☀️",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Sun and shadows",
@@ -427,6 +455,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "skybox",
     icon: "🌌",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Sky",
@@ -497,6 +526,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "ground",
     icon: "🟫",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Ground plane",
@@ -515,6 +545,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "camera",
     icon: "🎥",
+    update: updateAttrs,
     marker: true,
     schema: {
       type: "object",
@@ -592,6 +623,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "sound",
     icon: "🔊",
+    update: updateAttrs,
     marker: true,
     schema: {
       type: "object",
@@ -619,6 +651,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "reflections",
     icon: "🪞",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Reflection probe",
@@ -640,6 +673,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "terrain",
     icon: "⛰️",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Terrain",
@@ -714,6 +748,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "water",
     icon: "🌊",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Water",
@@ -733,6 +768,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "clouds",
     icon: "☁️",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Clouds",
@@ -753,6 +789,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "ambient",
     icon: "🌗",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Ambient life",
@@ -771,6 +808,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "fog",
     icon: "🌫️",
+    update: updateAttrs,
     schema: {
       type: "object",
       title: "Fog",

@@ -106,6 +106,25 @@ export interface SchemaPanelOptions {
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
   /**
+   * A BOX for a property — a tosijs leaf with `.value` and `.observe()`.
+   *
+   * Hand one over and the widget binds to it: `boundValue` in widgets3d reads
+   * and writes THROUGH the store and updates the widget in place when the value
+   * changes elsewhere. Nothing here re-renders, because nothing needs to.
+   *
+   * This is the whole point, and it is what tosijs is for. The model is
+   * observant, not reactive — a write queues an rAF update that touches the one
+   * bound node that changed, it checks whether the value is actually new before
+   * bothering anybody, and it is heavily tested. Measured: 50 writes to one path
+   * produce 1 notification. Re-rendering a panel to show a number is doing that
+   * work again, worse.
+   *
+   * Return `undefined` for a key with no stable address and the widget falls
+   * back to a plain value plus `onChange`, which is what tool options do — they
+   * are not part of the document, so they have no path to bind to.
+   */
+  box?: (key: string) => unknown;
+  /**
    * A GESTURE finished — write it to the document, one undo step.
    *
    * Widgets with a drag report twice: `onChange` continuously so the scene can
@@ -124,7 +143,7 @@ export interface SchemaPanelOptions {
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, onChange, onCommit } = options;
+  const { schema, values, onChange, onCommit, box } = options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 
@@ -229,7 +248,13 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         toggle3d({
           label,
-          value: value === true,
+          /*
+            The BOX if there is one, else the plain value. `boundValue` decides:
+            anything with `.observe()` is driven through the store, anything else
+            is held locally. So one call site serves a bound document field and
+            an unbound tool option without either knowing about the other.
+          */
+          value: (box?.(key) as boolean | undefined) ?? value === true,
           onChange: (v: boolean) => onChange(key, v),
         })
       );
@@ -240,7 +265,10 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         select3d({
           label,
-          value: (value as string | number) ?? spec.enum[0]!,
+          value:
+            (box?.(key) as string | number | undefined) ??
+            (value as string | number) ??
+            spec.enum[0]!,
           options: spec.enum.map((option) => {
             const named = spec["x-labels"]?.[String(option)];
             // A named value is a word, not a quantity — "Off" takes no unit.
@@ -264,7 +292,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         slider3d({
           label,
-          value: Number(value) || 0,
+          value: (box?.(key) as number | undefined) ?? (Number(value) || 0),
           min,
           max,
           step: spec.type === "integer" ? 1 : undefined,

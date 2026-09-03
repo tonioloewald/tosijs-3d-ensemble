@@ -150,6 +150,37 @@ interface TosiStore {
 /** Distinguishes each editor's store path — see `_store`. */
 let documents = 0;
 
+/** The piece, feature and field a document path points at. */
+interface FeatureField {
+  id: string;
+  feature: string;
+  key: string;
+}
+
+/**
+ * Read `pieces[id=sky].features.skybox.timeOfDay` back into its three parts.
+ *
+ * Returns null for anything else — a structural change, a rename, a position —
+ * so the observer can tell a bound field write from everything else without
+ * the writer having to announce itself.
+ */
+function parseFeaturePath(path: string): FeatureField | null {
+  /*
+    ⚠️ NOT anchored at the start. An observed path is prefixed with the STORE
+    KEY — `ensemble-editor-1.pieces[id=sky].features.skybox.timeOfDay` — and a
+    `^pieces` anchor silently matched nothing.
+
+    The failure was not silent for long but it was well disguised: with no
+    field parsed, the write skipped rounding AND fell through to `chrome:
+    true`, which re-rendered the panel and destroyed the slider under the
+    pointer on the first frame of a drag. So the one bug looked like the
+    original "sliders don't work as sliders", after the fix for that had
+    landed.
+  */
+  const match = /pieces\[id=([^\]]+)\]\.features\.([^.]+)\.([^.]+)$/.exec(path);
+  return match ? { id: match[1]!, feature: match[2]!, key: match[3]! } : null;
+}
+
 /** A sample world to author against. Never saved with the ensemble. */
 export type Backdrop = "none" | "land" | "aquatic";
 
@@ -384,20 +415,244 @@ export class EnsembleEditor extends Component {
     Each editor gets its own store key, because `tosi` registers a global path
     namespace and two editors on one page would otherwise share a document.
   */
-  private _store = (
-    tosi({ [`ensemble-editor-${++documents}`]: EMPTY }) as unknown as Record<
-      string,
-      TosiStore
-    >
-  )[`ensemble-editor-${documents}`]!;
+  /**
+   * The tosijs BOX for one feature field, or undefined if there is no piece.
+   *
+   * Addressed by piece ID, never by array index — `pieces[id=sky].features…`.
+   * That is this format's own invariant ("derived ids mean every insertion
+   * renumbers the world") and xin's path syntax happens to agree, so a binding
+   * keeps pointing at its piece when something is inserted above it. Measured
+   * in `tosi-store.test.ts`, not assumed.
+   */
+  private _box(id: string, feature: string, key: string): unknown {
+    if (!this._ensemble.pieces.some((piece) => piece.id === id)) {
+      return undefined;
+    }
+    return (this._store as unknown as Record<string, unknown>)[
+      `pieces[id=${id}].features.${feature}.${key}`
+    ];
+  }
+
+  /**
+   * The document as of the last history entry, and its serialisation.
+   *
+   * The serialisation is the cheap test for "did anything actually change",
+   * which is what lets ONE observer serve both mutation paths without
+   * double-recording. `edit()` records its own step and calls `_markRecorded`,
+   * so by the time its notification arrives the snapshot already matches and
+   * the observer does nothing. A write straight through a bound widget leaves
+   * the snapshot stale, and the observer picks it up.
+   *
+   * Stringifying a small JSON document once per frame is nothing next to the
+   * scene rebuild it precedes — the same argument that lets `pick` rebuild its
+   * index per pick.
+   */
+  private _snapshot: Ensemble = EMPTY;
+
+  private _snapshotJson = "";
+
+  /** Coalescing key for the run in progress — the PATH being written. */
+  private _lastWritePath: string | null = null;
+
+  /** This document is now the baseline; nothing pending for the observer. */
+  private _markRecorded(): void {
+    this._snapshot = structuredClone(this._ensemble);
+    this._snapshotJson = JSON.stringify(this._ensemble);
+    this._lastWritePath = null;
+  }
+
+  /**
+   * A bound widget wrote to the document. Do what `updateFeature` used to.
+   *
+   * Undo coalesces on the PATH, which is the observant model's actual point:
+   * every write carries a stable global address, so "is this the same edit
+   * continuing?" is a string comparison rather than a `describe` string I
+   * invented and had to keep unique. One drag of one slider is one step.
+   *
+   * The scene rebuild rides tosijs's batching — notifications arrive on an rAF,
+   * so fifty pointer-moves rebuild the scene once per frame instead of fifty
+   * times. That is the other half of "applying change too aggressively", and it
+   * came free with the store rather than needing a debounce of my own.
+   */
+  private _onDocumentWrite(path: string): void {
+    /*
+      ROUND FIRST, and by MUTATING THE RAW DOCUMENT rather than writing a box.
+
+      Writing a box here would notify again, and that second notification looks
+      like a fresh edit — a new undo step for a change the author did not make.
+      Mutating the plain object under the store sidesteps the cycle entirely,
+      and costs nothing that matters: the widget is the one displaying the
+      value, it already shows what the pointer is doing, and the document is
+      what the rounding is FOR.
+    */
+    this._roundDocument();
+
+    const json = JSON.stringify(this._ensemble);
+    // Nothing new — including every notification raised by `edit()` itself,
+    // which has already recorded its own step.
+    if (json === this._snapshotJson) return;
+
+    /*
+      Coalesce on the PATH, which is the observant model's actual point: every
+      write carries a stable global address, so "is this the same edit
+      continuing?" is a string comparison rather than a `describe` string I
+      invented and had to keep unique. One drag of one slider is one step.
+    */
+    if (path !== this._lastWritePath) {
+      this._history.record(path, this._snapshot);
+      this._lastWritePath = path;
+    }
+    /*
+      APPLY, DON'T REBUILD, when the feature knows how.
+
+      A rebuild disposes and re-instantiates every piece, and `place-mesh`
+      applies rotation on a RETRY over several frames — so rebuilding once per
+      frame means no piece's rotation ever settles. Dragging a sky slider
+      straightened every ship in the cove until the drag ended. (Not new: the
+      old `updateFeature` rebuilt too. It only became visible once the slider
+      survived long enough to produce a sustained drag.)
+
+      The snapshot is still the pre-change document at this point, so it is what
+      says WHICH configs moved.
+    */
+    const applied = this._applyFeatureUpdates(this._snapshot);
+
+    this._snapshot = structuredClone(this._ensemble);
+    this._snapshotJson = json;
+
+    /*
+      NEVER the chrome. A bound widget is already showing its own value, and
+      re-rendering would destroy the one the pointer is holding — which is the
+      bug this whole change exists to fix. Panel SHAPE changes do not come
+      through here at all: a field other fields are gated on is deliberately
+      left unbound, so it travels the explicit `updateFeature` path instead.
+    */
+    if (!applied) this.rebuild({ chrome: false });
+  }
+
+  /**
+   * Push changed feature configs into the live scene. True if ALL of them went.
+   *
+   * False means something changed that no feature could apply — a piece added
+   * or removed, a mesh swapped, a feature without an `update` — and the caller
+   * falls back to a rebuild. All-or-nothing on purpose: a partial application
+   * would leave the scene disagreeing with the document in a way nothing would
+   * report.
+   */
+  private _applyFeatureUpdates(before: Ensemble): boolean {
+    const built = this._built;
+    if (!built) return false;
+
+    const previous = new Map(
+      before.pieces.map((piece) => [piece.id, piece] as const)
+    );
+    if (previous.size !== this._ensemble.pieces.length) return false;
+
+    for (const piece of this._ensemble.pieces) {
+      const was = previous.get(piece.id);
+      // A new, renamed or removed piece is structural.
+      if (!was) return false;
+      // Anything outside `features` — position, mesh, enabled — is not ours.
+      if (
+        JSON.stringify({ ...piece, features: null }) !==
+        JSON.stringify({ ...was, features: null })
+      ) {
+        return false;
+      }
+      const names = new Set([
+        ...Object.keys(piece.features ?? {}),
+        ...Object.keys(was.features ?? {}),
+      ]);
+      for (const name of names) {
+        const now = piece.features?.[name];
+        const then = was.features?.[name];
+        if (JSON.stringify(now) === JSON.stringify(then)) continue;
+        // A feature gained or lost is structural, not a value change.
+        if (!now || !then) return false;
+        const registration = featureRegistration(name);
+        const handle = built.pieces.get(piece.id)?.handles.get(name);
+        if (!registration?.update || handle === undefined) return false;
+        if (
+          !registration.update(
+            handle as never,
+            now as Record<string, unknown>,
+            piece
+          )
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Round every feature value in the document, in place.
+   *
+   * Whole-document rather than "the field the path names", because an observed
+   * path is not always a field: tosijs may report the store ROOT for a change
+   * underneath it, and a rounder that depended on parsing the path quietly did
+   * nothing in exactly that case. Walking a small JSON document is nothing next
+   * to the scene rebuild it precedes.
+   *
+   * Per-field precision survives the change, since the walk knows which feature
+   * and key it is on and can ask the schema.
+   */
+  private _roundDocument(): void {
+    for (const piece of this._ensemble.pieces) {
+      for (const [feature, config] of Object.entries(piece.features ?? {})) {
+        const values = config as Record<string, unknown>;
+        if (!values || typeof values !== "object") continue;
+        for (const key of Object.keys(values)) {
+          const rounded = roundDeep(
+            values[key],
+            this._precisionFor(feature, key)
+          );
+          // Assign only on a real change: `roundDeep` rebuilds objects, so an
+          // unconditional write would replace equal structures every frame.
+          if (JSON.stringify(rounded) !== JSON.stringify(values[key])) {
+            values[key] = rounded;
+          }
+        }
+      }
+    }
+  }
+
+  /** This editor's key in the global tosijs namespace. Declared FIRST. */
+  private _storeKey = `ensemble-editor-${++documents}`;
+
+  private _stores = tosi({
+    // CLONED. `EMPTY` is a module constant, and handing the same object to two
+    // stores would alias two editors' documents together.
+    [this._storeKey]: structuredClone(EMPTY),
+  }) as unknown as Record<string, TosiStore>;
+
+  private get _store(): TosiStore {
+    return this._stores[this._storeKey]!;
+  }
 
   /** The plain document. Boxes are for binding; everything else reads this. */
   private get _ensemble(): Ensemble {
     return this._store.tosi.value;
   }
 
+  /*
+    ⚠️ NEVER HOLD A BOXED PROXY ACROSS A WRITE TO ITS PARENT.
+
+    `.tosi.value = wholeNewDocument` writes the store perfectly well. What does
+    not work is reading it back through a reference CAPTURED before the write:
+    that reference keeps answering with the old document, forever, with no error
+    anywhere. Loading an ensemble looked like it silently failed and the editor
+    sat there holding an empty document.
+
+    Which is why `_store` above is a GETTER over `_stores[_storeKey]` rather
+    than a field initialised once — every read goes down the chain and gets the
+    live box. Pinned in `tosi-store.test.ts`, including the stale-capture case,
+    because it looks exactly like a write that never happened.
+  */
   private set _ensemble(value: Ensemble) {
-    this._store.tosi.value = value;
+    (this._stores as unknown as Record<string, Ensemble>)[this._storeKey] =
+      value;
   }
 
   /**
@@ -417,6 +672,9 @@ export class EnsembleEditor extends Component {
   private _index = new Map<unknown, string>();
   private _tool = "select";
   private _toolOptions: Record<string, unknown> = {};
+  /** Detaches the document observer. Called on disconnect. */
+  private _unobserve: (() => void) | null = null;
+
   private _stopFrames: (() => void) | null = null;
   private _handles: HandlesView | null = null;
   private _selected: string | null = null;
@@ -867,6 +1125,15 @@ export class EnsembleEditor extends Component {
     */
     this._history.record(describe, this._ensemble, options?.coalesce);
     mutate(this._ensemble);
+    /*
+      MUTATED THE RAW DOCUMENT, so tell the store — bound widgets are watching
+      paths, and a mutation they never hear about leaves the panel showing the
+      old number. `touch` is the notification; `_markRecorded` is what stops
+      that notification being mistaken for a fresh edit by the observer, since
+      this function has already recorded its own step.
+    */
+    this._markRecorded();
+    this._store.tosi.touch();
 
     /*
       A DRAG RELEASE HAS NOTHING TO REBUILD.
@@ -932,6 +1199,9 @@ export class EnsembleEditor extends Component {
    */
   private _restore(ensemble: Ensemble): void {
     this._ensemble = ensemble;
+    // An undo is not an edit. Rebase the baseline so the observer does not
+    // record the restoration as a new step you would then have to undo.
+    this._markRecorded();
     if (
       this._selected &&
       !ensemble.pieces.some((p) => p.id === this._selected)
@@ -1026,6 +1296,17 @@ export class EnsembleEditor extends Component {
     this._attachShortcuts();
 
     /*
+      ONE OBSERVER FOR THE WHOLE DOCUMENT, rather than a callback per widget.
+      tosijs batches on an rAF and skips writes that change nothing, so this
+      fires once per frame during a drag and not at all when a widget rewrites
+      the value it already had.
+    */
+    this._unobserve?.();
+    this._unobserve = this._store.tosi.observe((path) =>
+      this._onDocumentWrite(String(path))
+    );
+
+    /*
       THE INPUT LOOP IS NOT THE RENDER LOOP.
 
       The obvious wiring is `scene.registerBeforeRender`, and it is wrong here:
@@ -1078,6 +1359,11 @@ export class EnsembleEditor extends Component {
     */
     this._stopFrames?.();
     this._stopFrames = null;
+    // The store outlives a disconnect — it is keyed to this element, not to
+    // the DOM — so the observer has to come off or a re-parented editor ends up
+    // with two of them rebuilding the scene on every write.
+    this._unobserve?.();
+    this._unobserve = null;
     this._pointer?.dispose();
     this._pointer = null;
     this._detachShortcuts?.();
@@ -2858,6 +3144,26 @@ export class EnsembleEditor extends Component {
         schema: registration.schema,
         values: (config ?? {}) as Record<string, unknown>,
         /*
+          BOUND, so the widget reads and writes the document itself and tosijs
+          keeps it current. Nothing here re-renders to show a number.
+        */
+        box: (key) =>
+          /*
+            A field OTHER FIELDS ARE GATED ON stays unbound on purpose.
+
+            Flipping `terrain.biome` has to make `biomeSeaLevel` and
+            `biomeLapseRate` appear, and appearing is a structural change — the
+            one thing the practice doc says a render pass is for. Leaving that
+            one field on the explicit `updateFeature` path keeps the re-render
+            where it belongs and keeps it out of the observer, which must never
+            touch the panel because a bound widget may be mid-drag.
+
+            Everything else binds, which is everything you can drag.
+          */
+          this._changesPanelShape(name, key)
+            ? undefined
+            : this._box(selected.id, name, key),
+        /*
           BOTH channels write, and they differ only in undo granularity.
 
           An ordinary control — a slider, a toggle — has no gesture end to wait
@@ -2868,8 +3174,28 @@ export class EnsembleEditor extends Component {
           A composite widget DOES know when its gesture ended and says so
           through `onCommit`, which takes its own step.
         */
-        onChange: (key, value) =>
-          this.updateFeature(selected.id, name, key, value, undefined, true),
+        /*
+          ONLY FOR WHAT IS NOT BOUND. A bound widget has ALREADY written the
+          value through its box by the time this fires — writing it again would
+          be a second, redundant trip through `edit`, recording a history step
+          for a change the observer is about to record properly.
+
+          What is left: the icon-grid cell selector, which has no single field
+          to address, and anything a schema describes that the bound branches do
+          not cover.
+        */
+        onChange: (key, value) => {
+          const bound =
+            !this._changesPanelShape(name, key) &&
+            this._box(selected.id, name, key);
+          if (bound) return;
+          this.updateFeature(selected.id, name, key, value, undefined, true);
+        },
+        /*
+          Composite widgets — the light editor, a curve — hand back a WHOLE
+          object at the end of a gesture and do not use `boundValue`, so they
+          still commit through here.
+        */
         onCommit: (key, value, describe) =>
           this.updateFeature(selected.id, name, key, value, describe),
       });

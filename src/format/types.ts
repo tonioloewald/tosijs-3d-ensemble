@@ -274,6 +274,24 @@ export interface Ensemble {
    */
   scale?: number;
   pieces: Piece[];
+  /**
+   * Scenery for the AUTHOR, which is not part of the ensemble.
+   *
+   * A base that applies a province to ambient terrain has nothing to stand on
+   * while you author it: you need a terrain to see the province against, and
+   * that terrain must not travel with the base — or every consumer gets one
+   * imposed on the terrain it already has.
+   *
+   * A separate block rather than a flag on a piece, and the difference is the
+   * whole point. A `context: true` piece is one missing `filter` away from
+   * being built by a consumer that never heard of the flag, and the failure is
+   * silent: a game quietly gains a terrain. Nothing that reads `pieces` can
+   * build these by accident, because it never sees them.
+   *
+   * `buildEnsemble` ignores this. The EDITOR builds it, faded and unpickable —
+   * see `EnsembleEditor`.
+   */
+  preview?: { pieces: Piece[] };
   links?: Link[];
   points?: Point[];
   zones?: Zone[];

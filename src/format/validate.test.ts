@@ -225,3 +225,44 @@ describe("scale, uniform or per axis", () => {
     ).toBe("warning");
   });
 });
+
+describe("the preview block", () => {
+  const withScenery = (pieces: unknown[]) =>
+    validate({
+      name: "sited",
+      pieces: [{ id: "real", mesh: "X", at: [0, 0, 0] }],
+      preview: { pieces: pieces as never },
+    } as never);
+
+  it("reports its problems, and never as errors", () => {
+    const problems = withScenery([{ id: "island" }]);
+    expect(problems.length).toBeGreaterThan(0);
+    expect(problems.every((p) => p.severity === "warning")).toBe(true);
+  });
+
+  it("paths findings into /preview so an editor can point at them", () => {
+    expect(withScenery([{ id: "island" }])[0]!.path).toStartWith(
+      "/preview/pieces/0"
+    );
+  });
+
+  it("says nothing at all when the scenery is sound", () => {
+    expect(withScenery([{ id: "island", mesh: "X", at: [0, 0, 0] }])).toEqual(
+      []
+    );
+  });
+
+  it("warns when a preview id shadows a real one", () => {
+    const problems = withScenery([{ id: "real", mesh: "X", at: [0, 0, 0] }]);
+    expect(problems.map((p) => p.code)).toEqual(["preview-shadows-piece"]);
+  });
+
+  it("is silent about an ensemble that has none", () => {
+    expect(
+      validate({
+        name: "bare",
+        pieces: [{ id: "a", mesh: "X", at: [0, 0, 0] }],
+      })
+    ).toEqual([]);
+  });
+});

@@ -265,6 +265,21 @@ export class EnsembleEditor extends Component {
     /** Sample world to author against — authoring context, never saved. */
     backdrop: "land" as Backdrop,
     /**
+     * Metres between the water surface and the backdrop's grid plane.
+     *
+     * The grid plane used to be SUPPRESSED whenever anything supplied water,
+     * because two surfaces at the same level z-fight. But suppressing it threw
+     * away the one thing that makes a sea authorable — a floor with a scale on
+     * it — so a cove looked like ships floating in a void. Below rather than
+     * absent: no coincident surfaces, and the seabed reads as a seabed.
+     *
+     * Customisable because the right depth is a judgement about the scene: too
+     * shallow and the grid shows through the water it is meant to sit under;
+     * too deep and it is invisible haze. Zero puts them back in the same plane
+     * and brings back the flicker, so the floor is a centimetre.
+     */
+    seabed: 12,
+    /**
      * Hide the piece list and property panel.
      *
      * Inverted on purpose: an HTML boolean attribute is false-by-default
@@ -1107,6 +1122,16 @@ export class EnsembleEditor extends Component {
     }
     const scene = b3d({
       /*
+        LOOK UP FROM UNDERNEATH. `<tosi-b3d>` defaults to 5°-70° above the
+        horizon, which is right for a game — a player who orbits below the
+        ground plane sees the world from inside the floor. An author is not a
+        player: checking that a hull sits ON the water rather than through it,
+        or that a piece's underside clears the terrain, is a view from slightly
+        below, and 5° above cannot give it. Going far under is still useless,
+        so this opens a lip rather than the whole hemisphere.
+      */
+      minElevation: -20,
+      /*
         Pointers attach HERE, not in `connectedCallback`.
 
         `<tosi-b3d>` builds its Babylon scene asynchronously, so at connect
@@ -1155,6 +1180,8 @@ export class EnsembleEditor extends Component {
     this._sceneReady = false;
     this._built?.dispose();
     this._built = null;
+    this._preview?.dispose();
+    this._preview = null;
     this._handles?.dispose();
     this._handles = null;
     this._marker?.dispose();
@@ -1214,10 +1241,19 @@ export class EnsembleEditor extends Component {
   */
   private _syncBackdrop(): void {
     if (!this._scene) return;
+    /*
+      A DISABLED PIECE PROVIDES NOTHING, so it must not suppress the backdrop
+      part it would have provided. Switching the sea off left `water` in this
+      set, so the ground — which yields to any surface at the same level —
+      stayed suppressed too, and the grid did not come back: "when I disabled
+      water I didn't see the grid". The doc above already says deleting the
+      skybox piece should return the backdrop's sky; disabling it is the same
+      claim withdrawn, and the set is where that has to be read.
+    */
     const used = new Set(
-      this._ensemble.pieces.flatMap((piece) =>
-        Object.keys(piece.features ?? {})
-      )
+      this._ensemble.pieces
+        .filter((piece) => piece.enabled !== false)
+        .flatMap((piece) => Object.keys(piece.features ?? {}))
     );
     const aquatic = this.backdrop === "aquatic";
     const on = this.backdrop !== "none";
@@ -1245,21 +1281,46 @@ export class EnsembleEditor extends Component {
       plane as well, both at y=0, which is the coincident-surface flicker all
       over again in a costume.
     */
+    /*
+      WATER PUSHES THE FLOOR DOWN; IT NO LONGER REMOVES IT. Ground and terrain
+      still suppress it outright — those ARE floors, and a second one under a
+      terrain is invisible at best and z-fighting at worst.
+    */
+    const wet = used.has("water") || (on && aquatic);
+    const floor = wet ? this._waterLevel() - Math.max(this.seabed, 0.01) : 0;
     this._backdropPart(
       "ground",
-      on && !used.has("ground") && !used.has("terrain") && !used.has("water"),
+      on && !used.has("ground") && !used.has("terrain"),
       () =>
         b3dGround({
           width: 4000,
           height: 4000,
-          y: aquatic ? -140 : 0,
+          y: floor,
           // A neutral grid, not a checker: a checker reads as "missing
           // texture", where a metric grid gives the eye a scale reference
           // while judging an arrangement.
           texture: GRID_TEXTURE,
           textureTiles: 4000 / GRID_METRES,
-        })
+        }),
+      false,
+      (element) => {
+        (element as unknown as { y: number }).y = floor;
+      }
     );
+  }
+
+  /**
+   * The height the sea sits at — the ensemble's own water piece, or zero.
+   *
+   * A water FEATURE has no level of its own; the piece carrying it does, and
+   * an author who drops the sea to y=-3 to sink a wreck should take the seabed
+   * down with it rather than have the grid surface through the water.
+   */
+  private _waterLevel(): number {
+    const piece = this._ensemble.pieces.find(
+      (p) => p.enabled !== false && p.features?.water
+    );
+    return piece?.at?.[1] ?? 0;
   }
 
   /** Add or remove one backdrop element, idempotently. */
@@ -1274,7 +1335,9 @@ export class EnsembleEditor extends Component {
       that supplies its own sea, which is the coincident-surface bug the
       `wanted` test exists to prevent, reintroduced from the other side.
     */
-    cededToEnsemble = false
+    cededToEnsemble = false,
+    /** Applied on every sync to a part that already exists. */
+    update?: (element: SceneElement) => void
   ): void {
     const existing = this._backdrop.get(name);
     if (wanted && !existing) {
@@ -1283,6 +1346,14 @@ export class EnsembleEditor extends Component {
       this._backdrop.set(name, element);
       return;
     }
+    /*
+      AN EXISTING PART STILL HAS TO TRACK ITS INPUTS. `make` runs once, so
+      everything it computes freezes at first sight — the seabed depth was
+      right on the rebuild that created the ground and never moved again, so
+      sinking the sea left the grid surfacing through it. Reconciling means
+      reconciling the values too, not just the presence.
+    */
+    if (wanted && existing) update?.(existing);
     if (!wanted && existing) {
       /*
         HAND IT OVER, DO NOT DESTROY IT.
@@ -1335,6 +1406,7 @@ export class EnsembleEditor extends Component {
       placePiece: placeMesh,
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     });
+    this._buildPreview();
     /*
       Reap AFTER the build, never between dispose and build.
 
@@ -2249,6 +2321,69 @@ export class EnsembleEditor extends Component {
       )
     );
   }
+
+  /**
+   * Build the author's scenery — `ensemble.preview` — faded and unpickable.
+   *
+   * A SECOND `buildEnsemble` over a different piece list, not a flag threaded
+   * through the first, which is what keeps the safety property: the runtime
+   * call only ever sees `pieces`, so nothing here can reach a consumer.
+   */
+  private _buildPreview(): void {
+    this._preview?.dispose();
+    this._preview = null;
+    const pieces = this._ensemble.preview?.pieces ?? [];
+    if (!pieces.length || !this._scene) return;
+    this._preview = buildEnsemble(
+      { ...this._ensemble, pieces, preview: undefined },
+      {
+        scene: this._scene,
+        library: this.library,
+        placePiece: placeMesh,
+        ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
+      }
+    );
+    this._fadePreview();
+  }
+
+  /**
+   * Make the scenery read as scenery: faded, and never in the way.
+   *
+   * ⚠️ `mesh.visibility`, NOT `material.alpha`. Library materials are SHARED
+   * between instances, so tinting one would fade the real pieces that happen to
+   * use the same mesh — the context terrain and the terrain you are authoring
+   * would dim together, which is the opposite of the point.
+   *
+   * Unpickable too: scenery you can click is scenery you select by accident
+   * while reaching for the thing behind it. It stays reachable from the piece
+   * list, which is where you go when you mean it.
+   *
+   * Deferred, because a library instance does not exist when its element is
+   * appended — the same reason `place-mesh` waits before writing a transform.
+   */
+  private _fadePreview(): void {
+    const apply = () => {
+      for (const built of this._preview?.pieces.values() ?? []) {
+        const root = ((built.element as { mesh?: unknown } | null)?.mesh ??
+          built.node) as {
+          getChildMeshes?: (d?: boolean) => Array<Record<string, unknown>>;
+        } | null;
+        if (!root?.getChildMeshes) continue;
+        for (const mesh of [
+          root as unknown as Record<string, unknown>,
+          ...root.getChildMeshes(false),
+        ]) {
+          if (typeof mesh.visibility === "number") mesh.visibility = 0.3;
+          mesh.isPickable = false;
+        }
+      }
+    };
+    apply();
+    // Instances arrive late; a single pass would fade only what was ready.
+    for (const delay of [120, 400, 1200]) setTimeout(apply, delay);
+  }
+
+  private _preview: BuiltEnsemble | null = null;
 
   /** The piece list, split into environment primitives and placed content. */
   private _pieceGroups(): unknown[] {

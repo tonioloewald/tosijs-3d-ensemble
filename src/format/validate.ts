@@ -354,6 +354,55 @@ export function validate(
     }
   }
 
+  /*
+    THE PREVIEW BLOCK IS CHECKED, BUT ONLY EVER AS A WARNING.
+
+    Nothing here can reach a consumer — `buildEnsemble` never reads it — so
+    none of it can break anybody's game, and an error would be a lie. But the
+    EDITOR builds these pieces, so they can be wrong, and this is the only
+    channel that would say so; left unchecked, a context terrain with a
+    misspelled mesh is just scenery that silently did not appear.
+
+    The same validator, re-entered on the preview's pieces, with its paths
+    re-rooted — one implementation, so the two can never drift.
+
+    `checkRegistry: false` deliberately. Registered checks are DOMAIN rules,
+    and scenery is not part of the design: a combat preset asking why the
+    context island has no power source is noise about something the author is
+    only looking at.
+  */
+  const scenery = ensemble.preview?.pieces;
+  if (Array.isArray(scenery) && scenery.length) {
+    const inner = validate(
+      { ...ensemble, pieces: scenery, preview: undefined },
+      { ...opts, checkRegistry: false }
+    );
+    for (const problem of inner) {
+      problems.push({
+        ...problem,
+        severity: "warning",
+        path: problem.path.startsWith("/pieces")
+          ? `/preview${problem.path}`
+          : `/preview/pieces${problem.path}`,
+      });
+    }
+    /*
+      Ids collide in the SCENE even though they do not collide in the format —
+      the two builds keep separate maps, but the author looking at two things
+      called `island` has no way to tell which one they can move.
+    */
+    const real = new Set(ensemble.pieces.map((piece) => piece.id));
+    scenery.forEach((piece, i) => {
+      if (real.has(piece.id))
+        add(
+          "warning",
+          "preview-shadows-piece",
+          `preview piece "${piece.id}" has the same id as a real piece`,
+          `/preview/pieces/${i}/id`
+        );
+    });
+  }
+
   return problems;
 }
 

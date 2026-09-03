@@ -335,3 +335,57 @@ describe("buildEnsemble", () => {
     expect(seen).toBe(body);
   });
 });
+
+describe("what a build refuses to build", () => {
+  it("skips a piece marked enabled: false", () => {
+    const built = buildEnsemble(
+      {
+        name: "muted",
+        pieces: [
+          { id: "on", mesh: "X", at: [0, 0, 0] },
+          { id: "off", mesh: "X", at: [0, 0, 0], enabled: false },
+        ],
+      },
+      { scene: fakeScene() }
+    );
+    expect([...built.pieces.keys()]).toEqual(["on"]);
+  });
+
+  it("treats every other value of enabled as ON", () => {
+    /*
+      `enabled === false`, never truthiness. Every ensemble ever written omits
+      the field, so a falsy test would build all of them as empty scenes — and
+      silently, since an empty scene throws nothing.
+    */
+    const built = buildEnsemble(
+      {
+        name: "implied",
+        pieces: [
+          { id: "absent", mesh: "X", at: [0, 0, 0] },
+          { id: "true", mesh: "X", at: [0, 0, 0], enabled: true },
+        ],
+      },
+      { scene: fakeScene() }
+    );
+    expect([...built.pieces.keys()]).toEqual(["absent", "true"]);
+  });
+
+  it("never builds the author's preview scenery", () => {
+    /*
+      THE POINT OF THE `preview` BLOCK. A `context: true` flag on a piece is
+      one missing `filter` away from being built by a consumer that never heard
+      of it, and the failure is silent — a game gains a terrain it did not ask
+      for. A separate block cannot be built by accident because the runtime
+      never looks there. This test is what keeps that true.
+    */
+    const built = buildEnsemble(
+      {
+        name: "sited",
+        pieces: [{ id: "real", mesh: "X", at: [0, 0, 0] }],
+        preview: { pieces: [{ id: "scenery", mesh: "X", at: [0, 0, 0] }] },
+      },
+      { scene: fakeScene() }
+    );
+    expect([...built.pieces.keys()]).toEqual(["real"]);
+  });
+});

@@ -1,6 +1,6 @@
 {
   "name": "tosijs-3d-ensemble",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The tosijs-3d ensemble format, its instantiator, and a graphical editor for authoring ensembles.",
   "main": "./dist/index.js",
   "exports": {

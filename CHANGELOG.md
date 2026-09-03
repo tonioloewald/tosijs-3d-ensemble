@@ -3,6 +3,62 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.1.2] — 2026-09-04
+
+⚠️ **0.1.1 was tagged but never reached npm.** Everything local was green — the
+tag, the push, the build — and the one step nobody checked afterwards was the
+publish. `npm view` said `0.1.0` while the repo said `v0.1.1`. So 0.1.2 carries
+0.1.1's fix as well; if you are on 0.1.0, this is the release that unbreaks the
+import.
+
+### Fixed
+
+- **A re-parent reloaded `src` over the author's work.** The doc system
+  re-parents this element, a re-parent is a disconnect plus a connect, and
+  `connectedCallback` re-fetched `src` — replacing whatever was loaded or
+  edited, with no error and no undo entry, since a document swap clears the
+  history by design. Loaded once per `src` now, not once per connect.
+- **`terrain` produced no ground at all.** The element preallocates a tile pool
+  and fills it only on `regenerate()`, which nothing called. Its first outing in
+  a live scene, and it had never worked.
+- **The camera framed a terrain from inside it.** Framing used authored
+  positions, and a terrain sits at the origin contributing nothing to the span.
+  It now reads extent from the ensemble — `reach`, or `tileSize × 2^lodLevels`.
+- **Every terrain slider value was invented, and wrong.** `grossScale` is a
+  FREQUENCY (0.005–0.3, default 0.015); it was declared as metres, 1–1,000,000,
+  defaulting to 4000. The whole set now comes from tosijs-3d's own terrain demo.
+  `horizScale` was missing entirely, so two of three interacting quantities were
+  adjustable and the third invisible.
+- **`reach` could hang the tab.** Finest tiles go as `(2·reach / tileSize)²` and
+  they are separate controls, so the product bites. `tileSize` now has a floor,
+  which is the term driving the square.
+- **Toggling `biome` did nothing visible.** It wrote and regenerated, but the
+  fields it gates could not appear, because the code path that stops a slider
+  being destroyed mid-drag also suppressed the re-render.
+- **Sliders behaved as sliders.** The panel is no longer re-rendered on a value
+  change, so a drag keeps the widget it started on. One drag is one undo step.
+
+### Added
+
+- **A `utilities` library in the insert palette** — sun, sky, terrain, water,
+  lamp, camera, sound and the rest. The format always allowed a piece whose
+  features are its body; nothing could create one, because the palette lists
+  meshes. `registerFeature({ primitive: true })` marks a feature that can stand
+  alone, so a consumer's own appears there too.
+- **`insertAt`** — where an inserted primitive goes: the clicked point, the
+  clicked height only (a terrain has no x/z), or a fixed position (a skybox has
+  no position; `sun`'s `at` is a direction).
+- **A `New` button**, which starts a scene with the things that shape it — sun,
+  light and sky enabled, terrain and water present but disabled. An empty
+  document had nothing to change the light with. It is an edit, so it undoes.
+- **Piece renaming**, from the property panel, re-pointing `links` and any
+  feature field declared `"x-widget": "ref"`.
+- **`preview.pieces`** — scenery for the author that no consumer ever builds,
+  drawn faded and unpickable.
+- **`Piece.enabled`** — `false` skips a piece at build without deleting it.
+- **Three decimal places** on values entering the document, so a pointer drag
+  stops writing `20.651162790697676`.
+
 ## [0.1.1] — 2026-09-03
 
 ### Fixed
@@ -85,5 +141,6 @@ Stated plainly because the alternative is somebody discovering them:
 `tosijs-3d ^0.7.0` — never a prerelease range; `0.7.0-rc.1` was published before
 the betas and semver sorts beta below rc, so `^0.7.0-beta.6` resolves backwards.
 
+[0.1.2]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.2
 [0.1.1]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.1
 [0.1.0]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.0

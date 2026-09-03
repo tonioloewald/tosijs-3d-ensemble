@@ -1951,6 +1951,38 @@ export class EnsembleEditor extends Component {
     camera.target.y = (axes[1]!.min + axes[1]!.max) / 2;
     camera.target.z = (axes[2]!.min + axes[2]!.max) / 2;
     camera.radius = Math.max(span * 2.2, 24);
+
+    /*
+      TERRAIN HAS NO POSITION AND ENORMOUS EXTENT, so framing on authored
+      positions alone puts the camera INSIDE the ground.
+
+      A terrain piece sits at `[0,0,0]` and contributes nothing to the span, so
+      an ensemble that is a landscape plus two props frames as if it were two
+      props: radius 24, target at y=0, and the surface — 40m of relief over a
+      400m wavelength — closes over the camera. It rendered perfectly and looked
+      like a grey void. Owner, on seeing it: "terrains tend to be large by
+      default".
+
+      Read from the ENSEMBLE rather than sampled from the mesh: the numbers that
+      say how big it is are in the document, the terrain streams tiles around
+      the camera so it has no bounds to measure anyway, and a height sample
+      would need the element ready — which framing does not wait for.
+    */
+    const terrain = this._ensemble.pieces.find(
+      (piece) => piece.enabled !== false && piece.features?.terrain
+    );
+    if (terrain) {
+      const cfg = terrain.features!.terrain as Record<string, number>;
+      const relief = Number(cfg.grossAmplitude ?? 0);
+      const wavelength = Number(cfg.grossScale ?? 0);
+      // Above the ridges, not level with them: `at[1]` is the terrain's base
+      // height and the relief goes UP from there.
+      camera.target.y = (terrain.at?.[1] ?? 0) + relief;
+      // Far enough back to see a feature of the landscape rather than a facet
+      // of one. Half a wavelength shows a hill and its neighbour.
+      camera.radius = Math.max(camera.radius, wavelength / 2, relief * 4, 120);
+    }
+
     camera.beta = 1.15;
   }
 

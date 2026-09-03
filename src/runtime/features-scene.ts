@@ -91,6 +91,42 @@ export function updateAttrs(
   return true;
 }
 
+/**
+ * Ask a terrain to actually build its ground.
+ *
+ * ⚠️ **A terrain that is appended and configured renders NOTHING.** It
+ * preallocates a tile pool — 120 meshes with `isVisible: false` and no
+ * bounds — and fills it only when told to. Measured: `regenerate()` took the
+ * visible count from 0 to 120 in one call.
+ *
+ * Upstream says so for the authored hooks ("Set it, then `regenerate()`"), and
+ * it is true of the ordinary attributes too. So this is the first built-in
+ * feature to be exercised in a live scene, and it did not work — which is the
+ * changelog's "thin bindings, unverified" arriving on schedule.
+ *
+ * DEFERRED, because the element runs `sceneReady` after it joins the document
+ * and there is nothing to regenerate before that. Retried on a short budget for
+ * the same reason `place-mesh` retries: "appended" is not "ready", and calling
+ * once, immediately, is a silent no-op one layer down.
+ */
+function regenerateWhenReady(element: unknown, ctx: FeatureContext): void {
+  const target = element as { regenerate?: () => void } | null;
+  if (!target?.regenerate) return;
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    try {
+      target.regenerate?.();
+      clearInterval(timer);
+    } catch {
+      // Not ready yet. A throw here is expected early and fatal late, so the
+      // budget is what turns "too soon" into "give up" rather than a spin.
+      if (tries >= 40) clearInterval(timer);
+    }
+  }, 50);
+  ctx.onDispose(() => clearInterval(timer));
+}
+
 /** Append an element to the scene and tear it down on dispose. */
 export function add(ctx: FeatureContext, el: unknown): SceneElement {
   const element = el as SceneElement;
@@ -719,8 +755,17 @@ export function registerSceneFeatures(): void {
     icon: "⛰️",
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
-    update: (handle, cfg) =>
-      updateAttrs(handle, { ...cfg, biome: cfg.biome ? "on" : "off" }),
+    update: (handle, cfg) => {
+      const changed = updateAttrs(handle, {
+        ...cfg,
+        biome: cfg.biome ? "on" : "off",
+      });
+      // Setting attributes is not rebuilding the ground. Without this a slider
+      // moves a number and the terrain keeps its old shape — the same silent
+      // nothing as never generating it in the first place.
+      (handle as { regenerate?: () => void })?.regenerate?.();
+      return changed;
+    },
     schema: {
       type: "object",
       title: "Terrain",
@@ -778,8 +823,8 @@ export function registerSceneFeatures(): void {
       at y=-140 through the camera at y=0. `x`/`z` are ignored on purpose: the
       field is unbounded, so there is nothing for them to mean.
     */
-    bind: (_piece, cfg, ctx) =>
-      add(
+    bind: (_piece, cfg, ctx) => {
+      const element = add(
         ctx,
         b3dTerrain({
           baseHeight: ctx.at[1],
@@ -789,7 +834,10 @@ export function registerSceneFeatures(): void {
           // enum and a raw boolean would not survive the trip.
           biome: cfg.biome ? "on" : "off",
         })
-      ),
+      );
+      regenerateWhenReady(element, ctx);
+      return element;
+    },
   });
 
   registerFeature({

@@ -79,3 +79,41 @@ describe("history", () => {
     expect(h.undo({ n: 99 })!.state).toEqual({ n: 9 });
   });
 });
+
+/*
+  A CONTINUOUS CONTROL IS ONE UNDO STEP.
+
+  `slider3d` exposes `onChange` alone — no gesture end — so dragging one reports
+  per pointer-move. Without coalescing, undo walks back through a drag a pixel
+  at a time and never reaches the value you started from.
+*/
+describe("coalescing", () => {
+  it("folds a run of same-named edits into one step", () => {
+    const history = createHistory<{ n: number }>((v) => ({ ...v }));
+    history.record("edit skybox.timeOfDay sky", { n: 0 }, true);
+    history.record("edit skybox.timeOfDay sky", { n: 1 }, true);
+    history.record("edit skybox.timeOfDay sky", { n: 2 }, true);
+    expect(history.depth().past).toBe(1);
+  });
+
+  it("keeps the state from BEFORE the run, which is what undo restores", () => {
+    const history = createHistory<{ n: number }>((v) => ({ ...v }));
+    history.record("drag", { n: 0 }, true);
+    history.record("drag", { n: 1 }, true);
+    expect(history.undo({ n: 2 })?.state).toEqual({ n: 0 });
+  });
+
+  it("does not fold a DIFFERENT field", () => {
+    const history = createHistory<{ n: number }>((v) => ({ ...v }));
+    history.record("edit skybox.timeOfDay sky", { n: 0 }, true);
+    history.record("edit skybox.turbidity sky", { n: 1 }, true);
+    expect(history.depth().past).toBe(2);
+  });
+
+  it("does not fold when the caller does not ask", () => {
+    const history = createHistory<{ n: number }>((v) => ({ ...v }));
+    history.record("same", { n: 0 });
+    history.record("same", { n: 1 });
+    expect(history.depth().past).toBe(2);
+  });
+});

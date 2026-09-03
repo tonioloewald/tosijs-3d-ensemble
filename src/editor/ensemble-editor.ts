@@ -743,7 +743,7 @@ export class EnsembleEditor extends Component {
   edit(
     describe: string,
     mutate: (ensemble: Ensemble) => void,
-    options?: { rebuild?: boolean; chrome?: boolean }
+    options?: { rebuild?: boolean; chrome?: boolean; coalesce?: boolean }
   ): void {
     /*
       SNAPSHOT BEFORE, not a diff.
@@ -755,7 +755,7 @@ export class EnsembleEditor extends Component {
       "everything goes through one path, so adding it later is cheap"; this is
       that promise being cashed, and it was one function.
     */
-    this._history.record(describe, this._ensemble);
+    this._history.record(describe, this._ensemble, options?.coalesce);
     mutate(this._ensemble);
 
     /*
@@ -1875,14 +1875,22 @@ export class EnsembleEditor extends Component {
     feature: string,
     key: string,
     value: unknown,
-    describe?: string
+    describe?: string,
+    coalesce = false
   ): void {
-    this.edit(`${describe ?? `edit ${feature}`} ${id}`, (ensemble) => {
-      const piece = ensemble.pieces.find((p) => p.id === id);
-      if (!piece?.features) return;
-      const config = (piece.features[feature] ?? {}) as Record<string, unknown>;
-      piece.features[feature] = { ...config, [key]: value };
-    });
+    this.edit(
+      `${describe ?? `edit ${feature}.${key}`} ${id}`,
+      (ensemble) => {
+        const piece = ensemble.pieces.find((p) => p.id === id);
+        if (!piece?.features) return;
+        const config = (piece.features[feature] ?? {}) as Record<
+          string,
+          unknown
+        >;
+        piece.features[feature] = { ...config, [key]: value };
+      },
+      { coalesce }
+    );
   }
 
   /*
@@ -2334,7 +2342,19 @@ export class EnsembleEditor extends Component {
       const widgets = schemaWidgets({
         schema: registration.schema,
         values: (config ?? {}) as Record<string, unknown>,
-        onChange: () => {},
+        /*
+          BOTH channels write, and they differ only in undo granularity.
+
+          An ordinary control — a slider, a toggle — has no gesture end to wait
+          for: `slider3d` exposes `onChange` alone. Leaving this a no-op is why
+          the skybox panel appeared and did nothing. So it writes, and coalesces
+          into one undo step for as long as the same field keeps reporting.
+
+          A composite widget DOES know when its gesture ended and says so
+          through `onCommit`, which takes its own step.
+        */
+        onChange: (key, value) =>
+          this.updateFeature(selected.id, name, key, value, undefined, true),
         onCommit: (key, value, describe) =>
           this.updateFeature(selected.id, name, key, value, describe),
       });

@@ -29,7 +29,19 @@ export interface Step<T> {
 
 export interface History<T> {
   /** Remember `state` as the version BEFORE the edit about to happen. */
-  record(describe: string, state: T): void;
+  /**
+   * Record a step.
+   *
+   * `coalesce` folds this into the previous step when it carries the same
+   * `describe` — for a control that reports CONTINUOUSLY. A slider has no
+   * gesture end to wait for (`slider3d` exposes only `onChange`), so dragging
+   * one would otherwise put a step in the history per pointer-move and undo
+   * would walk back through the drag a pixel at a time.
+   *
+   * Folding keeps the OLDEST state, because that is what "before the drag"
+   * means — the thing undo has to restore.
+   */
+  record(describe: string, state: T, coalesce?: boolean): void;
   /** The state to go back to, given where we are now. Null when there is none. */
   undo(current: T): Step<T> | null;
   /** The state to go forward to. Null when nothing was undone. */
@@ -53,7 +65,14 @@ export function createHistory<T>(
   const future: Array<Step<T>> = [];
 
   return {
-    record(describe, state) {
+    record(describe, state, coalesce) {
+      const last = past[past.length - 1];
+      if (coalesce && last?.describe === describe) {
+        // Same gesture continuing: the step already holds the state before it
+        // started, which is the one undo needs. Nothing to add.
+        future.length = 0;
+        return;
+      }
       past.push({ describe, state: clone(state) });
       if (past.length > limit) past.shift();
       // The fork: what was undone is no longer reachable once you edit again.

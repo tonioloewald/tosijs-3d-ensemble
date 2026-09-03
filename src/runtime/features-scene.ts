@@ -644,7 +644,38 @@ export function registerSceneFeatures(): void {
       type: "object",
       title: "Terrain",
       properties: {
-        biome: { type: "string", default: "temperate" },
+        /*
+          A BOOLEAN, because upstream's `biome` is `'on' | 'off'` — and this
+          shipped as a free string defaulting to `"temperate"`, which is a
+          value that does not exist. Measured rather than reasoned about:
+          setting `biome="temperate"` on a live `tosi-b3d-terrain` leaves it
+          reading `"off"`, so the field has never done anything at all. The
+          author could not even turn biome shading on by accident, since the
+          one word that works was not discoverable from the panel.
+
+          A control that does nothing is worse than no control, and this is the
+          second time that rule has caught something in this repo.
+        */
+        biome: { type: "boolean", default: false },
+        /*
+          Exposed BECAUSE the toggle is: upstream warns that the automatic
+          lapse rate "is a small-world number and renders a 340m world entirely
+          as snow", and that it must be scaled to the vertical relief
+          (`≈ baseTemperature / relief`). Shipping the switch without the two
+          knobs that make it usable is how you get a feature that is technically
+          available and practically a white screen.
+
+          `x-requires` hides them until biome shading is on, so the ordinary
+          terrain panel does not grow two fields that do nothing.
+        */
+        biomeSeaLevel: {
+          ...num(-10000, 10000, 0, "m"),
+          "x-requires": { biome: true },
+        },
+        biomeLapseRate: {
+          ...num(0, 0.05, 0, undefined),
+          "x-requires": { biome: true },
+        },
         seed: num(0, 1e9, 1),
         surfaceType: {
           type: "string",
@@ -667,7 +698,17 @@ export function registerSceneFeatures(): void {
       field is unbounded, so there is nothing for them to mean.
     */
     bind: (_piece, cfg, ctx) =>
-      add(ctx, b3dTerrain({ baseHeight: ctx.at[1], ...cfg })),
+      add(
+        ctx,
+        b3dTerrain({
+          baseHeight: ctx.at[1],
+          ...cfg,
+          // `'on'`/`'off'` STRINGS, like the lamp's switches: an absent HTML
+          // boolean attribute reads false, so upstream spells these as an
+          // enum and a raw boolean would not survive the trip.
+          biome: cfg.biome ? "on" : "off",
+        })
+      ),
   });
 
   registerFeature({

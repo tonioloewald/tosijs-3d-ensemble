@@ -163,6 +163,24 @@
       "id": "colours",
       "mesh": "flag-pirate-high",
       "at": [-2, 0, 2]
+    },
+    {
+      "id": "lantern",
+      "at": [1.5, 1.5, -3],
+      "features": {
+        "lamp": {
+          "settings": {
+            "kind": "point",
+            "on": true,
+            "hue": 35,
+            "saturation": 0.55,
+            "intensity": 1.2,
+            "range": 8,
+            "shadows": false,
+            "angle": 60
+          }
+        }
+      }
     }
   ],
   "points": [

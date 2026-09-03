@@ -102,6 +102,7 @@ import type { HandlesView } from "./handles-view";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles";
 import type { Grip } from "./handles";
 import { schemaWidgets } from "./schema-panel";
+import { featureRegistration } from "../format/registry";
 import type { EditorRay } from "./input/pointer";
 import type { CatalogEntry, ToolContext } from "./tools/tool-registry";
 import { placeMesh } from "../runtime/place-mesh";
@@ -1861,6 +1862,29 @@ export class EnsembleEditor extends Component {
     if (saved) this.ensemble = saved;
   }
 
+  /**
+   * Write one key of one feature's config, as a single undo step.
+   *
+   * `describe` comes from the widget when it has one — tosijs-3d passes
+   * "move attack split" and the like — and we attach the piece id, which it
+   * cannot know and we always can. That is the shape of every other entry in
+   * this history: verb, then subject.
+   */
+  updateFeature(
+    id: string,
+    feature: string,
+    key: string,
+    value: unknown,
+    describe?: string
+  ): void {
+    this.edit(`${describe ?? `edit ${feature}`} ${id}`, (ensemble) => {
+      const piece = ensemble.pieces.find((p) => p.id === id);
+      if (!piece?.features) return;
+      const config = (piece.features[feature] ?? {}) as Record<string, unknown>;
+      piece.features[feature] = { ...config, [key]: value };
+    });
+  }
+
   /*
     TWO panels, not one.
 
@@ -2289,6 +2313,38 @@ export class EnsembleEditor extends Component {
         scale
       );
     }
+    /*
+      A PANEL PER FEATURE, which the editor has never had.
+
+      A piece's features were editable only by hand in the JSON: the property
+      panel showed position, rotation and scale and nothing else, so a `turret`
+      or a `lamp` was invisible in the tool that exists to author them.
+
+      Each feature already declares a JSON Schema — that is what `registerFeature`
+      takes — so the generated panel needs no per-feature code. It is also what
+      makes tosijs-3d's lamp editor arrive for free: `lightSettingsSchema()`
+      marks one field, and `schemaWidgets` hands the whole lamp to it.
+
+      Commits, not live changes: a feature edit rebuilds the scene, so writing on
+      every pointer-move of a curve would rebuild it fifty times per drag.
+    */
+    for (const [name, config] of Object.entries(selected.features ?? {})) {
+      const registration = featureRegistration(name);
+      if (!registration?.schema) continue;
+      const widgets = schemaWidgets({
+        schema: registration.schema,
+        values: (config ?? {}) as Record<string, unknown>,
+        onChange: () => {},
+        onCommit: (key, value, describe) =>
+          this.updateFeature(selected.id, name, key, value, describe),
+      });
+      if (!widgets.length) continue;
+      fields.push(
+        label3d({ text: name, muted: true, compact: true }),
+        ...(widgets as never[])
+      );
+    }
+
     /*
       ONE GROUP OWNS THE KEYBOARD.
 

@@ -37,7 +37,13 @@ format.
 */
 /*{"parent":"Runtime","order":3}*/
 import {
+  DEFAULT_LIGHT,
   b3dAmbient,
+  b3dAreaLight,
+  b3dPointLight,
+  b3dSpotLight,
+  lightColor,
+  lightSettingsSchema,
   b3dClouds,
   b3dFog,
   b3dGround,
@@ -319,6 +325,67 @@ export function registerSceneFeatures(): void {
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dLight({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
+  });
+
+  /*
+    A LAMP IS NOT THE `light` FEATURE, AND MUST NOT REPLACE IT.
+
+    `light` is a HemisphericLight — an ambient fill, which is what a scene's
+    `fill` piece wants and what it has always meant. A lamp is a thing you PLACE:
+    a point, spot or area light with a range, a cone, geometry you can see, and
+    a time-varying program. Collapsing them would have broken every fill in
+    every file to gain nothing.
+
+    The whole of it is ONE field. `lightSettingsSchema()` marks it
+    `x-widget: "light"`, so a generated panel hands the entire lamp to
+    tosijs-3d's editor — power, colour, intensity and the four-curve program
+    with its shared attack/sustain splits — and we write no widget code and hold
+    no invariants we cannot express.
+  */
+  registerFeature({
+    name: "lamp",
+    schema: {
+      type: "object",
+      title: "Lamp",
+      properties: {
+        settings: lightSettingsSchema({ title: "Lamp" }) as never,
+      },
+    },
+    bind: (_piece, cfg, ctx) => {
+      const settings = {
+        ...DEFAULT_LIGHT,
+        ...((cfg.settings as Partial<typeof DEFAULT_LIGHT>) ?? {}),
+      };
+      const place = { x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] };
+      /*
+        `on` and `shadows` cross as 'on'/'off' STRINGS, not booleans: an absent
+        HTML boolean attribute reads false, so a lamp written with a true
+        default would arrive switched off. Upstream calls that out and tosijs
+        now throws on a true-default boolean rather than failing silently.
+      */
+      const common = {
+        ...place,
+        intensity: settings.intensity,
+        range: settings.range,
+        diffuse: lightColor(settings),
+        on: settings.on ? "on" : "off",
+        shadows: settings.shadows ? "on" : "off",
+      };
+      const element =
+        settings.kind === "spot"
+          ? b3dSpotLight({ ...common, angle: settings.angle })
+          : settings.kind === "area"
+          ? b3dAreaLight(common)
+          : b3dPointLight(common);
+      const mounted = add(ctx, element);
+      /*
+        The program is an OBJECT, so it is set as a property rather than an
+        attribute — an attribute would stringify it.
+      */
+      (mounted as unknown as { program?: unknown }).program =
+        settings.program ?? null;
+      return mounted;
+    },
   });
 
   registerFeature({

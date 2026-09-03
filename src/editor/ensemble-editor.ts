@@ -2598,7 +2598,22 @@ export class EnsembleEditor extends Component {
       bind (it does not use `boundValue`), but its VALUE still has an address,
       and writing that address puts it on the same path as everything else.
     */
-    const box = this._box(id, feature, key) as { value: unknown } | undefined;
+    /*
+      ⚠️ NOT for a field the panel's SHAPE depends on.
+
+      The box path is deliberately chrome-free — that is what stops a slider
+      being destroyed under the pointer. But `terrain.biome` gates
+      `biomeSeaLevel` and `biomeLapseRate` behind `x-requires`, and those have
+      to APPEAR, which is a re-render. Taking the shortcut here meant flipping
+      the toggle wrote the value, regenerated the terrain, and changed nothing
+      an author could see: "clicking biome doesn't seem to do anything."
+
+      So a gating field falls through to `edit`, which re-renders. It is one
+      toggle, not a drag, so there is no widget to destroy.
+    */
+    const box = this._changesPanelShape(feature, key)
+      ? undefined
+      : (this._box(id, feature, key) as { value: unknown } | undefined);
     if (box) {
       box.value = value;
       return;

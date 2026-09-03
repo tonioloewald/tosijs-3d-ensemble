@@ -5,10 +5,11 @@
 `SPEC.md`. This is the guide for putting it back, and it is short because the
 formats barely diverged.
 
-> Written here rather than filed as an issue on `manta-recon` because that
-> checkout has **no git remote**, so it has no tracker to file against. The
-> cross-project rule still holds: nothing in this document changes a file in
-> that repo — it says what its owner should do.
+> Tracked as
+> [manta-recon#1](https://github.com/tonioloewald/manta-recon/issues/1). The
+> cross-project rule holds: nothing in this document changes a file in that repo
+> — it says what its owner should do, and this copy ships with the package so it
+> is reachable by anyone who only installed it.
 
 ## Where it stands, measured
 

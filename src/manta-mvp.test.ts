@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { validate } from "./format/validate";
+import { migrate } from "./format/migrate";
 import { buildEnsemble } from "./runtime/build";
 import { registerCombatPreset } from "./presets/combat";
 import type { SceneElement } from "./format/registry";
@@ -71,6 +72,46 @@ describe.skipIf(!present)("manta-recon's prefabs, through this package", () => {
       built.dispose();
     });
   }
+
+  it("MIGRATED, all four validate clean — this is the milestone-1 gate", () => {
+    /*
+      The one that actually matters. Two of the four load as they stand; this
+      asserts the other two need nothing beyond `migrate()`, which is what
+      makes the Manta migration a command rather than a hand-edit of 13 pieces.
+    */
+    const remaining: string[] = [];
+    for (const file of files) {
+      const { ensemble } = migrate(load(file));
+      for (const problem of validate(ensemble)) {
+        if (problem.severity === "error") {
+          remaining.push(`${file}: ${problem.code} ${problem.path}`);
+        }
+      }
+    }
+    expect(remaining).toEqual([]);
+  });
+
+  it("MIGRATED, all four still build every piece", () => {
+    for (const file of files) {
+      const { ensemble } = migrate(load(file));
+      const built = buildEnsemble(ensemble, { scene: fakeScene() });
+      expect([...built.pieces.keys()].sort()).toEqual(
+        ensemble.pieces.map((p) => p.id).sort()
+      );
+      built.dispose();
+    }
+  });
+
+  it("shows what the migration actually did", () => {
+    for (const file of files) {
+      const { changes } = migrate(load(file));
+      console.log(
+        `  ${file}: ${changes.length} change(s)` +
+          (changes.length ? ` — ${changes[0]!.note}, …` : "")
+      );
+    }
+    expect(true).toBe(true);
+  });
 
   it("reports what the warnings are, if any", () => {
     for (const file of files) {

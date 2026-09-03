@@ -69,6 +69,8 @@ export type {
   SceneElement,
 } from "./format/registry";
 export { validate, registerCheck } from "./format/validate";
+export { migrate, slugify } from "./format/migrate";
+export type { Migration, Change } from "./format/migrate";
 export type { Problem, Severity, ValidateOptions } from "./format/validate";
 
 // ── The instantiator: needs tosijs-3d, needs no UI ──────────────────────────

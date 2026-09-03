@@ -361,6 +361,9 @@ export class EnsembleEditor extends Component {
   declare gridSnap: number;
   declare angleSnap: number;
   declare src: string;
+
+  /** The `src` this editor has already fetched. See the note in the mount. */
+  private _loadedSrc: string | null = null;
   declare backdrop: Backdrop;
   declare hideChrome: boolean;
 
@@ -752,7 +755,27 @@ export class EnsembleEditor extends Component {
       // only caller, so an empty editor came up with no panel at all — which
       // reads as a broken tool rather than an empty one.
       this.rebuild();
-      if (this.src) void this.load(this.src);
+      /*
+        ⚠️ ONCE PER `src`, NOT ONCE PER CONNECT.
+
+        This element is RE-PARENTED by the doc system — that is the whole
+        subject of the DOM-move note above — and a re-parent is a disconnect
+        followed by a connect, so `connectedCallback` runs again on an editor
+        that is already holding an author's work. Loading `src` there throws it
+        away and silently replaces it with the file the page started with.
+
+        Found by accident: a delete landed on `pirate-cove` while the editor was
+        supposed to be showing `terrain-test`, because the document had swapped
+        underneath between selecting and clicking. It had been making every
+        browser check that day unreliable, and I had been blaming the checks.
+
+        Setting `src` to something new still loads it; returning to a page does
+        not.
+      */
+      if (this.src && this.src !== this._loadedSrc) {
+        this._loadedSrc = this.src;
+        void this.load(this.src);
+      }
     }, 0);
   }
 

@@ -117,3 +117,51 @@ describe("coalescing", () => {
     expect(history.depth().past).toBe(2);
   });
 });
+
+describe("a slider drag is one undo step", () => {
+  /*
+    The rule the owner asked for: "don't advance the undo buffer for
+    progressive changes to the same property". `coalesce` already does it —
+    same `describe`, folded, keeping the OLDEST state so undo lands where the
+    drag STARTED rather than one pointer-move back.
+
+    Pinned because the property is invisible in normal use: a drag that records
+    every move still looks correct until you press undo six times to get back
+    where you were.
+  */
+  it("folds a run of same-named changes into one", () => {
+    const history = createHistory<{ v: number }>(clone);
+    history.record("edit skybox.timeOfDay sky", { v: 0 }, true);
+    for (const v of [3, 7, 11, 16, 20]) {
+      history.record("edit skybox.timeOfDay sky", { v }, true);
+    }
+    expect(history.depth().past).toBe(1);
+  });
+
+  it("undoes to where the drag started, not to its last frame", () => {
+    const history = createHistory<{ v: number }>(clone);
+    history.record("edit skybox.timeOfDay sky", { v: 0 }, true);
+    history.record("edit skybox.timeOfDay sky", { v: 20 }, true);
+    expect(history.undo({ v: 24 })?.state).toEqual({ v: 0 });
+  });
+
+  it("does not fold two different properties", () => {
+    const history = createHistory<{ v: number }>(clone);
+    history.record("edit skybox.timeOfDay sky", { v: 0 }, true);
+    history.record("edit skybox.turbidity sky", { v: 0 }, true);
+    expect(history.depth().past).toBe(2);
+  });
+
+  it("does not fold two separate drags of the same property", () => {
+    /*
+      Two drags of one slider are two edits, and folding them would make the
+      first unreachable. They are separated by whatever happened between —
+      here, a selection change writing its own step.
+    */
+    const history = createHistory<{ v: number }>(clone);
+    history.record("edit skybox.timeOfDay sky", { v: 0 }, true);
+    history.record("move sun", { v: 0 });
+    history.record("edit skybox.timeOfDay sky", { v: 20 }, true);
+    expect(history.depth().past).toBe(3);
+  });
+});

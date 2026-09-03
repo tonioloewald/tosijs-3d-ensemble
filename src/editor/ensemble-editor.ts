@@ -2034,6 +2034,30 @@ export class EnsembleEditor extends Component {
    * cannot know and we always can. That is the shape of every other entry in
    * this history: verb, then subject.
    */
+  /**
+   * Does changing this field change the SHAPE of the panel, not just a value?
+   *
+   * True only when some other property is gated on it by `x-requires` — the
+   * `biome` toggle revealing `biomeSeaLevel` and `biomeLapseRate` is the case
+   * that exists. Everything else is a value landing in a widget that is already
+   * displaying it.
+   */
+  private _changesPanelShape(feature: string, key: string): boolean {
+    const properties = (
+      featureRegistration(feature)?.schema as
+        | {
+            properties?: Record<
+              string,
+              { "x-requires"?: Record<string, unknown> }
+            >;
+          }
+        | undefined
+    )?.properties;
+    return Object.values(properties ?? {}).some(
+      (spec) => spec?.["x-requires"] && key in spec["x-requires"]
+    );
+  }
+
   updateFeature(
     id: string,
     feature: string,
@@ -2042,6 +2066,35 @@ export class EnsembleEditor extends Component {
     describe?: string,
     coalesce = false
   ): void {
+    /*
+      DO NOT RE-RENDER THE PANEL YOU ARE BEING DRAGGED IN.
+
+      Every feature edit used to re-render the whole chrome, which destroys and
+      rebuilds the very `slider3d` the pointer is holding — so the drag lost its
+      widget on the first pointer-move and "sliders don't work as sliders".
+
+      The deeper point, and the one worth keeping: **re-rendering is not the
+      tosijs way.** The model is observant, not reactive — the DOM is terrain
+      you lay down once and bind, and a value change touches the bound node
+      rather than re-describing the UI. Reaching for a re-render to reflect a
+      value is the imported React habit that `practices/observant-model.md`
+      names as the single most common mistake in this ecosystem, and it is
+      exactly what this was.
+
+      ⚠️ We cannot yet do the RIGHT thing here, only stop doing the wrong one.
+      A bound panel needs a way to push a value INTO a live widget, and
+      `Widget3d` has none — `slider3d` takes `value` at construction and reports
+      out through `onChange`, and only composites like `LightEditorField` expose
+      `setValue`. So the panel cannot be bound; it can only be rebuilt. Filed
+      upstream. Until then the honest position is: never rebuild it for a value,
+      because the widget that raised the change is already showing that value —
+      it IS the source during the gesture.
+
+      Structure is the one exception, and `render()` doing structural touch-ups
+      is what the practice doc permits. A field revealed by `x-requires` has to
+      appear from somewhere, so that ONE case re-renders and continuous drags
+      never do.
+    */
     this.edit(
       `${describe ?? `edit ${feature}.${key}`} ${id}`,
       (ensemble) => {
@@ -2053,7 +2106,7 @@ export class EnsembleEditor extends Component {
         >;
         piece.features[feature] = { ...config, [key]: value };
       },
-      { coalesce }
+      { coalesce, chrome: this._changesPanelShape(feature, key) }
     );
   }
 

@@ -25,22 +25,34 @@ means "this puts a real thing at `at`, and it cannot be seen". A consumer's
 feature gets a beacon the same way it gets an icon, which is the property that
 makes the registry worth having.
 
-## Visible on purpose, and visible THROUGH things
+A CUBE, not a sphere: it is a stand-in for a thing rather than a thing. Owner:
+*"really we should provide a simple collision cube for any abstract thing that
+has a position that we might need to select"* — and the generality is the
+point. Lamps are the case that surfaced it; positional sound, a placed camera,
+and later reference points and zones are the same shape of problem.
 
-The selection marker is quiet because it decorates something you can already
-see. A beacon IS the thing you can see, so it is drawn plainly — and in
-rendering group 1, so a lamp mounted inside a lantern mesh is still clickable
-rather than sealed inside the geometry it lights.
+## Invisible, and that is not a contradiction
 
-A CUBE, not a sphere: it reads as a stand-in for a thing rather than as a
-thing, which is what it is. Owner: *"really we should provide a simple
-collision cube for any abstract thing that has a position that we might need to
-select"* — and the generality is the point. Lamps are the case that surfaced
-it; positional sound, a placed camera, and later reference points and zones are
-the same shape of problem.
+The first version drew an amber cube. It works, and it is clutter: a solid the
+author cannot move, delete or edit, sitting in a view whose whole purpose is
+judging an arrangement. A COLLISION cube is what was asked for, and collision
+geometry is not seen.
+
+⚠️ **This is only pickable because we pass our own predicate.** Babylon's
+default picking test is `isEnabled() && isVisible && isPickable`, so an
+invisible mesh is normally unpickable — but `pickPiece` supplies a predicate,
+and Babylon consults the predicate INSTEAD of that test rather than as well as
+it. An invisible collision proxy therefore works here and would silently stop
+working for any caller that picks without a predicate. Verified by ray rather
+than reasoned about, because "it should still be pickable" is exactly the kind
+of claim this project has been wrong about before.
+
+Finding it without seeing it is not the problem it sounds like: a lamp is
+already visible as the light it casts, and it is a row in the piece list. What
+it needed was somewhere for a ray to land.
 */
 /*{"parent":"Internals","order":7}*/
-import { Color3, MeshBuilder, StandardMaterial } from "@babylonjs/core";
+import { MeshBuilder } from "@babylonjs/core";
 import type { Vec3 } from "../format/types";
 
 /** Where a beacon sits, and which piece it stands for. */
@@ -48,8 +60,6 @@ export interface Beacon {
   id: string;
   at: Vec3;
 }
-
-const COLOR: [number, number, number] = [1, 0.82, 0.42];
 
 /**
  * Big enough to hit on a phone, small enough not to read as scenery.
@@ -75,8 +85,6 @@ interface Dot {
   position: { x: number; y: number; z: number };
   isPickable: boolean;
   isVisible: boolean;
-  renderingGroupId: number;
-  material?: unknown;
   isDisposed: () => boolean;
   dispose: () => void;
   computeWorldMatrix: (force: boolean) => void;
@@ -86,20 +94,12 @@ export function createBeaconView(scene: unknown): BeaconView {
   const s = scene as never;
   const dots = new Map<string, Dot>();
 
-  const material = new StandardMaterial(
-    "ensemble-beacon-mat",
-    s
-  ) as unknown as {
-    emissiveColor: Color3;
-    diffuseColor: Color3;
-    disableLighting: boolean;
-    alpha: number;
-    dispose: () => void;
-  };
-  material.emissiveColor = new Color3(...COLOR);
-  material.diffuseColor = new Color3(0, 0, 0);
-  material.disableLighting = true;
-  material.alpha = 0.85;
+  /*
+    No material at all — not a transparent one. An invisible mesh is never
+    submitted for rendering, so a material would be a StandardMaterial created
+    and disposed for nothing. It would also show up in the material count that
+    `build → dispose → build` asserts on, which is a test worth not muddying.
+  */
 
   return {
     sync(beacons) {
@@ -118,10 +118,8 @@ export function createBeaconView(scene: unknown): BeaconView {
             { size: SIZE },
             s
           ) as unknown as Dot;
-          dot.material = material;
           dot.isPickable = true;
-          // Through the fixture it is mounted in, or it cannot be clicked.
-          dot.renderingGroupId = 1;
+          dot.isVisible = false;
           dots.set(id, dot);
         }
         dot.position.x = at[0];
@@ -147,7 +145,6 @@ export function createBeaconView(scene: unknown): BeaconView {
     dispose() {
       for (const dot of dots.values()) dot.dispose();
       dots.clear();
-      material.dispose();
     },
   };
 }

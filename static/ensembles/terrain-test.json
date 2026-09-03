@@ -25,15 +25,18 @@
         "terrain": {
           "seed": 7,
           "surfaceType": "plane",
-          "grossScale": 400,
-          "grossAmplitude": 40,
-          "detailScale": 60,
-          "detailAmplitude": 6
+          "tileSize": 5,
+          "lodLevels": 5,
+          "reach": 80,
+          "grossScale": 220,
+          "grossAmplitude": 14,
+          "detailScale": 40,
+          "detailAmplitude": 1.5
         }
       }
     },
     {
-      "id": "marker",
+      "id": "watchtower",
       "library": "pirate",
       "mesh": "tower-complete-large",
       "at": [0, 0, 0]

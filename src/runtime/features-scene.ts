@@ -814,6 +814,31 @@ export function registerSceneFeatures(): void {
         detailScale: num(1, 10000, 200, "m"),
         detailAmplitude: num(0, 2000, 30, "m"),
         baseHeight: num(-10000, 10000, 0, "m"),
+        /*
+          HOW BIG THE WORLD IS — the three attributes that decide extent, and
+          the reason they belong in an authoring panel rather than a tuning one.
+
+          A terrain is a grid of tiles: `tileSize` is the finest, `lodLevels`
+          doubles it k times, so the COARSEST tile is `tileSize × 2^lodLevels`
+          — 320m at the defaults. `reach` is the radius, and 0 means "auto from
+          the coarsest tile", which is the unbounded-ish streaming case.
+
+          Owner's model, and it is the right one: a terrain is *"either a single
+          tile, a fixed grid of tiles, or an unbounded grid, and each would have
+          implicit extent for purposes of framing"*. Those are reach values:
+
+            single tile      reach = coarsest / 2   (160 at the defaults)
+            3 × 3 grid       reach = coarsest × 1.5 (480)
+            unbounded        reach = 0 (auto, streams around the camera)
+
+          Exposed because framing needs them and an author needs framing —
+          `frame()` reads exactly these to decide how far back to stand. Left
+          unexposed they were the difference between seeing your level and
+          starting inside it.
+        */
+        tileSize: num(1, 1000, 10, "m"),
+        lodLevels: { type: "integer", minimum: 0, maximum: 12, default: 5 },
+        reach: num(0, 100000, 0, "m"),
         wireframe: { type: "boolean", default: false },
       },
     },

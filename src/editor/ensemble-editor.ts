@@ -1973,14 +1973,30 @@ export class EnsembleEditor extends Component {
     );
     if (terrain) {
       const cfg = terrain.features!.terrain as Record<string, number>;
-      const relief = Number(cfg.grossAmplitude ?? 0);
-      const wavelength = Number(cfg.grossScale ?? 0);
-      // Above the ridges, not level with them: `at[1]` is the terrain's base
-      // height and the relief goes UP from there.
-      camera.target.y = (terrain.at?.[1] ?? 0) + relief;
-      // Far enough back to see a feature of the landscape rather than a facet
-      // of one. Half a wavelength shows a hill and its neighbour.
-      camera.radius = Math.max(camera.radius, wavelength / 2, relief * 4, 120);
+      /*
+        EXTENT IS DECLARED, not guessed from the relief.
+
+        The first version framed off `grossAmplitude` and `grossScale`, which
+        describe the SHAPE of the noise, not the size of the world — a gentle
+        landscape and a dramatic one of identical extent framed differently, and
+        neither on purpose.
+
+        A terrain is a grid: `tileSize` is the finest, `lodLevels` doubles it,
+        so the coarsest tile is `tileSize × 2^lodLevels`. `reach` is the radius
+        and 0 means "auto from the coarsest tile" — which is upstream's own
+        concept, so this reads the number rather than inventing a parallel one.
+      */
+      const tileSize = Number(cfg.tileSize ?? 10);
+      const lodLevels = Number(cfg.lodLevels ?? 5);
+      const coarsest = tileSize * 2 ** lodLevels;
+      const radius = Number(cfg.reach) || coarsest;
+      // Above the ridges, not level with them: `at[1]` is the base height and
+      // the relief goes UP from it.
+      camera.target.y =
+        (terrain.at?.[1] ?? 0) + Number(cfg.grossAmplitude ?? 0);
+      // 1.6× the radius puts the whole disc inside a 60° field of view with a
+      // margin, rather than cropping its edges.
+      camera.radius = Math.max(camera.radius, radius * 1.6);
     }
 
     camera.beta = 1.15;

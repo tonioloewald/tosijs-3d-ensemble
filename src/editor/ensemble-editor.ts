@@ -106,7 +106,7 @@ import type { Grip } from "./handles";
 import { schemaWidgets } from "./schema-panel";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round";
 import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view";
-import { featureRegistration } from "../format/registry";
+import { featureRegistration, registeredFeatures } from "../format/registry";
 import type { EditorRay } from "./input/pointer";
 import type { CatalogEntry, ToolContext } from "./tools/tool-registry";
 import { placeMesh } from "../runtime/place-mesh";
@@ -2389,7 +2389,41 @@ export class EnsembleEditor extends Component {
   }
 
   /**
-   * Empty the scene, keeping the libraries.
+   * What a NEW ensemble starts with — the things that shape the world.
+   *
+   * Not an empty document. An empty one has no sky to change the light with, no
+   * sun to move, and no terrain to stand on, so the first thing an author must
+   * do is add four pieces before they can look at anything. Owner: *"a minimal
+   * new scene should have the stuff that can shape ambient stuff (including
+   * terrain) in it. That can always be disabled or deleted"*.
+   *
+   * ⚠️ Terrain and water arrive DISABLED, and that distinction is the point.
+   * Light and sky are how you see; a landscape and a sea are decisions. A new
+   * document that imposed a terrain would be a template pretending to be a
+   * blank page — and `enabled: false` means the settings are there to turn on
+   * with one toggle, having cost nothing in the meantime.
+   *
+   * It also matters on ADOPTION: a piece carrying `skybox` settings imposes
+   * them on whatever scene loads the ensemble, so "present but off" is exactly
+   * how you ship an arrangement that has an opinion about the sky without
+   * forcing it.
+   *
+   * Empty configs throughout: every default lives in each feature's schema, and
+   * writing them here would put them in the document as though the author had
+   * chosen them.
+   */
+  private static starterPieces(): Piece[] {
+    return [
+      { id: "sun", at: [-0.5, 1, 0.4], features: { sun: {} } },
+      { id: "fill", at: [0, 1, 0], features: { light: {} } },
+      { id: "sky", at: [0, 0, 0], features: { skybox: {} } },
+      { id: "land", at: [0, 0, 0], enabled: false, features: { terrain: {} } },
+      { id: "sea", at: [0, 0, 0], enabled: false, features: { water: {} } },
+    ];
+  }
+
+  /**
+   * Start a new ensemble, keeping the libraries.
    *
    * ⚠️ An EDIT, not a document swap. Assigning `ensemble` clears the history —
    * deliberately, since an undo that reached back into a previous document
@@ -2405,6 +2439,7 @@ export class EnsembleEditor extends Component {
     this.edit("new ensemble", (ensemble) => {
       ensemble.name = "untitled";
       ensemble.pieces.length = 0;
+      ensemble.pieces.push(...EnsembleEditor.starterPieces());
       delete ensemble.links;
       delete ensemble.points;
       delete ensemble.zones;
@@ -2781,10 +2816,32 @@ export class EnsembleEditor extends Component {
 
   private _shelfMounted = false;
 
+  /** The name of the pseudo-library holding environment primitives. */
+  private static readonly UTILITIES = "utilities";
+
+  /**
+   * The features an author can INSERT — sun, sky, terrain, water, a lamp.
+   *
+   * Read off the registry (`primitive: true`), so a consumer's own standalone
+   * feature appears here without the editor knowing it exists. That is the same
+   * property that gives it an icon and a panel, and it is the whole reason the
+   * palette does not hold a list of names.
+   */
+  private _utilities(): Array<{ name: string; icon: string }> {
+    return registeredFeatures()
+      .filter((feature) => feature.primitive)
+      .map((feature) => ({ name: feature.name, icon: feature.icon ?? "▪️" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   private _renderLibraryPalette(): void {
     this._mountShelf();
     const catalog = this.meshCatalog();
-    if (!catalog.length) return;
+    const utilities = this._utilities();
+    // The utilities are always there, so the palette is worth drawing even
+    // before a single kit has loaded — which is also the state a NEW ensemble
+    // starts in, and the state in which "add a terrain" was impossible.
+    if (!catalog.length && !utilities.length) return;
 
     /*
       TWO PICKERS, NOT ONE COMPOUND ONE.
@@ -2799,6 +2856,12 @@ export class EnsembleEditor extends Component {
       ...new Set(catalog.map((entry) => entry.library)),
     ].sort();
     /*
+      UTILITIES FIRST, and as a library rather than a fourth panel. An author
+      choosing what to place is doing one thing, and splitting it by whether the
+      thing happens to have a mesh is our implementation showing through.
+    */
+    if (utilities.length) libraries.unshift(EnsembleEditor.UTILITIES);
+    /*
       DEFAULT TO THE ENSEMBLE'S OWN KIT, not to whichever sorts first.
 
       With a shelf mounted, `libraries[0]` was "commercial" — alphabetical, and
@@ -2809,6 +2872,43 @@ export class EnsembleEditor extends Component {
     const currentLibrary =
       (this._toolOptions.library as string) ??
       (own && libraries.includes(own) ? own : libraries[0]!);
+    if (currentLibrary === EnsembleEditor.UTILITIES) {
+      this._addPanel(
+        "left",
+        panel3d(
+          { width: PANEL_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
+          label3d({ text: `Library (${utilities.length})`, bold: true }),
+          label3d({ text: "library", muted: true, compact: true }),
+          select3d({
+            label: "",
+            value: currentLibrary,
+            options: libraries,
+            onChange: (value: string | number) => {
+              this.setToolOption("library", String(value));
+              this.setToolOption("family", undefined);
+            },
+          }),
+          list3d<{ label: string; name: string }>({
+            items: utilities.map((utility) => ({
+              label: `${utility.icon} ${utility.name}`,
+              name: utility.name,
+            })),
+            onSelect: (item) => {
+              if (this._tool !== "insert") this.setTool("insert");
+              /*
+                Whichever of the two is set is what gets placed, so choosing a
+                utility must CLEAR the mesh — otherwise the last mesh you looked
+                at is still armed and the click places that instead.
+              */
+              this.setToolOption("mesh", undefined);
+              this.setToolOption("feature", item.name);
+            },
+          })
+        )
+      );
+      return;
+    }
+
     const inLibrary = catalog.filter(
       (entry) => entry.library === currentLibrary
     );
@@ -2880,6 +2980,7 @@ export class EnsembleEditor extends Component {
           })),
           onSelect: (item) => {
             if (this._tool !== "insert") this.setTool("insert");
+            this.setToolOption("feature", undefined);
             this.setToolOption("mesh", item.entry.mesh);
             this.setToolOption("library", item.entry.library);
           },

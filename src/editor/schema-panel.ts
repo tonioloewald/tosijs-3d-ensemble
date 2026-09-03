@@ -99,6 +99,23 @@ interface PropertySpec {
    * rounding. See `format/round.ts`.
    */
   "x-precision"?: number;
+  /**
+   * Slider scale — `"log"` or `"log2"` where a field spans decades.
+   *
+   * A linear track is the wrong instrument for a quantity whose useful values
+   * cover orders of magnitude: terrain's `grossScale` ran 1..1,000,000 with its
+   * default at 0.4% of the travel, so every value anybody wanted lived in the
+   * first few pixels. Owner: "a lot of the slider ranges for the terrain are
+   * pathological. A whole bunch of the values do all their useful work between
+   * 0 and 1" — of the track, which is exactly what this fixes.
+   *
+   * ⚠️ Needs `minimum > 0`. `slider3d` falls back to linear for a range that
+   * includes zero, silently — so a field whose zero MEANS something (`reach: 0`
+   * is "auto", an amplitude of 0 is flat) gets a tightened linear range rather
+   * than a log one that would quietly not apply. tosijs-3d#62 asks for a log
+   * scale with a zero stop; until then this is the honest split.
+   */
+  "x-scale"?: "linear" | "log" | "log2";
 }
 
 export interface SchemaPanelOptions {
@@ -296,6 +313,9 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           min,
           max,
           step: spec.type === "integer" ? 1 : undefined,
+          ...(spec["x-scale"] && spec["x-scale"] !== "linear"
+            ? { scale: spec["x-scale"] }
+            : {}),
           onChange: (v: number) => onChange(key, v),
         })
       );

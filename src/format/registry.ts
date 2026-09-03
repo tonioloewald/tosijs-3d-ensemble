@@ -209,6 +209,25 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   marker?: boolean;
   /**
+   * This feature can BE a piece — it is not a decoration on a placed mesh.
+   *
+   * The format has always allowed it: a piece with no `mesh` whose features are
+   * its body is an "environment primitive", which is how `sun`, `skybox`,
+   * `water` and `terrain` exist. What was missing was any way to CREATE one:
+   * the insert palette lists library meshes, and every environment primitive
+   * has no mesh, so an author could edit the ones a file already had and never
+   * add another. "I can't add a terrain to a new scene."
+   *
+   * So the palette offers these under **utilities**, and a consumer's own
+   * standalone feature appears there for free — the same registry property that
+   * gives it an icon, a panel and a beacon.
+   *
+   * False for a decorator: `destroyable`, `spin`, `door` and `collidable`
+   * modify a piece that already has a body, and offering them as things to
+   * insert would produce pieces that are nothing at all.
+   */
+  primitive?: boolean;
+  /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game

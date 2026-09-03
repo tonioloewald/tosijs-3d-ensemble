@@ -58,6 +58,35 @@ import {
 import { registerFeature } from "../format/registry";
 import type { FeatureContext, SceneElement } from "../format/registry";
 
+/**
+ * A LOG10 slider over decades — the right instrument for a multiplicative
+ * quantity.
+ *
+ * A linear track is wrong for anything whose useful values span orders of
+ * magnitude: terrain's `grossScale` ran 1..1,000,000 with its default at 0.4%
+ * of the travel, so every value an author wanted lived in the first few pixels.
+ * Measured across the terrain schema, EVERY default sat between 0.00% and 3% of
+ * its track. Owner: "a lot of these are precisely the kind of thing a -3 to 3
+ * log 10 scale would be perfect for".
+ *
+ * Given in DECADES, because that is how you think about these: `decades(-3, 3)`
+ * is 0.001 to 1000, and the default lands in the middle where it belongs.
+ *
+ * ⚠️ Only for a quantity that is POSITIVE and multiplicative. `slider3d` falls
+ * back to linear for a range including zero, silently, so a field whose zero
+ * means something — `reach: 0` is "auto", `baseHeight` can be negative — keeps
+ * a tightened LINEAR range instead. Where "flat" is the useful zero, a
+ * thousandth of a metre is flat, so the bottom decade stands in for it.
+ */
+const decades = (from: number, to: number, def?: number, unit?: string) => ({
+  type: "number",
+  minimum: 10 ** from,
+  maximum: 10 ** to,
+  "x-scale": "log",
+  ...(def === undefined ? {} : { default: def }),
+  ...(unit ? { "x-unit": unit } : {}),
+});
+
 const num = (min: number, max: number, def?: number, unit?: string) => ({
   type: "number",
   minimum: min,
@@ -376,6 +405,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "light",
     icon: "🔦",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -408,6 +438,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "lamp",
     icon: "💡",
+    primitive: true,
     /*
       NOT `updateAttrs`. A lamp's config is ONE field, `settings`, and the bind
       spreads it across the light element's own attributes — so the blanket
@@ -509,6 +540,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "sun",
     icon: "☀️",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -530,6 +562,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "skybox",
     icon: "🌌",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -601,6 +634,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "ground",
     icon: "🟫",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -620,6 +654,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "camera",
     icon: "🎥",
+    primitive: true,
     /*
       NO `update`: this feature's handle is a stop FUNCTION, not an element —
       it drives the scene camera through `whenCamera`. `updateAttrs` would have
@@ -703,6 +738,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "sound",
     icon: "🔊",
+    primitive: true,
     update: updateAttrs,
     marker: true,
     schema: {
@@ -731,6 +767,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "reflections",
     icon: "🪞",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -753,6 +790,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "terrain",
     icon: "⛰️",
+    primitive: true,
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {
@@ -799,21 +837,24 @@ export function registerSceneFeatures(): void {
           "x-requires": { biome: true },
         },
         biomeLapseRate: {
-          ...num(0, 0.05, 0, undefined),
+          ...num(0, 0.02, 0, undefined),
           "x-requires": { biome: true },
         },
-        seed: num(0, 1e9, 1),
+        // An integer you TYPE or step, not a track you drag: no seed is
+        // "near" another, so 0..1e9 made every value indistinguishable.
+        seed: { type: "integer", minimum: 0, maximum: 9999, default: 1 },
         surfaceType: {
           type: "string",
           enum: ["plane", "sphere", "cylinder", "torus"],
           default: "plane",
         },
-        radius: num(100, 1e7, 6000, "m"),
-        grossScale: num(1, 1e6, 4000, "m"),
-        grossAmplitude: num(0, 20000, 600, "m"),
-        detailScale: num(1, 10000, 200, "m"),
-        detailAmplitude: num(0, 2000, 30, "m"),
-        baseHeight: num(-10000, 10000, 0, "m"),
+        radius: decades(2, 7, 6000, "m"),
+        grossScale: decades(0, 6, 4000, "m"),
+        grossAmplitude: decades(-1, 5, 600, "m"),
+        detailScale: decades(-1, 5, 200, "m"),
+        detailAmplitude: decades(-2, 4, 30, "m"),
+        // LINEAR: it goes negative (a seabed), and log cannot.
+        baseHeight: num(-1000, 1000, 0, "m"),
         /*
           HOW BIG THE WORLD IS — the three attributes that decide extent, and
           the reason they belong in an authoring panel rather than a tuning one.
@@ -836,9 +877,11 @@ export function registerSceneFeatures(): void {
           unexposed they were the difference between seeing your level and
           starting inside it.
         */
-        tileSize: num(1, 1000, 10, "m"),
+        tileSize: decades(0, 3, 10, "m"),
         lodLevels: { type: "integer", minimum: 0, maximum: 12, default: 5 },
-        reach: num(0, 100000, 0, "m"),
+        // LINEAR: 0 is not a small radius, it is "auto from the coarsest
+        // tile" — a mode, which a log scale cannot reach (tosijs-3d#62).
+        reach: num(0, 5000, 0, "m"),
         wireframe: { type: "boolean", default: false },
       },
     },
@@ -868,6 +911,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "water",
     icon: "🌊",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -888,6 +932,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "clouds",
     icon: "☁️",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -909,6 +954,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "ambient",
     icon: "🌗",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",
@@ -928,6 +974,7 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "fog",
     icon: "🌫️",
+    primitive: true,
     update: updateAttrs,
     schema: {
       type: "object",

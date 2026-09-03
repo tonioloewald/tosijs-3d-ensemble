@@ -75,6 +75,13 @@ export function registerEditorTools(): void {
         // pick list from the library instead of a text field.
         mesh: { type: "string", title: "Mesh", "x-widget": "mesh" },
         library: { type: "string", title: "Library" },
+        /*
+          A FEATURE to insert, instead of a mesh — sun, terrain, water, a lamp.
+          Separate from `mesh` rather than a magic library name, so nothing has
+          to guess which kind of thing is selected: whichever is set is what
+          gets placed.
+        */
+        feature: { type: "string", title: "Utility" },
       },
     },
     onGesture: {
@@ -99,7 +106,8 @@ export function registerEditorTools(): void {
       */
       end(gesture, ctx) {
         const mesh = ctx.options.mesh as string | undefined;
-        if (!mesh) return;
+        const feature = ctx.options.feature as string | undefined;
+        if (!mesh && !feature) return;
         const ray = gesture.primary.ray();
         if (!ray) return;
         /*
@@ -125,17 +133,33 @@ export function registerEditorTools(): void {
         const step = Number(ctx.options.gridSnap ?? 0);
         const at = snapVec3(point, step);
         const id = uniqueId(
-          slugify(mesh),
+          slugify(feature ?? mesh!),
           ctx.ensemble.pieces.map((p) => p.id)
         );
         const library = ctx.options.library as string | undefined;
+
+        if (feature) {
+          /*
+            An environment primitive: no mesh, and the feature IS the body.
+            Empty config, so every default in its schema applies — a `terrain`
+            with no settings is a terrain, and the property panel is where you
+            shape it. Filling in defaults here would write them into the
+            document as if the author had chosen them.
+          */
+          ctx.edit(`insert ${feature}`, (ensemble) => {
+            ensemble.pieces.push({ id, at, features: { [feature]: {} } });
+          });
+          ctx.select(id);
+          return;
+        }
+
         ctx.edit(`insert ${mesh}`, (ensemble) => {
           // Record WHICH library, when the ensemble declares more than one.
           // With a single library it is noise, so it is omitted.
           const declared = ensemble.libraries ?? [];
           const qualify = library && declared.length > 1;
           ensemble.pieces.push(
-            qualify ? { id, mesh, library, at } : { id, mesh, at }
+            qualify ? { id, mesh: mesh!, library, at } : { id, mesh: mesh!, at }
           );
         });
         ctx.select(id);

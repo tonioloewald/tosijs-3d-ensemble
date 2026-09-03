@@ -159,6 +159,28 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   body?: boolean;
   /**
+   * What this feature LOOKS LIKE in a list, one glyph wide.
+   *
+   * On the registration and not in a `switch` in the editor, because the whole
+   * property of a registry is that a consumer's feature is indistinguishable
+   * from a built-in — and a switch breaks that at exactly the point a consumer
+   * would notice: theirs is the only row with a blank icon.
+   *
+   * ⚠️ AN EMOJI TODAY, AN ICON NAME LATER. tosijs-3d's `iconData` holds 61
+   * icons and every one is UI chrome — arrows, corners, play, trash, keyboard.
+   * There is no sun, no light, no water, no mesh, no marker. Asked for in
+   * tosijs-3d#64 along with an icon COLUMN type for `table`, since a cell
+   * currently renders `String(v)` and has no route to a glyph.
+   *
+   * Emoji were verified in the browser rather than assumed: they render in
+   * colour and `getComputedTextLength` measures them correctly (26.1 → 50.3px
+   * for a two-character prefix), so the SVG UI lays a row out properly. That
+   * was checked on the DOM overlay path ONLY — the in-scene texture path
+   * rasterises the same SVG, and coloured glyphs and font fallback are exactly
+   * where the two could diverge. Flagged in the issue; nobody has looked.
+   */
+  icon?: string;
+  /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game

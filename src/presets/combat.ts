@@ -94,6 +94,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "collidable",
+    icon: "🧱",
     schema: {
       type: "object",
       title: "Collidable",
@@ -117,6 +118,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "destroyable",
+    icon: "💥",
     schema: {
       type: "object",
       title: "Destroyable",
@@ -163,6 +165,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "blip",
+    icon: "📡",
     schema: {
       type: "object",
       title: "Radar blip",
@@ -180,6 +183,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "turret",
+    icon: "🔫",
     schema: {
       type: "object",
       title: "Turret",
@@ -221,6 +225,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "launcher",
+    icon: "🚀",
     schema: {
       type: "object",
       title: "Missile launcher",
@@ -245,6 +250,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "protector",
+    icon: "🛡️",
     schema: {
       type: "object",
       title: "Shield field",
@@ -298,6 +304,7 @@ export function registerCombatPreset(): void {
 
   registerFeature({
     name: "launchpad",
+    icon: "🛫",
     // No runtime binding — see the note at the top of this file. Marked so an
     // author finds out here rather than at ship time.
     editorOnly: true,

@@ -1,7 +1,7 @@
 /*#
 # The world preset
 
-Doors, locks, lamps, spinners and triggers — the vocabulary a **place** needs,
+Doors, locks, spinners and triggers — the vocabulary a **place** needs,
 as opposed to a battle. Opt in the way you opt into combat:
 
 ```typescript
@@ -52,7 +52,6 @@ import {
   canUse,
   closedDoor,
   doorAmount,
-  flicker,
   selectClip,
   spinAngle,
   stepDoor,
@@ -144,6 +143,7 @@ export function registerWorldPreset(): void {
 
   registerFeature<InteractiveHandle>({
     name: "interactive",
+    icon: "🤚",
     schema: {
       type: "object",
       title: "Interactive",
@@ -200,6 +200,7 @@ export function registerWorldPreset(): void {
 
   registerFeature<LockHandle>({
     name: "lockable",
+    icon: "🔒",
     schema: {
       type: "object",
       title: "Lockable",
@@ -229,7 +230,6 @@ export function registerWorldPreset(): void {
 
   registerAnimation();
   registerDoor();
-  registerLamp();
   registerSpin();
   registerTrigger();
 }
@@ -260,6 +260,7 @@ export interface AnimationHandle {
 function registerAnimation(): void {
   registerFeature<AnimationHandle>({
     name: "animation",
+    icon: "🎞️",
     schema: {
       type: "object",
       title: "Animation",
@@ -351,6 +352,7 @@ function registerAnimation(): void {
 function registerDoor(): void {
   registerFeature({
     name: "door",
+    icon: "🚪",
     schema: {
       type: "object",
       title: "Door",
@@ -430,62 +432,10 @@ function registerDoor(): void {
   });
 }
 
-function registerLamp(): void {
-  registerFeature({
-    name: "lamp",
-    schema: {
-      type: "object",
-      title: "Lamp",
-      properties: {
-        color: { type: "string", "x-widget": "color", default: "#ffd9a0" },
-        brightness: num(0, 20, 1.2),
-        range: num(0, 200, 12, "m"),
-        on: { type: "boolean", default: true },
-        flicker: num(0, 1, 0, undefined),
-        castShadows: { type: "boolean", default: false },
-      },
-    },
-    bind(_piece, cfg, ctx) {
-      const base = Number(cfg.brightness ?? 1.2);
-      const amount = Number(cfg.flicker ?? 0);
-      let on = cfg.on !== false;
-      // Seeded from the piece id, so two lamps in a room do not pulse in unison.
-      const seed =
-        [...ctx.piece.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 97;
-      const light = makeLight(ctx, cfg);
-
-      /*
-        A LAMP'S OWN MESH MUST NOT CAST SHADOWS. A glowing bulb that casts is
-        a bulb that shades the room it is lighting — the fixture ends up
-        silhouetted against its own light, which reads as a rendering bug.
-      */
-      const mesh = (
-        ctx.element as unknown as { mesh?: { receiveShadows?: boolean } } | null
-      )?.mesh;
-      if (mesh) mesh.receiveShadows = false;
-
-      if (amount > 0 && light) {
-        everyFrame(ctx, (_dt, now) => {
-          light.intensity = on ? flicker(base, amount, now, seed) : 0;
-        });
-      }
-
-      return {
-        setOn(next: boolean) {
-          on = next;
-          if (light) light.intensity = next ? base : 0;
-        },
-        get on() {
-          return on;
-        },
-      };
-    },
-  });
-}
-
 function registerSpin(): void {
   registerFeature({
     name: "spin",
+    icon: "🔄",
     schema: {
       type: "object",
       title: "Spin",
@@ -516,6 +466,7 @@ function registerSpin(): void {
 function registerTrigger(): void {
   registerFeature({
     name: "trigger",
+    icon: "🎯",
     schema: {
       type: "object",
       title: "Trigger",
@@ -613,30 +564,4 @@ function writeBody(
     node.rotation.y = transform.rot[1] * rad;
     node.rotation.z = transform.rot[2] * rad;
   }
-}
-
-/** The Babylon light a lamp drives, if one could be made. */
-function makeLight(
-  ctx: FeatureContext,
-  cfg: Record<string, unknown>
-): { intensity: number } | null {
-  const el = (ctx.scene as unknown as { ownerDocument?: Document })
-    .ownerDocument;
-  if (!el) return null;
-  const light = el.createElement("tosi-b3d-light") as HTMLElement & {
-    light?: { intensity: number };
-  };
-  light.setAttribute("x", String(ctx.at[0]));
-  light.setAttribute("y", String(ctx.at[1]));
-  light.setAttribute("z", String(ctx.at[2]));
-  light.setAttribute(
-    "intensity",
-    String(cfg.on === false ? 0 : cfg.brightness ?? 1.2)
-  );
-  if (cfg.color) light.setAttribute("diffuse", String(cfg.color));
-  ctx.scene.appendChild(light);
-  ctx.onDispose(() => light.remove());
-  return (light.light ?? { intensity: Number(cfg.brightness ?? 1.2) }) as {
-    intensity: number;
-  };
 }

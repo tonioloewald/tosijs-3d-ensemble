@@ -314,6 +314,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "light",
+    icon: "🔦",
     schema: {
       type: "object",
       title: "Light",
@@ -344,6 +345,7 @@ export function registerSceneFeatures(): void {
   */
   registerFeature({
     name: "lamp",
+    icon: "💡",
     schema: {
       type: "object",
       title: "Lamp",
@@ -390,6 +392,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "sun",
+    icon: "☀️",
     schema: {
       type: "object",
       title: "Sun and shadows",
@@ -409,6 +412,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "skybox",
+    icon: "🌌",
     schema: {
       type: "object",
       title: "Sky",
@@ -478,6 +482,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "ground",
+    icon: "🟫",
     schema: {
       type: "object",
       title: "Ground plane",
@@ -495,6 +500,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "camera",
+    icon: "🎥",
     schema: {
       type: "object",
       title: "Camera",
@@ -570,6 +576,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "sound",
+    icon: "🔊",
     schema: {
       type: "object",
       title: "Sound",
@@ -595,6 +602,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "reflections",
+    icon: "🪞",
     schema: {
       type: "object",
       title: "Reflection probe",
@@ -615,6 +623,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "terrain",
+    icon: "⛰️",
     schema: {
       type: "object",
       title: "Terrain",
@@ -647,6 +656,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "water",
+    icon: "🌊",
     schema: {
       type: "object",
       title: "Water",
@@ -665,6 +675,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "clouds",
+    icon: "☁️",
     schema: {
       type: "object",
       title: "Clouds",
@@ -684,6 +695,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "ambient",
+    icon: "🌗",
     schema: {
       type: "object",
       title: "Ambient life",
@@ -701,6 +713,7 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "fog",
+    icon: "🌫️",
     schema: {
       type: "object",
       title: "Fog",

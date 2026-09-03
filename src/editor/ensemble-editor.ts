@@ -2393,8 +2393,46 @@ export class EnsembleEditor extends Component {
   private _preview: BuiltEnsemble | null = null;
 
   /** The piece list, split into environment primitives and placed content. */
+  /**
+   * The glyph for a row: what KIND of thing this piece is.
+   *
+   * Read off the feature REGISTRATION, never a switch here — the property that
+   * makes features a registry is that a consumer's feature is indistinguishable
+   * from a built-in, and a switch in the editor breaks it exactly where a
+   * consumer would notice. It also keeps the combat preset's icons out of a
+   * scene-only bundle for free: this reads a map, it does not import anything.
+   *
+   * A mesh wins over any feature, because a piece with a mesh IS that mesh and
+   * its features decorate it. Otherwise the first feature with an icon, with
+   * `body` features asked first — a lamp that is also destroyable is a lamp,
+   * not an explosion.
+   */
+  private _kindIcon(piece: Piece): string {
+    if (piece.mesh) return "📦";
+    const names = Object.keys(piece.features ?? {});
+    const registrations = names
+      .map((name) => featureRegistration(name))
+      .filter((r): r is NonNullable<typeof r> => !!r);
+    const chosen =
+      registrations.find((r) => r.body && r.icon) ??
+      registrations.find((r) => r.icon);
+    // A piece whose features are all unregistered still gets a row, and a
+    // row with no glyph would sit half a character left of every other one.
+    return chosen?.icon ?? "▪️";
+  }
+
   private _pieceGroups(): unknown[] {
-    const label = (p: Piece) => (p.enabled === false ? `◌ ${p.id}` : p.id);
+    /*
+      KIND AND STATE ARE DIFFERENT THINGS, so they do not share a glyph. A
+      disabled lamp is still a lamp: the icon says which, and the state is a
+      word after the name. The first version replaced the whole label with
+      `◌ id`, which threw the kind away to say something about the state.
+
+      When the icon column lands (tosijs-3d#64) these become two columns and
+      the string-building here goes away.
+    */
+    const label = (p: Piece) =>
+      `${this._kindIcon(p)} ${p.id}${p.enabled === false ? " · off" : ""}`;
     const environment = this._ensemble.pieces.filter((p) => !p.mesh);
     const content = this._ensemble.pieces.filter((p) => p.mesh);
     const out: unknown[] = [];

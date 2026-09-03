@@ -180,8 +180,15 @@ const GRID_METRES = 10;
  * column of three different widths reads as three unrelated things that happen
  * to be stacked. They were 184, 150 and 200 because each was sized to its own
  * content as it was written.
+ *
+ * The right-hand panels take it too, so the two edges of the viewport match.
+ * They were 240, which fitted their content only in the sense that it did not
+ * overflow: `shadowDarkness` and `activeDistance` collided with their own
+ * sliders, and a vector row put three fields and three keyboard buttons in the
+ * space of two. A property panel is where the numbers are READ, so it is the
+ * last place to be economical about width.
  */
-const LEFT_WIDTH = 320;
+const PANEL_WIDTH = 320;
 
 /*
   THE MENU STRINGS, so the picker and the handler cannot disagree about them.
@@ -2038,7 +2045,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: LEFT_WIDTH, padding: 8, gap: 6 },
+        { width: PANEL_WIDTH, padding: 8, gap: 6 },
         label3d({ text: "Tools", bold: true }),
         iconGrid3d({
           mode: "radio",
@@ -2096,7 +2103,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "right",
       panel3d(
-        { width: 240, padding: 10, gap: 6 },
+        { width: PANEL_WIDTH, padding: 10, gap: 6 },
         label3d({ text: tool.label, bold: true }),
         ...(widgets as never[])
       )
@@ -2192,7 +2199,7 @@ export class EnsembleEditor extends Component {
       panel3d(
         // A LIST is the one case for a bound: it is arbitrarily long, and
         // `maxHeight` scrolls past it instead of growing off the screen.
-        { width: LEFT_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
+        { width: PANEL_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
         label3d({ text: `Library (${inLibrary.length})`, bold: true }),
         // Only when there IS a choice: one library and this is a control that
         // can only tell you what you already know.
@@ -2268,7 +2275,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: LEFT_WIDTH, padding: 8, gap: 4 },
+        { width: PANEL_WIDTH, padding: 8, gap: 4 },
         ui.inputField({
           value: this._ensemble.name ?? "",
           placeholder: "untitled",
@@ -2299,7 +2306,7 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "left",
       panel3d(
-        { width: LEFT_WIDTH, maxHeight: 340, padding: 8, gap: 4 },
+        { width: PANEL_WIDTH, maxHeight: 340, padding: 8, gap: 4 },
         /*
           ENVIRONMENT AND CONTENT ARE DIFFERENT KINDS OF THING.
 
@@ -2569,10 +2576,11 @@ export class EnsembleEditor extends Component {
     this._addPanel(
       "right",
       panel3d(
-        // Sized by its content. The arithmetic that used to live here — 24 per
-        // caption, 54 per vector row — was measured in a browser and was still
-        // wrong the moment a row was added.
-        { width: 240, padding: 10, gap: 4 },
+        // HEIGHT is sized by its content. The arithmetic that used to live
+        // here — 24 per caption, 54 per vector row — was measured in a browser
+        // and was still wrong the moment a row was added. Width is shared with
+        // every other panel, which is a layout decision rather than a fit.
+        { width: PANEL_WIDTH, padding: 10, gap: 4 },
         label3d({ text: selected.id, bold: true }),
         label3d({
           text:

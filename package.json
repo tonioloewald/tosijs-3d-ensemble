@@ -22,7 +22,8 @@
     "dist",
     "!dist/iife.js",
     "!dist/iife.js.map",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "MIGRATING.md"
   ],
   "repository": {
     "type": "git",

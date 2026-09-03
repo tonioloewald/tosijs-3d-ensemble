@@ -104,6 +104,7 @@ import type { HandlesView } from "./handles-view";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles";
 import type { Grip } from "./handles";
 import { schemaWidgets } from "./schema-panel";
+import { DEFAULT_PRECISION, roundDeep } from "../format/round";
 import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view";
 import { featureRegistration } from "../format/registry";
 import type { EditorRay } from "./input/pointer";
@@ -1892,7 +1893,12 @@ export class EnsembleEditor extends Component {
       (ensemble) => {
         const piece = ensemble.pieces.find((p) => p.id === id);
         if (!piece) return;
-        Object.assign(piece, patch);
+        /*
+          ROUNDED ON THE WAY IN. A drag with `gridSnap: 0` — a legal setting —
+          writes exactly what the ray hit, and the document is the product
+          here: something an author reads, a generator emits and a diff shows.
+        */
+        Object.assign(piece, roundDeep(patch));
       },
       // The scene DOES need rebuilding — a typed coordinate moves the piece —
       // but the panel does not, and redrawing it is what steals the focus.
@@ -2104,10 +2110,38 @@ export class EnsembleEditor extends Component {
           string,
           unknown
         >;
-        piece.features[feature] = { ...config, [key]: value };
+        /*
+          DEEP, because a composite widget hands back a whole object: a light's
+          settings carry an intensity, a hue and a four-curve program, and
+          every number in there came from a drag too.
+        */
+        piece.features[feature] = {
+          ...config,
+          [key]: roundDeep(value, this._precisionFor(feature, key)),
+        };
       },
       { coalesce, chrome: this._changesPanelShape(feature, key) }
     );
+  }
+
+  /**
+   * Decimal places for one field — `x-precision`, or three.
+   *
+   * Per FIELD rather than per feature, because the fields differ: a time of day
+   * wants millimetre-equivalent precision and a lapse rate spanning `0..0.05`
+   * would be destroyed by it. `roundNumber` protects the small case on its own,
+   * but a field that genuinely needs five decimals should be able to say so
+   * rather than rely on the fallback.
+   */
+  private _precisionFor(feature: string, key: string): number {
+    const spec = (
+      featureRegistration(feature)?.schema as
+        | { properties?: Record<string, { "x-precision"?: number }> }
+        | undefined
+    )?.properties?.[key];
+    return typeof spec?.["x-precision"] === "number"
+      ? spec["x-precision"]
+      : DEFAULT_PRECISION;
   }
 
   /*

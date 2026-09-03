@@ -91,6 +91,14 @@ interface PropertySpec {
    * anything.
    */
   "x-requires"?: Record<string, unknown>;
+  /**
+   * Decimal places to store, overriding the default three.
+   *
+   * Read by the editor when the value lands in the document, not here — the
+   * widget shows whatever the pointer is doing, and only what is KEPT needs
+   * rounding. See `format/round.ts`.
+   */
+  "x-precision"?: number;
 }
 
 export interface SchemaPanelOptions {

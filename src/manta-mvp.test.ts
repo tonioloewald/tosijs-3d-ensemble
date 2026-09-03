@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { validate } from "./format/validate";
 import { buildEnsemble } from "./runtime/build";
@@ -30,7 +30,19 @@ const load = (f: string): Ensemble =>
 const fakeScene = () =>
   ({ appendChild: () => {}, remove: () => {} } as unknown as SceneElement);
 
-beforeAll(() => registerCombatPreset());
+/*
+  PUT IT BACK. Registries are global and the suite shares a process, so a file
+  that loads a preset and walks away changes the answers in every other file —
+  `roles.test.ts` and `validate.test.ts` both assert that the format ships NO
+  domain, and one `registerCombatPreset()` anywhere makes that false. It failed
+  three tests in two files that this one never mentions, which is the least
+  debuggable shape a test failure has.
+*/
+let dropPreset: () => void = () => {};
+beforeAll(() => {
+  dropPreset = registerCombatPreset();
+});
+afterAll(() => dropPreset());
 
 describe.skipIf(!present)("manta-recon's prefabs, through this package", () => {
   it("found them", () => {

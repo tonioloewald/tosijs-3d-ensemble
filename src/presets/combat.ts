@@ -34,8 +34,8 @@ moved behind a call the consumer makes.
 */
 /*{"parent":"Presets","order":2}*/
 import { b3dCollisions, b3dLauncher, b3dTurret } from "tosijs-3d";
-import { registerFeature } from "../format/registry";
-import { registerRole } from "../format/roles";
+import { registerFeature, unregisterFeature } from "../format/registry";
+import { registerRole, unregisterRole } from "../format/roles";
 import { featuresOf } from "../format/roles";
 import { registerCheck } from "../format/validate";
 import { add } from "../runtime/features-scene";
@@ -87,9 +87,19 @@ function ensureCollisions(
 
 let registered = false;
 
-/** Register the fortification vocabulary: features, roles and its one rule. */
-export function registerCombatPreset(): void {
-  if (registered) return;
+/** Undoes the last `registerCombatPreset()`, or nothing. */
+let teardown: () => void = () => {};
+
+/**
+ * Register the fortification vocabulary: features, roles and its one rule.
+ *
+ * Returns a TEARDOWN, the way `registerCheck` does. A preset that can only be
+ * added is a preset a consumer cannot swap — and it made the test suite
+ * order-dependent, because the format's own "we ship no domain" assertions
+ * become false the moment any file registers this and never puts it back.
+ */
+export function registerCombatPreset(): () => void {
+  if (registered) return teardown;
   registered = true;
 
   registerFeature({
@@ -321,6 +331,20 @@ export function registerCombatPreset(): void {
 
   registerCombatRoles();
   registerCombatChecks();
+
+  /*
+    Built from the name lists rather than a hand-kept sequence of calls, so a
+    feature or role added later cannot be left behind by a teardown nobody
+    remembered to update.
+  */
+  teardown = () => {
+    for (const name of COMBAT_FEATURES) unregisterFeature(name);
+    for (const name of COMBAT_ROLES) unregisterRole(name);
+    for (const drop of checkTeardowns.splice(0)) drop();
+    registered = false;
+    teardown = () => {};
+  };
+  return teardown;
 }
 
 /**
@@ -360,21 +384,46 @@ function registerCombatRoles(): void {
   });
 }
 
+/** What `registerCombatPreset` adds, and therefore what it removes. */
+const COMBAT_FEATURES = [
+  "collidable",
+  "destroyable",
+  "blip",
+  "turret",
+  "launcher",
+  "protector",
+  "launchpad",
+];
+
+const COMBAT_ROLES = [
+  "structure",
+  "target",
+  "power",
+  "generator",
+  "shield",
+  "critical",
+];
+
+/** `registerCheck` hands back an unregister; keep it or the rule is permanent. */
+const checkTeardowns: Array<() => void> = [];
+
 function registerCombatChecks(): void {
-  registerCheck((ensemble): Problem[] =>
-    ensemble.pieces.flatMap((piece, i) => {
-      // Keyed on the protector FEATURE, not on a `shield` role name, so a
-      // consumer's own role for a field is covered too.
-      if (!featuresOf(piece).protector) return [];
-      if ((ensemble.links ?? []).some((l) => l.to === piece.id)) return [];
-      return [
-        {
-          severity: "error" as const,
-          code: "unreachable-shield",
-          message: `"${piece.id}" projects a field and has no incoming link — nothing can bring it down`,
-          path: `/pieces/${i}`,
-        },
-      ];
-    })
+  checkTeardowns.push(
+    registerCheck((ensemble): Problem[] =>
+      ensemble.pieces.flatMap((piece, i) => {
+        // Keyed on the protector FEATURE, not on a `shield` role name, so a
+        // consumer's own role for a field is covered too.
+        if (!featuresOf(piece).protector) return [];
+        if ((ensemble.links ?? []).some((l) => l.to === piece.id)) return [];
+        return [
+          {
+            severity: "error" as const,
+            code: "unreachable-shield",
+            message: `"${piece.id}" projects a field and has no incoming link — nothing can bring it down`,
+            path: `/pieces/${i}`,
+          },
+        ];
+      })
+    )
   );
 }

@@ -52,6 +52,20 @@ export function registerRole(name: string, features: Features): void {
   roles.set(name, features);
 }
 
+/**
+ * Remove a role. True if it was there.
+ *
+ * The counterpart `registerFeature` has had all along, and its absence was a
+ * real hole rather than an oversight nobody noticed: a consumer could load a
+ * preset and never swap it, and a TEST that registered one silently changed
+ * the answers in every other test file — which is how it surfaced. The format
+ * asserts it ships no domain, and one `registerCombatPreset()` anywhere made
+ * that assertion false everywhere.
+ */
+export function unregisterRole(name: string): boolean {
+  return roles.delete(name);
+}
+
 /** Every registered role name — what the editor offers in a role picker. */
 export function roleNames(): string[] {
   return [...roles.keys()];

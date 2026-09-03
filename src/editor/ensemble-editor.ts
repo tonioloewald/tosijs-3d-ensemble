@@ -637,18 +637,20 @@ export class EnsembleEditor extends Component {
   }
 
   /*
-    ⚠️ NEVER HOLD A BOXED PROXY ACROSS A WRITE TO ITS PARENT.
+    ⚠️ NEVER HOLD A BOXED PROXY. A HELD ONE DISAGREES WITH ITSELF.
 
-    `.tosi.value = wholeNewDocument` writes the store perfectly well. What does
-    not work is reading it back through a reference CAPTURED before the write:
-    that reference keeps answering with the old document, forever, with no error
-    anywhere. Loading an ensemble looked like it silently failed and the editor
-    sat there holding an empty document.
+    A box carries a PATH and resolves live, so traversing a captured box is
+    correct. `.value` is the exception: it returns the target the box was built
+    over, permanently, however many times the path is reassigned. One object,
+    two answers — and the wrong one is the cheap read everything reaches for.
 
-    Which is why `_store` above is a GETTER over `_stores[_storeKey]` rather
-    than a field initialised once — every read goes down the chain and gets the
-    live box. Pinned in `tosi-store.test.ts`, including the stale-capture case,
-    because it looks exactly like a write that never happened.
+    Held in a field, `_ensemble` returned an empty document while the bound
+    widgets, which traverse, had the real one. Loading looked like a silent
+    no-op and the afternoon went to the writer. tosijs#35.
+
+    So `_store` is a GETTER over `_stores[_storeKey]`: every access mints a
+    fresh proxy — `store.q === store.q` is false — and nothing is ever held.
+    Pinned in `tosi-store.test.ts`.
   */
   private set _ensemble(value: Ensemble) {
     (this._stores as unknown as Record<string, Ensemble>)[this._storeKey] =

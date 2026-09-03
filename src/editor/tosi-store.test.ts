@@ -17,22 +17,29 @@ describe("replacing the whole document", () => {
     expect(store.r1.tosi.value.pieces.length).toBe(1);
   });
 
-  it("⚠️ but a CAPTURED box reads stale after its parent is replaced", () => {
+  it("⚠️ a captured box DISAGREES WITH ITSELF after its parent is replaced", () => {
     /*
-      The trap, and it cost an hour here because it looks exactly like a write
-      that did not happen. The write DID happen — read through the parent and
-      the new document is there. What is stale is the held reference.
+      A box holds a PATH, not a value, and resolves live — which is why
+      traversing a captured box is correct. `.value` is the exception: it
+      returns the target the box was constructed over, permanently, however
+      many times the path is reassigned.
 
-      So: never keep a boxed proxy across a write to its parent. Re-read it
-      through the chain. The editor's `_store` is a GETTER over
-      `_stores[_storeKey]` for this reason, not a field captured once.
+      So one object gives two answers, and the wrong one is the cheap read that
+      everything reaches for. The editor held the store in a field and read
+      `.value`, so loading an ensemble looked like a silent no-op while the
+      bound widgets — which traverse — had the real document. An afternoon went
+      to the writer before anyone suspected the read. tosijs#35.
+
+      Hence `_store` is a GETTER over `_stores[_storeKey]`: every access mints a
+      fresh proxy (`store.q === store.q` is false), so nothing is ever held.
     */
     const store = tosi({ r2: { name: "empty" } }) as any;
     const captured = store.r2;
-    captured.tosi.value = { name: "loaded" };
+    store.r2.tosi.value = { name: "loaded" };
 
-    expect(store.r2.tosi.value.name).toBe("loaded"); // the write landed
-    expect(captured.tosi.value.name).toBe("empty"); // the capture did not
+    expect(store.r2.tosi.value.name).toBe("loaded"); // fresh proxy: correct
+    expect(captured.name.value).toBe("loaded"); // traversal: also correct
+    expect(captured.tosi.value.name).toBe("empty"); // .value: the original
   });
 
   it("a leaf write goes through the box", () => {

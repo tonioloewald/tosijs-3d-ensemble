@@ -2413,12 +2413,25 @@ export class EnsembleEditor extends Component {
    * chosen them.
    */
   private static starterPieces(): Piece[] {
+    /*
+      IDS MATCH THEIR FEATURE NAMES, and that is not cosmetic. The starter used
+      to call them `land` and `sea` while Insert names a piece after its feature
+      — so a scene could hold `land` (disabled) and `terrain` (just inserted)
+      and nothing said they were the same kind of thing. Owner, reasonably:
+      "what's the difference between land and terrain?" None: one was a piece
+      id I invented, the other is the feature. Now there is one word for it.
+    */
     return [
       { id: "sun", at: [-0.5, 1, 0.4], features: { sun: {} } },
-      { id: "fill", at: [0, 1, 0], features: { light: {} } },
-      { id: "sky", at: [0, 0, 0], features: { skybox: {} } },
-      { id: "land", at: [0, 0, 0], enabled: false, features: { terrain: {} } },
-      { id: "sea", at: [0, 0, 0], enabled: false, features: { water: {} } },
+      { id: "light", at: [0, 1, 0], features: { light: {} } },
+      { id: "skybox", at: [0, 0, 0], features: { skybox: {} } },
+      {
+        id: "terrain",
+        at: [0, 0, 0],
+        enabled: false,
+        features: { terrain: {} },
+      },
+      { id: "water", at: [0, 0, 0], enabled: false, features: { water: {} } },
     ];
   }
 

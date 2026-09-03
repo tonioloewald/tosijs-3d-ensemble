@@ -541,6 +541,7 @@ export function registerSceneFeatures(): void {
     name: "sun",
     icon: "☀️",
     primitive: true,
+    insertAt: [-0.5, 1, 0.4],
     update: updateAttrs,
     schema: {
       type: "object",
@@ -563,6 +564,7 @@ export function registerSceneFeatures(): void {
     name: "skybox",
     icon: "🌌",
     primitive: true,
+    insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
       type: "object",
@@ -635,6 +637,7 @@ export function registerSceneFeatures(): void {
     name: "ground",
     icon: "🟫",
     primitive: true,
+    insertAt: "height",
     update: updateAttrs,
     schema: {
       type: "object",
@@ -768,6 +771,7 @@ export function registerSceneFeatures(): void {
     name: "reflections",
     icon: "🪞",
     primitive: true,
+    insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
       type: "object",
@@ -791,6 +795,7 @@ export function registerSceneFeatures(): void {
     name: "terrain",
     icon: "⛰️",
     primitive: true,
+    insertAt: "height",
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {
@@ -877,11 +882,29 @@ export function registerSceneFeatures(): void {
           unexposed they were the difference between seeing your level and
           starting inside it.
         */
-        tileSize: decades(0, 3, 10, "m"),
+        // Floor of 2m, not 1: the tile count is quadratic in 1/tileSize, and
+        // the bottom of a log track is exactly where a drag lands fastest.
+        tileSize: decades(0.3, 3, 10, "m"),
         lodLevels: { type: "integer", minimum: 0, maximum: 12, default: 5 },
-        // LINEAR: 0 is not a small radius, it is "auto from the coarsest
-        // tile" — a mode, which a log scale cannot reach (tosijs-3d#62).
-        reach: num(0, 5000, 0, "m"),
+        /*
+          ⚠️ REACH IS THE ONE CONTROL THAT CAN KILL THE TAB, so its range is a
+          safety rail rather than a preference.
+
+          Tiles at the finest level go as `(2·reach / tileSize)²`, and the two
+          are separate sliders, so the product is what bites: reach 5000 with
+          tileSize 10 is a MILLION tiles, and with tileSize 1 it is a hundred
+          million. Owner: "reach is bizarre and can kill the tab."
+
+          400m is ~6400 finest tiles at the default tileSize — a large authored
+          level — and the schema cannot express "…unless tileSize is small", so
+          the cap is set for the worst pairing rather than the typical one.
+          Bounding the actual work belongs in the element, which knows both
+          numbers; asked for upstream.
+
+          LINEAR, because 0 is not a small radius. It is "auto from the coarsest
+          tile" — a MODE, which a log scale cannot reach (tosijs-3d#62).
+        */
+        reach: num(0, 400, 0, "m"),
         wireframe: { type: "boolean", default: false },
       },
     },
@@ -912,6 +935,7 @@ export function registerSceneFeatures(): void {
     name: "water",
     icon: "🌊",
     primitive: true,
+    insertAt: "height",
     update: updateAttrs,
     schema: {
       type: "object",
@@ -933,6 +957,7 @@ export function registerSceneFeatures(): void {
     name: "clouds",
     icon: "☁️",
     primitive: true,
+    insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
       type: "object",
@@ -955,6 +980,7 @@ export function registerSceneFeatures(): void {
     name: "ambient",
     icon: "🌗",
     primitive: true,
+    insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
       type: "object",
@@ -975,6 +1001,7 @@ export function registerSceneFeatures(): void {
     name: "fog",
     icon: "🌫️",
     primitive: true,
+    insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
       type: "object",

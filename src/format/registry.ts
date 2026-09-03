@@ -228,6 +228,23 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   primitive?: boolean;
   /**
+   * Where an inserted piece of this kind goes.
+   *
+   * - `"point"` (the default) — where the author clicked. Right for anything
+   *   that is somewhere: a lamp, a sound, a camera.
+   * - `"height"` — `[0, y, 0]`, the clicked HEIGHT only. A terrain, a ground
+   *   plane and a sea are unbounded in x/z, so those coordinates mean nothing
+   *   and carrying them from the click writes noise into the document.
+   * - a `Vec3` — a fixed position. Covers "position is meaningless" as
+   *   `[0,0,0]` (a skybox, fog, ambient life) and the one case that is neither:
+   *   `sun`, whose `at` is a DIRECTION, so a clicked point would aim it
+   *   somewhere arbitrary and `[0,0,0]` would be degenerate.
+   *
+   * Owner: "some things might make sense to insert at 0,0,0 rather than
+   * where-ever you click".
+   */
+  insertAt?: "point" | "height" | Vec3;
+  /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game

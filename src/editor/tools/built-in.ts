@@ -12,6 +12,7 @@ separate select tool meant declaring your intent to a palette before declaring
 it again to the thing you were pointing at.
 */
 /*{"parent":"Editing","order":3}*/
+import { featureRegistration } from "../../format/registry";
 import { snapVec3 } from "../handles";
 import type { Vec3 } from "../../format/types";
 import { registerCommand, registerTool } from "./tool-registry";
@@ -140,6 +141,20 @@ export function registerEditorTools(): void {
 
         if (feature) {
           /*
+            WHERE it goes is the feature's business, not the click's. A skybox
+            has no position, a terrain has only a height, and `sun`'s `at` is a
+            DIRECTION — dropping any of them at the picked point writes a
+            coordinate that means nothing and, for the sun, aims it somewhere
+            arbitrary.
+          */
+          const rule = featureRegistration(feature)?.insertAt ?? "point";
+          const where: Vec3 =
+            rule === "point"
+              ? at
+              : rule === "height"
+              ? [0, at[1], 0]
+              : ([...rule] as Vec3);
+          /*
             An environment primitive: no mesh, and the feature IS the body.
             Empty config, so every default in its schema applies — a `terrain`
             with no settings is a terrain, and the property panel is where you
@@ -147,7 +162,11 @@ export function registerEditorTools(): void {
             document as if the author had chosen them.
           */
           ctx.edit(`insert ${feature}`, (ensemble) => {
-            ensemble.pieces.push({ id, at, features: { [feature]: {} } });
+            ensemble.pieces.push({
+              id,
+              at: where,
+              features: { [feature]: {} },
+            });
           });
           ctx.select(id);
           return;

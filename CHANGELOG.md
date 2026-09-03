@@ -3,6 +3,35 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.1.1] — 2026-09-03
+
+### Fixed
+
+- **0.1.0 could not be imported at all.** It imports `DEFAULT_LIGHT` from
+  `tosijs-3d`, a symbol published only in **0.7.8**, while the peer range said
+  `^0.7.0`. An adopter on 0.7.4 — inside the advertised range — got
+  `SyntaxError: Export named 'DEFAULT_LIGHT' not found`, and because
+  `features-scene` is re-exported from the barrel it took `validate`,
+  `buildEnsemble` and `registerFeature` down with it. The first import line in
+  `MIGRATING.md` was the one that could not work. Reported as #1 by the first
+  consumer to install it.
+
+  **0.7.4, 0.7.5, 0.7.6 and 0.7.7 are all affected** — the range promised four
+  published versions that every one of them failed. If you installed 0.1.0, you
+  need both this release and `tosijs-3d@^0.7.8`.
+
+  The peer range is now `^0.7.8`, which is the version the code was actually
+  written against.
+
+### Added
+
+- **A test that the peer range is a promise we keep.** No test of the CODE could
+  have caught this — the code is correct against the version on disk; what was
+  wrong was the promise. So `src/peer-range.test.ts` asserts we develop against
+  the **floor** of the range we advertise, and that the dev dependency is pinned
+  to that floor rather than a caret that drifts upward silently. With that
+  invariant, anything importable exists in the floor by construction.
+
 ## [0.1.0] — 2026-09-03
 
 First release. The **ensemble** format, its instantiator, and a graphical editor
@@ -56,4 +85,5 @@ Stated plainly because the alternative is somebody discovering them:
 `tosijs-3d ^0.7.0` — never a prerelease range; `0.7.0-rc.1` was published before
 the betas and semver sorts beta below rc, so `^0.7.0-beta.6` resolves backwards.
 
+[0.1.1]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.1
 [0.1.0]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.0

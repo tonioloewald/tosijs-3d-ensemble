@@ -11,6 +11,10 @@ formats barely diverged.
 > — it says what its owner should do, and this copy ships with the package so it
 > is reachable by anyone who only installed it.
 
+> **Requires `tosijs-3d@^0.7.8`.** 0.1.0 advertised `^0.7.0` and imported a
+> symbol only 0.7.8 exports, so it could not be imported on 0.7.4–0.7.7 — see
+> the changelog. Use 0.1.1 or later.
+
 ## Where it stands, measured
 
 Run against `static/prefabs/*.json` as they are today:

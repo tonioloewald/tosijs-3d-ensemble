@@ -1,6 +1,6 @@
 {
   "name": "tosijs-3d-ensemble",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The tosijs-3d ensemble format, its instantiator, and a graphical editor for authoring ensembles.",
   "main": "./dist/index.js",
   "exports": {
@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "tosijs": "^1.7.8",
-    "tosijs-3d": "^0.7.0",
+    "tosijs-3d": "^0.7.8",
     "@babylonjs/core": "^9.0.0"
   },
   "devDependencies": {

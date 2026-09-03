@@ -1,0 +1,42 @@
+{
+  "name": "terrain-test",
+  "kind": "location",
+  "libraries": [
+    {
+      "name": "pirate",
+      "url": "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb"
+    }
+  ],
+  "pieces": [
+    {
+      "id": "sun",
+      "at": [-0.5, 1, 0.4],
+      "features": { "sun": { "intensity": 1.1 } }
+    },
+    {
+      "id": "sky",
+      "at": [0, 0, 0],
+      "features": { "skybox": { "timeOfDay": 10 } }
+    },
+    {
+      "id": "land",
+      "at": [0, 0, 0],
+      "features": {
+        "terrain": {
+          "seed": 7,
+          "surfaceType": "plane",
+          "grossScale": 400,
+          "grossAmplitude": 40,
+          "detailScale": 60,
+          "detailAmplitude": 6
+        }
+      }
+    },
+    {
+      "id": "marker",
+      "library": "pirate",
+      "mesh": "tower-complete-large",
+      "at": [0, 0, 0]
+    }
+  ]
+}

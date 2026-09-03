@@ -55,7 +55,7 @@ editing numbers. That is the editor's single most important interaction and it
 is an upstream build; see UPSTREAM.md.
 */
 /*{"parent":"Editing","order":1}*/
-import { Component } from "tosijs";
+import { Component, tosi } from "tosijs";
 import {
   b3d,
   b3dGround,
@@ -124,6 +124,31 @@ import {
   writeSaved,
 } from "./storage";
 import type { SceneElement } from "../format/registry";
+
+/**
+ * A tosijs store holding one ensemble.
+ *
+ * Typed loosely on purpose: the proxy's shape is a path-addressed view of the
+ * document, not the document, and pretending otherwise in the types invites
+ * exactly the mistake the note on `_store` records.
+ */
+interface TosiStore {
+  value: Ensemble;
+  /*
+    THROUGH `.tosi`, NOT THE BARE PROPERTIES. The accessor is the collision-free
+    API: a document with its own `value` or `observe` key would shadow the
+    direct forms, and `observe` in particular is typed differently on the two —
+    the bare one is a path notifier, this one takes the callback.
+  */
+  tosi: {
+    value: Ensemble;
+    touch: () => void;
+    observe: (callback: (path: string) => void) => () => void;
+  };
+}
+
+/** Distinguishes each editor's store path — see `_store`. */
+let documents = 0;
 
 /** A sample world to author against. Never saved with the ensemble. */
 export type Backdrop = "none" | "land" | "aquatic";
@@ -323,7 +348,57 @@ export class EnsembleEditor extends Component {
     this._history.clear();
     this.rebuild();
   }
-  private _ensemble: Ensemble = EMPTY;
+  /*
+    THE DOCUMENT LIVES IN A TOSIJS STORE, AND THAT IS NOT BOOKKEEPING.
+
+    tosijs is OBSERVANT, not reactive: the DOM is its own source of truth, there
+    is no virtual DOM, and a write queues an rAF update that touches the one
+    bound node that changed. Measured here rather than taken on faith — **50
+    writes to one path produce 1 notification.** Every mechanism I had written
+    by hand (coalescing an undo run by `describe`, deciding when to re-render
+    the chrome, deciding what counts as a structural change) is a worse
+    reimplementation of something the store does for free and tests heavily.
+
+    ⚠️ A tosijs proxy is NOT transparent to ordinary reads, and assuming it is
+    would break everything downstream. Measured: `pieces.find(p => p.id === 'a')`
+    returns `{}` because `p.id` is a BOX rather than a string, `p.id === 'a'` is
+    false, and `structuredClone` throws `DataCloneError`.
+
+    **This is not a gap somebody forgot to close — it is not closeable in
+    JavaScript.** An object wrapper is always truthy, so `new Boolean(false)` is
+    truthy, and no proxy can make a boxed `false` behave like `false` in a
+    condition. Owner: *"There's no workaround within typescript or javascript
+    for ridiculous shit like new Boolean(false) is truthy."* Fixing it means
+    fixing the language, which is what `tjs-lang` is for — in a `.tjs` file
+    native `==` is a footgun-free `===` that UNWRAPS BOXED PRIMITIVES, so
+    `box == "a"` is simply true. We are in `.ts`, so we do not get that.
+
+    The consequence to hold onto here: **never put a box in a condition and
+    never compare one with `===`.** `if (box)` is true for a box holding
+    `false`, and `piece.enabled === false` — a test this file depends on —
+    silently stops being true. So the proxy is used for exactly one thing,
+    binding and observing, and `.value` unwraps the plain document that
+    `buildEnsemble`, `validate`, `serialise` and the history have always been
+    handed.
+
+    Each editor gets its own store key, because `tosi` registers a global path
+    namespace and two editors on one page would otherwise share a document.
+  */
+  private _store = (
+    tosi({ [`ensemble-editor-${++documents}`]: EMPTY }) as unknown as Record<
+      string,
+      TosiStore
+    >
+  )[`ensemble-editor-${documents}`]!;
+
+  /** The plain document. Boxes are for binding; everything else reads this. */
+  private get _ensemble(): Ensemble {
+    return this._store.tosi.value;
+  }
+
+  private set _ensemble(value: Ensemble) {
+    this._store.tosi.value = value;
+  }
 
   /**
    * Host owns persistence — the component calls this, it picks no backend.

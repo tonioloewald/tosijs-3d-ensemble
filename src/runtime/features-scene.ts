@@ -433,7 +433,34 @@ export function registerSceneFeatures(): void {
           a moving one opts in by saying so. That also makes an ensemble
           REPRODUCIBLE: load the same file twice and get the same light.
         */
-        realtimeScale: num(0, 1000, 0),
+        /*
+          LOG-SPACED, AND STILL ABLE TO REACH ZERO.
+
+          A linear 0..1000 track puts every value anyone wants in the first
+          thousandth of its travel — 1 and 10 are indistinguishable positions.
+          `slider3d` has a `log` scale for exactly that, but it "requires
+          min > 0; a range including zero falls back to linear", and 0 is both
+          the default here and the only way to say "do not move".
+
+          The values worth having are decades, so they are named ones. That
+          keeps Off reachable, spaces the rest logarithmically, and says what
+          each means — `600` is not self-evidently ten minutes of sky per
+          second.
+        */
+        realtimeScale: {
+          type: "number",
+          title: "Time speed",
+          enum: [0, 1, 10, 60, 600, 3600],
+          default: 0,
+          "x-labels": {
+            "0": "Off",
+            "1": "realtime",
+            "10": "10×",
+            "60": "1 min/s",
+            "600": "10 min/s",
+            "3600": "1 hr/s",
+          },
+        },
       },
     },
     bind: (_piece, cfg, ctx) => {

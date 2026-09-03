@@ -2462,6 +2462,24 @@ export class EnsembleEditor extends Component {
       appear from somewhere, so that ONE case re-renders and continuous drags
       never do.
     */
+    /*
+      THROUGH THE BOX WHEN THERE IS ONE, so a composite widget gets everything a
+      bound one gets: rounding, undo coalesced on the path, and a feature
+      `update` instead of a rebuild.
+
+      The lamp is why. Its whole config is one `settings` field edited by
+      `lightEditor3d`, which commits on every pointer-move rather than once per
+      gesture — so dragging intensity ran a full rebuild per frame, and "the
+      rotations of things reset while the drag is active". The composite cannot
+      bind (it does not use `boundValue`), but its VALUE still has an address,
+      and writing that address puts it on the same path as everything else.
+    */
+    const box = this._box(id, feature, key) as { value: unknown } | undefined;
+    if (box) {
+      box.value = value;
+      return;
+    }
+
     this.edit(
       `${describe ?? `edit ${feature}.${key}`} ${id}`,
       (ensemble) => {

@@ -372,7 +372,46 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "lamp",
     icon: "💡",
-    update: updateAttrs,
+    /*
+      NOT `updateAttrs`. A lamp's config is ONE field, `settings`, and the bind
+      spreads it across the light element's own attributes — so the blanket
+      helper would have set `element.settings = {…}`, an attribute no light has,
+      and reported success. That is a control that does nothing, arrived at by
+      assuming every feature maps config onto attributes 1:1. Ten of thirteen
+      do; this is one that does not.
+    */
+    update: (handle, cfg) => {
+      const element = handle as unknown as Record<string, unknown> & {
+        tagName?: string;
+      };
+      if (!element?.tagName) return false;
+      const settings = {
+        ...DEFAULT_LIGHT,
+        ...((cfg.settings as Partial<typeof DEFAULT_LIGHT>) ?? {}),
+      };
+      /*
+        A CHANGED `kind` IS A DIFFERENT ELEMENT, so it is structural and the
+        caller must rebuild. Saying "applied" here would leave a point light in
+        the scene while the document said spot, with nothing to report it.
+      */
+      const wanted =
+        settings.kind === "spot"
+          ? "TOSI-B3D-SPOT-LIGHT"
+          : settings.kind === "area"
+          ? "TOSI-B3D-AREA-LIGHT"
+          : "TOSI-B3D-POINT-LIGHT";
+      if (element.tagName.toUpperCase() !== wanted) return false;
+      return updateAttrs(handle, {
+        intensity: settings.intensity,
+        range: settings.range,
+        diffuse: lightColor(settings),
+        // Strings, not booleans — see the note in `bind`.
+        on: settings.on ? "on" : "off",
+        shadows: settings.shadows ? "on" : "off",
+        ...(settings.kind === "spot" ? { angle: settings.angle } : {}),
+        program: settings.program ?? null,
+      });
+    },
     marker: true,
     /*
       THE LIGHT IS THE PIECE'S BODY, and saying so is what makes a lamp
@@ -545,7 +584,12 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "camera",
     icon: "🎥",
-    update: updateAttrs,
+    /*
+      NO `update`: this feature's handle is a stop FUNCTION, not an element —
+      it drives the scene camera through `whenCamera`. `updateAttrs` would have
+      returned false anyway, but by accident rather than by decision, and the
+      caller's rebuild is the correct answer here.
+    */
     marker: true,
     schema: {
       type: "object",
@@ -673,7 +717,10 @@ export function registerSceneFeatures(): void {
   registerFeature({
     name: "terrain",
     icon: "⛰️",
-    update: updateAttrs,
+    // `biome` is an on/off ENUM upstream, so it needs the same mapping the
+    // bind applies. `updateAttrs` alone would write a boolean and do nothing.
+    update: (handle, cfg) =>
+      updateAttrs(handle, { ...cfg, biome: cfg.biome ? "on" : "off" }),
     schema: {
       type: "object",
       title: "Terrain",

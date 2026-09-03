@@ -2372,6 +2372,32 @@ export class EnsembleEditor extends Component {
     return true;
   }
 
+  /**
+   * Empty the scene, keeping the libraries.
+   *
+   * ⚠️ An EDIT, not a document swap. Assigning `ensemble` clears the history —
+   * deliberately, since an undo that reached back into a previous document
+   * would restore pieces this one never had — so a "New" built that way would
+   * throw an afternoon away with no way back. Routed through `edit` it is one
+   * undo step like anything else.
+   *
+   * Libraries survive on purpose: clearing the scene means "start again with
+   * this kit", and dropping them would make placing a single box a matter of
+   * re-adding a library first. `name` resets, because Download names the file.
+   */
+  newEnsemble(): void {
+    this.edit("new ensemble", (ensemble) => {
+      ensemble.name = "untitled";
+      ensemble.pieces.length = 0;
+      delete ensemble.links;
+      delete ensemble.points;
+      delete ensemble.zones;
+      delete ensemble.preview;
+    });
+    this._selected = null;
+    this._syncSelection();
+  }
+
   savedEnsembles(): string[] {
     return typeof localStorage === "undefined" ? [] : savedNames(localStorage);
   }
@@ -2878,6 +2904,7 @@ export class EnsembleEditor extends Component {
           When an icon grid can open a menu (tosijs-3d#59) these become two
           icons with a menu apiece, and the slots come back.
         */
+        button3d({ label: "New", onClick: () => this.newEnsemble() }),
         button3d({ label: "Download", onClick: () => this.saveFile() }),
         button3d({ label: "Open file…", onClick: () => this.openFile() })
       )

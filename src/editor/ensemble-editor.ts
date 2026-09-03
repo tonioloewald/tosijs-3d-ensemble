@@ -71,6 +71,7 @@ import {
   euler3d,
   iconGrid3d,
   slider3d,
+  toggle3d,
   ui,
   vector3d,
 } from "tosijs-3d";
@@ -2227,12 +2228,48 @@ export class EnsembleEditor extends Component {
       "left",
       panel3d(
         { width: LEFT_WIDTH, maxHeight: 340, padding: 8, gap: 4 },
-        list3d<{ label: string; id: string }>({
-          items: this._ensemble.pieces.map((p) => ({ label: p.id, id: p.id })),
-          onSelect: (item) => this.select(item.id),
-        })
+        /*
+          ENVIRONMENT AND CONTENT ARE DIFFERENT KINDS OF THING.
+
+          The format already draws this line — a piece with no `mesh` is an
+          "environment primitive", one whose FEATURES are its body: the sky, the
+          sea, the sun, the view. They configure the world rather than adding to
+          it, and several of them exist mainly so the thing being authored has
+          somewhere to be.
+
+          Mixed into one list they read as peers of a barrel, so `sea` and
+          `flagship` looked like the same sort of entry. Two groups, and each
+          says which it is.
+
+          A disabled piece is struck through rather than hidden: it is still in
+          the document and still selectable, which is the whole point of
+          disabling instead of deleting.
+        */
+        ...(this._pieceGroups() as never[])
       )
     );
+  }
+
+  /** The piece list, split into environment primitives and placed content. */
+  private _pieceGroups(): unknown[] {
+    const label = (p: Piece) => (p.enabled === false ? `◌ ${p.id}` : p.id);
+    const environment = this._ensemble.pieces.filter((p) => !p.mesh);
+    const content = this._ensemble.pieces.filter((p) => p.mesh);
+    const out: unknown[] = [];
+    for (const [title, group] of [
+      ["environment", environment],
+      ["pieces", content],
+    ] as Array<[string, Piece[]]>) {
+      if (!group.length) continue;
+      out.push(label3d({ text: title, muted: true, compact: true }));
+      out.push(
+        list3d<{ label: string; id: string }>({
+          items: group.map((p) => ({ label: label(p), id: p.id })),
+          onSelect: (item) => this.select(item.id),
+        })
+      );
+    }
+    return out;
   }
 
   private _renderProperties(): void {
@@ -2268,6 +2305,18 @@ export class EnsembleEditor extends Component {
     });
     inputs.push(position as unknown as { fields: unknown[] });
     const fields: unknown[] = [
+      /*
+        Off, not gone. Deleting says "this was a mistake"; disabling says "not
+        right now" — drop the sea to look at the seabed, mute a lamp to judge
+        the sky. It is authored state and lives in the file, because that
+        survives a reload and belongs to the document.
+      */
+      toggle3d({
+        label: "enabled",
+        value: selected.enabled !== false,
+        onChange: (on: boolean) =>
+          this.update(selected.id, { enabled: on ? undefined : false }),
+      }) as never,
       label3d({ text: "position", muted: true, compact: true }),
       position,
     ];

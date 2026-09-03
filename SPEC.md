@@ -813,6 +813,67 @@ What is missing is entirely editor-side, and it is two things:
   component. It must stay a suggestion, never a constraint — the moment the
   editor rejects an unknown kind, the format's openness is gone.
 
+### Three kinds of piece: added, applied, and only-for-looking
+
+> **Owner:** _"I want to be able to say create a base that applies a province to
+> ambient terrain and then sprinkles content onto it, but it would be nice to be
+> able to see it in context of a terrain that isn't added or imposed (just
+> useful to see what's going on)."_
+
+The format has two kinds of piece and needs three.
+
+|             | what it does                                                             | ships in the file? | imposed on a host? |
+| ----------- | ------------------------------------------------------------------------ | ------------------ | ------------------ |
+| **added**   | places a mesh — a barrel, a ship                                         | yes                | yes                |
+| **applied** | changes the world it lands in — a province carving terrain, sky settings | yes                | yes                |
+| **context** | exists so the AUTHOR can see what they are doing                         | **no**             | **no**             |
+
+The first two the format already handles, and `mesh` already separates them: a
+piece with one adds geometry, a piece without one IS its features. The third is
+missing and it is the one this workflow needs.
+
+A base that reshapes ambient terrain has nothing to stand on while you author
+it. You need a terrain to see the province against — and that terrain must not
+become part of the ensemble, or every consumer of the base gets a terrain
+imposed on the one it already has.
+
+**The editor already does exactly this, and cannot be told to.** `_syncBackdrop`
+supplies a sky, a ground and a sea so an ensemble has somewhere to be, and
+suppresses each one the moment the ensemble supplies its own. That is context —
+but it is the EDITOR's choice from three fixed backdrops, and what an author
+needs is to choose it: _this_ base against _that_ terrain.
+
+**Recommendation: context does not live in `pieces`.** A `preview` block beside
+them, ignored by the runtime by construction:
+
+```jsonc
+{
+  "name": "forward-base",
+  "pieces": [
+    /* added and applied — the ensemble */
+  ],
+  "preview": {
+    "pieces": [{ "id": "ground", "features": { "terrain": { "seed": 12 } } }]
+  }
+}
+```
+
+Not a flag on a piece, and the difference matters. A `context: true` piece is
+one `filter` away from being built by a consumer that never heard of the flag,
+and the failure is silent — a game quietly gains a terrain. A separate block
+cannot be built by accident, because a runtime that reads `pieces` never sees
+it.
+
+It also answers "what happens on save": `preview` is part of the DOCUMENT, so
+reopening shows the same context you left, while `buildEnsemble` and every
+consumer ignore it without being told to.
+
+⚠️ **Open, and worth settling before it is built:** whether `preview` may
+contain arbitrary pieces (a whole scene, which is powerful and duplicates the
+format inside itself) or only environment primitives — terrain, sky, water,
+ground — which is what the case actually calls for and keeps the block from
+becoming a second ensemble with no validation of its own.
+
 ### A "utilities" library — the palette is where you insert ANYTHING
 
 > **Owner:** _"we may want a 'utilities' library that includes things like named

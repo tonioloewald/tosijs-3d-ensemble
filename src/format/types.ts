@@ -191,6 +191,22 @@ export interface Piece {
    */
   mesh?: string;
   /**
+   * Build this piece? Absent means yes.
+   *
+   * For turning something OFF without losing it — drop the sea to look at the
+   * seabed, mute a lamp to judge the sky, park a half-finished wing while you
+   * work on the rest. Deleting says "this was a mistake"; disabling says "not
+   * right now", and an author needs both.
+   *
+   * `false` and not truthiness: an absent flag has to mean enabled, or every
+   * ensemble ever written becomes an empty scene.
+   *
+   * It is authored state, not editor state — it lives in the file, because
+   * "the sea is off while I work on the seabed" survives a reload and belongs
+   * to the document, not to whoever opened it.
+   */
+  enabled?: boolean;
+  /**
    * Nested ensemble by name, INSTEAD of `mesh`.
    *
    * The shape is reserved so that ids, links and the encounter layer are built

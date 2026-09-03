@@ -187,6 +187,9 @@ export function buildEnsemble(
 
   for (const piece of ensemble.pieces) {
     if (!piece.id || piece.ensemble) continue; // reported by validate; not buildable
+    // Switched off by the author. Still in the document, still in the piece
+    // list, simply not built — see `Piece.enabled`.
+    if (piece.enabled === false) continue;
     const pieceScale = scaleVector(piece.scale);
     const scale3: Vec3 = [
       ensembleScale * pieceScale[0],

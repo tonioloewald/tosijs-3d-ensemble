@@ -158,6 +158,16 @@ gets broken (`src/peer-range.test.ts`).
   2.0s, then gone. It clears on failure too — a spinner that never stops is a
   lie about work still being done.
 
+- **The schema dispatch is pinned by test.** `x-widget: 'curve'` and
+  `'light-program'` have never run in this repo — the lamp hands its whole
+  `settings` field to `lightEditor3d`, so the nested curves never reach the
+  dispatch. They are not dead code: they are the receiving end of a contract,
+  and the first schema to use one will come from OUTSIDE (a consumer's feature,
+  or tosijs-3d's `provinceClimateSchema()`, whose three channels are curves
+  today). That is exactly the arrangement where a broken branch is found by
+  somebody else, months later, as "the panel shows a label where a curve should
+  be".
+
 - **Strings are editable, including colours.** This branch rendered a muted
   label — "show the value rather than hide the field", pending the SVG
   keyboard. The keyboard has been available since 0.7.4 and the label stayed,

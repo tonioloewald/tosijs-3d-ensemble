@@ -40,7 +40,11 @@ console. Every element this module creates is appended explicitly.
 */
 /*{"parent":"Runtime","order":1}*/
 import { featuresOf } from "../format/roles.js";
-import { featureRegistration } from "../format/registry.js";
+import {
+  featureRegistration,
+  linkPayload,
+  linkRegistration,
+} from "../format/registry.js";
 import { scaleVector, uniformScale } from "../format/scale.js";
 import { validate } from "../format/validate.js";
 import {
@@ -312,6 +316,55 @@ export function buildEnsemble(
           built.piece
         )}/features/${feature}`,
       });
+    }
+  }
+
+  /*
+    PHASE 3 — LINKS. Documented at the top of this file since the beginning and
+    absent from it for just as long: `ensemble.links` was read by nothing, so an
+    ensemble with chain reactions built cleanly, reported no problems, and did
+    nothing. Reported by the first consumer that had any.
+
+    After phase 2 on purpose: a handler reaches BOTH ends, and every feature has
+    to have linked before either end is meaningful to it.
+
+    Keyed by payload key, exactly as a piece's features are keyed by name, so
+    `{ from, to, delay: 0.4, beam: true }` invokes whatever is registered for
+    `delay` and for `beam` — and a consumer's link kind is indistinguishable
+    from a built-in. The instantiator itself stays domain-free: a chain reaction
+    is a combat rule, a beam is a visual one, and this file also has to load a
+    botanical garden.
+  */
+  for (const [index, link] of (ensemble.links ?? []).entries()) {
+    for (const [name, cfg] of Object.entries(linkPayload(link))) {
+      const reg = linkRegistration(name);
+      if (!reg) continue;
+      try {
+        reg.bind(
+          (cfg && typeof cfg === "object" ? cfg : { value: cfg }) as Record<
+            string,
+            unknown
+          >,
+          {
+            link,
+            from: pieces.get(link.from),
+            to: pieces.get(link.to),
+            ensemble,
+            scene,
+            pieces,
+            onDispose,
+          }
+        );
+      } catch (err) {
+        // Isolated like a feature's: a broken link must not cost the author
+        // the rest of a scene they are in the middle of editing.
+        problems.push({
+          severity: "error",
+          code: "link-bind-failed",
+          message: `link "${name}" failed to bind: ${String(err)}`,
+          path: `/links/${index}`,
+        });
+      }
     }
   }
 

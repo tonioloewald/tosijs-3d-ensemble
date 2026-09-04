@@ -62,6 +62,24 @@ export {
   registeredFeatures,
   unregisterFeature,
 } from "./format/registry.js";
+/*
+  Links are a registry too, keyed by PAYLOAD KEY the way features are keyed by
+  name — so `{ from, to, delay: 0.4, beam: true }` invokes whatever is
+  registered for each. The instantiator stays domain-free: a chain reaction is a
+  combat rule and a beam is a visual one.
+*/
+export {
+  registerLink,
+  linkRegistration,
+  registeredLinks,
+  unregisterLink,
+  linkPayload,
+} from "./format/registry.js";
+export type {
+  LinkContext,
+  LinkEnd,
+  LinkRegistration,
+} from "./format/registry.js";
 export type {
   FeatureContext,
   FeatureRegistration,

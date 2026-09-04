@@ -3,6 +3,45 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.2.0] — 2026-09-04
+
+### Added
+
+- **The link phase the instantiator documented and never had.** `buildEnsemble`'s
+  header has promised since the beginning that it "wires the ensemble's `links`
+  (chain reactions)". Nothing read `ensemble.links` — the string appeared only in
+  that comment — so an ensemble with links built cleanly, reported no problems,
+  and silently did nothing. Reported by the first consumer that had any (#2).
+
+  **Links are a registry, keyed by payload key**, exactly as a piece's features
+  are keyed by name:
+
+  ```js
+  registerLink({
+    name: 'delay',
+    bind: (cfg, { from, to, onDispose }) => { … },
+  })
+  ```
+
+  So `{ from: 'reactor', to: 'field', delay: 0.4, beam: true }` invokes whatever
+  is registered for `delay` and for `beam`, and a consumer's own link kind is
+  indistinguishable from a built-in.
+
+  ⚠️ **The instantiator implements neither.** A chain reaction is a combat rule
+  and a beam is a visual one; this package also has to load a botanical garden.
+  The mechanism is here, the meaning is the domain's — the same split that keeps
+  `destroyable` in `presets/combat` and `radar` in the consumer that needs it.
+
+  A link handler gets BOTH ends resolved, which a feature `link` hook could not:
+  a chain is a property of the LINK, so whichever endpoint wired it would have
+  to reach across, and two endpoints both trying leaves teardown ambiguous.
+
+  The payload is read from the top level AND from `values` — the type documents
+  `values`, files in the wild use the top level, so both work and `values` wins a
+  collision. A dangling end resolves to `undefined` rather than throwing, since
+  `validate` already reports it and an exception would cost an author the rest of
+  a scene they are mid-edit on.
+
 ## [0.1.3] — 2026-09-04
 
 ### Fixed
@@ -172,6 +211,7 @@ Stated plainly because the alternative is somebody discovering them:
 `tosijs-3d ^0.7.0` — never a prerelease range; `0.7.0-rc.1` was published before
 the betas and semver sorts beta below rc, so `^0.7.0-beta.6` resolves backwards.
 
+[0.2.0]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.2.0
 [0.1.3]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.3
 [0.1.2]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.2
 [0.1.1]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.1

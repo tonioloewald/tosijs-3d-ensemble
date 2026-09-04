@@ -57,7 +57,7 @@ goes black with no error where anyone would look. A `bind`/`link` that registers
 per-frame work must guard itself.
 */
 /*{"parent":"Format","order":3}*/
-import type { Ensemble, Piece, Vec3 } from "./types.js";
+import type { Ensemble, Link, Piece, Vec3 } from "./types.js";
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer
  *  does not import the framework. */
@@ -282,4 +282,115 @@ export function registeredFeatures(): FeatureRegistration<never>[] {
 /** Drop a registration. Mainly for tests, which must not leak into each other. */
 export function unregisterFeature(name: string): boolean {
   return features.delete(name);
+}
+
+/*#
+## Links are a registry too
+
+`buildEnsemble` documented a link phase that wires `ensemble.links`, and the
+runtime never read them: an ensemble with chain reactions built cleanly,
+reported no problems, and did nothing. Found by the first consumer with links,
+which is exactly who would find it.
+
+The fix cannot be "implement chain reactions", because **the format has no
+domain**. A `delay` that kills one piece after another is a combat rule; a
+`beam` that draws a conduit is a visual one. Neither belongs in an instantiator
+that also has to load a botanical garden.
+
+So links get the same treatment features already have: a **registry keyed by
+the payload key**. A piece's `features` is a map of name → config; a link's
+payload is read the same way, so `{ from, to, delay: 0.4, beam: true }` invokes
+whatever is registered for `delay` and for `beam`, and a consumer's own link
+kind is indistinguishable from a built-in.
+
+⚠️ **The payload is every key except `from`, `to` and `kind`, merged over
+`values`.** The type documents `values`, and the files in the wild put `delay`
+and `beam` at the top level — so both are read rather than one being declared
+wrong after the fact. `values` wins on a collision, being the explicit spelling.
+
+It also settles an ownership question a feature hook could not. A chain is a
+property of the LINK, not of either endpoint: whichever end wired it would have
+to reach across, and two endpoints both trying leaves it ambiguous who disposes
+it. A link handler owns the link, gets both ends, and disposes once.
+*/
+
+/**
+ * One end of a link, as a handler sees it.
+ *
+ * Structural rather than the runtime's `BuiltPiece`, because `format` must not
+ * import `runtime` — the format is what a generator and a validator use, and
+ * neither should drag in an instantiator. `BuiltPiece` satisfies this shape, so
+ * the runtime passes its own objects through unchanged.
+ */
+export interface LinkEnd {
+  piece: Piece;
+  /** World position: origin + `at` × ensemble scale. */
+  at: Vec3;
+  /** The element carrying the body, or null — same split as `FeatureContext`. */
+  element: SceneElement | null;
+  node: unknown;
+  /** Whatever each of this piece's features returned from `bind`. */
+  handles: Map<string, unknown>;
+}
+
+/** What a link handler is given. Both endpoints are resolved for it. */
+export interface LinkContext {
+  link: Link;
+  /**
+   * The ends, or `undefined` where an id resolves to nothing.
+   *
+   * Not an error here: `validate` already reports a dangling link, and a
+   * handler that throws on a half-built document would take the rest of the
+   * scene down while an author is mid-edit.
+   */
+  from: LinkEnd | undefined;
+  to: LinkEnd | undefined;
+  ensemble: Ensemble;
+  scene: SceneElement;
+  pieces: Map<string, LinkEnd>;
+  onDispose(fn: () => void): void;
+}
+
+export interface LinkRegistration<Handle = unknown> {
+  /** The payload key this handles — `delay`, `beam`, `amount`. */
+  name: string;
+  /** For an editor to render the link's settings. */
+  schema?: FeatureSchema;
+  bind(cfg: Record<string, unknown>, ctx: LinkContext): Handle;
+}
+
+const links = new Map<string, LinkRegistration<never>>();
+
+/** Register a link kind. Overwrites one of the same name. */
+export function registerLink<Handle>(reg: LinkRegistration<Handle>): void {
+  links.set(reg.name, reg as unknown as LinkRegistration<never>);
+}
+
+export function linkRegistration(
+  name: string
+): LinkRegistration<never> | undefined {
+  return links.get(name);
+}
+
+export function registeredLinks(): LinkRegistration<never>[] {
+  return [...links.values()];
+}
+
+export function unregisterLink(name: string): boolean {
+  return links.delete(name);
+}
+
+/**
+ * A link's payload, whichever way it was written.
+ *
+ * `from`, `to` and `kind` are the format's own fields; everything else is the
+ * domain's. `values` is the documented spelling and wins on a collision.
+ */
+export function linkPayload(link: Link): Record<string, unknown> {
+  const { from, to, kind, values, ...rest } = link as Link &
+    Record<string, unknown>;
+  void from;
+  void to;
+  void kind;
+  return { ...rest, ...(values ?? {}) };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { iconData } from "tosijs-3d";
 import { registerEditorTools } from "./tools/built-in.js";
 import { registeredCommands, registeredTools } from "./tools/tool-registry.js";
+import { PIECE_ROW_ICONS } from "./ensemble-editor.js";
 
 /*
   AN ICON NAME IS A STRING, AND A WRONG ONE FAILS QUIETLY.
@@ -34,6 +35,13 @@ const iconsInUse = (): Array<{ owner: string; icon: string }> => [
   ...registeredCommands().map((c) => ({
     owner: `command:${c.name}`,
     icon: c.icon ?? "",
+  })),
+  // The piece list's row menu, which no registry knows about — its glyphs are
+  // chosen at the call site and would otherwise be the only unchecked ones in
+  // the editor.
+  ...Object.entries(PIECE_ROW_ICONS).map(([name, icon]) => ({
+    owner: `piece-row:${name}`,
+    icon,
   })),
 ];
 

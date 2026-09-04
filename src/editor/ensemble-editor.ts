@@ -61,6 +61,7 @@ import {
   b3d,
   b3dGround,
   b3dLibrary,
+  spinner3d,
   b3dLight,
   b3dSkybox,
   b3dWater,
@@ -135,6 +136,7 @@ import {
   writeSaved,
 } from "./storage.js";
 import type { SceneElement } from "../format/registry.js";
+import type { MenuAction, Table, TableRow } from "tosijs-3d";
 
 /**
  * A tosijs store holding one ensemble.
@@ -326,6 +328,24 @@ function pickFile(onText: (text: string) => void): void {
 */
 export interface EnsembleEditor
   extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
+/**
+ * Glyphs the piece list's row menu draws.
+ *
+ * A module-level constant rather than literals inside the menu builder, so
+ * `icon-names.test.ts` can check them WITHOUT constructing an editor. An icon
+ * name is a string and a wrong one fails quietly — `iconGlyph` draws a
+ * fallback box — which is how `cornerUpLeft` shipped as an empty square where
+ * Undo should be, reported twice before anyone traced it.
+ */
+export const PIECE_ROW_ICONS = {
+  /** The row's own ⋯ button. */
+  menu: "moreVertical",
+  enable: "checkSquare",
+  disable: "square",
+  duplicate: "copy",
+  delete: "trash",
+} as const;
+
 export class EnsembleEditor extends Component {
   static override preferredTagName = "tosi-ensemble-editor";
 
@@ -2893,14 +2913,38 @@ export class EnsembleEditor extends Component {
     const shelf = this._shelf();
     if (!shelf.length) return;
     this._shelfMounted = true;
+    /*
+      SAY THAT IT IS HAPPENING. The palette opens listing whatever is already
+      mounted — usually the ensemble's own one library — and a few seconds
+      later silently becomes four. Nothing marked the gap, so the honest
+      reading of the first frame was "this kit is all there is", and an author
+      who looked away came back to a different list with no idea why.
+
+      `spinner3d` rather than `progress3d`: `mountLibraries` resolves once, for
+      the whole shelf, so there is no fraction to report and faking one is
+      worse than admitting it is indeterminate (tosijs-3d#60, ours).
+    */
+    this._shelfLoading = shelf.length;
     void mountLibraries({ ...this._ensemble, libraries: shelf }, this._scene)
       .then(() => {
+        this._shelfLoading = 0;
         if (this.isConnected) this._renderChrome();
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // A kit that will not load must not leave the spinner running for the
+        // rest of the session: a spinner that never stops is a lie about work
+        // still being done.
+        this._shelfLoading = 0;
+        if (this.isConnected) this._renderChrome();
+      });
+    // The mount above may resolve synchronously from cache, so redraw only if
+    // it did not — otherwise the spinner flashes for one frame.
+    if (this._shelfLoading && this.isConnected) this._renderChrome();
   }
 
   private _shelfMounted = false;
+  /** How many shelf kits are still arriving; `0` when none are. */
+  private _shelfLoading = 0;
 
   /** The name of the pseudo-library holding environment primitives. */
   private static readonly UTILITIES = "utilities";
@@ -2918,6 +2962,21 @@ export class EnsembleEditor extends Component {
       .filter((feature) => feature.primitive)
       .map((feature) => ({ name: feature.name, icon: feature.icon ?? "▪️" }))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * "still loading kits", or nothing at all.
+   *
+   * Spread into a panel rather than returned as a widget, so that when there is
+   * nothing to say the panel has one fewer child instead of an empty row —
+   * `panel3d` sizes to its content, and a blank child is a blank gap.
+   */
+  private _shelfSpinner(): ReturnType<typeof spinner3d>[] {
+    if (!this._shelfLoading) return [];
+    const kits = this._shelfLoading;
+    return [
+      spinner3d({ label: `loading ${kits} kit${kits === 1 ? "" : "s"}…` }),
+    ];
   }
 
   private _renderLibraryPalette(): void {
@@ -2964,6 +3023,7 @@ export class EnsembleEditor extends Component {
         panel3d(
           { width: PANEL_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
           label3d({ text: `Library (${utilities.length})`, bold: true }),
+          ...this._shelfSpinner(),
           label3d({ text: "library", muted: true, compact: true }),
           select3d({
             label: "",
@@ -3275,35 +3335,161 @@ export class EnsembleEditor extends Component {
     return chosen?.icon ?? "▪️";
   }
 
+  /**
+   * The piece list: a filtered `table` per group, not a `list3d` of strings.
+   *
+   * Three things arrived in tosijs-3d 0.8.0 that this had been faking:
+   *
+   * - **`filter` / `setFilter`** (#67, ours). A scene list is hundreds of rows.
+   *   Filtering our own `rows` array would throw away the scroll position, the
+   *   selection and the focus index the table owns — so the filter has to live
+   *   INSIDE it, and it does: hiding is a view state, and a row you selected
+   *   and then filtered out is still selected when it comes back.
+   * - **A button column with `menu(row)`** (#64). Per-row actions, anchored to
+   *   the row they act on. The button takes the press instead of the row, so a
+   *   row's ⋯ does not also select it.
+   * - **Real columns.** Kind and state used to be concatenated into one label
+   *   string (`📦 flagship · off`), which is a table drawn with spaces.
+   *
+   * ⚠️ NOT `kind: 'icon'` for the kind column, though that is what #64 asked
+   * for. An icon column reads its value as an `iconGlyph` NAME, and our icons
+   * are EMOJI — `registerFeature({ icon: '☀️' })` is the registry's contract,
+   * and it is what lets a consumer's own feature appear in this list with a
+   * glyph the editor never knew about. Switching to names would make every
+   * consumer register an SVG icon too, to gain nothing an author can see. The
+   * kind stays a narrow text column.
+   */
   private _pieceGroups(): unknown[] {
-    /*
-      KIND AND STATE ARE DIFFERENT THINGS, so they do not share a glyph. A
-      disabled lamp is still a lamp: the icon says which, and the state is a
-      word after the name. The first version replaced the whole label with
-      `◌ id`, which threw the kind away to say something about the state.
+    const out: unknown[] = [];
+    this._pieceTables = [];
 
-      When the icon column lands (tosijs-3d#64) these become two columns and
-      the string-building here goes away.
+    /*
+      THE FILTER FIELD IS UNBOUND AND OUTSIDE THE RENDER, deliberately.
+
+      Re-rendering the chrome on every keystroke would rebuild the tables, and
+      rebuilding them discards exactly what the upstream filter exists to
+      preserve — plus the field itself, mid-word. So the text lives here, the
+      field holds its own, and `setFilter` is called on the LIVE tables.
     */
-    const label = (p: Piece) =>
-      `${this._kindIcon(p)} ${p.id}${p.enabled === false ? " · off" : ""}`;
+    out.push(
+      ui.inputField({
+        value: this._pieceFilter,
+        placeholder: "filter…",
+        handleChange: (text: string) => this._setPieceFilter(text),
+      }) as never
+    );
+
     const environment = this._ensemble.pieces.filter((p) => !p.mesh);
     const content = this._ensemble.pieces.filter((p) => p.mesh);
-    const out: unknown[] = [];
     for (const [title, group] of [
       ["environment", environment],
       ["pieces", content],
     ] as Array<[string, Piece[]]>) {
       if (!group.length) continue;
       out.push(label3d({ text: title, muted: true, compact: true }));
-      out.push(
-        list3d<{ label: string; id: string }>({
-          items: group.map((p) => ({ label: label(p), id: p.id })),
-          handleSelect: (item) => this.select(item.id),
-        })
-      );
+      const rows: TableRow[] = group.map((piece) => ({
+        id: piece.id,
+        kind: this._kindIcon(piece),
+        // KIND AND STATE ARE DIFFERENT THINGS, so they do not share a glyph. A
+        // disabled lamp is still a lamp: the icon says which, and the state is
+        // a word after the name. An early version replaced the whole label
+        // with `◌ id`, throwing the kind away to say something about state.
+        name: `${piece.id}${piece.enabled === false ? " · off" : ""}`,
+        actions: PIECE_ROW_ICONS.menu,
+      }));
+      const built = ui.table({
+        rows,
+        columns: [
+          { key: "kind", width: 22, align: "center", label: "" },
+          { key: "name", flex: 1, minWidth: 80, label: "" },
+          {
+            key: "actions",
+            kind: "button",
+            width: 26,
+            label: "",
+            menu: (row: Record<string, unknown>) =>
+              this._pieceMenu(String(row.id)),
+          },
+        ],
+        // No captions: three columns called "kind", "name" and "actions" tell
+        // an author nothing they cannot see. The header row is the space.
+        headerHeight: 0,
+        rowHeight: 26,
+        height: Math.min(group.length, 7) * 26,
+        selection: "single",
+        // `null` is what `setFilter` takes for "everything"; the OPTION wants
+        // it absent. Same idea, two spellings, one `??`.
+        filter: this._pieceFilterPredicate() ?? undefined,
+        handleSelect: ([id]: string[]) => {
+          if (id) this.select(id);
+        },
+      });
+      this._pieceTables.push(built);
+      out.push(built as never);
     }
     return out;
+  }
+
+  /** Live tables, held so the filter can reach them without a re-render. */
+  private _pieceTables: Table[] = [];
+  private _pieceFilter = "";
+
+  private _setPieceFilter(text: string): void {
+    this._pieceFilter = text;
+    const predicate = this._pieceFilterPredicate();
+    for (const built of this._pieceTables) built.setFilter(predicate);
+  }
+
+  /** `null` for "show everything", which is what the table wants for no filter. */
+  private _pieceFilterPredicate(): ((row: TableRow) => boolean) | null {
+    const query = this._pieceFilter.trim().toLowerCase();
+    if (!query) return null;
+    return (row) =>
+      String(row.name ?? "")
+        .toLowerCase()
+        .includes(query);
+  }
+
+  /**
+   * A row's own actions.
+   *
+   * `Delete` and `Duplicate` are the REGISTERED commands, run against the row
+   * rather than reimplemented — so a consumer that replaces `delete` replaces
+   * it here too, and the undo entry reads the same however it was invoked.
+   * Selecting first is not a side effect to apologise for: acting on a row you
+   * did not select, while a different piece stays selected in the scene, is
+   * the surprise.
+   */
+  private _pieceMenu(id: string): MenuAction[] {
+    const piece = this._ensemble.pieces.find((p) => p.id === id);
+    const off = piece?.enabled === false;
+    return [
+      {
+        label: off ? "Enable" : "Disable",
+        icon: off ? PIECE_ROW_ICONS.enable : PIECE_ROW_ICONS.disable,
+        handleSelect: () =>
+          this.update(id, { enabled: off ? undefined : false }),
+      },
+      {
+        label: "Duplicate",
+        icon: PIECE_ROW_ICONS.duplicate,
+        handleSelect: () => this._runCommandOn(id, "duplicate"),
+      },
+      {
+        label: "Delete",
+        icon: PIECE_ROW_ICONS.delete,
+        handleSelect: () => this._runCommandOn(id, "delete"),
+      },
+    ];
+  }
+
+  private _runCommandOn(id: string, name: string): void {
+    this.select(id);
+    const command = registeredCommands().find((c) => c.name === name);
+    const ctx = this._toolContext();
+    // Greyed in the tool bar, refused here — the same rule, asked the same way.
+    if (!command || command.enabled?.(ctx) === false) return;
+    command.run(ctx);
   }
 
   private _renderProperties(): void {

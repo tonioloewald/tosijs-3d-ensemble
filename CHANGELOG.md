@@ -126,6 +126,52 @@ gets broken (`src/peer-range.test.ts`).
   mechanism_. The attribute was set, the element accepted it, the tests passed,
   and the turret aimed exactly where it would have with no `smart` at all.
 
+### Added
+
+- **The piece list is a filtered table with per-row actions.** One field
+  narrows hundreds of rows; a row's ⋯ offers Enable/Disable, Duplicate and
+  Delete.
+
+  The filter reaches the LIVE tables through `setFilter` rather than
+  re-rendering the panel, which is the whole reason the feature had to be
+  upstream (tosijs-3d#67, ours): re-rendering would discard the scroll
+  position, the selection and the focus index the table owns — and the field
+  itself, mid-word. Measured: filtering out the selected `flagship` left it
+  selected, and it came back when the filter cleared. Hiding is a view state.
+
+  Delete and Duplicate run the REGISTERED commands rather than reimplementing
+  them, so a consumer that replaces `delete` replaces it here too and the undo
+  entry reads the same however it was invoked.
+
+  ⚠️ **`kind: 'icon'` is deliberately NOT used**, though that is what we asked
+  #64 for. An icon column reads its value as an `iconGlyph` NAME, and our
+  feature icons are EMOJI — `registerFeature({ icon: '☀️' })` is the registry's
+  contract, and it is what lets a consumer's own feature appear in this list
+  with a glyph the editor never knew about. Names would make every consumer
+  register an SVG icon too, to gain nothing an author can see.
+
+- **The kit shelf says it is loading.** The insert palette opens listing
+  whatever is already mounted — usually the ensemble's own one library — and a
+  few seconds later silently became four. Nothing marked the gap, so the honest
+  reading of the first frame was "this kit is all there is" (tosijs-3d#60,
+  ours). Measured with cache-busted kit URLs: "loading 4 kits…" up from 1.0s to
+  2.0s, then gone. It clears on failure too — a spinner that never stops is a
+  lie about work still being done.
+
+- **Strings are editable, including colours.** This branch rendered a muted
+  label — "show the value rather than hide the field", pending the SVG
+  keyboard. The keyboard has been available since 0.7.4 and the label stayed,
+  so every string property in every scene feature was read-only:
+  `ground.texture`, `water.normalMap`, `clouds.model`, and — once we adopted
+  tosijs-3d's own scene schemas — seven colour fields, four on the sky alone.
+
+  ⚠️ A colour deserves better than a hex field and there is nothing to give it:
+  tosijs-3d has no colour control at all, and its own `skyboxSchema()` declares
+  four `format: 'color'` properties its widget set cannot edit. Filed as
+  tosijs-3d#72 rather than hand-rolled — a widget belongs to its owner.
+  `x-widget: "color"` is preserved so a picker drops in without touching a
+  schema.
+
 ### Changed
 
 - **The sky's `realtimeScale` is a log slider with a zero stop, not a cycler.**

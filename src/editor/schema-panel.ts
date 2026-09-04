@@ -74,6 +74,13 @@ interface PropertySpec {
   default?: unknown;
   "x-unit"?: string;
   "x-widget"?: string;
+  /**
+   * JSON Schema's own annotation, which is what tosijs-3d's scene schemas use
+   * (`format: 'color'`). `pick()` translates it into `x-widget` on the way in;
+   * this is here for a schema that did not come through `pick()` — a
+   * consumer's own feature, or one written straight against JSON Schema.
+   */
+  format?: string;
   /** Which domain a `curve` field is in: `profile`, `falloff` or `radial`. */
   "x-curve-kind"?: string;
   /**
@@ -372,10 +379,43 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       continue;
     }
 
-    // Strings and anything unrecognised: show the value rather than hide the
-    // field. Text entry wants the SVG keyboard and lands with the property
-    // panel — until then an author can at least SEE what is set.
-    widgets.push(label3d({ text: `${label}: ${value ?? "—"}`, muted: true }));
+    /*
+      STRINGS ARE EDITABLE NOW, INCLUDING COLOURS.
+
+      This branch used to render a muted label — "show the value rather than
+      hide the field", pending the SVG keyboard. The keyboard has been here
+      since 0.7.4 and the label stayed, so every string property in every scene
+      feature was read-only: `ground.texture`, `water.normalMap`,
+      `clouds.model`, and — after adopting tosijs-3d's own scene schemas —
+      SEVEN colour fields, four of them on the sky alone.
+
+      Read-only is at least honest, which is why this was never urgent. It is
+      still a panel that shows you a setting and refuses to let you change it.
+
+      ⚠️ A COLOUR DESERVES BETTER THAN A HEX FIELD, and there is nothing to
+      give it: tosijs-3d has no colour control at all (`lightEditor3d` sidesteps
+      it with a hue slider, and `FieldType` is
+      `text | number | integer | email | url | tel`). Its OWN `skyboxSchema()`
+      declares four `format: 'color'` properties its widget set cannot edit,
+      which is the ask, filed rather than hand-rolled — a widget belongs to its
+      owner. `x-widget: "color"` is preserved here so the picker drops in
+      without touching a schema.
+    */
+    const isColor = spec["x-widget"] === "color" || spec.format === "color";
+    widgets.push(
+      label3d({
+        text: `${label}${isColor ? " (hex)" : ""}`,
+        muted: true,
+        compact: true,
+      })
+    );
+    widgets.push(
+      ui.inputField({
+        value: value === undefined || value === null ? "" : String(value),
+        placeholder: isColor ? "#rrggbb" : "—",
+        handleChange: (next: string) => handleChange(key, next),
+      }) as never
+    );
   }
 
   return widgets;

@@ -34,7 +34,7 @@ export interface History<T> {
    *
    * `coalesce` folds this into the previous step when it carries the same
    * `describe` — for a control that reports CONTINUOUSLY. A slider has no
-   * gesture end to wait for (`slider3d` exposes only `onChange`), so dragging
+   * gesture end to wait for (`slider3d` exposes only `handleChange`), so dragging
    * one would otherwise put a step in the history per pointer-move and undo
    * would walk back through the drag a pixel at a time.
    *

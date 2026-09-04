@@ -9,7 +9,7 @@ renderer, JSON Schema in, SVG UI widgets out, and it serves both.
 const panel = schemaPanel({
   schema: turretSchema,
   values: piece.features.turret,
-  onChange: (key, value) => edit(`turret ${key}`, () => { ... }),
+  handleChange: (key, value) => edit(`turret ${key}`, () => { ... }),
 })
 ```
 
@@ -121,7 +121,7 @@ interface PropertySpec {
 export interface SchemaPanelOptions {
   schema: FeatureSchema | undefined;
   values: Record<string, unknown>;
-  onChange: (key: string, value: unknown) => void;
+  handleChange: (key: string, value: unknown) => void;
   /**
    * A BOX for a property — a tosijs leaf with `.value` and `.observe()`.
    *
@@ -137,20 +137,20 @@ export interface SchemaPanelOptions {
    * work again, worse.
    *
    * Return `undefined` for a key with no stable address and the widget falls
-   * back to a plain value plus `onChange`, which is what tool options do — they
+   * back to a plain value plus `handleChange`, which is what tool options do — they
    * are not part of the document, so they have no path to bind to.
    */
   box?: (key: string) => unknown;
   /**
    * A GESTURE finished — write it to the document, one undo step.
    *
-   * Widgets with a drag report twice: `onChange` continuously so the scene can
+   * Widgets with a drag report twice: `handleChange` continuously so the scene can
    * follow the hand, and this once at the end. Without the split, one drag of a
    * curve point would be fifty entries in the history; without the live half,
    * the 3D preview would only catch up when you let go. Falls back to
-   * `onChange` for widgets that have no gesture to end.
+   * `handleChange` for widgets that have no gesture to end.
    */
-  onCommit?: (key: string, value: unknown, describe?: string) => void;
+  handleCommit?: (key: string, value: unknown, describe?: string) => void;
   /** Panel heading. Omitted for an embedded group. */
   title?: string;
   width?: number;
@@ -160,7 +160,7 @@ export interface SchemaPanelOptions {
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, onChange, onCommit, box } = options;
+  const { schema, values, handleChange, handleCommit, box } = options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 
@@ -195,7 +195,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           // happen and this hands back the answer, or `previous` to veto.
           handleChange: (change: { index: number; selection: number[] }) =>
             resolveToolCells(change),
-          handleSelect: (selection: number[]) => onChange(key, selection),
+          handleSelect: (selection: number[]) => handleChange(key, selection),
         }) as never
       );
       continue;
@@ -227,7 +227,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       Commit-only to the document: these all report live as well, but a live
       write here would rebuild the scene on every pointer-move.
     */
-    const commit = onCommit ?? ((k, v) => onChange(k, v));
+    const commit = handleCommit ?? ((k, v) => handleChange(k, v));
     if (spec["x-widget"] === "light") {
       widgets.push(
         lightEditor3d({
@@ -272,7 +272,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             an unbound tool option without either knowing about the other.
           */
           value: (box?.(key) as boolean | undefined) ?? value === true,
-          onChange: (v: boolean) => onChange(key, v),
+          handleChange: (v: boolean) => handleChange(key, v),
         })
       );
       continue;
@@ -294,7 +294,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
               ? { label: `${option}${rawUnit}`, value: option }
               : option;
           }),
-          onChange: (v: string | number) => onChange(key, v),
+          handleChange: (v: string | number) => handleChange(key, v),
         })
       );
       continue;
@@ -316,7 +316,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           ...(spec["x-scale"] && spec["x-scale"] !== "linear"
             ? { scale: spec["x-scale"] }
             : {}),
-          onChange: (v: number) => onChange(key, v),
+          handleChange: (v: number) => handleChange(key, v),
         })
       );
       continue;

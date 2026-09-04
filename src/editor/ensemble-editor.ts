@@ -105,7 +105,11 @@ import { axisVector, noTransforms, normaliseDegrees } from "./handles.js";
 import type { Grip } from "./handles.js";
 import { schemaWidgets } from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
-import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view.js";
+import {
+  createBeaconView,
+  type Beacon,
+  type BeaconView,
+} from "./beacon-view.js";
 import { featureRegistration, registeredFeatures } from "../format/registry.js";
 import type { EditorRay } from "./input/pointer.js";
 import type { CatalogEntry, ToolContext } from "./tools/tool-registry.js";
@@ -113,7 +117,13 @@ import { placeMesh } from "../runtime/place-mesh.js";
 import { registerSceneFeatures } from "../runtime/features-scene.js";
 import { validate } from "../format/validate.js";
 import type { BuiltEnsemble } from "../runtime/build.js";
-import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types.js";
+import type {
+  Ensemble,
+  Euler,
+  Piece,
+  Vec3,
+  LibraryRef,
+} from "../format/types.js";
 import { narrowScale, scaleVector } from "../format/scale.js";
 import {
   fileNameFor,
@@ -1616,11 +1626,20 @@ export class EnsembleEditor extends Component {
         not" — so re-registering on every ready would stack duplicates.
       */
       if (!this._stopWatchingDisposal) {
+        /*
+          NOT optional-called. This was written before `whenDisposed` existed,
+          against tosijs-3d#22, and `?.()` meant a missing method left us
+          silently never observing disposal — the failure this whole callback
+          exists to prevent, arriving as nothing at all. It shipped in
+          tosijs-3d@0.8.0 and our peer FLOOR is 0.8.0, so it is guaranteed;
+          if it ever is not, that should be loud.
+        */
         const watchable = scene as unknown as {
-          whenDisposed?: (cb: () => void) => () => void;
+          whenDisposed: (cb: () => void) => () => void;
         };
-        this._stopWatchingDisposal =
-          watchable.whenDisposed?.(() => this._onSceneDisposed()) ?? null;
+        this._stopWatchingDisposal = watchable.whenDisposed(() =>
+          this._onSceneDisposed()
+        );
       }
       this._syncBackdrop();
       if (this._rebuildPending) {
@@ -2598,7 +2617,7 @@ export class EnsembleEditor extends Component {
       ⚠️ We cannot yet do the RIGHT thing here, only stop doing the wrong one.
       A bound panel needs a way to push a value INTO a live widget, and
       `Widget3d` has none — `slider3d` takes `value` at construction and reports
-      out through `onChange`, and only composites like `LightEditorField` expose
+      out through `handleChange`, and only composites like `LightEditorField` expose
       `setValue`. So the panel cannot be bound; it can only be rebuilt. Filed
       upstream. Until then the honest position is: never rebuild it for a value,
       because the widget that raised the change is already showing that value —
@@ -2803,14 +2822,14 @@ export class EnsembleEditor extends Component {
     const widgets = schemaWidgets({
       schema: tool.optionsSchema,
       values: this._optionValues(),
-      onChange: (key, value) => this.setToolOption(key, value),
+      handleChange: (key, value) => this.setToolOption(key, value),
       /*
         A tool option is not a document edit, so there is nothing to record —
         but the split still matters: a widget with a drag reports live AND on
-        release, and without an `onCommit` here it would write the option fifty
+        release, and without a `handleCommit` here it would write the option fifty
         times per gesture, re-rendering the chrome each time.
       */
-      onCommit: (key, value) => this.setToolOption(key, value),
+      handleCommit: (key, value) => this.setToolOption(key, value),
     });
     this._addPanel(
       "right",
@@ -2934,7 +2953,7 @@ export class EnsembleEditor extends Component {
             label: "",
             value: currentLibrary,
             options: libraries,
-            onChange: (value: string | number) => {
+            handleChange: (value: string | number) => {
               this.setToolOption("library", String(value));
               this.setToolOption("family", undefined);
             },
@@ -2944,7 +2963,7 @@ export class EnsembleEditor extends Component {
               label: `${utility.icon} ${utility.name}`,
               name: utility.name,
             })),
-            onSelect: (item) => {
+            handleSelect: (item) => {
               if (this._tool !== "insert") this.setTool("insert");
               /*
                 Whichever of the two is set is what gets placed, so choosing a
@@ -2993,7 +3012,7 @@ export class EnsembleEditor extends Component {
                 label: "",
                 value: currentLibrary,
                 options: libraries,
-                onChange: (value: string | number) => {
+                handleChange: (value: string | number) => {
                   this.setToolOption("library", String(value));
                   // The old family belongs to the old library.
                   this.setToolOption("family", undefined);
@@ -3006,7 +3025,7 @@ export class EnsembleEditor extends Component {
           label: "",
           value: current,
           options: families,
-          onChange: (value: string | number) => {
+          handleChange: (value: string | number) => {
             this.setToolOption("family", String(value));
           },
         }),
@@ -3029,7 +3048,7 @@ export class EnsembleEditor extends Component {
                     .replace(/^[_-]/, "") || entry.mesh,
             entry,
           })),
-          onSelect: (item) => {
+          handleSelect: (item) => {
             if (this._tool !== "insert") this.setTool("insert");
             this.setToolOption("feature", undefined);
             this.setToolOption("mesh", item.entry.mesh);
@@ -3057,7 +3076,7 @@ export class EnsembleEditor extends Component {
         ui.inputField({
           value: this._ensemble.name ?? "",
           placeholder: "untitled",
-          onChange: (value: string) => this.rename(value),
+          handleChange: (value: string) => this.rename(value),
         }) as never,
         /*
           TWO BUTTONS, UNTIL THERE ARE MENUS.
@@ -3072,9 +3091,9 @@ export class EnsembleEditor extends Component {
           When an icon grid can open a menu (tosijs-3d#59) these become two
           icons with a menu apiece, and the slots come back.
         */
-        button3d({ label: "New", onClick: () => this.newEnsemble() }),
-        button3d({ label: "Download", onClick: () => this.saveFile() }),
-        button3d({ label: "Open file…", onClick: () => this.openFile() })
+        button3d({ label: "New", handleClick: () => this.newEnsemble() }),
+        button3d({ label: "Download", handleClick: () => this.saveFile() }),
+        button3d({ label: "Open file…", handleClick: () => this.openFile() })
       )
     );
   }
@@ -3264,7 +3283,7 @@ export class EnsembleEditor extends Component {
       out.push(
         list3d<{ label: string; id: string }>({
           items: group.map((p) => ({ label: label(p), id: p.id })),
-          onSelect: (item) => this.select(item.id),
+          handleSelect: (item) => this.select(item.id),
         })
       );
     }
@@ -3300,7 +3319,7 @@ export class EnsembleEditor extends Component {
       },
       step: 0.25,
       scrub: 0.02,
-      onChange: (v) => this.update(selected.id, { at: [v.x, v.y, v.z] }),
+      handleChange: (v) => this.update(selected.id, { at: [v.x, v.y, v.z] }),
     });
     inputs.push(position as unknown as { fields: unknown[] });
     const fields: unknown[] = [
@@ -3313,7 +3332,7 @@ export class EnsembleEditor extends Component {
       toggle3d({
         label: "enabled",
         value: selected.enabled !== false,
-        onChange: (on: boolean) =>
+        handleChange: (on: boolean) =>
           this.update(selected.id, { enabled: on ? undefined : false }),
       }) as never,
       label3d({ text: "position", muted: true, compact: true }),
@@ -3325,7 +3344,7 @@ export class EnsembleEditor extends Component {
         value: { x: rot[0], y: rot[1], z: rot[2] },
         step: 5,
         scrub: 0.5,
-        onChange: (v) =>
+        handleChange: (v) =>
           this.update(selected.id, {
             rot: [v.x, v.y, v.z].map(normaliseDegrees) as Euler,
           }),
@@ -3358,7 +3377,7 @@ export class EnsembleEditor extends Component {
         // A scale of zero collapses the mesh and cannot be scrubbed back out
         // of, since every later factor multiplies it.
         min: 0.01,
-        onChange: (v) =>
+        handleChange: (v) =>
           this.update(selected.id, {
             scale: narrowScale([v.x, v.y, v.z]),
           }),
@@ -3414,12 +3433,12 @@ export class EnsembleEditor extends Component {
           BOTH channels write, and they differ only in undo granularity.
 
           An ordinary control — a slider, a toggle — has no gesture end to wait
-          for: `slider3d` exposes `onChange` alone. Leaving this a no-op is why
+          for: `slider3d` exposes `handleChange` alone. Leaving this a no-op is why
           the skybox panel appeared and did nothing. So it writes, and coalesces
           into one undo step for as long as the same field keeps reporting.
 
           A composite widget DOES know when its gesture ended and says so
-          through `onCommit`, which takes its own step.
+          through `handleCommit`, which takes its own step.
         */
         /*
           ONLY FOR WHAT IS NOT BOUND. A bound widget has ALREADY written the
@@ -3431,7 +3450,7 @@ export class EnsembleEditor extends Component {
           to address, and anything a schema describes that the bound branches do
           not cover.
         */
-        onChange: (key, value) => {
+        handleChange: (key, value) => {
           const bound =
             !this._changesPanelShape(name, key) &&
             this._box(selected.id, name, key);
@@ -3443,7 +3462,7 @@ export class EnsembleEditor extends Component {
           object at the end of a gesture and do not use `boundValue`, so they
           still commit through here.
         */
-        onCommit: (key, value, describe) =>
+        handleCommit: (key, value, describe) =>
           this.updateFeature(selected.id, name, key, value, describe),
       });
       if (!widgets.length) continue;
@@ -3505,7 +3524,7 @@ export class EnsembleEditor extends Component {
           ui.inputField({
             value: selected.id,
             placeholder: "id",
-            onChange: (value: string) => {
+            handleChange: (value: string) => {
               this.renamePiece(selected.id, value);
             },
           }) as never

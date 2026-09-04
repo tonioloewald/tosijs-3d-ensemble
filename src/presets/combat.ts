@@ -222,7 +222,14 @@ export function registerCombatPreset(): () => void {
           damage: cfg.damage ?? 4,
           muzzleSpeed: cfg.muzzleSpeed ?? 240,
           traverseRate: cfg.traverseRate ?? 1.2,
-          smart: cfg.smart ? "on" : "off",
+          // `smart` is a NUMBER upstream — a 0..1 skill curve (lead ramps to
+          // full by 0.5, gravity-drop compensation by 1), not an on/off flag.
+          // We wrote "on"/"off" and tosijs SILENTLY DISCARDED it, so a turret
+          // authored `smart: true` never led its target and nothing said so.
+          // tosijs 1.9 applies a wrong-typed write instead of dropping it,
+          // which turned the same bug into `Math.min(1, "off")` → NaN aim.
+          // The boolean stays in our schema; it maps to the curve's endpoints.
+          smart: cfg.smart ? 1 : 0,
         })
       ),
     // A dead platform stops shooting.

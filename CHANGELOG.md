@@ -3,6 +3,68 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+A **minor** when it ships: the peer floor moved, which is a decision about who
+gets broken (`src/peer-range.test.ts`).
+
+### ⚠️ Breaking — the peer floor moved
+
+- **`tosijs-3d` is now `^0.8.0`** (was `^0.7.8`) and **`tosijs` is `^1.9.2`**
+  (was `^1.7.8`). Both are floors we develop against, not versions we merely
+  tolerate, so an adopter must move with us.
+
+  Taken deliberately rather than deferred: 0.8.0 carries `scene.whenDisposed`,
+  which we had already written the editor against, and the `handleX` rename,
+  whose old spelling is removed in 0.9. Sitting on the old floor only makes the
+  same migration bigger later.
+
+### Fixed
+
+- **A `smart` turret never led its target, and under tosijs 1.9 it aimed at
+  `NaN` instead.** `presets/combat` wrote `smart: "on" | "off"` to
+  `<tosi-b3d-turret>`, whose `smart` is a NUMBER — a 0..1 skill curve, where
+  lead ramps to full by 0.5 and gravity-drop compensation by 1.
+
+  tosijs used to discard a wrong-typed write to an `initAttributes` prop
+  **silently**, so `smart: true` in an ensemble had always been a no-op and
+  nothing anywhere said so. tosijs 1.9 warns and **applies** the value instead,
+  which turned the dead write into `Math.max(0, Math.min(1, "off"))` → `NaN`
+  through the aim maths — for both spellings.
+
+  The boolean stays in our schema and maps to the curve's endpoints. Found by
+  the upgrade: the new warning names the element, the prop and the value, which
+  is the whole argument for the change upstream.
+
+  ⚠️ **This is the project's own rule again** — _verify the OUTPUT, not the
+  mechanism_. The attribute was set, the element accepted it, the tests passed,
+  and the turret aimed exactly where it would have with no `smart` at all.
+
+### Changed
+
+- **Callbacks passed to tosijs-3d widgets are `handleX`.** `handleChange`,
+  `handleSelect`, `handleClick`, `handleCommit` — at every call site in
+  `ensemble-editor.ts` and `schema-panel.ts`, and on `SchemaPanelOptions`
+  itself, which is ours.
+
+  Both spellings work through tosijs-3d 0.8.x and `onX` is removed in 0.9, so
+  this is not urgent — but a _half_-migrated codebase is what caused three of
+  the bugs 0.8.0 fixed upstream, where one widget took `handleChange` and its
+  neighbour took `onChange` and neither complained about the other. Renaming
+  ours too means there is no longer a spelling question to get wrong.
+
+- **`scene.whenDisposed` is no longer optional-chained.** It was written before
+  the method existed (tosijs-3d#22), and `?.()` meant a missing method left the
+  editor silently never observing scene disposal — precisely the failure the
+  callback exists to prevent, arriving as nothing at all. The peer floor now
+  guarantees it.
+
+- **`src/editor/tosi-store.test.ts` asserts the FIXED behaviour of a held
+  proxy.** tosijs 1.9.2 fixed tosijs#35 (ours): `.value`, `valueOf()` and
+  `toJSON()` follow the path now instead of returning the object the proxy was
+  created over. The test pinned the bug, so the upgrade is what failed it —
+  which is what a test like that is for. `_store` stays a getter.
+
 ## [0.2.0] — 2026-09-04
 
 ### Added

@@ -17,29 +17,38 @@ describe("replacing the whole document", () => {
     expect(store.r1.tosi.value.pieces.length).toBe(1);
   });
 
-  it("⚠️ a captured box DISAGREES WITH ITSELF after its parent is replaced", () => {
+  it("a captured box agrees with itself after its parent is replaced", () => {
     /*
-      A box holds a PATH, not a value, and resolves live — which is why
-      traversing a captured box is correct. `.value` is the exception: it
-      returns the target the box was constructed over, permanently, however
-      many times the path is reassigned.
+      A box holds a PATH, not a value, and resolves live. That was ALWAYS true
+      of traversal and, until tosijs 1.9.2, NOT true of `.value`: it returned
+      the target the box was constructed over, permanently, however many times
+      the path was reassigned.
 
-      So one object gives two answers, and the wrong one is the cheap read that
+      So one object gave two answers, and the wrong one was the cheap read that
       everything reaches for. The editor held the store in a field and read
       `.value`, so loading an ensemble looked like a silent no-op while the
       bound widgets — which traverse — had the real document. An afternoon went
-      to the writer before anyone suspected the read. tosijs#35.
+      to the writer before anyone suspected the read.
 
-      Hence `_store` is a GETTER over `_stores[_storeKey]`: every access mints a
+      ✅ Fixed in tosijs@1.9.2 (tosijs#35, ours): `.value`, `valueOf()` and
+      `toJSON()` all follow the path now. This test asserted the BUG and was
+      what failed on the upgrade — which is the outcome a test like this is
+      for.
+
+      `_store` stays a GETTER over `_stores[_storeKey]`: every access mints a
       fresh proxy (`store.q === store.q` is false), so nothing is ever held.
+      That is no longer load-bearing for this case, but a held proxy still has
+      live-view semantics worth not reasoning about at each call site — and an
+      INDEX path (`rows[0]`) names a SLOT, so a held one reports a different
+      item after a splice. We address pieces by id (`pieces[id=…]`) throughout.
     */
     const store = tosi({ r2: { name: "empty" } }) as any;
     const captured = store.r2;
     store.r2.tosi.value = { name: "loaded" };
 
     expect(store.r2.tosi.value.name).toBe("loaded"); // fresh proxy: correct
-    expect(captured.name.value).toBe("loaded"); // traversal: also correct
-    expect(captured.tosi.value.name).toBe("empty"); // .value: the original
+    expect(captured.name.value).toBe("loaded"); // traversal: always was
+    expect(captured.tosi.value.name).toBe("loaded"); // .value: now agrees
   });
 
   it("a leaf write goes through the box", () => {

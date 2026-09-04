@@ -83,7 +83,7 @@ describe("history", () => {
 /*
   A CONTINUOUS CONTROL IS ONE UNDO STEP.
 
-  `slider3d` exposes `onChange` alone — no gesture end — so dragging one reports
+  `slider3d` exposes `handleChange` alone — no gesture end — so dragging one reports
   per pointer-move. Without coalescing, undo walks back through a drag a pixel
   at a time and never reaches the value you started from.
 */

@@ -10,7 +10,7 @@ gets broken (`src/peer-range.test.ts`).
 
 ### ⚠️ Breaking — the peer floor moved
 
-- **`tosijs-3d` is now `^0.8.0`** (was `^0.7.8`) and **`tosijs` is `^1.9.2`**
+- **`tosijs-3d` is now `^0.8.0`** (was `^0.7.8`) and **`tosijs` is `^1.10.0`**
   (was `^1.7.8`). Both are floors we develop against, not versions we merely
   tolerate, so an adopter must move with us.
 
@@ -20,6 +20,43 @@ gets broken (`src/peer-range.test.ts`).
   same migration bigger later.
 
 ### Fixed
+
+- **An attribute that had no type, for as long as it has existed.** tosijs
+  1.10.0 removed `Component`'s `[key: string]: any` index signature
+  (tosijs#36), which propagated to every subclass and made any misspelling on
+  `this` compile. One thing fell out of it here: `seabed` is in the editor's
+  `initAttributes` and never got a matching `declare` line, so `this.seabed`
+  typed as `any`.
+
+  Nothing was broken at runtime — but the same omission on a name that did NOT
+  exist would have compiled just as quietly, which is the worst shape a type
+  error can have: the tool that exists to catch it reports success.
+
+  Both components now type their attributes FROM the values, so there is no
+  second declaration to drift:
+
+  ```ts
+  export interface EnsembleEditor
+    extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
+  ```
+
+  ⚠️ Not `withAttributes()`, which is what tosijs's own migration note
+  recommends. Its return type is not nameable from `'tosijs'`, so declaration
+  emit fails with TS2742 and `bun run build` refuses — filed as tosijs#38,
+  already fixed upstream and unpublished. `bun run build` running the SECOND
+  typecheck is the only reason we know; `bun run typecheck` passes either way.
+
+- **The peer-floor test guarded one peer of three.** It has said since 0.1.0
+  that we develop against the FLOOR of the range we advertise — because that is
+  how 0.1.0 shipped a symbol its own range did not guarantee — and it only ever
+  checked `tosijs-3d`. Meanwhile the `tosijs` floor was raised by hand twice in
+  one day with nothing checking it, and `tosijs` is precisely the dependency
+  whose types we compile against.
+
+  It now loops over every peer, with an exemption list that must carry a
+  reason. It failed on its first run: the `tosijs` devDependency was a caret,
+  free to float above the floor on any install, exactly as the comment in that
+  file warns.
 
 - **The scene schemas were hand-copied, and every kind of drift was silent.**
   Ranges, units, enums and log scales for the ten scene primitives now come

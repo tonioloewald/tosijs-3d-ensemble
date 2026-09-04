@@ -44,7 +44,7 @@
     "tosijs-schema": "^1.9.0"
   },
   "peerDependencies": {
-    "tosijs": "^1.9.2",
+    "tosijs": "^1.10.0",
     "tosijs-3d": "^0.8.0",
     "@babylonjs/core": "^9.0.0"
   },
@@ -58,7 +58,7 @@
     "chokidar": "^5.0.0",
     "happy-dom": "^20.11.6",
     "prettier": "^2.8.8",
-    "tosijs": "^1.9.2",
+    "tosijs": "1.10.0",
     "tosijs-3d": "0.8.0",
     "tosijs-ui": "^1.13.0",
     "typescript": "^5.9.3"

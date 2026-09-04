@@ -56,6 +56,7 @@ is an upstream build; see UPSTREAM.md.
 */
 /*{"parent":"Editing","order":1}*/
 import { Component, tosi } from "tosijs";
+import type { ComponentAttrs } from "tosijs";
 import {
   b3d,
   b3dGround,
@@ -301,6 +302,30 @@ function pickFile(onText: (text: string) => void): void {
   input.click();
 }
 
+/*
+  ATTRIBUTES ARE DECLARED BY THEIR VALUES, not twice.
+
+  This used to be `static initAttributes` plus a hand-written `declare` line
+  per attribute, and the two drifted: `seabed` never got its line, so
+  `this.seabed` was `any` — invisible, because `Component` carried a
+  `[key: string]: any` index signature that made EVERY misspelling on `this`
+  compile. tosijs 1.10.0 dropped it (tosijs#36) and `tsc` reported the one
+  place we had been getting away with it.
+
+  The `ComponentAttrs` interface below types every attribute from its value, so
+  there is no second declaration to keep in step and a new attribute needs no
+  new line at all. `backdrop` carries an `as Backdrop` because a literal widens
+  to `string` otherwise, and the union is the point.
+
+  ⚠️ NOT `withAttributes()`, which is the shape tosijs's own migration note
+  recommends. Its return type is not nameable from `'tosijs'`, so `tsc -p
+  tsconfig.build.json` cannot emit our `.d.ts` (TS2742) — and `bun run build`
+  runs that, which is the only reason we know. Filed as tosijs#38, already
+  fixed upstream and unpublished; switch when it lands. `ComponentAttrs` is
+  documented for exactly this case and costs one line.
+*/
+export interface EnsembleEditor
+  extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
 export class EnsembleEditor extends Component {
   static override preferredTagName = "tosi-ensemble-editor";
 
@@ -365,17 +390,8 @@ export class EnsembleEditor extends Component {
     hideChrome: false,
   };
 
-  declare library: string;
-  declare libraryUrl: string;
-  declare libraries: string;
-  declare gridSnap: number;
-  declare angleSnap: number;
-  declare src: string;
-
   /** The `src` this editor has already fetched. See the note in the mount. */
   private _loadedSrc: string | null = null;
-  declare backdrop: Backdrop;
-  declare hideChrome: boolean;
 
   /** The ensemble being edited. Assign to load one from memory. */
   get ensemble(): Ensemble {

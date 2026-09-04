@@ -26,36 +26,80 @@ import { readFileSync } from "node:fs";
   the same commit — which is a decision about who you are breaking, and belongs
   in the changelog.
 */
-const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-
 /** The lowest version a caret range admits — `^0.7.8` → `0.7.8`. */
 const floorOf = (range: string): string => range.replace(/^[\^~>=\s]+/, "");
 
+/**
+ * Peers we develop against the FLOOR of, with the reason for anything we do
+ * not — so adding a peer forces the decision instead of inheriting silence.
+ */
+const EXEMPT: Record<string, string> = {
+  // Babylon is a peer of `tosijs-3d` on the same `^9.0.0` range, so it is the
+  // SCENE's dependency reaching through us rather than one we chose. Pinning
+  // our dev copy to 9.0.0 would not make an adopter's resolution match ours,
+  // and it would hold this repo a year behind the engine it renders with.
+  "@babylonjs/core": "tosijs-3d owns this range; we only re-declare it",
+};
+
 describe("the peer range is a promise we keep", () => {
-  it("declares tosijs-3d as a peer", () => {
-    expect(pkg.peerDependencies?.["tosijs-3d"]).toBeString();
+  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+  const peers = Object.entries(pkg.peerDependencies ?? {}) as Array<
+    [string, string]
+  >;
+
+  it("has peers to check", () => {
+    // Guards the guard: an empty peer list passes every loop below.
+    expect(peers.length).toBeGreaterThan(1);
   });
 
-  it("develops against the FLOOR of the range it advertises", () => {
-    const advertised = floorOf(pkg.peerDependencies["tosijs-3d"]);
-    const installed = JSON.parse(
-      readFileSync("node_modules/tosijs-3d/package.json", "utf8")
-    ).version;
+  it("develops against the FLOOR of every range it advertises", () => {
     /*
-      Equal, not "satisfies". Installing anything ABOVE the floor is exactly how
-      0.1.0 shipped a symbol its own range did not guarantee — and it is
-      invisible, because everything passes.
+      ⚠️ This used to name `tosijs-3d` alone, and the gap was invisible for the
+      same reason the original bug was: everything passes when the version on
+      disk happens to be the one you wrote against. We then raised `tosijs` to
+      `^1.9.2` and later to `^1.10.0` by hand, twice, with nothing checking
+      either — and `tosijs` is exactly the dependency whose types we compile
+      against, so a symbol from a version above our floor is the same
+      `SyntaxError: Export named … not found` the comment above describes.
     */
-    expect(`${installed} (installed) vs ${advertised} (range floor)`).toBe(
-      `${advertised} (installed) vs ${advertised} (range floor)`
-    );
+    const drift: string[] = [];
+    for (const [name, range] of peers) {
+      if (EXEMPT[name]) continue;
+      const advertised = floorOf(range);
+      const installed = JSON.parse(
+        readFileSync(`node_modules/${name}/package.json`, "utf8")
+      ).version;
+      // Equal, not "satisfies" — installing anything ABOVE the floor is
+      // exactly how 0.1.0 shipped a symbol its own range did not guarantee.
+      if (installed !== advertised) {
+        drift.push(`${name}: ${installed} installed, floor is ${advertised}`);
+      }
+    }
+    expect(drift).toEqual([]);
   });
 
-  it("keeps the dev dependency pinned to that same floor", () => {
+  it("keeps each dev dependency pinned to that same floor", () => {
     // Pinned, not caret: a caret devDependency drifts upward on any install and
     // takes the floor invariant with it, silently.
-    expect(pkg.devDependencies?.["tosijs-3d"]).toBe(
-      floorOf(pkg.peerDependencies["tosijs-3d"])
-    );
+    const loose: string[] = [];
+    for (const [name, range] of peers) {
+      if (EXEMPT[name]) continue;
+      const dev = pkg.devDependencies?.[name];
+      if (dev !== floorOf(range)) {
+        loose.push(
+          `${name}: devDependency "${dev}", floor is ${floorOf(range)}`
+        );
+      }
+    }
+    expect(loose).toEqual([]);
+  });
+
+  it("exempts nothing without a reason", () => {
+    for (const [name, why] of Object.entries(EXEMPT)) {
+      expect([name, typeof why === "string" && why.length > 20]).toEqual([
+        name,
+        true,
+      ]);
+    }
   });
 });

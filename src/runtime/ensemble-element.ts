@@ -57,12 +57,12 @@ and — more to the point — never sees `shield` in a property panel.
 */
 /*{"parent":"Runtime","order":2}*/
 import { Component } from "tosijs";
-import { buildEnsemble } from "./build";
-import { placeMesh } from "./place-mesh";
-import { mountLibraries } from "./libraries";
-import type { BuiltEnsemble } from "./build";
-import type { Ensemble as EnsembleData, Vec3 } from "../format/types";
-import type { SceneElement } from "../format/registry";
+import { buildEnsemble } from "./build.js";
+import { placeMesh } from "./place-mesh.js";
+import { mountLibraries } from "./libraries.js";
+import type { BuiltEnsemble } from "./build.js";
+import type { Ensemble as EnsembleData, Vec3 } from "../format/types.js";
+import type { SceneElement } from "../format/registry.js";
 
 export class TosiEnsemble extends Component {
   static override preferredTagName = "tosi-ensemble";

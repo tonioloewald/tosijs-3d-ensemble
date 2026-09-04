@@ -42,9 +42,9 @@ So rotating a node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
 /*{"parent":"Internals","order":8}*/
-import { applyEuler, applyScale } from "../runtime/node-transform";
-import type { TransformableNode } from "../runtime/node-transform";
-import type { Euler, Vec3 } from "../format/types";
+import { applyEuler, applyScale } from "../runtime/node-transform.js";
+import type { TransformableNode } from "../runtime/node-transform.js";
+import type { Euler, Vec3 } from "../format/types.js";
 
 const DEG_TO_RAD = Math.PI / 180;
 

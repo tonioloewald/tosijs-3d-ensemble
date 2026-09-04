@@ -34,14 +34,14 @@ moved behind a call the consumer makes.
 */
 /*{"parent":"Presets","order":2}*/
 import { b3dCollisions, b3dLauncher, b3dTurret } from "tosijs-3d";
-import { registerFeature, unregisterFeature } from "../format/registry";
-import { registerRole, unregisterRole } from "../format/roles";
-import { featuresOf } from "../format/roles";
-import { registerCheck } from "../format/validate";
-import { add } from "../runtime/features-scene";
-import { attachBlip } from "../runtime/place-mesh";
-import type { SceneElement } from "../format/registry";
-import type { Problem } from "../format/validate";
+import { registerFeature, unregisterFeature } from "../format/registry.js";
+import { registerRole, unregisterRole } from "../format/roles.js";
+import { featuresOf } from "../format/roles.js";
+import { registerCheck } from "../format/validate.js";
+import { add } from "../runtime/features-scene.js";
+import { attachBlip } from "../runtime/place-mesh.js";
+import type { SceneElement } from "../format/registry.js";
+import type { Problem } from "../format/validate.js";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
   type: "number",

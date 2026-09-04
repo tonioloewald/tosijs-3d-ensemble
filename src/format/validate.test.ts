@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { validate } from "./validate";
-import { registerFeature, unregisterFeature } from "./registry";
-import { registerCheck } from "./validate";
-import type { Ensemble } from "./types";
+import { validate } from "./validate.js";
+import { registerFeature, unregisterFeature } from "./registry.js";
+import { registerCheck } from "./validate.js";
+import type { Ensemble } from "./types.js";
 
 const minimal = (over: Partial<Ensemble> = {}): Ensemble => ({
   name: "test",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { featuresOf, registerRole, roleFeatures, roleNames } from "./roles";
+import { featuresOf, registerRole, roleFeatures, roleNames } from "./roles.js";
 
 describe("roles", () => {
   it("ships NO roles — a role is a domain vocabulary, and the format has no domain", () => {

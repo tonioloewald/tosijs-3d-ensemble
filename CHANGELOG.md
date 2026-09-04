@@ -3,13 +3,44 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.1.3] — 2026-09-04
+
+### Fixed
+
+- **The published package could not be imported by Node at all.** Every relative
+  import in `dist` was extensionless — `from "./format/roles"` — and Node's ESM
+  resolver requires the extension:
+
+  ```
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '…/dist/format/roles'
+  ```
+
+  Bundlers resolve it, which is why nothing caught it: this project's own loop
+  is Bun and a bundler, and so is the doc site, and so was the first consumer.
+  **0.1.0, 0.1.1 and 0.1.2 are all affected.** It falsified the claim that
+  `validate` and `buildEnsemble` work headlessly — which a generator emitting
+  ensembles depends on.
+
+  204 imports across 56 files now carry `.js`, and a test asserts it of the
+  SOURCE, so it fails at authoring time rather than after a publish.
+
+  ⚠️ **The barrel still cannot be imported by Node**, because `tosijs-3d` has
+  the identical problem one level down. Filed upstream. The headless route works
+  today through subpaths, verified against the published tarball in a clean
+  install:
+
+  ```js
+  import { validate } from "tosijs-3d-ensemble/format/validate";
+  import { migrate } from "tosijs-3d-ensemble/format/migrate";
+  ```
+
 ## [0.1.2] — 2026-09-04
 
-⚠️ **0.1.1 was tagged but never reached npm.** Everything local was green — the
-tag, the push, the build — and the one step nobody checked afterwards was the
-publish. `npm view` said `0.1.0` while the repo said `v0.1.1`. So 0.1.2 carries
-0.1.1's fix as well; if you are on 0.1.0, this is the release that unbreaks the
-import.
+⚠️ **Correction:** this entry originally said 0.1.1 never reached npm. It did —
+the registry showed only `0.1.0` when checked, and `0.1.1` appeared afterwards,
+so the publish landed late or the read lagged it. 0.1.2 was cut rather than
+publishing the 0.1.1 tarball because `main` had moved eight commits past that
+tag, and it carries 0.1.1's fix as well.
 
 ### Fixed
 
@@ -141,6 +172,7 @@ Stated plainly because the alternative is somebody discovering them:
 `tosijs-3d ^0.7.0` — never a prerelease range; `0.7.0-rc.1` was published before
 the betas and semver sorts beta below rc, so `^0.7.0-beta.6` resolves backwards.
 
+[0.1.3]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.3
 [0.1.2]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.2
 [0.1.1]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.1
 [0.1.0]: https://github.com/tonioloewald/tosijs-3d-ensemble/releases/tag/v0.1.0

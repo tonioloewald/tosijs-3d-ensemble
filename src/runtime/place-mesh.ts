@@ -58,11 +58,11 @@ is judging, so cubes in the right places beat an empty scene.
 */
 /*{"parent":"Internals","order":9}*/
 import { b3dBox, b3dDestroyable, b3dRadarBlip } from "tosijs-3d";
-import { applyEuler, applyScale } from "./node-transform";
-import type { TransformableNode } from "./node-transform";
-import type { SceneElement } from "../format/registry";
-import type { Piece, Vec3 } from "../format/types";
-import type { PlaceContext, Placement } from "./build";
+import { applyEuler, applyScale } from "./node-transform.js";
+import type { TransformableNode } from "./node-transform.js";
+import type { SceneElement } from "../format/registry.js";
+import type { Piece, Vec3 } from "../format/types.js";
+import type { PlaceContext, Placement } from "./build.js";
 
 interface LibraryElement {
   getNames?: () => string[];

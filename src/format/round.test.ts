@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { roundDeep, roundNumber } from "./round";
+import { roundDeep, roundNumber } from "./round.js";
 
 describe("roundNumber", () => {
   it("cuts a pointer's noise down to a readable number", () => {

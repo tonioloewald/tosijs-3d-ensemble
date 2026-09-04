@@ -14,9 +14,9 @@ import {
   snap,
   snapVec3,
   wrapDegrees,
-} from "./handles";
-import type { EditorRay } from "./input/pointer";
-import type { Vec3 } from "../format/types";
+} from "./handles.js";
+import type { EditorRay } from "./input/pointer.js";
+import type { Vec3 } from "../format/types.js";
 
 const ray = (
   origin: [number, number, number],

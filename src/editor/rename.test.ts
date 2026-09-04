@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "bun:test";
-import { registerCombatPreset } from "../presets/combat";
-import { featureRegistration } from "../format/registry";
+import { registerCombatPreset } from "../presets/combat.js";
+import { featureRegistration } from "../format/registry.js";
 
 /*
   RENAMING A PIECE IS A GRAPH EDIT.

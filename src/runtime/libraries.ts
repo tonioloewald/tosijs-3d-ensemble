@@ -21,8 +21,8 @@ Without it that piece renders differently depending on which library finished
 loading first — a bug that reproduces on one machine and not another.
 */
 /*{"parent":"Internals","order":10}*/
-import type { Ensemble, Piece } from "../format/types";
-import type { SceneElement } from "../format/registry";
+import type { Ensemble, Piece } from "../format/types.js";
+import type { SceneElement } from "../format/registry.js";
 
 interface LibraryElement extends Element {
   ready?: Promise<void>;

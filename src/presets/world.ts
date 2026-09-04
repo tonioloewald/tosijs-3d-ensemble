@@ -47,7 +47,7 @@ a `RegExp` does not survive `JSON.stringify`.
 */
 /*{"parent":"Presets","order":1}*/
 import { b3dTrigger } from "tosijs-3d";
-import { registerFeature } from "../format/registry";
+import { registerFeature } from "../format/registry.js";
 import {
   canUse,
   closedDoor,
@@ -56,10 +56,10 @@ import {
   spinAngle,
   stepDoor,
   unlocks,
-} from "./world-logic";
-import type { DoorState, LockState } from "./world-logic";
-import type { FeatureContext, SceneElement } from "../format/registry";
-import type { Piece } from "../format/types";
+} from "./world-logic.js";
+import type { DoorState, LockState } from "./world-logic.js";
+import type { FeatureContext, SceneElement } from "../format/registry.js";
+import type { Piece } from "../format/types.js";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
   type: "number",

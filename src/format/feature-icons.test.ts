@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { registeredFeatures } from "./registry";
-import { registerSceneFeatures } from "../runtime/features-scene";
-import { registerWorldPreset } from "../presets/world";
-import { registerCombatPreset } from "../presets/combat";
+import { registeredFeatures } from "./registry.js";
+import { registerSceneFeatures } from "../runtime/features-scene.js";
+import { registerWorldPreset } from "../presets/world.js";
+import { registerCombatPreset } from "../presets/combat.js";
 
 /*
   EVERY BUILT-IN FEATURE MUST SAY WHAT IT LOOKS LIKE.

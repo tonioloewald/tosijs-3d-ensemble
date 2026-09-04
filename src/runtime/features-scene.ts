@@ -55,8 +55,8 @@ import {
   b3dTerrain,
   b3dWater,
 } from "tosijs-3d";
-import { registerFeature } from "../format/registry";
-import type { FeatureContext, SceneElement } from "../format/registry";
+import { registerFeature } from "../format/registry.js";
+import type { FeatureContext, SceneElement } from "../format/registry.js";
 
 /**
  * A LOG10 slider over decades — the right instrument for a multiplicative

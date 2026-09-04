@@ -10,8 +10,8 @@ is nothing to reach out and hold with. Everything it does is far interaction,
 which is why the ray/near split had to exist before the first tool was written.
 */
 /*{"parent":"Internals","order":2}*/
-import type { EditorPointer, EditorRay } from "./pointer";
-import type { Vec3 } from "../../format/types";
+import type { EditorPointer, EditorRay } from "./pointer.js";
+import type { Vec3 } from "../../format/types.js";
 
 interface PickingScene {
   createPickingRay: (

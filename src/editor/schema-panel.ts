@@ -52,8 +52,8 @@ import {
   DEFAULT_TOOL_CELLS,
   TOOL_CELLS,
   resolveToolCells,
-} from "./tools/transform";
-import type { FeatureSchema } from "../format/registry";
+} from "./tools/transform.js";
+import type { FeatureSchema } from "../format/registry.js";
 
 interface PropertySpec {
   type?: string;

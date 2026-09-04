@@ -8,13 +8,13 @@ import {
   resolveGrab,
   resolveToolCells,
   transformsOf,
-} from "./transform";
-import { getTool, unregisterTool } from "./tool-registry";
-import type { ToolContext } from "./tool-registry";
-import type { Grip } from "../handles";
-import type { Gesture, EditorPointer, EditorRay } from "../input/pointer";
-import type { Ensemble, Vec3 } from "../../format/types";
-import type { WritableBody } from "../transform-write";
+} from "./transform.js";
+import { getTool, unregisterTool } from "./tool-registry.js";
+import type { ToolContext } from "./tool-registry.js";
+import type { Grip } from "../handles.js";
+import type { Gesture, EditorPointer, EditorRay } from "../input/pointer.js";
+import type { Ensemble, Vec3 } from "../../format/types.js";
+import type { WritableBody } from "../transform-write.js";
 
 const pointer = (
   ray: EditorRay | null,

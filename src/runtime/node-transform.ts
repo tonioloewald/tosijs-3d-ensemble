@@ -30,8 +30,8 @@ which is the √2 a square turns into. Filed as tosijs-3d#47 (scale) and #48
 (rotation); when they land this module retires.
 */
 /*{"parent":"Runtime","order":7}*/
-import { scaleVector } from "../format/scale";
-import type { Euler, Vec3 } from "../format/types";
+import { scaleVector } from "../format/scale.js";
+import type { Euler, Vec3 } from "../format/types.js";
 
 const DEG_TO_RAD = Math.PI / 180;
 

@@ -21,7 +21,7 @@ geometry it is meant to cover, and the minimum is worse. Say which you mean at
 the call site if it matters; most callers want the enclosing extent.
 */
 /*{"parent":"Format","order":6}*/
-import type { Vec3 } from "./types";
+import type { Vec3 } from "./types.js";
 
 /** A scale as three components, whichever way it was written. */
 export function scaleVector(

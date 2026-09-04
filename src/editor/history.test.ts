@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createHistory } from "./history";
+import { createHistory } from "./history.js";
 
 const clone = <T>(v: T): T => structuredClone(v);
 

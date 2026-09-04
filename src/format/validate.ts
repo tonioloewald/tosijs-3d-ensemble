@@ -30,9 +30,9 @@ message **on the field** rather than in a list at the bottom of the screen.
   Pass `meshes` when you have it and omit it when you don't.
 */
 /*{"parent":"Format","order":2}*/
-import { featuresOf, roleFeatures } from "./roles";
-import { featureRegistration } from "./registry";
-import type { Ensemble, Piece, Point, Vec3, Zone } from "./types";
+import { featuresOf, roleFeatures } from "./roles.js";
+import { featureRegistration } from "./registry.js";
+import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
 export type Severity = "error" | "warning";
 

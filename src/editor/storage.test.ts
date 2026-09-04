@@ -9,8 +9,8 @@ import {
   serialise,
   writeSaved,
   type KeyStore,
-} from "./storage";
-import type { Ensemble } from "../format/types";
+} from "./storage.js";
+import type { Ensemble } from "../format/types.js";
 
 /** A `localStorage` that is a Map, so none of this needs a browser. */
 const store = (seed: Record<string, string> = {}): KeyStore => {

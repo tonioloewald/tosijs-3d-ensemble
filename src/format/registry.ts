@@ -57,7 +57,7 @@ goes black with no error where anyone would look. A `bind`/`link` that registers
 per-frame work must guard itself.
 */
 /*{"parent":"Format","order":3}*/
-import type { Ensemble, Piece, Vec3 } from "./types";
+import type { Ensemble, Piece, Vec3 } from "./types.js";
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer
  *  does not import the framework. */

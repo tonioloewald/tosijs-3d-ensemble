@@ -66,16 +66,16 @@ import {
   snap,
   snapVec3,
   wrapDegrees,
-} from "../handles";
-import { narrowScale, scaleVector } from "../../format/scale";
-import { writeTransform } from "../transform-write";
-import type { WritableBody } from "../transform-write";
-import { registerTool } from "./tool-registry";
-import { uniqueId } from "./built-in";
-import type { Axis, Grip, TransformSet } from "../handles";
-import type { Gesture } from "../input/pointer";
-import type { ToolContext } from "./tool-registry";
-import type { Euler, Piece, Vec3 } from "../../format/types";
+} from "../handles.js";
+import { narrowScale, scaleVector } from "../../format/scale.js";
+import { writeTransform } from "../transform-write.js";
+import type { WritableBody } from "../transform-write.js";
+import { registerTool } from "./tool-registry.js";
+import { uniqueId } from "./built-in.js";
+import type { Axis, Grip, TransformSet } from "../handles.js";
+import type { Gesture } from "../input/pointer.js";
+import type { ToolContext } from "./tool-registry.js";
+import type { Euler, Piece, Vec3 } from "../../format/types.js";
 
 /** What a drag needs to remember between its start and its end. */
 interface Drag {

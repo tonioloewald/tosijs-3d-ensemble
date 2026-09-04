@@ -27,7 +27,7 @@ featuresOf({ id: 'r1', at: [0, 0, 0], role: 'reactor', features: { destroyable: 
 ```
 */
 /*{"parent":"Format","order":4}*/
-import type { Features, Piece, Role } from "./types";
+import type { Features, Piece, Role } from "./types.js";
 
 /*
   NO ROLES SHIP WITH THE FORMAT.

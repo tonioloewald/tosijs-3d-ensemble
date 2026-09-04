@@ -38,9 +38,9 @@ import {
   StandardMaterial,
   Vector3,
 } from "@babylonjs/core";
-import { axisIndex, otherAxes } from "./handles";
-import type { Axis, Grip, TransformSet } from "./handles";
-import type { Euler, Vec3 } from "../format/types";
+import { axisIndex, otherAxes } from "./handles.js";
+import type { Axis, Grip, TransformSet } from "./handles.js";
+import type { Euler, Vec3 } from "../format/types.js";
 
 const DEG = Math.PI / 180;
 

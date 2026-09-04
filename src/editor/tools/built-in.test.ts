@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { registerEditorTools, slugify, uniqueId } from "./built-in";
-import { getTool, registeredCommands } from "./tool-registry";
-import type { ToolContext } from "./tool-registry";
-import type { Ensemble, Vec3 } from "../../format/types";
-import type { Gesture, EditorRay } from "../input/pointer";
+import { registerEditorTools, slugify, uniqueId } from "./built-in.js";
+import { getTool, registeredCommands } from "./tool-registry.js";
+import type { ToolContext } from "./tool-registry.js";
+import type { Ensemble, Vec3 } from "../../format/types.js";
+import type { Gesture, EditorRay } from "../input/pointer.js";
 
 const ray: EditorRay = { origin: [0, 10, 0], direction: [0, -1, 0] };
 const gesture = (): Gesture => ({

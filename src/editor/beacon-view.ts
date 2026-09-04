@@ -53,7 +53,7 @@ it needed was somewhere for a ray to land.
 */
 /*{"parent":"Internals","order":7}*/
 import { MeshBuilder } from "@babylonjs/core";
-import type { Vec3 } from "../format/types";
+import type { Vec3 } from "../format/types.js";
 
 /** Where a beacon sits, and which piece it stands for. */
 export interface Beacon {

@@ -39,19 +39,19 @@ why loading at runtime is where it bites: no error, no pieces, nothing in the
 console. Every element this module creates is appended explicitly.
 */
 /*{"parent":"Runtime","order":1}*/
-import { featuresOf } from "../format/roles";
-import { featureRegistration } from "../format/registry";
-import { scaleVector, uniformScale } from "../format/scale";
-import { validate } from "../format/validate";
+import { featuresOf } from "../format/roles.js";
+import { featureRegistration } from "../format/registry.js";
+import { scaleVector, uniformScale } from "../format/scale.js";
+import { validate } from "../format/validate.js";
 import {
   libraryNames,
   meshesByLibrary,
   mountLibraries,
   resolveLibrary,
-} from "./libraries";
-import type { FeatureContext, SceneElement } from "../format/registry";
-import type { Problem } from "../format/validate";
-import type { Ensemble, Piece, Vec3 } from "../format/types";
+} from "./libraries.js";
+import type { FeatureContext, SceneElement } from "../format/registry.js";
+import type { Problem } from "../format/validate.js";
+import type { Ensemble, Piece, Vec3 } from "../format/types.js";
 
 export interface BuildOptions {
   /** The `<tosi-b3d>` element to append into. */

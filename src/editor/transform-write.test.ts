@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { writeTransform } from "./transform-write";
+import { writeTransform } from "./transform-write.js";
 
 const elementBody = () => ({
   element: {

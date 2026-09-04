@@ -44,7 +44,7 @@ but is not is worse than nothing.
 */
 /*{"parent":"Internals","order":6}*/
 import { Color3, Color4, MeshBuilder, StandardMaterial } from "@babylonjs/core";
-import type { Vec3 } from "../format/types";
+import type { Vec3 } from "../format/types.js";
 
 /** Marks a mesh as ours, so picking can tell a marker from the scene. */
 export const MARKER_TAG = "ensemble-editor-selection";

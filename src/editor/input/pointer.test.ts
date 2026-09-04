@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { PointerHub, closestPointOnRay, distance, pointOnRay } from "./pointer";
-import type { EditorPointer, EditorRay, Gesture } from "./pointer";
-import type { Vec3 } from "../../format/types";
+import { PointerHub, closestPointOnRay, distance, pointOnRay } from "./pointer.js";
+import type { EditorPointer, EditorRay, Gesture } from "./pointer.js";
+import type { Vec3 } from "../../format/types.js";
 
 class FakePointer implements EditorPointer {
   active = false;

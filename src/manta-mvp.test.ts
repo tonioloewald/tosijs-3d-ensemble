@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { validate } from "./format/validate";
-import { migrate } from "./format/migrate";
-import { buildEnsemble } from "./runtime/build";
-import { registerCombatPreset } from "./presets/combat";
-import type { SceneElement } from "./format/registry";
-import type { Ensemble } from "./format/types";
+import { validate } from "./format/validate.js";
+import { migrate } from "./format/migrate.js";
+import { buildEnsemble } from "./runtime/build.js";
+import { registerCombatPreset } from "./presets/combat.js";
+import type { SceneElement } from "./format/registry.js";
+import type { Ensemble } from "./format/types.js";
 
 /*
   MILESTONE 1'S GATE, MEASURED RATHER THAN ASSERTED.

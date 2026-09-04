@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FlatPointer } from "./flat-pointer";
+import { FlatPointer } from "./flat-pointer.js";
 
 /*
   This file tests an ADAPTER, so it is allowed to know about DOM events —

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { buildEnsemble } from "./build";
-import { registerFeature, unregisterFeature } from "../format/registry";
-import type { SceneElement } from "../format/registry";
-import type { Ensemble } from "../format/types";
+import { buildEnsemble } from "./build.js";
+import { registerFeature, unregisterFeature } from "../format/registry.js";
+import type { SceneElement } from "../format/registry.js";
+import type { Ensemble } from "../format/types.js";
 
 /*
   A scene stub. `build.ts` deliberately imports no engine — the mesh placer is

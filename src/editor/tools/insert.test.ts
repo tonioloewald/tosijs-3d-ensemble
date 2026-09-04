@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { registerEditorTools } from "./built-in";
-import { getTool } from "./tool-registry";
-import type { ToolContext } from "./tool-registry";
-import type { Ensemble, Vec3 } from "../../format/types";
+import { registerEditorTools } from "./built-in.js";
+import { getTool } from "./tool-registry.js";
+import type { ToolContext } from "./tool-registry.js";
+import type { Ensemble, Vec3 } from "../../format/types.js";
 
 /*
   INSERTING AN ENVIRONMENT PRIMITIVE.

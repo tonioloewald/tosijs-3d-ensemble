@@ -19,8 +19,8 @@ walk up a short parent chain with a hash lookup at each step — and it stays th
 way with a thousand pieces.
 */
 /*{"parent":"Internals","order":6}*/
-import type { BuiltEnsemble } from "../runtime/build";
-import type { EditorRay } from "./input/pointer";
+import type { BuiltEnsemble } from "../runtime/build.js";
+import type { EditorRay } from "./input/pointer.js";
 
 interface NodeLike {
   parent?: NodeLike | null;

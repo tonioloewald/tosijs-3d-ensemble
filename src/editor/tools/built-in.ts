@@ -12,10 +12,10 @@ separate select tool meant declaring your intent to a palette before declaring
 it again to the thing you were pointing at.
 */
 /*{"parent":"Editing","order":3}*/
-import { featureRegistration } from "../../format/registry";
-import { snapVec3 } from "../handles";
-import type { Vec3 } from "../../format/types";
-import { registerCommand, registerTool } from "./tool-registry";
+import { featureRegistration } from "../../format/registry.js";
+import { snapVec3 } from "../handles.js";
+import type { Vec3 } from "../../format/types.js";
+import { registerCommand, registerTool } from "./tool-registry.js";
 
 let registered = false;
 

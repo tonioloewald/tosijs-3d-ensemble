@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { migrate, slugify } from "./migrate";
-import type { Ensemble } from "./types";
+import { migrate, slugify } from "./migrate.js";
+import type { Ensemble } from "./types.js";
 
 const doc = (pieces: unknown[]): Ensemble =>
   ({ name: "legacy", pieces } as Ensemble);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { validate } from "./validate";
-import { featuresOf, registerRole } from "./roles";
-import { registerFeature, unregisterFeature } from "./registry";
-import type { Ensemble } from "./types";
+import { validate } from "./validate.js";
+import { featuresOf, registerRole } from "./roles.js";
+import { registerFeature, unregisterFeature } from "./registry.js";
+import type { Ensemble } from "./types.js";
 
 /*
   THE CORE FORMAT HAS NO DOMAIN, AND THIS IS WHERE THAT IS PINNED.

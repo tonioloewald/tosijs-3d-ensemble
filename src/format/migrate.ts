@@ -43,7 +43,7 @@ an `hp` already lifted is not lifted twice.
   tidies away data it does not understand is a migration that loses data.
 */
 /*{"parent":"Format","order":9}*/
-import type { Ensemble, Piece } from "./types";
+import type { Ensemble, Piece } from "./types.js";
 
 /** One thing the migration changed, in the author's terms. */
 export interface Change {

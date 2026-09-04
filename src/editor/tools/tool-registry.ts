@@ -32,9 +32,9 @@ written — the same renderer the piece property panel uses. A tool with a
 bespoke panel would drift from the rest of the editor within a week.
 */
 /*{"parent":"Editing","order":2}*/
-import type { EditorRay, Gesture } from "../input/pointer";
-import type { Ensemble, Piece, Vec3 } from "../../format/types";
-import type { FeatureSchema, SceneElement } from "../../format/registry";
+import type { EditorRay, Gesture } from "../input/pointer.js";
+import type { Ensemble, Piece, Vec3 } from "../../format/types.js";
+import type { FeatureSchema, SceneElement } from "../../format/registry.js";
 
 /** What a tool or command is given to work with. */
 export interface ToolContext {

@@ -15,7 +15,7 @@ string, so the interesting parts are testable without a browser and the parts
 that need one are three lines each.
 */
 /*{"parent":"Editor","order":8}*/
-import type { Ensemble } from "../format/types";
+import type { Ensemble } from "../format/types.js";
 
 /**
  * Namespaced, because `localStorage` is one flat map shared with every other

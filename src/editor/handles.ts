@@ -30,8 +30,8 @@ a long drag. Quantising the resulting absolute value instead means a snapped
 piece is always exactly on the grid, however it got there.
 */
 /*{"parent":"Internals","order":4}*/
-import type { Vec3 } from "../format/types";
-import type { EditorRay } from "./input/pointer";
+import type { Vec3 } from "../format/types.js";
+import type { EditorRay } from "./input/pointer.js";
 
 export type Axis = "x" | "y" | "z";
 

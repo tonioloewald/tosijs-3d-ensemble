@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { iconData } from "tosijs-3d";
-import { registerEditorTools } from "./tools/built-in";
-import { registeredCommands, registeredTools } from "./tools/tool-registry";
+import { registerEditorTools } from "./tools/built-in.js";
+import { registeredCommands, registeredTools } from "./tools/tool-registry.js";
 
 /*
   AN ICON NAME IS A STRING, AND A WRONG ONE FAILS QUIETLY.

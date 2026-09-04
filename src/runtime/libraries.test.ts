@@ -4,9 +4,9 @@ import {
   meshesByLibrary,
   mountLibraries,
   resolveLibrary,
-} from "./libraries";
-import type { SceneElement } from "../format/registry";
-import type { Ensemble, Piece } from "../format/types";
+} from "./libraries.js";
+import type { SceneElement } from "../format/registry.js";
+import type { Ensemble, Piece } from "../format/types.js";
 
 const scene = (libraries: Record<string, string[]>): SceneElement =>
   ({

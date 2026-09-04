@@ -77,44 +77,44 @@ import {
   vector3d,
 } from "tosijs-3d";
 import { Quaternion, Ray, Vector3 } from "@babylonjs/core";
-import { buildEnsemble } from "../runtime/build";
-import { reapUnclaimedSingletons } from "../runtime/features-scene";
+import { buildEnsemble } from "../runtime/build.js";
+import { reapUnclaimedSingletons } from "../runtime/features-scene.js";
 import {
   libraryCatalogue,
   libraryNames,
   meshesByLibrary,
   mountLibraries,
-} from "../runtime/libraries";
-import { FlatPointer } from "./input/flat-pointer";
-import { PointerHub } from "./input/pointer";
-import { bodyIndex, pickPiece } from "./selection";
+} from "../runtime/libraries.js";
+import { FlatPointer } from "./input/flat-pointer.js";
+import { PointerHub } from "./input/pointer.js";
+import { bodyIndex, pickPiece } from "./selection.js";
 import {
   defaultOptions,
   getTool,
   registeredCommands,
   registeredTools,
-} from "./tools/tool-registry";
-import { registerEditorTools } from "./tools/built-in";
-import { registerTransformTool, transformsOf } from "./tools/transform";
-import { createHandles } from "./handles-view";
-import { createHistory } from "./history";
-import { createSelectionView } from "./selection-view";
-import type { SelectionView } from "./selection-view";
-import type { HandlesView } from "./handles-view";
-import { axisVector, noTransforms, normaliseDegrees } from "./handles";
-import type { Grip } from "./handles";
-import { schemaWidgets } from "./schema-panel";
-import { DEFAULT_PRECISION, roundDeep } from "../format/round";
-import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view";
-import { featureRegistration, registeredFeatures } from "../format/registry";
-import type { EditorRay } from "./input/pointer";
-import type { CatalogEntry, ToolContext } from "./tools/tool-registry";
-import { placeMesh } from "../runtime/place-mesh";
-import { registerSceneFeatures } from "../runtime/features-scene";
-import { validate } from "../format/validate";
-import type { BuiltEnsemble } from "../runtime/build";
-import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types";
-import { narrowScale, scaleVector } from "../format/scale";
+} from "./tools/tool-registry.js";
+import { registerEditorTools } from "./tools/built-in.js";
+import { registerTransformTool, transformsOf } from "./tools/transform.js";
+import { createHandles } from "./handles-view.js";
+import { createHistory } from "./history.js";
+import { createSelectionView } from "./selection-view.js";
+import type { SelectionView } from "./selection-view.js";
+import type { HandlesView } from "./handles-view.js";
+import { axisVector, noTransforms, normaliseDegrees } from "./handles.js";
+import type { Grip } from "./handles.js";
+import { schemaWidgets } from "./schema-panel.js";
+import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
+import { createBeaconView, type Beacon, type BeaconView } from "./beacon-view.js";
+import { featureRegistration, registeredFeatures } from "../format/registry.js";
+import type { EditorRay } from "./input/pointer.js";
+import type { CatalogEntry, ToolContext } from "./tools/tool-registry.js";
+import { placeMesh } from "../runtime/place-mesh.js";
+import { registerSceneFeatures } from "../runtime/features-scene.js";
+import { validate } from "../format/validate.js";
+import type { BuiltEnsemble } from "../runtime/build.js";
+import type { Ensemble, Euler, Piece, Vec3, LibraryRef } from "../format/types.js";
+import { narrowScale, scaleVector } from "../format/scale.js";
 import {
   fileNameFor,
   parseEnsemble,
@@ -122,8 +122,8 @@ import {
   savedNames,
   serialise,
   writeSaved,
-} from "./storage";
-import type { SceneElement } from "../format/registry";
+} from "./storage.js";
+import type { SceneElement } from "../format/registry.js";
 
 /**
  * A tosijs store holding one ensemble.

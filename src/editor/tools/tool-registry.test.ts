@@ -8,7 +8,7 @@ import {
   registerTool,
   unregisterCommand,
   unregisterTool,
-} from "./tool-registry";
+} from "./tool-registry.js";
 
 afterEach(() => {
   unregisterTool("probe");

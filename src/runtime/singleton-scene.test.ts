@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { addSingleton, reapUnclaimedSingletons } from "./features-scene";
-import type { FeatureContext, SceneElement } from "../format/registry";
+import { addSingleton, reapUnclaimedSingletons } from "./features-scene.js";
+import type { FeatureContext, SceneElement } from "../format/registry.js";
 
 /*
   THE BLACK SKY, AS A TEST.

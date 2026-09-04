@@ -9,8 +9,8 @@ import {
   spinAngle,
   stepDoor,
   unlocks,
-} from "./world-logic";
-import type { DoorState } from "./world-logic";
+} from "./world-logic.js";
+import type { DoorState } from "./world-logic.js";
 
 const run = (
   state: DoorState,

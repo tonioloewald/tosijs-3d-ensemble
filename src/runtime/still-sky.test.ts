@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { featureRegistration } from "../format/registry";
-import { registerSceneFeatures, stillSky } from "./features-scene";
+import { featureRegistration } from "../format/registry.js";
+import { registerSceneFeatures, stillSky } from "./features-scene.js";
 
 /*
   A SKY THAT DRIFTS IS A LIGHT METER THAT WILL NOT HOLD STILL.

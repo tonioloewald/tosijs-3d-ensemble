@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { bodyIndex, owningPiece } from "./selection";
-import type { BuiltEnsemble } from "../runtime/build";
+import { bodyIndex, owningPiece } from "./selection.js";
+import type { BuiltEnsemble } from "../runtime/build.js";
 
 const node = (name: string, parent?: object) => ({
   name,

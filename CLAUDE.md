@@ -175,6 +175,16 @@ Cheap now, painful to retrofit:
 - **Features are a registry**, not a switch. `registerFeature({name, schema,
 bind})`; a consumer's feature must be indistinguishable from a built-in in the
   format, the editor and the file.
+- **A scene primitive's schema is NOT ours to write.** Ranges, units, enums and
+  log scales for the ten scene primitives come from `tosijs-3d`'s
+  `sceneSchemas` through `pick()` in `src/runtime/features-scene.ts`. Hand-copying
+  them drifted in every direction at once and every drift was SILENT — a
+  boolean `underwaterFog` written to a number, an `ambient.preset` of `birds`
+  that renders motes, a `fog.mode` of `none` that renders LINEAR fog. What
+  stays ours is WHICH properties an author sees and a few authoring defaults;
+  `src/runtime/scene-schemas.test.ts` fails on anything else, with four listed
+  exceptions. **If you find yourself typing a `minimum` for a scene field,
+  stop** — it belongs upstream.
 - **Regex lives as a source string**, compiled at load — a `RegExp` makes the
   format unserializable.
 - **`rot` is euler DEGREES**, matching tosijs-3d elements. Say so where a reader

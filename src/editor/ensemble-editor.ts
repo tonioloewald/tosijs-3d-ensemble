@@ -103,7 +103,7 @@ import type { SelectionView } from "./selection-view.js";
 import type { HandlesView } from "./handles-view.js";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles.js";
 import type { Grip } from "./handles.js";
-import { schemaWidgets } from "./schema-panel.js";
+import { boundIfSet, schemaWidgets } from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
 import {
   createBeaconView,
@@ -3406,29 +3406,46 @@ export class EnsembleEditor extends Component {
     for (const [name, config] of Object.entries(selected.features ?? {})) {
       const registration = featureRegistration(name);
       if (!registration?.schema) continue;
+      const values = (config ?? {}) as Record<string, unknown>;
+      /*
+        ONE RULE, ONE FUNCTION — asked by the widget and by the write path.
+
+        ⚠️ These were two expressions that agreed by inspection, and then they
+        stopped. `box` gained "…and only if the document HAS this key" (so an
+        unset field shows its default instead of the bottom of its range) while
+        the write path went on asking `this._box(...)` directly — which answers
+        for any addressable key, set or not. So every unset field read
+        correctly and silently refused to be edited: the slider moved, nothing
+        was written, and nothing said so.
+
+        Caught in a browser, by dragging a field the document did not set. No
+        test here would have: both halves are individually right.
+      */
+      const boxFor = (key: string): unknown =>
+        /*
+          A field OTHER FIELDS ARE GATED ON stays unbound on purpose.
+
+          Flipping `terrain.biome` has to make `biomeSeaLevel` and
+          `biomeLapseRate` appear, and appearing is a structural change — the
+          one thing the practice doc says a render pass is for. Leaving that
+          one field on the explicit `updateFeature` path keeps the re-render
+          where it belongs and keeps it out of the observer, which must never
+          touch the panel because a bound widget may be mid-drag.
+
+          Everything else the document HAS binds, which is everything you can
+          drag on a field that has been set.
+        */
+        this._changesPanelShape(name, key)
+          ? undefined
+          : boundIfSet(values, key, (k) => this._box(selected.id, name, k));
       const widgets = schemaWidgets({
         schema: registration.schema,
-        values: (config ?? {}) as Record<string, unknown>,
+        values,
         /*
           BOUND, so the widget reads and writes the document itself and tosijs
           keeps it current. Nothing here re-renders to show a number.
         */
-        box: (key) =>
-          /*
-            A field OTHER FIELDS ARE GATED ON stays unbound on purpose.
-
-            Flipping `terrain.biome` has to make `biomeSeaLevel` and
-            `biomeLapseRate` appear, and appearing is a structural change — the
-            one thing the practice doc says a render pass is for. Leaving that
-            one field on the explicit `updateFeature` path keeps the re-render
-            where it belongs and keeps it out of the observer, which must never
-            touch the panel because a bound widget may be mid-drag.
-
-            Everything else binds, which is everything you can drag.
-          */
-          this._changesPanelShape(name, key)
-            ? undefined
-            : this._box(selected.id, name, key),
+        box: boxFor,
         /*
           BOTH channels write, and they differ only in undo granularity.
 
@@ -3451,10 +3468,7 @@ export class EnsembleEditor extends Component {
           not cover.
         */
         handleChange: (key, value) => {
-          const bound =
-            !this._changesPanelShape(name, key) &&
-            this._box(selected.id, name, key);
-          if (bound) return;
+          if (boxFor(key)) return;
           this.updateFeature(selected.id, name, key, value, undefined, true);
         },
         /*

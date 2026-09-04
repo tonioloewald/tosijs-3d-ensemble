@@ -130,5 +130,103 @@ export function migrate(input: Ensemble): Migration {
     }
   });
 
+  /*
+    VALUES THAT WERE NEVER VALUES.
+
+    Four scene-feature fields were hand-copied wrong, so a file could carry a
+    setting the element had no way to honour — and it did not complain, it fell
+    back. `preset: "birds"` rendered MOTES; `mode: "none"` rendered LINEAR fog.
+    The file said one thing and the scene did another, for as long as anyone
+    left it alone.
+
+    Adopting `sceneSchemas` (tosijs-3d#63) makes those unreachable going
+    forward: the panel is a picker over the real set. It does nothing for a
+    file already written, which is what this is for — the point of a migration
+    is to make a document SAY what it already DOES.
+  */
+  const AMBIENT_PRESETS = [
+    "motes",
+    "bubbles",
+    "rain",
+    "snow",
+    "dust",
+    "leaves",
+  ];
+  const AMBIENT_WHERE = ["always", "underwater", "above"];
+  const FOG_MODES = ["linear", "exp", "exp2"];
+
+  pieces.forEach((piece, index) => {
+    const features = piece.features as
+      | Record<string, Record<string, unknown>>
+      | undefined;
+    if (!features) return;
+    const at = (feature: string, key: string) =>
+      `/pieces/${index}/features/${feature}/${key}`;
+
+    const ambient = features.ambient;
+    if (ambient && typeof ambient.preset === "string") {
+      if (!AMBIENT_PRESETS.includes(ambient.preset)) {
+        const was = ambient.preset;
+        // `PRESETS[this.preset] ?? PRESETS.motes` — this is what it rendered.
+        ambient.preset = "motes";
+        changes.push({
+          path: at("ambient", "preset"),
+          note: `"${was}" is not a preset; the scene has been rendering "motes" — said so`,
+        });
+      }
+    }
+    if (ambient && typeof ambient.where === "string") {
+      if (!AMBIENT_WHERE.includes(ambient.where)) {
+        const was = ambient.where;
+        ambient.where = "always";
+        changes.push({
+          path: at("ambient", "where"),
+          note: `"${was}" is not a placement; the scene has been rendering "always" — said so`,
+        });
+      }
+    }
+
+    const fog = features.fog;
+    if (fog && typeof fog.mode === "string" && !FOG_MODES.includes(fog.mode)) {
+      const was = fog.mode;
+      /*
+        ⚠️ "none" almost certainly meant NO FOG, and it never delivered that:
+        `FOG_MODES[attrs.mode] ?? FOGMODE_LINEAR`. So this preserves the
+        RENDER, which is a migration's job, and the note has to carry the
+        intent — because the fix for "I wanted no fog" is to delete the piece,
+        and only the author can decide that.
+      */
+      fog.mode = "linear";
+      changes.push({
+        path: at("fog", "mode"),
+        note:
+          was === "none"
+            ? 'fog mode "none" was never a mode — the scene has been rendering LINEAR fog, and now says so. If you meant NO fog, delete the fog piece'
+            : `"${was}" is not a fog mode; the scene has been rendering LINEAR — said so`,
+      });
+    }
+
+    const water = features.water;
+    if (water && typeof water.underwaterFog === "boolean") {
+      /*
+        The attribute is a NUMBER, 0..1, and a boolean written to it was
+        DISCARDED — so both `true` and `false` rendered the element's 0.12.
+
+        `true` therefore keeps its render and gains a value. `false` does not:
+        it renders differently after this, on purpose, because "off" is what it
+        plainly meant and honouring it is the whole reason to migrate rather
+        than to leave the file lying.
+      */
+      const was = water.underwaterFog;
+      water.underwaterFog = was ? 0.12 : 0;
+      changes.push({
+        path: at("water", "underwaterFog"),
+        note: was
+          ? "underwaterFog is a 0..1 amount, not a switch; `true` was discarded and the scene rendered 0.12 — said so"
+          : "underwaterFog is a 0..1 amount, not a switch; `false` was discarded and the scene rendered 0.12 — now genuinely off",
+      });
+    }
+  });
+
   return { ensemble, changes };
 }

@@ -109,13 +109,28 @@ interface PropertySpec {
    * pathological. A whole bunch of the values do all their useful work between
    * 0 and 1" — of the track, which is exactly what this fixes.
    *
-   * ⚠️ Needs `minimum > 0`. `slider3d` falls back to linear for a range that
-   * includes zero, silently — so a field whose zero MEANS something (`reach: 0`
-   * is "auto", an amplitude of 0 is flat) gets a tightened linear range rather
-   * than a log one that would quietly not apply. tosijs-3d#62 asks for a log
-   * scale with a zero stop; until then this is the honest split.
+   * ⚠️ A log scale cannot represent zero. It used to fall back to LINEAR for a
+   * range including zero, silently, so a field whose zero MEANS something
+   * (`reach: 0` is "auto", `realtimeScale: 0` is a still sky) had to keep a
+   * tightened linear range. `x-zero-stop` ends that split — see below.
    */
   "x-scale"?: "linear" | "log" | "log2";
+  /**
+   * A log slider whose handle CATCHES at zero, rather than approaching it
+   * asymptotically and never arriving.
+   *
+   * The case is a decade-spanning quantity with a real off — a sky's
+   * `realtimeScale`, fog density, any rate — where zero is often the DEFAULT.
+   * Without it the default becomes unreachable the moment you touch the
+   * control, which is worse than the cramped linear track it replaced. `min`
+   * then means the log FLOOR, the smallest non-zero value.
+   *
+   * ✅ tosijs-3d@0.8.0 (#62, ours). tosijs-3d's own `skyboxSchema()` and
+   * `fogSchema()` already spell their fields this way, so adopting
+   * `scene-schemas` brought it with them and retired the named-decade cyclers
+   * that stood in for it.
+   */
+  "x-zero-stop"?: boolean;
 }
 
 export interface SchemaPanelOptions {
@@ -157,6 +172,19 @@ export interface SchemaPanelOptions {
   /** Upper bound before the panel scrolls. Height itself is the content's. */
   maxHeight?: number;
 }
+
+/**
+ * The box for `key`, but ONLY if the document has a value there.
+ *
+ * Named and exported so the rule can be checked without standing up a DOM —
+ * the whole defect is one `??` reaching an object instead of a default, and
+ * that is not something a screenshot makes obvious.
+ */
+export const boundIfSet = (
+  values: Record<string, unknown>,
+  key: string,
+  box: ((key: string) => unknown) | undefined
+): unknown => (values[key] === undefined ? undefined : box?.(key));
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
@@ -213,6 +241,27 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
     const unit = rawUnit && !picker ? ` (${rawUnit})` : "";
     const label = `${spec.title ?? key}${unit}`;
     const value = values[key] ?? spec.default;
+    /*
+      ⚠️ BIND ONLY WHAT THE DOCUMENT ACTUALLY HAS.
+
+      `box(key)` returns a box for any key with a stable address — including
+      one the document has never set. A box over an absent path has no value,
+      and a widget bound to it renders at the BOTTOM of its range: the sky
+      panel read `latitude -90` and `luminance 0` while the element sat at 40
+      and 1. The schema's default was right there in `value` and the box, being
+      an object, is never nullish, so `??` never reached it.
+
+      That is a control that LIES rather than one that does nothing, which is
+      worse — it invites you to trust a reading nothing produced. It was easy
+      to miss while we exposed six mostly-authored properties per feature;
+      adopting tosijs-3d's schemas took the sky to eleven, of which an untouched
+      file sets two, and it became the first thing anyone would see.
+
+      So an unset field is UNBOUND and shows its default. Editing it writes
+      through `handleChange` exactly as a tool option does, the document gains
+      the key, and the next render binds it for real.
+    */
+    const bound = boundIfSet(values, key, box);
 
     /*
       WIDGETS THAT OWN A COMPOSITE, handed the whole field.
@@ -271,7 +320,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             is held locally. So one call site serves a bound document field and
             an unbound tool option without either knowing about the other.
           */
-          value: (box?.(key) as boolean | undefined) ?? value === true,
+          value: (bound as boolean | undefined) ?? value === true,
           handleChange: (v: boolean) => handleChange(key, v),
         })
       );
@@ -283,7 +332,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
         select3d({
           label,
           value:
-            (box?.(key) as string | number | undefined) ??
+            (bound as string | number | undefined) ??
             (value as string | number) ??
             spec.enum[0]!,
           options: spec.enum.map((option) => {
@@ -309,13 +358,14 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         slider3d({
           label,
-          value: (box?.(key) as number | undefined) ?? (Number(value) || 0),
+          value: (bound as number | undefined) ?? (Number(value) || 0),
           min,
           max,
           step: spec.type === "integer" ? 1 : undefined,
           ...(spec["x-scale"] && spec["x-scale"] !== "linear"
             ? { scale: spec["x-scale"] }
             : {}),
+          ...(spec["x-zero-stop"] ? { zeroStop: true } : {}),
           handleChange: (v: number) => handleChange(key, v),
         })
       );

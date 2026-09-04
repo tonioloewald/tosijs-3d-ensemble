@@ -164,3 +164,84 @@ describe("the properties that make it safe to run", () => {
     expect(ensemble.pieces[0]!.features?.radar).toEqual({});
   });
 });
+
+describe("values that were never values", () => {
+  /*
+    Each of these could be written into a file by our own editor, and none of
+    them could be honoured by the element it addressed. The scene fell back and
+    said nothing, so the document and the render disagreed for as long as
+    nobody looked. Adopting tosijs-3d's `sceneSchemas` closes the door; this
+    reopens the files already behind it.
+  */
+  const scene = (features: Record<string, unknown>) => ({
+    pieces: [{ id: "env", features }],
+  });
+  const first = (result: ReturnType<typeof migrate>) =>
+    (result.ensemble.pieces[0]!.features ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+  it('rewrites an ambient preset the element never had ("birds" rendered motes)', () => {
+    const result = migrate(scene({ ambient: { preset: "birds" } }) as never);
+    expect(first(result).ambient!.preset).toBe("motes");
+    expect(result.changes[0]!.note).toContain("motes");
+  });
+
+  it("leaves a preset that IS a preset alone", () => {
+    const result = migrate(scene({ ambient: { preset: "leaves" } }) as never);
+    expect(first(result).ambient!.preset).toBe("leaves");
+    expect(result.changes).toEqual([]);
+  });
+
+  it('rewrites `where: "air"`, which is not one of the three placements', () => {
+    const result = migrate(scene({ ambient: { where: "air" } }) as never);
+    expect(first(result).ambient!.where).toBe("always");
+  });
+
+  it('turns fog mode "none" into the LINEAR it was always rendering', () => {
+    const result = migrate(scene({ fog: { mode: "none" } }) as never);
+    expect(first(result).fog!.mode).toBe("linear");
+    // The note has to carry the intent: the fix for "I wanted no fog" is to
+    // delete the piece, and only the author can make that call.
+    expect(result.changes[0]!.note).toContain("delete the fog piece");
+  });
+
+  it("keeps a real fog mode", () => {
+    const result = migrate(scene({ fog: { mode: "exp2" } }) as never);
+    expect(first(result).fog!.mode).toBe("exp2");
+    expect(result.changes).toEqual([]);
+  });
+
+  it("turns a boolean underwaterFog into the 0..1 amount it always was", () => {
+    // `true` was DISCARDED and rendered 0.12, so this preserves the render.
+    expect(
+      first(migrate(scene({ water: { underwaterFog: true } }) as never)).water!
+        .underwaterFog
+    ).toBe(0.12);
+    // `false` was discarded too — so this one CHANGES the render, on purpose,
+    // because "off" is what it plainly meant.
+    expect(
+      first(migrate(scene({ water: { underwaterFog: false } }) as never)).water!
+        .underwaterFog
+    ).toBe(0);
+  });
+
+  it("leaves a number alone, so re-running is a no-op", () => {
+    const once = migrate(scene({ water: { underwaterFog: 0.4 } }) as never);
+    expect(first(once).water!.underwaterFog).toBe(0.4);
+    expect(once.changes).toEqual([]);
+  });
+
+  it("is idempotent over a file it has already fixed", () => {
+    const once = migrate(
+      scene({
+        ambient: { preset: "birds", where: "air" },
+        fog: { mode: "none" },
+      }) as never
+    );
+    const twice = migrate(once.ensemble);
+    expect(twice.changes).toEqual([]);
+    expect(twice.ensemble).toEqual(once.ensemble);
+  });
+});

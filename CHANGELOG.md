@@ -21,6 +21,55 @@ gets broken (`src/peer-range.test.ts`).
 
 ### Fixed
 
+- **The scene schemas were hand-copied, and every kind of drift was silent.**
+  Ranges, units, enums and log scales for the ten scene primitives now come
+  from `tosijs-3d`'s own `sceneSchemas` (tosijs-3d#63, our ask). Adopting them
+  turned up four more controls that could not do what they said:
+
+  | ours                             | the element                             |
+  | -------------------------------- | --------------------------------------- |
+  | `water.underwaterFog: boolean`   | a NUMBER 0..1 — the toggle wrote `true` |
+  | `ambient.preset` default `birds` | unknown preset → falls back to `motes`  |
+  | `ambient.where` default `air`    | not in `always \| underwater \| above`  |
+  | `fog.mode` offered `none`        | unknown mode → falls back to LINEAR     |
+
+  So the fog setting an author picks _in order to see the horizon_ rendered
+  linear fog, and the ambient default named a preset that does not exist. None
+  of it was reported by anything.
+
+  `migrate()` rewrites all four in a file already written, because a migration
+  exists to make a document say what it already does. `"none"` becomes
+  `"linear"` and the note says to delete the piece if no fog was the intent —
+  that call is the author's.
+
+  Two things stay ours and are documented as decisions rather than copies:
+  **which** properties an author sees (`terrainSchema()` has 30, of which five
+  are engine tuning) and a handful of authoring defaults. A test pins both:
+  every key we name must still exist upstream, and we may not restate a range,
+  unit, enum or scale — with exactly four listed exceptions.
+
+  The sky panel went from 6 properties to 11. Nobody had decided to drop the
+  other five; they were simply never copied.
+
+- **A property the document had not set displayed as the BOTTOM of its range.**
+  The sky panel read `latitude -90` and `luminance 0` while the element sat at
+  40 and 1. `box(key)` answers for any addressable key, set or not, and a box
+  over an absent path has no value — so `?? spec.default` never ran, because a
+  box is an object and `??` only falls through on nullish.
+
+  That is a control that LIES rather than one that does nothing, which is
+  worse: it invites trust in a reading nothing produced. Visible now because
+  adopting the upstream schemas took the sky to eleven properties of which an
+  untouched file sets two.
+
+- **…and unbinding those fields stopped them writing at all.** The fix above
+  left the write path still asking `this._box(key)` directly, which answers for
+  any addressable key — so every unset field read correctly and silently
+  refused to be edited. One rule in two expressions that agreed by inspection
+  until one of them changed; they are one function now. Caught in a browser by
+  dragging a field the document did not set, which no test here would have
+  done, because both halves were individually right.
+
 - **A `smart` turret never led its target, and under tosijs 1.9 it aimed at
   `NaN` instead.** `presets/combat` wrote `smart: "on" | "off"` to
   `<tosi-b3d-turret>`, whose `smart` is a NUMBER — a 0..1 skill curve, where
@@ -41,6 +90,14 @@ gets broken (`src/peer-range.test.ts`).
   and the turret aimed exactly where it would have with no `smart` at all.
 
 ### Changed
+
+- **The sky's `realtimeScale` is a log slider with a zero stop, not a cycler.**
+  The named-decade enum (`Off / realtime / 10× / 1 min/s …`) stood in for a
+  control that could span 0..3600 and still reach zero, and 0.8.0's `slider3d`
+  has one (tosijs-3d#62, ours) — which is how upstream's own `skyboxSchema()`
+  already spells it. `schema-panel` reads `x-zero-stop`. A still sky is still
+  the default, because an ensemble is a static description and has to be
+  reproducible.
 
 - **Callbacks passed to tosijs-3d widgets are `handleX`.** `handleChange`,
   `handleSelect`, `handleClick`, `handleCommit` — at every call site in

@@ -38,6 +38,7 @@ format.
 /*{"parent":"Runtime","order":3}*/
 import {
   DEFAULT_LIGHT,
+  sceneSchemas,
   b3dAmbient,
   b3dAreaLight,
   b3dPointLight,
@@ -58,35 +59,6 @@ import {
 import { registerFeature } from "../format/registry.js";
 import type { FeatureContext, SceneElement } from "../format/registry.js";
 
-/**
- * A LOG10 slider over decades — the right instrument for a multiplicative
- * quantity.
- *
- * A linear track is wrong for anything whose useful values span orders of
- * magnitude: terrain's `grossScale` ran 1..1,000,000 with its default at 0.4%
- * of the travel, so every value an author wanted lived in the first few pixels.
- * Measured across the terrain schema, EVERY default sat between 0.00% and 3% of
- * its track. Owner: "a lot of these are precisely the kind of thing a -3 to 3
- * log 10 scale would be perfect for".
- *
- * Given in DECADES, because that is how you think about these: `decades(-3, 3)`
- * is 0.001 to 1000, and the default lands in the middle where it belongs.
- *
- * ⚠️ Only for a quantity that is POSITIVE and multiplicative. `slider3d` falls
- * back to linear for a range including zero, silently, so a field whose zero
- * means something — `reach: 0` is "auto", `baseHeight` can be negative — keeps
- * a tightened LINEAR range instead. Where "flat" is the useful zero, a
- * thousandth of a metre is flat, so the bottom decade stands in for it.
- */
-const decades = (from: number, to: number, def?: number, unit?: string) => ({
-  type: "number",
-  minimum: 10 ** from,
-  maximum: 10 ** to,
-  "x-scale": "log",
-  ...(def === undefined ? {} : { default: def }),
-  ...(unit ? { "x-unit": unit } : {}),
-});
-
 const num = (min: number, max: number, def?: number, unit?: string) => ({
   type: "number",
   minimum: min,
@@ -94,6 +66,79 @@ const num = (min: number, max: number, def?: number, unit?: string) => ({
   ...(def === undefined ? {} : { default: def }),
   ...(unit ? { "x-unit": unit } : {}),
 });
+
+type Spec = Record<string, unknown>;
+
+/**
+ * Property specs that this repo failed to find upstream. Empty; a test says so.
+ *
+ * Exported for that test, not for consumers.
+ */
+export const schemaDrift: string[] = [];
+
+/**
+ * The properties an author should see, taken from **tosijs-3d's own schema**.
+ *
+ * We used to hand-copy every range, unit and enum out of the elements. It
+ * drifted in every direction at once, and every kind of drift was SILENT:
+ *
+ * | ours                              | the element                            |
+ * | --------------------------------- | -------------------------------------- |
+ * | `underwaterFog: boolean`          | a NUMBER, 0..1 — the toggle wrote `true` |
+ * | `ambient.preset` default `birds`  | unknown preset → falls back to `motes` |
+ * | `ambient.where` default `air`     | not in `'always' \| 'underwater' \| 'above'` |
+ * | `fog.mode` offered `none`         | unknown mode → falls back to LINEAR    |
+ * | `applyFog` default `true`         | the element defaults `false`           |
+ * | 6 of skybox's 16 properties       | nobody decided to drop the other ten   |
+ *
+ * Not one of those was reported by anything. A panel showed a control, the
+ * author moved it, and the scene did what it was already doing — which is this
+ * project's oldest lesson (*a control that does nothing is worse than no
+ * control*) reached by a route no test was watching.
+ *
+ * So the SHAPE of a property — its type, range, unit, scale and enum — now
+ * comes from `sceneSchemas` (tosijs-3d#63, our ask), and cannot drift again
+ * because it is not copied. Two things stay ours, because they are genuinely
+ * editorial rather than factual:
+ *
+ * - **which** properties an author sees. `terrainSchema()` has 30, of which
+ *   `poolSize`, `fillBudget` and `tileBuildMs` are engine tuning. A curated
+ *   panel is the product; the full attribute list is the reference.
+ * - **`overrides`**, for a default that is an AUTHORING choice rather than the
+ *   element's resting state — a sun sized for a landscape, a still sky. Each
+ *   one below says why it is not just drift wearing a nicer name.
+ *
+ * A key that upstream drops lands in `schemaDrift` and warns, rather than
+ * throwing: this runs inside `registerSceneFeatures()` at page load, and a
+ * throw there is a black screen. The test is what makes it loud.
+ */
+const pick = (
+  name: keyof typeof sceneSchemas,
+  keys: readonly string[],
+  overrides: Record<string, Spec> = {}
+): Record<string, Spec> => {
+  const source = (sceneSchemas[name]() as { properties: Record<string, Spec> })
+    .properties;
+  const out: Record<string, Spec> = {};
+  for (const key of keys) {
+    const spec = source[key];
+    if (!spec) {
+      const where = `${name}.${key}`;
+      if (!schemaDrift.includes(where)) {
+        schemaDrift.push(where);
+        console.warn(
+          `tosijs-3d-ensemble: "${where}" is no longer in tosijs-3d's schema — the field is omitted from the panel rather than shown with invented bounds.`
+        );
+      }
+      continue;
+    }
+    // Upstream says `format: 'color'`; our panel reads `x-widget`. One line
+    // here beats teaching every call site both spellings.
+    const widget = spec.format === "color" ? { "x-widget": "color" } : {};
+    out[key] = { ...spec, ...widget, ...(overrides[key] ?? {}) };
+  }
+  return out;
+};
 
 /**
  * Apply a feature's config to the element it created, without rebuilding.
@@ -410,11 +455,12 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Light",
-      properties: {
-        intensity: num(0, 10, 0.9),
-        diffuse: { type: "string", "x-widget": "color" },
-        specular: { type: "string", "x-widget": "color" },
-      },
+      // `0.9` rather than the element's `1`: a fill sits UNDER a sun, and a
+      // full-strength hemispheric wash flattens the shadows the sun is there
+      // to cast.
+      properties: pick("light", ["intensity", "diffuse", "specular"], {
+        intensity: { default: 0.9 },
+      }),
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dLight({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
@@ -546,13 +592,29 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Sun and shadows",
-      properties: {
-        intensity: num(0, 10, 1),
-        shadowDarkness: num(0, 1, 0.4),
-        shadowTextureSize: num(256, 4096, 1024),
-        numCascades: num(1, 4, 2),
-        activeDistance: num(10, 20000, 400, "m"),
-      },
+      /*
+        The overrides are LANDSCAPE defaults. The element rests at values
+        tuned for a small demo scene — `activeDistance: 30`, no cascades, no
+        shadow map — and an ensemble is routinely a coastline. `x`/`y`/`z` are
+        not picked: they are the sun's DIRECTION, and the piece's `at` is it.
+      */
+      properties: pick(
+        "sun",
+        [
+          "intensity",
+          "shadowDarkness",
+          "shadowTextureSize",
+          "numCascades",
+          "activeDistance",
+          "shadowMaxZ",
+        ],
+        {
+          shadowDarkness: { default: 0.4 },
+          shadowTextureSize: { default: 1024 },
+          numCascades: { default: 2 },
+          activeDistance: { default: 400 },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) => {
       const placed = { ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] };
@@ -569,56 +631,52 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Sky",
-      properties: {
-        timeOfDay: num(0, 24, 11, "h"),
-        turbidity: num(0, 40, 10),
-        luminance: num(0, 2, 1),
-        latitude: num(-90, 90, 0, "°"),
-        applyFog: { type: "boolean", default: true },
-        /*
-          TIME OF DAY MUST STAND STILL UNLESS ASKED NOT TO.
+      /*
+        TIME OF DAY MUST STAND STILL UNLESS ASKED NOT TO.
 
-          `b3d-skybox` defaults `realtimeScale` to 10 and advances `timeOfDay`
-          on a 100 ms interval, which works out at a full day/night cycle every
-          FORTY MINUTES. An ensemble is a static description of an arrangement,
-          so a file that says `timeOfDay: 11` and renders dusk is simply wrong —
-          and leaving the editor open walked the sky into night, reported as
-          "is it night time?" after a long session. Measured across this
-          session: 10.06 → 10.23 → 10.29 with nothing touching it.
+        `b3d-skybox` defaults `realtimeScale` to 10 and advances `timeOfDay`
+        on a 100 ms interval, which works out at a full day/night cycle every
+        FORTY MINUTES. An ensemble is a static description of an arrangement,
+        so a file that says `timeOfDay: 11` and renders dusk is simply wrong —
+        and leaving the editor open walked the sky into night, reported as "is
+        it night time?" after a long session. Measured across one session:
+        10.06 → 10.23 → 10.29 with nothing touching it.
 
-          So the format defaults it to 0 — a still sky — and a scene that wants
-          a moving one opts in by saying so. That also makes an ensemble
-          REPRODUCIBLE: load the same file twice and get the same light.
-        */
-        /*
-          LOG-SPACED, AND STILL ABLE TO REACH ZERO.
+        So the format defaults it to 0 — a still sky — and a scene that wants a
+        moving one opts in. That also makes an ensemble REPRODUCIBLE: load the
+        same file twice and get the same light.
 
-          A linear 0..1000 track puts every value anyone wants in the first
-          thousandth of its travel — 1 and 10 are indistinguishable positions.
-          `slider3d` has a `log` scale for exactly that, but it "requires
-          min > 0; a range including zero falls back to linear", and 0 is both
-          the default here and the only way to say "do not move".
+        ⚠️ The named-decade CYCLER this used to be is gone. It stood in for a
+        slider that could span 0..3600 and still reach zero, and 0.8.0's
+        `slider3d` has exactly that (`x-scale: log` + `x-zero-stop`) — which is
+        how upstream's own `realtimeScale` is already spelled. Keeping the
+        cycler would mean keeping a hand-written enum next to a schema that
+        describes the control properly (tosijs-3d#62).
 
-          The values worth having are decades, so they are named ones. That
-          keeps Off reachable, spaces the rest logarithmically, and says what
-          each means — `600` is not self-evidently ten minutes of sky per
-          second.
-        */
-        realtimeScale: {
-          type: "number",
-          title: "Time speed",
-          enum: [0, 1, 10, 60, 600, 3600],
-          default: 0,
-          "x-labels": {
-            "0": "Off",
-            "1": "realtime",
-            "10": "10×",
-            "60": "1 min/s",
-            "600": "10 min/s",
-            "3600": "1 hr/s",
-          },
-        },
-      },
+        `timeOfDay` opens at 11 rather than the element's 6.5 for the same
+        reason a photograph is not taken at dawn: an author needs to SEE the
+        thing being arranged, and 6.5 is half-light.
+      */
+      properties: pick(
+        "skybox",
+        [
+          "timeOfDay",
+          "realtimeScale",
+          "latitude",
+          "azimuth",
+          "turbidity",
+          "luminance",
+          "sunColor",
+          "duskColor",
+          "moonColor",
+          "moonIntensity",
+          "applyFog",
+        ],
+        {
+          timeOfDay: { default: 11 },
+          realtimeScale: { default: 0, title: "Time speed" },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) => {
       const still = stillSky(cfg);
@@ -642,13 +700,19 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Ground plane",
-      properties: {
-        width: num(1, 100000, 400, "m"),
-        height: num(1, 100000, 400, "m"),
-        color: { type: "string", "x-widget": "color" },
-        texture: { type: "string", default: "checker" },
-        textureTiles: num(1, 400, 20),
-      },
+      // A ground plane is the FLOOR of an arrangement, so it opens big enough
+      // to stand something on — the element's 4×4 m is a demo prop. `checker`
+      // because an untextured grey plane gives an author no sense of scale.
+      properties: pick(
+        "ground",
+        ["width", "height", "color", "texture", "textureTiles"],
+        {
+          width: { default: 400 },
+          height: { default: 400 },
+          texture: { default: "checker" },
+          textureTiles: { default: 20 },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dGround({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
@@ -776,11 +840,13 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Reflection probe",
-      properties: {
-        probeSize: num(16, 1024, 128),
-        refreshRate: num(0, 60, 1),
-        maxDistance: num(1, 10000, 200, "m"),
-      },
+      // `probeSize: 0` is the element's "off"; a probe you have placed on
+      // purpose should render, so it opens at a usable resolution.
+      properties: pick(
+        "reflections",
+        ["probeSize", "refreshRate", "maxDistance", "farDistance"],
+        { probeSize: { default: 128 }, maxDistance: { default: 200 } }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       addSingleton(
@@ -812,74 +878,80 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Terrain",
-      properties: {
-        /*
-          ⚠️ THESE NUMBERS COME FROM tosijs-3d's OWN TERRAIN DEMO, not from us.
+      /*
+        ⚠️ THIS SCHEMA WAS HAND-WRITTEN AND WRONG THREE SEPARATE WAYS IN ONE
+        DAY, and then wrong again in ways nobody counted.
 
-          The previous set was invented, and every one was wrong — not merely
-          badly ranged. `grossScale` is a FREQUENCY, not a wavelength: the demo
-          runs it 0.005..0.3 with a default of 0.015, and the comment there
-          explains why ("at h-size 8 a grossScale of 0.015 means ~530m
-          features"). We had it as metres, 1..1,000,000, defaulting to 4000 —
-          a number four orders of magnitude outside the useful range, wearing a
-          unit it does not have.
+        `biome` was declared a free string when it is an on/off enum. Every
+        default sat under 3% of its slider track. `reach` was unbounded into
+        tab-death. Then the VALUES turned out to be invented: `grossScale` is a
+        FREQUENCY (0.005..0.3) and we had it as metres, 1..1,000,000,
+        defaulting to 4000 — four orders of magnitude outside the useful range,
+        wearing a unit it does not have.
 
-          Owner: "a whole bunch of the values do all their useful work between 0
-          and 1", which was literal and which I first read as a statement about
-          the SLIDER TRACK. It was about the values.
+        The second pass hand-copied `b3d-terrain`'s demo instead of guessing,
+        which was better and still a copy, and the note here said so: "it will
+        drift again, which is the argument for tosijs-3d#66". #66 landed in
+        0.8.0. The ranges, units and log scales below are now the element's
+        own, and cannot drift, because nothing here restates them.
 
-          So these are lifted from `b3d-terrain`'s demo — its defaults and its
-          own slider bounds where it has them. It is a hand-copy and will drift
-          again, which is the argument for tosijs-3d#66 rather than a reason to
-          keep guessing in the meantime.
-        */
-        biome: { type: "boolean", default: false },
-        biomeSeaLevel: {
-          ...num(-10000, 10000, 0, "m"),
-          "x-requires": { biome: true },
-        },
-        biomeLapseRate: {
-          ...num(0, 0.02, 0, undefined),
-          "x-requires": { biome: true },
-        },
-        // A seed is typed or stepped, never dragged: no seed is near another.
-        seed: { type: "integer", minimum: 0, maximum: 9999, default: 111 },
-        surfaceType: {
-          type: "string",
-          enum: ["plane", "sphere", "cylinder", "torus"],
-          default: "plane",
-        },
-        // For the curved surfaces. The demo uses 1000 on a cylinder; what it
-        // does on a torus is an open question upstream (tosijs-3d#66).
-        radius: decades(1, 5, 1000, "m"),
-        /*
-          FREQUENCIES, divided by `horizScale`. Demo sliders exactly: gross
-          0.005..0.3, detail 0.02..1. Both do all their work below 1, which is
-          what a linear track over six decades destroyed.
-        */
-        grossScale: num(0.005, 0.3, 0.015),
-        detailScale: num(0.02, 1, 0.09),
-        horizScale: num(0.1, 64, 8),
-        // METRES of relief, and the demo's own slider bounds.
-        grossAmplitude: num(0, 400, 250, "m"),
-        detailAmplitude: num(0, 50, 45, "m"),
-        baseHeight: num(-1000, 1000, 0, "m"),
-        /*
-          WORLD SHAPE. The demo's own comment calls `tileSize` / `lodLevels` /
-          `reach` "world-shape choices" and uses 128 / 3 / 5000 — "big tiles +
-          few levels keep the pool small and the meshes cheap".
-
-          ⚠️ Finest-level tiles go as `(2·reach / tileSize)²`, and these are two
-          separate sliders, so it is the PRODUCT that kills the tab. The demo's
-          own pairing is 6,100 tiles; 10m tiles with the same reach would be a
-          million. A schema cannot say "…unless tileSize is small", so the
-          floor on tileSize is doing the work the element should do itself.
-        */
-        tileSize: decades(1.5, 2.7, 128, "m"),
-        lodLevels: { type: "integer", minimum: 1, maximum: 8, default: 3 },
-        reach: num(0, 8000, 0, "m"),
-        wireframe: { type: "boolean", default: false },
-      },
+        What stays ours is the CURATION — `terrainSchema()` has 30 properties
+        and `poolSize`, `fillBudget`, `tileBuildMs`, `profile` and `debugColor`
+        are engine tuning, not authoring — plus the four overrides, each of
+        which is a decision rather than a copy.
+      */
+      properties: pick(
+        "terrain",
+        [
+          "seed",
+          "surfaceType",
+          "radius",
+          "grossScale",
+          "detailScale",
+          "horizScale",
+          "grossAmplitude",
+          "detailAmplitude",
+          "baseHeight",
+          "normalSmoothing",
+          "biome",
+          "biomeSeaLevel",
+          "biomeLapseRate",
+          "tileSize",
+          "lodLevels",
+          "reach",
+          "wireframe",
+        ],
+        {
+          // A seed is typed or stepped, never dragged: no seed is near another.
+          seed: { type: "integer", maximum: 9999, default: 111 },
+          // An ensemble's terrain is a landscape. A cylinder is a planet.
+          surfaceType: { default: "plane" },
+          // Six decades of travel, so a linear track is unusable.
+          radius: { "x-scale": "log", default: 1000 },
+          /*
+            THE FORMAT KEEPS A BOOLEAN. Upstream spells this `'on' | 'off'`
+            because an absent HTML boolean attribute reads false, but that is
+            an ELEMENT concern — a JSON document has real booleans, and files
+            already say `"biome": true`. The bind maps it; see below.
+          */
+          biome: { type: "boolean", enum: undefined, default: false },
+          biomeSeaLevel: { "x-requires": { biome: true } },
+          biomeLapseRate: { "x-requires": { biome: true } },
+          grossAmplitude: { default: 250 },
+          detailAmplitude: { default: 45 },
+          horizScale: { default: 8 },
+          /*
+            ⚠️ A FLOOR THE ELEMENT DOES NOT HAVE. Finest-level tiles go as
+            `(2·reach / tileSize)²`, and these are two separate sliders — so it
+            is the PRODUCT that kills the tab. Upstream allows `tileSize: 1`,
+            which with a 5 km reach is a hundred million tiles. A schema cannot
+            say "…unless reach is large", so the floor stands in for a
+            constraint the element should hold itself.
+          */
+          tileSize: { minimum: 32, default: 128 },
+          lodLevels: { default: 3 },
+        }
+      ),
     },
     /*
       The piece's `at` sets the terrain's BASE HEIGHT — a heightfield has no
@@ -913,14 +985,38 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Water",
-      properties: {
-        waterSize: num(10, 100000, 2000, "m"),
-        waveHeight: num(0, 10, 0.3, "m"),
-        waveLength: num(0.01, 10, 0.1),
-        windForce: num(0, 100, 6),
-        waterColor: { type: "string", "x-widget": "color", default: "#0a3d5c" },
-        underwaterFog: { type: "boolean", default: true },
-      },
+      /*
+        ⚠️ `underwaterFog` IS A NUMBER, and we declared it a boolean.
+
+        The panel rendered a toggle, an author flipped it, and `true` went to a
+        `number` attribute — discarded in silence until tosijs 1.9, which
+        applies it instead. Either way the murk never changed. It is 0..1 here
+        because that is what the element reads, which is the whole argument for
+        not hand-copying this file (tosijs-3d#63).
+
+        `waterSize` opens at an ensemble's scale rather than the element's
+        128 m, and the colour is a deeper blue than the element's default
+        because an arrangement usually sits ON the sea, not in a pool.
+      */
+      properties: pick(
+        "water",
+        [
+          "waterSize",
+          "waveHeight",
+          "waveLength",
+          "windForce",
+          "bumpHeight",
+          "waterColor",
+          "underwaterFog",
+          "underwaterMurk",
+        ],
+        {
+          waterSize: { default: 2000 },
+          waveHeight: { default: 0.3 },
+          windForce: { default: 6 },
+          waterColor: { default: "#0a3d5c" },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dWater({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
@@ -935,15 +1031,30 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Clouds",
-      properties: {
-        count: num(0, 500, 40),
-        altitude: num(0, 20000, 900, "m"),
-        thickness: num(0, 5000, 200, "m"),
-        spread: num(100, 100000, 4000, "m"),
-        coverage: num(0, 1, 0.5),
-        opacity: num(0, 1, 0.8),
-        castShadows: { type: "boolean", default: false },
-      },
+      // Higher, thicker and wider than the element's defaults, which are sized
+      // for a scene you can walk across. `castShadows` stays off: the changelog
+      // is explicit that it costs a caster pass per frame.
+      properties: pick(
+        "clouds",
+        [
+          "coverage",
+          "count",
+          "altitude",
+          "thickness",
+          "spread",
+          "size",
+          "color",
+          "opacity",
+          "castShadows",
+        ],
+        {
+          count: { default: 40 },
+          altitude: { default: 900 },
+          thickness: { default: 200 },
+          spread: { default: 4000 },
+          opacity: { default: 0.8 },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       addSingleton(ctx, "tosi-b3d-clouds", () => b3dClouds({ ...cfg }), cfg),
@@ -958,13 +1069,26 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Ambient life",
-      properties: {
-        preset: { type: "string", default: "birds" },
-        where: { type: "string", default: "air" },
-        count: num(0, 500, 20),
-        radius: num(10, 20000, 400, "m"),
-        color: { type: "string", "x-widget": "color" },
-      },
+      /*
+        ⚠️ NO DEFAULT OVERRIDES HERE, because ours were not defaults — they
+        were WRONG VALUES. `preset` defaulted to `birds` and the element knows
+        `motes`, `bubbles`, `rain`, `snow`, `dust` and `leaves`; an unknown
+        preset falls back to `motes` (`PRESETS[this.preset] ?? PRESETS.motes`).
+        `where` defaulted to `air` and the attribute is
+        `'always' | 'underwater' | 'above'`. So the feature shipped with a
+        default that could not be honoured, and honoured it by ignoring it.
+
+        Both were free strings in our schema, which is exactly how a typo
+        survives: with the enum in place the panel is a picker over the real
+        set and the wrong value is unreachable.
+      */
+      properties: pick("ambient", [
+        "preset",
+        "where",
+        "count",
+        "radius",
+        "color",
+      ]),
     },
     bind: (_piece, cfg, ctx) =>
       addSingleton(ctx, "tosi-b3d-ambient", () => b3dAmbient({ ...cfg }), cfg),
@@ -979,18 +1103,29 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Fog",
-      properties: {
-        mode: {
-          type: "string",
-          enum: ["none", "linear", "exp", "exp2"],
-          default: "exp2",
-        },
-        color: { type: "string", "x-widget": "color", default: "#8fa6b2" },
-        density: num(0, 0.1, 0.002),
-        start: num(0, 100000, 100, "m"),
-        end: num(0, 100000, 4000, "m"),
-        syncSkybox: { type: "boolean", default: true },
-      },
+      /*
+        ⚠️ `none` IS GONE FROM `mode`, and it was never real. `b3d-fog` reads
+        `FOG_MODES[attrs.mode] ?? FOGMODE_LINEAR`, so choosing "none" gave you
+        LINEAR fog — the one setting an author picks in order to see the
+        horizon did the opposite, quietly. Delete the fog piece, or take
+        `density` to zero, which the log slider's zero stop now reaches.
+
+        `syncSkybox` is ours on purpose: an ensemble owns its sky as well as its
+        fog, and letting them disagree is a mistake the file can make but never
+        wants to. `exp2` likewise — atmospheric depth rather than a wall.
+      */
+      properties: pick(
+        "fog",
+        ["mode", "color", "density", "start", "end", "syncSkybox"],
+        {
+          mode: { default: "exp2" },
+          color: { default: "#8fa6b2" },
+          density: { default: 0.002 },
+          start: { default: 100 },
+          end: { default: 4000 },
+          syncSkybox: { default: true },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       addSingleton(ctx, "tosi-b3d-fog", () => b3dFog({ ...cfg }), cfg),

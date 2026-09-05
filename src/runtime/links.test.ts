@@ -28,6 +28,21 @@ afterEach(() => {
   while (registered.length) unregisterLink(registered.pop()!);
 });
 
+/*
+  A STUB PLACER, because these pieces carry meshes.
+
+  Without one every build here reports `no-placer` and two of these tests
+  asserted `problems` was empty — so they were quietly asserting the silence
+  that manta-recon#3 turned out to be. Bodies also make the link tests
+  stronger: a handler is supposed to receive ends that EXIST, and that is what
+  the issue's second witness was about (`LinkEnd.element` and `.node` both
+  empty for pieces the map counted as built).
+*/
+const opts = () => ({
+  scene: fakeScene(),
+  placePiece: (piece: { id: string }) => ({ node: { id: piece.id } }),
+});
+
 const twoPieces = (links: unknown[]): Ensemble =>
   ({
     name: "linked",
@@ -42,9 +57,10 @@ describe("the link phase", () => {
   it("invokes a handler for a payload key", () => {
     const seen: Array<Record<string, unknown>> = [];
     register({ name: "delay", bind: (cfg) => seen.push(cfg) });
-    buildEnsemble(twoPieces([{ from: "reactor", to: "field", delay: 0.4 }]), {
-      scene: fakeScene(),
-    });
+    buildEnsemble(
+      twoPieces([{ from: "reactor", to: "field", delay: 0.4 }]),
+      opts() as never
+    );
     // A scalar payload arrives boxed, so a handler always gets an object.
     expect(seen).toEqual([{ value: 0.4 }]);
   });
@@ -57,9 +73,10 @@ describe("the link phase", () => {
     */
     let ctx: LinkContext | null = null;
     register({ name: "delay", bind: (_cfg, c) => (ctx = c) });
-    buildEnsemble(twoPieces([{ from: "reactor", to: "field", delay: 1 }]), {
-      scene: fakeScene(),
-    });
+    buildEnsemble(
+      twoPieces([{ from: "reactor", to: "field", delay: 1 }]),
+      opts() as never
+    );
     expect(ctx!.from!.piece.id).toBe("reactor");
     expect(ctx!.to!.piece.id).toBe("field");
     expect(ctx!.to!.at).toEqual([0, 10, 0]);
@@ -71,7 +88,7 @@ describe("the link phase", () => {
     register({ name: "beam", bind: () => seen.push("beam") });
     buildEnsemble(
       twoPieces([{ from: "reactor", to: "field", delay: 0.4, beam: true }]),
-      { scene: fakeScene() }
+      opts() as never
     );
     expect(seen.sort()).toEqual(["beam", "delay"]);
   });
@@ -81,7 +98,7 @@ describe("the link phase", () => {
     // an error, for the same reason an unregistered feature is only a warning.
     const built = buildEnsemble(
       twoPieces([{ from: "reactor", to: "field", nobodyHandlesThis: 1 }]),
-      { scene: fakeScene() }
+      opts() as never
     );
     expect(built.problems).toEqual([]);
   });
@@ -91,9 +108,10 @@ describe("the link phase", () => {
     // rest of a scene they are mid-edit on.
     let ctx: LinkContext | null = null;
     register({ name: "delay", bind: (_c, c2) => (ctx = c2) });
-    buildEnsemble(twoPieces([{ from: "reactor", to: "ghost", delay: 1 }]), {
-      scene: fakeScene(),
-    });
+    buildEnsemble(
+      twoPieces([{ from: "reactor", to: "ghost", delay: 1 }]),
+      opts() as never
+    );
     expect(ctx!.from!.piece.id).toBe("reactor");
     expect(ctx!.to).toBeUndefined();
   });
@@ -107,7 +125,7 @@ describe("the link phase", () => {
     });
     const built = buildEnsemble(
       twoPieces([{ from: "reactor", to: "field", delay: 1 }]),
-      { scene: fakeScene() }
+      opts() as never
     );
     expect(built.problems.map((p) => p.code)).toEqual(["link-bind-failed"]);
     expect(built.pieces.size).toBe(2);
@@ -121,7 +139,7 @@ describe("the link phase", () => {
     });
     const built = buildEnsemble(
       twoPieces([{ from: "reactor", to: "field", beam: true }]),
-      { scene: fakeScene() }
+      opts() as never
     );
     built.dispose();
     expect(torn).toBe(1);

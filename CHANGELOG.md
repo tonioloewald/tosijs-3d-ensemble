@@ -58,6 +58,35 @@ gets broken (`src/peer-range.test.ts`).
   free to float above the floor on any install, exactly as the comment in that
   file warns.
 
+- **`buildEnsemble` reported "20 of 20 built, zero problems" and put no
+  geometry in the scene** (manta-recon#3). `pieces` counted every piece it
+  REACHED, not every piece it gave a body to, so a caller could not tell
+  "built" from "recorded" — which is the one thing that number is for. 0.2.0's
+  link phase produced a second witness for the same fault: every `LinkEnd`
+  arrived with `element` and `node` both empty, for pieces the map counted as
+  built.
+
+  The cause was one word. `placePiece` was destructured with **no default**
+  while its own doc comment said it defaulted to `placeMesh`, and it is invoked
+  as `placePiece?.(…)` — so for any caller who did not pass one, every piece
+  was recorded and none was placed. Nothing here could notice: all three call
+  sites in this repo pass it explicitly and every test stubbed it. Two of our
+  own tests were, it turns out, asserting that silence.
+
+  ⚠️ **It still does not default, and now says so.** `placeMesh` imports
+  tosijs-3d, which needs a DOM at module load, while `dist/runtime/build.js`
+  imports cleanly under plain Node — measured — which is what lets a generator
+  validate and build headlessly. The DOM dependency is the caller's to declare.
+
+  What changed is that omitting it is no longer silent, and the check is on the
+  OUTPUT rather than the option: a piece that names a mesh and ends with no
+  body is reported as **`no-placer`** (nothing was supplied — one problem, with
+  the fix in it) or **`no-body`** (the placer declined this piece, usually a
+  mesh that is in no mounted library). A piece with no mesh is not reported —
+  an environment primitive IS its feature — and neither is a disabled one.
+
+  `MIGRATING.md` now shows the whole call.
+
 - **The scene schemas were hand-copied, and every kind of drift was silent.**
   Ranges, units, enums and log scales for the ten scene primitives now come
   from `tosijs-3d`'s own `sceneSchemas` (tosijs-3d#63, our ask). Adopting them

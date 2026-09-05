@@ -110,6 +110,30 @@ The combat preset registers exactly the roles those prefabs use — `structure`,
 `target`, `power`, `generator`, `shield`, `critical` — which is unsurprising,
 since it was written from them.
 
+### Building one
+
+```js
+import { buildEnsemble, placeMesh } from "tosijs-3d-ensemble";
+
+const built = buildEnsemble(ensemble, {
+  scene, // <tosi-b3d>
+  origin, // where the ensemble's local origin sits
+  library: "enemies", // fallback for pieces that name no library of their own
+  placePiece: placeMesh, // ⚠️ REQUIRED for any ensemble with meshes
+});
+```
+
+⚠️ **`placePiece` does not default.** It looks like it should, and this
+package's own doc comment claimed it did until manta-recon#3 — with it omitted,
+every piece is _recorded_ and none is _placed_, which reported "20 of 20 built,
+zero problems" and put no geometry in the scene.
+
+It cannot default: `placeMesh` imports tosijs-3d, which needs a DOM at module
+load, while `buildEnsemble` imports cleanly under plain Node — which is what
+lets a generator validate and build headlessly. So the DOM dependency is yours
+to declare. Omitting it now reports `no-placer`, and a piece the placer
+declines reports `no-body`.
+
 Two differences worth knowing:
 
 - **`validate` returns `{severity, code, message, path}[]` and never throws.** An

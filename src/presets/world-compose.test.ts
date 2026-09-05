@@ -4,7 +4,11 @@ import { registerWorldPreset } from "./world.js";
 import { unregisterFeature } from "../format/registry.js";
 import type { SceneElement } from "../format/registry.js";
 import type { Ensemble } from "../format/types.js";
-import type { AnimationHandle, InteractiveHandle, LockHandle } from "./world.js";
+import type {
+  AnimationHandle,
+  InteractiveHandle,
+  LockHandle,
+} from "./world.js";
 
 /*
   Features composing on features is the substrate claim: a door is not
@@ -139,7 +143,9 @@ describe("world preset composition", () => {
     registerWorldPreset();
     const built = buildEnsemble(
       withFeatures({ spin: { degreesPerSecond: 90 } }),
-      { scene: scene() }
+      // A placer, because the piece carries a mesh: without one this asserted
+      // "no errors" against a build that placed nothing (manta-recon#3).
+      { scene: scene(), placePiece: (p) => ({ node: { id: p.id } }) }
     );
     expect(built.pieces.get("door")!.handles.has("interactive")).toBe(false);
     expect(built.problems.filter((p) => p.severity === "error")).toEqual([]);

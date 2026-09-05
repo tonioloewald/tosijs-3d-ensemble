@@ -80,9 +80,24 @@ export interface BuildOptions {
    */
   simTime?: () => number;
   /**
-   * Give the piece a body. Defaults to `placeMesh` from `./place-mesh`, the
-   * only part of this module that knows about tosijs-3d — swap it in a test, or
-   * to render pieces some other way.
+   * Give the piece a body. **Required for any ensemble with meshes** — pass
+   * `placeMesh` from this package unless you are rendering some other way.
+   *
+   * ```js
+   * import { buildEnsemble, placeMesh } from 'tosijs-3d-ensemble'
+   * buildEnsemble(ensemble, { scene, placePiece: placeMesh })
+   * ```
+   *
+   * ⚠️ **It does not default, and this comment used to say it did.** A default
+   * would mean importing `placeMesh` here, and `placeMesh` imports tosijs-3d,
+   * which needs a DOM at module load — while `build.js` imports cleanly under
+   * plain Node today, which is what lets a generator validate and build
+   * headlessly. So the DOM dependency is the caller's to declare.
+   *
+   * Omitting it is no longer silent: a piece that names a mesh and ends with no
+   * body is reported as `no-placer` (nothing was supplied) or `no-body` (the
+   * placer declined). manta-recon#3 — 20 of 20 pieces "built", zero problems,
+   * no geometry.
    *
    * Not called when a **body feature** already claimed the piece (see
    * `FeatureRegistration.body`).
@@ -298,6 +313,64 @@ export function buildEnsemble(
         }),
         onDispose
       );
+    }
+  }
+
+  /*
+    A PIECE THAT ENDED WITH NO BODY IS A PROBLEM, and used to be silence.
+
+    `pieces` counted every piece it REACHED, not every piece it gave a body to,
+    so `buildEnsemble` could report 20 of 20 built with zero problems and put no
+    geometry in the scene at all. A caller cannot tell "built" from "recorded",
+    which is the one thing that number is for. Reported by manta-recon as #3,
+    with `LinkEnd.element` and `LinkEnd.node` both empty for pieces the map
+    counted as built — the link phase faithfully handing over ends that were
+    never given bodies.
+
+    The check is on the OUTPUT, deliberately. The cause below is the one that
+    bit first, but a placer that declines — a mesh missing from every mounted
+    library, a `library` that resolves to nothing — lands here too, and would
+    otherwise be the same silence wearing a different hat.
+  */
+  const bodiless = ensemble.pieces.filter(
+    (piece) =>
+      piece.mesh &&
+      piece.enabled !== false &&
+      !piece.ensemble &&
+      piece.id &&
+      !pieces.get(piece.id)?.element &&
+      !pieces.get(piece.id)?.node
+  );
+  if (bodiless.length) {
+    if (!placePiece) {
+      /*
+        ONE problem, not one per piece: there is a single cause and a single
+        fix, and N identical errors bury the sentence that tells you what it is.
+
+        ⚠️ `placePiece` DOES NOT DEFAULT to `placeMesh`, though this file's own
+        doc comment claimed it did for as long as the option has existed. It
+        cannot: `placeMesh` imports tosijs-3d, which needs a DOM at module
+        load, and `build.js` is importable under plain Node today — measured —
+        which is what lets a generator validate and build headlessly. Every
+        call site in this repo passes `placePiece` explicitly and every test
+        stubs it, so nothing here could ever have noticed the default was a
+        sentence in a comment.
+      */
+      problems.push({
+        severity: "error",
+        code: "no-placer",
+        message: `${bodiless.length} piece(s) name a mesh and nothing placed them: no "placePiece" was supplied. It does NOT default — pass \`placePiece: placeMesh\` from this package. (buildEnsemble stays DOM-free so a generator can import it under Node; placeMesh is the part that knows about tosijs-3d.)`,
+        path: "/pieces",
+      });
+    } else {
+      for (const piece of bodiless) {
+        problems.push({
+          severity: "error",
+          code: "no-body",
+          message: `piece "${piece.id}" names mesh "${piece.mesh}" and ended with no body — the placer declined it. Usually the mesh is not in any mounted library under this ensemble's "libraries" (or the "library" option).`,
+          path: `/pieces/${ensemble.pieces.indexOf(piece)}/mesh`,
+        });
+      }
     }
   }
 

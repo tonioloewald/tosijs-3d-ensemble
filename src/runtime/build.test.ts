@@ -389,3 +389,83 @@ describe("what a build refuses to build", () => {
     expect([...built.pieces.keys()]).toEqual(["real"]);
   });
 });
+
+/*
+  "20 OF 20 BUILT, ZERO PROBLEMS, NO GEOMETRY" — manta-recon#3.
+
+  `pieces` counted every piece it REACHED, not every piece it gave a body to.
+  A consumer following the docs got a clean report and an empty scene, and the
+  0.2.0 link phase produced a second witness for the same fault: every
+  `LinkEnd` arrived with `element` and `node` both empty, for pieces the map
+  counted as built.
+
+  The cause was one word. `placePiece` was destructured with no default while
+  its own doc comment said it defaulted to `placeMesh`, and it is called as
+  `placePiece?.(…)` — so for any caller who did not pass one, every piece was
+  recorded and none was placed. Nothing here could notice: all three call sites
+  in this repo pass it explicitly and every test stubbed it.
+
+  It cannot actually default — `placeMesh` imports tosijs-3d, which needs a DOM
+  at module load, while `build.js` imports cleanly under plain Node, which is
+  what lets a generator build headlessly. So the fix is to say so, and to make
+  the OUTPUT loud: a piece that names a mesh and ends with no body.
+*/
+describe("a piece that ends with no body is reported", () => {
+  const meshed = (): Ensemble =>
+    ({
+      name: "meshed",
+      pieces: [
+        { id: "tower", mesh: "Control Tower", at: [0, 0, 0] },
+        { id: "dome", mesh: "Dome", at: [2, 0, 0] },
+      ],
+    } as Ensemble);
+
+  it("says so ONCE when no placer was supplied, and names the fix", () => {
+    const built = buildEnsemble(meshed(), { scene: fakeScene() });
+    const errors = built.problems.filter((p) => p.severity === "error");
+    // One problem, not one per piece: a single cause and a single fix, and N
+    // identical errors bury the sentence that tells you what it is.
+    expect(errors.map((p) => p.code)).toEqual(["no-placer"]);
+    expect(errors[0]!.message).toContain("placePiece: placeMesh");
+  });
+
+  it("reports each piece the placer DECLINED, which is a different cause", () => {
+    // A mesh missing from every mounted library lands here, and used to be the
+    // same silence wearing a different hat.
+    const built = buildEnsemble(meshed(), {
+      scene: fakeScene(),
+      placePiece: (piece) => (piece.id === "tower" ? { node: {} } : null),
+    });
+    const errors = built.problems.filter((p) => p.severity === "error");
+    expect(errors.map((p) => p.code)).toEqual(["no-body"]);
+    expect(errors[0]!.message).toContain('"dome"');
+  });
+
+  it("says nothing when every piece got a body", () => {
+    const built = buildEnsemble(meshed(), {
+      scene: fakeScene(),
+      placePiece: (piece) => ({ node: { id: piece.id } }),
+    });
+    expect(built.problems.filter((p) => p.severity === "error")).toEqual([]);
+  });
+
+  it("says nothing about a piece with no mesh — a primitive IS its feature", () => {
+    const sky = {
+      name: "sky-only",
+      pieces: [{ id: "sky", at: [0, 0, 0], features: {} }],
+    } as unknown as Ensemble;
+    const built = buildEnsemble(sky, { scene: fakeScene() });
+    expect(built.problems.filter((p) => p.code === "no-placer")).toEqual([]);
+  });
+
+  it("says nothing about a DISABLED piece, which is not built on purpose", () => {
+    const off = {
+      name: "off",
+      pieces: [
+        { id: "tower", mesh: "Control Tower", at: [0, 0, 0], enabled: false },
+      ],
+    } as unknown as Ensemble;
+    const built = buildEnsemble(off, { scene: fakeScene() });
+    expect(built.problems.filter((p) => p.severity === "error")).toEqual([]);
+  });
+});

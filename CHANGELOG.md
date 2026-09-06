@@ -87,6 +87,21 @@ gets broken (`src/peer-range.test.ts`).
 
   `MIGRATING.md` now shows the whole call.
 
+- **A pass and an absence were the same report.** `validate` skips unknown-mesh
+  checking when it has no `meshes` set — deliberately and documented, because
+  "a validation error that is really a loading race is worse than none". That
+  is right, and it left the caller unable to tell _checked and clean_ from _not
+  checked_: an ensemble full of typo'd mesh names passed silently, and a gate
+  reading `problems.length === 0` was told everything was fine. Named by
+  manta-recon in #3 alongside the placement fault.
+
+  `buildEnsemble` now emits a **`meshes-unchecked` warning** when pieces name
+  meshes and nothing could verify them, saying which libraries it asked. A
+  warning rather than an error, because skipping really is correct during a
+  load race — the defect was saying nothing, not the skipping. In an editor it
+  appears in the window before a library answers and clears on the rebuild,
+  which is a true statement about that window.
+
 - **The scene schemas were hand-copied, and every kind of drift was silent.**
   Ranges, units, enums and log scales for the ten scene primitives now come
   from `tosijs-3d`'s own `sceneSchemas` (tosijs-3d#63, our ask). Adopting them

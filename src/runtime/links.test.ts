@@ -40,6 +40,10 @@ afterEach(() => {
 */
 const opts = () => ({
   scene: fakeScene(),
+  // The meshes these pieces name, as a caller with a loaded library has them.
+  // Without it the build reports `meshes-unchecked` — correctly, since nothing
+  // could verify the names — and these tests assert `problems` exactly.
+  meshes: new Set(["R", "F"]),
   placePiece: (piece: { id: string }) => ({ node: { id: piece.id } }),
 });
 

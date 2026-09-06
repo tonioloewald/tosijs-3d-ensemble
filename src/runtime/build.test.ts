@@ -469,3 +469,81 @@ describe("a piece that ends with no body is reported", () => {
     expect(built.problems.filter((p) => p.severity === "error")).toEqual([]);
   });
 });
+
+/*
+  A PASS AND AN ABSENCE ARE DIFFERENT THINGS.
+
+  `validate` skips unknown-mesh checking when it has no `meshes` set, on purpose
+  and documented — "a validation error that is really a loading race is worse
+  than none, because it accuses good content". Right, and it left the caller
+  unable to tell "checked and clean" from "not checked", so an ensemble full of
+  typo'd mesh names passed silently. manta-recon#3 named this alongside the
+  placement fault, and it is the same disease in a different organ.
+*/
+describe("an unchecked mesh set says so", () => {
+  const meshed = () =>
+    ({
+      name: "meshed",
+      pieces: [{ id: "tower", mesh: "Control Tower", at: [0, 0, 0] }],
+    } as Ensemble);
+
+  it("warns when nothing could verify the names", () => {
+    const built = buildEnsemble(meshed(), {
+      scene: fakeScene(),
+      placePiece: (p) => ({ node: { id: p.id } }),
+    });
+    const warning = built.problems.find((p) => p.code === "meshes-unchecked");
+    expect(warning?.severity).toBe("warning");
+    // Not an error: skipping IS correct during a load race. The defect was
+    // saying nothing, not the skipping.
+    expect(built.problems.filter((p) => p.severity === "error")).toEqual([]);
+  });
+
+  it("names the libraries it asked, when the caller named one", () => {
+    const built = buildEnsemble(meshed(), {
+      scene: fakeScene(),
+      library: "enemies",
+      placePiece: (p) => ({ node: { id: p.id } }),
+    });
+    expect(
+      built.problems.find((p) => p.code === "meshes-unchecked")?.message
+    ).toContain('"enemies"');
+  });
+
+  it("says nothing once a mesh set is supplied", () => {
+    const built = buildEnsemble(meshed(), {
+      scene: fakeScene(),
+      meshes: new Set(["Control Tower"]),
+      placePiece: (p) => ({ node: { id: p.id } }),
+    });
+    expect(built.problems.filter((p) => p.code === "meshes-unchecked")).toEqual(
+      []
+    );
+  });
+
+  it("and THEN a typo is reported, which is the whole point", () => {
+    const typo = {
+      name: "typo",
+      pieces: [{ id: "tower", mesh: "Controll Tower", at: [0, 0, 0] }],
+    } as unknown as Ensemble;
+    const built = buildEnsemble(typo, {
+      scene: fakeScene(),
+      meshes: new Set(["Control Tower"]),
+      placePiece: (p) => ({ node: { id: p.id } }),
+    });
+    expect(
+      built.problems.some((p) => p.message.includes("Controll Tower"))
+    ).toBe(true);
+  });
+
+  it("says nothing about an ensemble with no meshes at all", () => {
+    const sky = {
+      name: "sky",
+      pieces: [{ id: "sky", at: [0, 0, 0], features: {} }],
+    } as unknown as Ensemble;
+    const built = buildEnsemble(sky, { scene: fakeScene() });
+    expect(built.problems.filter((p) => p.code === "meshes-unchecked")).toEqual(
+      []
+    );
+  });
+});

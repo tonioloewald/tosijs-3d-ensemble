@@ -10,11 +10,27 @@ const minimal = (over: Partial<Ensemble> = {}): Ensemble => ({
   ...over,
 });
 
-const codes = (e: Ensemble, opts = {}) => validate(e, opts).map((p) => p.code);
+/*
+  THE FIXTURES' MESH NAMES, supplied by default.
+
+  Without a `meshes` set, `validate` now warns `meshes-unchecked` — it cannot
+  tell a caller that a document passed when nothing looked at its mesh names.
+  These tests are about the OTHER rules, so they say "yes, I have a library"
+  rather than asserting the extra warning in every expectation, which would
+  bury the code each test is actually about.
+
+  Tests that ARE about mesh checking pass their own set, or omit it on purpose.
+*/
+const KNOWN = new Set(["Pump Station", "X", "Y", "bench", "car"]);
+
+const codes = (e: Ensemble, opts = {}) =>
+  validate(e, { meshes: KNOWN, ...opts }).map((p) => p.code);
 
 describe("validate", () => {
   it("accepts a minimal ensemble", () => {
-    expect(validate(minimal(), { checkRegistry: false })).toEqual([]);
+    expect(
+      validate(minimal(), { checkRegistry: false, meshes: KNOWN })
+    ).toEqual([]);
   });
 
   it("reports a missing name and missing pieces", () => {
@@ -145,7 +161,7 @@ describe("validate", () => {
         { id: "b", at: [0, 0, 0] },
       ],
     });
-    const problem = validate(e, { checkRegistry: false }).find(
+    const problem = validate(e, { checkRegistry: false, meshes: KNOWN }).find(
       (p) => p.code === "empty-piece"
     );
     expect(problem?.path).toBe("/pieces/1");
@@ -158,7 +174,7 @@ describe("validate", () => {
         { id: "landform", at: [0, 0, 0], features: { terrain: { seed: 1 } } },
       ],
     });
-    expect(validate(e)).toEqual([]);
+    expect(validate(e, { meshes: KNOWN })).toEqual([]);
     unregisterFeature("terrain");
   });
 
@@ -189,7 +205,7 @@ describe("validate", () => {
     const e = minimal({
       pieces: [{ id: "a", mesh: "X", at: [0, 0, 0], features: { wat: {} } }],
     });
-    const problems = validate(e);
+    const problems = validate(e, { meshes: KNOWN });
     expect(problems.map((p) => p.code)).toEqual(["unknown-feature"]);
     expect(problems[0]!.severity).toBe("warning");
   });
@@ -218,7 +234,7 @@ describe("scale, uniform or per axis", () => {
   it("warns rather than errors on a zero or negative component", () => {
     // A collapsed piece looks like a MISSING piece, so this is worth saying —
     // but a generator emitting it should not fail the whole load.
-    const problems = validate(withScale([1, 0, 1]));
+    const problems = validate(withScale([1, 0, 1]), { meshes: KNOWN });
     expect(problems.map((p) => p.code)).toContain("non-positive-scale");
     expect(
       problems.find((p) => p.code === "non-positive-scale")!.severity
@@ -228,11 +244,15 @@ describe("scale, uniform or per axis", () => {
 
 describe("the preview block", () => {
   const withScenery = (pieces: unknown[]) =>
-    validate({
-      name: "sited",
-      pieces: [{ id: "real", mesh: "X", at: [0, 0, 0] }],
-      preview: { pieces: pieces as never },
-    } as never);
+    validate(
+      {
+        name: "sited",
+        pieces: [{ id: "real", mesh: "X", at: [0, 0, 0] }],
+        preview: { pieces: pieces as never },
+      } as never,
+      // Not about mesh checking — see KNOWN above.
+      { meshes: KNOWN }
+    );
 
   it("reports its problems, and never as errors", () => {
     const problems = withScenery([{ id: "island" }]);
@@ -259,10 +279,75 @@ describe("the preview block", () => {
 
   it("is silent about an ensemble that has none", () => {
     expect(
-      validate({
-        name: "bare",
-        pieces: [{ id: "a", mesh: "X", at: [0, 0, 0] }],
-      })
+      validate(
+        {
+          name: "bare",
+          pieces: [{ id: "a", mesh: "X", at: [0, 0, 0] }],
+        },
+        { meshes: KNOWN }
+      )
     ).toEqual([]);
+  });
+});
+
+/*
+  A PASS AND AN ABSENCE ARE DIFFERENT ANSWERS — manta-recon#3.
+
+  Skipping the unknown-mesh check without a `meshes` set is correct and
+  documented: a validation error that is really a loading race accuses good
+  content. What was wrong is that the caller could not tell CHECKED-AND-CLEAN
+  from NOT-CHECKED, so a gate reading `problems.length === 0` was told
+  everything was fine about a document nothing had looked at.
+
+  Reported with a measurement rather than a reading of the docs, which is why
+  it survived my first pass at the issue: I fixed the same silence in
+  `buildEnsemble` and left it in `validate`, where a headless caller — a
+  generator with no scene, and therefore no libraries to derive a set from — is
+  exactly who most needs telling.
+*/
+describe("an unchecked mesh set says so", () => {
+  const typo = (): Ensemble =>
+    ({
+      name: "typo",
+      pieces: [
+        { id: "good", mesh: "Control Tower", at: [0, 0, 0] },
+        { id: "bad", mesh: "Contorl Towr", at: [0, 0, 0] },
+      ],
+    } as Ensemble);
+
+  it("reports the typo when it CAN check", () => {
+    expect(codes(typo(), { meshes: new Set(["Control Tower"]) })).toContain(
+      "unknown-mesh"
+    );
+  });
+
+  it("warns instead of going silent when it cannot", () => {
+    // Exactly the call manta measured returning `[]`.
+    const problems = validate(typo());
+    expect(problems.map((p) => p.code)).toEqual(["meshes-unchecked"]);
+    // A warning, not an error: omitting the set is legitimate, and in the
+    // headless case it is the only option.
+    expect(problems[0]!.severity).toBe("warning");
+  });
+
+  it("names the libraries the caller asked for, when it was told", () => {
+    const problems = validate(typo(), { libraries: ["enemies"] });
+    expect(problems[0]!.message).toContain('"enemies"');
+  });
+
+  it("treats an EMPTY set as unchecked, because it is", () => {
+    // A library that answered with no names checks nothing, and reporting
+    // every mesh as unknown would be the false-accusation case the skip
+    // exists to avoid.
+    expect(codes(typo(), { meshes: new Set() })).toEqual(["meshes-unchecked"]);
+  });
+
+  it("says nothing about an ensemble with no meshes to check", () => {
+    // An environment primitive IS its feature; there is nothing to look up.
+    const sky = {
+      name: "sky",
+      pieces: [{ id: "sky", at: [0, 0, 0], features: { skybox: {} } }],
+    } as unknown as Ensemble;
+    expect(codes(sky, { checkRegistry: false, meshes: undefined })).toEqual([]);
   });
 });

@@ -87,6 +87,12 @@ export interface ValidateOptions {
    */
   meshes?: Set<string> | Map<string, Set<string>>;
   /**
+   * Library names the caller LOOKED for, used only to make `meshes-unchecked`
+   * say which ones did not answer. Purely a message detail — nothing is
+   * validated against it.
+   */
+  libraries?: string[];
+  /**
    * Also check roles and features against the live registries. Default true.
    * These are warnings, not errors: a host may register its own after load.
    */
@@ -103,7 +109,9 @@ export function validate(
   ensemble: Ensemble,
   opts: ValidateOptions = {}
 ): Problem[] {
-  const { meshes, checkRegistry = true } = opts;
+  // Renamed on the way in: `libraries` is already a local Set of the names
+  // the ensemble DECLARES, and this is the list the caller ASKED for.
+  const { meshes, libraries: askedFor, checkRegistry = true } = opts;
   const problems: Problem[] = [];
   const add = (
     severity: Severity,
@@ -155,12 +163,24 @@ export function validate(
 
   const knownMeshes = (library?: string): Set<string> | undefined => {
     if (!meshes) return undefined;
-    if (meshes instanceof Set) return meshes;
-    if (library) return meshes.get(library);
+    /*
+      AN EMPTY SET IS "CANNOT CHECK", NOT "NOTHING IS VALID".
+
+      A library that answered with no names, or a `meshesByLibrary` that found
+      nothing mounted, used to make every mesh in the document unknown — the
+      false-accusation case this whole skip exists to prevent, arriving through
+      the door marked "checked". Returning `undefined` routes it to the
+      `meshes-unchecked` warning instead, which is the honest answer.
+    */
+    if (meshes instanceof Set) return meshes.size ? meshes : undefined;
+    if (library) {
+      const named = meshes.get(library);
+      return named?.size ? named : undefined;
+    }
     // No qualifier: the mesh may come from any mounted library.
     const all = new Set<string>();
     for (const names of meshes.values()) for (const n of names) all.add(n);
-    return all;
+    return all.size ? all : undefined;
   };
 
   const ids = new Set<string>();
@@ -400,6 +420,42 @@ export function validate(
           `preview piece "${piece.id}" has the same id as a real piece`,
           `/preview/pieces/${i}/id`
         );
+    });
+  }
+
+  /*
+    A PASS AND AN ABSENCE ARE DIFFERENT ANSWERS.
+
+    Skipping the unknown-mesh check without a `meshes` set is correct and
+    documented above — "a validation error that is really a loading race is
+    worse than none, because it accuses good content". What was wrong is that
+    the caller could not tell CHECKED-AND-CLEAN from NOT-CHECKED. Measured by
+    manta-recon, who probed it rather than inferring it from the docs:
+
+        validate(bogus, { meshes: known })  →  error: "Contorl Towr" is not in…
+        validate(bogus)                     →  []
+
+    Two mesh names, one deliberately misspelled, and the second call is silent.
+    A consumer's gate reading `problems.length === 0` was told everything was
+    fine about a document nothing had looked at.
+
+    A WARNING, not an error: omitting `meshes` is a legitimate thing to do, and
+    in the headless case — a generator with no scene and therefore no mounted
+    libraries to derive from — it is the ONLY thing to do. That is exactly the
+    caller who most needs telling that this document went unchecked.
+  */
+  const unchecked =
+    !meshes || (meshes instanceof Set ? meshes.size === 0 : meshes.size === 0);
+  if (unchecked && (ensemble.pieces ?? []).some((piece) => piece?.mesh)) {
+    problems.push({
+      severity: "warning",
+      code: "meshes-unchecked",
+      message: askedFor?.length
+        ? `mesh names were NOT validated: no mounted library answered for ${askedFor
+            .map((name) => `"${name}"`)
+            .join(", ")}. A typo'd mesh will not be reported until one does.`
+        : `mesh names were NOT validated: no "meshes" set was supplied, so there is nothing to check them against. A typo'd mesh name will pass silently.`,
+      path: "/pieces",
     });
   }
 

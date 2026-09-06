@@ -197,12 +197,24 @@ gets broken (`src/peer-range.test.ts`).
   reading `problems.length === 0` was told everything was fine. Named by
   manta-recon in #3 alongside the placement fault.
 
-  `buildEnsemble` now emits a **`meshes-unchecked` warning** when pieces name
-  meshes and nothing could verify them, saying which libraries it asked. A
+  **`validate` now emits a `meshes-unchecked` warning** when pieces name meshes
+  and nothing could verify them, naming the libraries the caller asked for. A
   warning rather than an error, because skipping really is correct during a
-  load race — the defect was saying nothing, not the skipping. In an editor it
-  appears in the window before a library answers and clears on the rebuild,
-  which is a true statement about that window.
+  load race — the defect was saying nothing, not the skipping.
+
+  ⚠️ In `validate`, not only in `buildEnsemble`, which is where the first pass
+  put it. manta-recon measured the silence in a DIRECT call — `validate(bogus)`
+  → `[]` with a deliberately misspelled mesh — and that is the caller who most
+  needs telling: a generator has no scene, so no mounted libraries, so nothing
+  to derive a set from. `buildEnsemble` still derives one when it can and
+  passes it through, so a build warns only when it genuinely could not look.
+
+- **An EMPTY mesh set accused every mesh of being unknown.** A library that
+  answered with no names, or a `meshesByLibrary` that found nothing mounted,
+  produced `unknown-mesh` for every piece in the document — the exact
+  false-accusation case the skip exists to prevent, arriving through the door
+  marked "checked". An empty set now means _cannot check_, and routes to the
+  warning. Found by writing the test for the warning above.
 
 - **The scene schemas were hand-copied, and every kind of drift was silent.**
   Ranges, units, enums and log scales for the ten scene primitives now come

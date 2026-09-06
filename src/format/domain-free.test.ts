@@ -68,7 +68,12 @@ describe("the format has no domain", () => {
   it("validates an ensemble with no combat vocabulary anywhere", () => {
     registerFeature({ name: "pruneable", schema: {} });
     registerFeature({ name: "irrigation", schema: {} });
-    expect(validate(garden)).toEqual([]);
+    // A mesh set, because this test is about the format having no DOMAIN, not
+    // about mesh names — without one `validate` rightly warns it could not
+    // check them, which would bury the point.
+    expect(
+      validate(garden, { meshes: new Set(["tree", "pillar", "building"]) })
+    ).toEqual([]);
     unregisterFeature("pruneable");
     unregisterFeature("irrigation");
   });
@@ -81,7 +86,10 @@ describe("the format has no domain", () => {
         ...garden,
         zones: [{ id: "z", at: [0, 0, 0], radius: 1, kind: "anything-at-all" }],
       },
-      { checkRegistry: false }
+      {
+        checkRegistry: false,
+        meshes: new Set(["tree", "pillar", "building"]),
+      }
     );
     expect(problems).toEqual([]);
   });

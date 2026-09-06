@@ -187,37 +187,16 @@ export function buildEnsemble(
     meshes ??
     (libraries.length ? meshesByLibrary(scene, libraries) : undefined);
   const checkable = !!known && (known as Map<string, Set<string>>).size !== 0;
-  const problems = validate(ensemble, checkable ? { meshes: known } : {});
   /*
-    SAY WHEN THE MESH CHECK DID NOT RUN.
-
-    `validate` skips unknown-mesh checking without a `meshes` set, on purpose
-    and documented: "a validation error that is really a loading race is worse
-    than none, because it accuses good content." That is right. What was wrong
-    is that the CALLER could not tell "checked and clean" from "not checked" —
-    so an ensemble full of typo'd mesh names passed silently, and a consumer's
-    gate reading `problems.length === 0` was told everything was fine.
-
-    Named by manta-recon in #3 alongside the placement fault, and it is the same
-    disease: a report that cannot distinguish a pass from an absence.
-
-    A WARNING, not an error, and only when there is something it would have
-    checked. In an editor this fires in the window before a library answers and
-    clears itself on the rebuild, which is a true statement about that window
-    rather than noise — the meshes really are unverified while it is up.
+    `validate` owns the "this went unchecked" warning, so a caller who reaches
+    it directly gets the same honesty a build does — that is where manta-recon
+    measured the silence. We pass `libraries` only so the message can name the
+    ones that did not answer.
   */
-  if (!checkable && ensemble.pieces.some((piece) => piece.mesh)) {
-    problems.push({
-      severity: "warning",
-      code: "meshes-unchecked",
-      message: libraries.length
-        ? `mesh names were NOT validated: no mounted library answered for ${libraries
-            .map((name) => `"${name}"`)
-            .join(", ")}. A typo'd mesh will not be reported until one does.`
-        : `mesh names were NOT validated: this ensemble declares no "libraries" and no "library" option was given, so there is nothing to check them against.`,
-      path: "/pieces",
-    });
-  }
+  const problems = validate(
+    ensemble,
+    checkable ? { meshes: known, libraries } : { libraries }
+  );
   const ensembleScale = ensemble.scale ?? 1;
   const pieces = new Map<string, BuiltPiece>();
   const disposers: Array<() => void> = [];

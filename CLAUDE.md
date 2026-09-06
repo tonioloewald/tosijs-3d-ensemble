@@ -267,10 +267,16 @@ about which claims have been checked:
 - **Checked by test:** validation, role merging, two-phase bind/link ordering,
   build → dispose → build leaving nothing behind, world-space scaling, and the
   editor tree-shaking out of a game's bundle.
-- **NOT checked:** anything the built-in features actually do in a scene —
-  turrets firing, chains, protection, terrain shape. `src/runtime/features.ts`
-  is thin bindings written against the element attributes, and a scene test is
-  the next thing it needs. Do not describe those as working.
+- **PARTLY checked, by the SCENE LANE** (`tests/*.pw.ts`, `bun run test:scene`):
+  real Chromium, real WebGL2 (SwiftShader, headless), asserting the RENDERER
+  rather than the element. The standard scene's sun, fill, skybox, camera,
+  ground extent and fog mode/density are covered. It found two bugs on its
+  first run — a load overtaken by the page's own `src`, and a log-scaled value
+  rounded to death on open — so read "no scene test" as "unknown", not "fine".
+- **STILL NOT checked:** what the COMBAT and WORLD features do — turrets
+  firing, chains, protection, terrain shape. Those bindings are written against
+  element attributes and nothing has watched one work. Do not describe them as
+  working; add a `.pw.ts` instead.
 - **NOT checked:** the headset. The whole reason the chrome is the SVG UI is
   that it should run in one, and nobody has put it in one yet.
 
@@ -431,7 +437,9 @@ here, because none of them fails loudly.
 ```bash
 bun start           # doc site + dev server on :8032; the editor is /editor/
 bun run build       # doc site + library build (tsc -p tsconfig.build.json)
-bun test            # everything
+bun test            # everything headless (happy-dom): format, maths, registry
+bun run test:scene  # the SCENE lane — real Chromium, real WebGL, real renderer
+bun run tests       # both
 bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
 ```

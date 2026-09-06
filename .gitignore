@@ -49,3 +49,5 @@ llms.txt
 # and the ensembles point at cdn.tosijs.net.
 static/*.glb
 docs.last-good/
+test-results/
+playwright-report/

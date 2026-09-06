@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { roundDeep, roundNumber } from "./round.js";
+import { roundDeep, roundNumber, roundSignificant } from "./round.js";
 
 describe("roundNumber", () => {
   it("cuts a pointer's noise down to a readable number", () => {
@@ -95,5 +95,49 @@ describe("roundDeep", () => {
     const rounded = roundDeep(original);
     expect(original.at[0]).toBe(1.23456);
     expect(rounded.at[0]).toBe(1.235);
+  });
+});
+
+/*
+  A LOG-SCALED FIELD IS ROUNDED BY SIGNIFICANT FIGURES.
+
+  Decimal places are a linear idea. Fog density runs 0..1 with everything
+  anyone wants below 0.01, so three decimals turned an authored 0.0015 into
+  0.002 — a 33% change, applied when the file was OPENED, before any edit. The
+  renderer then got the rounded value, so the file, the document and the
+  picture disagreed and nothing said so.
+
+  Found by the scene lane loading `standard-scene.json`, which is the first
+  thing that ever compared what a file says with what the renderer does.
+*/
+describe("roundSignificant", () => {
+  it("keeps a small quantity that toFixed(3) would move", () => {
+    // The exact case: 0.0015 is not near zero, so `roundNumber`'s zero guard
+    // never fired and the value was silently changed.
+    expect(roundNumber(0.0015)).toBe(0.002);
+    expect(roundSignificant(0.0015)).toBe(0.0015);
+  });
+
+  it("keeps relative precision across decades, which is the point", () => {
+    expect(roundSignificant(0.0015)).toBe(0.0015);
+    expect(roundSignificant(0.09)).toBe(0.09);
+    expect(roundSignificant(1.5)).toBe(1.5);
+    // And it still drops noise a finger produced, at any magnitude.
+    expect(roundSignificant(20.651162790697676)).toBe(20.7);
+    expect(roundSignificant(0.0015123456)).toBe(0.00151);
+  });
+
+  it("leaves zero and non-finite values alone", () => {
+    // `realtimeScale: 0` is a still sky and `reach: 0` is "auto" — a zero here
+    // is a setting, not a small number.
+    expect(roundSignificant(0)).toBe(0);
+    expect(Number.isNaN(roundSignificant(NaN))).toBe(true);
+    expect(roundSignificant(Infinity)).toBe(Infinity);
+  });
+
+  it("reaches numbers nested in a composite value", () => {
+    expect(roundDeep({ a: [0.0015, { b: 0.09 }] }, 3, true)).toEqual({
+      a: [0.0015, { b: 0.09 }],
+    });
   });
 });

@@ -44,7 +44,13 @@ export default defineSiteConfig({
   ],
   bundleEntry: "./demo/site.ts",
   staticDirs: ["static"],
-  port: 8032,
+  /*
+    `||`, not `??`: `PORT=` (set but empty) means unset, not port 0 — `??`
+    passes the empty string through to `Number('') === 0`. Env-aware so the
+    Playwright scene lane can run on its own port without killing the
+    `bun start` you have open (see `playwright.config.ts`).
+  */
+  port: Number(process.env.PORT || 8032),
   // `staticDirs` is copied into the output at BUILD time, so without this the
   // dev server serves a stale copy: editing a sample ensemble does nothing and
   // reports nothing, which reads as "my change had no effect" rather than

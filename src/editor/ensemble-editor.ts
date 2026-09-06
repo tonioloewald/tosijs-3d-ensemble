@@ -655,7 +655,8 @@ export class EnsembleEditor extends Component {
         for (const key of Object.keys(values)) {
           const rounded = roundDeep(
             values[key],
-            this._precisionFor(feature, key)
+            this._precisionFor(feature, key),
+            this._isLogScaled(feature, key)
           );
           // Assign only on a real change: `roundDeep` rebuilds objects, so an
           // unconditional write would replace equal structures every frame.
@@ -1443,16 +1444,48 @@ export class EnsembleEditor extends Component {
   }
 
   /** Fetch and edit an ensemble. */
+  /**
+   * Load an ensemble by URL. The newest REQUEST wins, not the fastest response.
+   *
+   * ⚠️ **A load in flight used to overwrite a document loaded after it.** The
+   * mount defers, sets `_loadedSrc` and starts fetching `src` — and that guard
+   * is about STARTING a load, not about it landing. So an editor on a page
+   * with `src` would accept `load()` (or `Open file…`) and then silently
+   * replace the result with the page's own file when the older fetch resolved.
+   *
+   * Measured on the standard scene through the new scene lane, which is how it
+   * was found:
+   *
+   *     t=102ms   ensemble.name  "standard-scene"   ← the explicit load
+   *     t=870ms   ensemble.name  "pirate-cove"      ← the mount's fetch, landing
+   *
+   * `_loadedSrc` already said `pirate-cove` throughout, so the guard was
+   * satisfied and useless. This is the same DATA LOSS as 0.1.2 — where a
+   * re-parent re-fetched `src` over the author's work — reached by the other
+   * door: that fix stopped a second load from STARTING, and nothing stopped
+   * the first from FINISHING.
+   *
+   * A generation counter, the pattern `b3d-library` already uses upstream for
+   * the identical hazard ("stale — discard"). Checked TWICE, because
+   * `mountLibraries` awaits as well: a second load can be asked for while the
+   * first is still mounting kits.
+   */
   async load(url: string): Promise<void> {
+    const generation = ++this._loadGeneration;
     const data = (await (await fetch(url)).json()) as Ensemble;
+    if (generation !== this._loadGeneration) return; // superseded while fetching
     // The ensemble declares its own libraries; mount them before building so
     // pieces resolve to real meshes on the first pass rather than boxes.
     if (this._scene) await mountLibraries(data, this._scene);
+    if (generation !== this._loadGeneration) return; // superseded while mounting
     this.ensemble = data;
     // Belt and braces: `mountLibraries` waits, but a library mounted by some
     // other path — or one that resolves after this build — still has to land.
     void this._rebuildWhenLibraryReady();
   }
+
+  /** Bumped by every `load()`; an older one that finishes late is discarded. */
+  private _loadGeneration = 0;
 
   /** Hand the current ensemble to the host's `onSave`. */
   async save(): Promise<void> {
@@ -2729,6 +2762,24 @@ export class EnsembleEditor extends Component {
    * but a field that genuinely needs five decimals should be able to say so
    * rather than rely on the fallback.
    */
+  /**
+   * Is this field MULTIPLICATIVE? Then decimals are the wrong instrument.
+   *
+   * `x-scale: 'log'` already says the useful values span decades, so it also
+   * answers how to round them. Three decimals turned an authored fog density
+   * of `0.0015` into `0.002` — on OPEN, before any edit — and the renderer got
+   * the rounded value, so the file, the document and the picture disagreed with
+   * nothing to say so. Found by the scene lane on `standard-scene.json`.
+   */
+  private _isLogScaled(feature: string, key: string): boolean {
+    const spec = (
+      featureRegistration(feature)?.schema as
+        | { properties?: Record<string, { "x-scale"?: string }> }
+        | undefined
+    )?.properties?.[key];
+    return spec?.["x-scale"] === "log" || spec?.["x-scale"] === "log2";
+  }
+
   private _precisionFor(feature: string, key: string): number {
     const spec = (
       featureRegistration(feature)?.schema as

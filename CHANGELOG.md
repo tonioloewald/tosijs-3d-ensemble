@@ -58,6 +58,57 @@ gets broken (`src/peer-range.test.ts`).
   free to float above the floor on any install, exactly as the comment in that
   file warns.
 
+### Added
+
+- **A scene lane — real Chromium, real WebGL, asserting the renderer.**
+  `tests/*.pw.ts`, run with `bun run test:scene`. Everything else here runs
+  under happy-dom, which has no WebGL, no layout and no render loop, so
+  CLAUDE.md has said all along that what the features actually DO was unchecked.
+
+  The cost of not having it is measured rather than theoretical: in one week, a
+  `smart` turret that never led its target, an `underwaterFog` toggle writing a
+  boolean to a number, an ambient `preset` naming something the element falls
+  back from, a fog `mode` that rendered its opposite, and a `placePiece` that
+  placed nothing while reporting 20 of 20 built. Every one was found by
+  adopting a schema or by a consumer. None by a test, because no test could see
+  a scene.
+
+  WebGL2 headless was verified BEFORE anything was built on it, since the lane
+  is worthless without it: SwiftShader, 49 content meshes, three lights, zero
+  page errors. It covers the standard scene's sun, fill, skybox, camera, ground
+  extent and fog mode/density, each read from the FILE rather than hard-coded so
+  editing the sample cannot leave the test asserting history.
+
+### Fixed
+
+- **A load was overtaken by the page's own `src`.** The mount defers, sets
+  `_loadedSrc` and starts fetching — a guard about STARTING a load, not about
+  it landing. So an editor on a page with `src` accepted an explicit `load()`
+  and then silently replaced the result when the older fetch resolved:
+
+  ```
+  t=102ms   ensemble.name  "standard-scene"   ← the explicit load
+  t=870ms   ensemble.name  "pirate-cove"      ← the mount's, landing
+  ```
+
+  This is 0.1.2's data loss through the other door — that fix stopped a second
+  load from STARTING, and nothing stopped the first from FINISHING. `load()`
+  carries a generation now and discards a superseded result, checked twice
+  because `mountLibraries` awaits as well. The newest REQUEST wins, not the
+  fastest response. Found by the scene lane on its first run.
+
+- **A log-scaled value was rounded to death when a file was opened.** Rounding
+  is three decimals, which is a LINEAR idea, and fog density runs `0 .. 1` with
+  everything anyone wants below `0.01`. So `standard-scene.json`'s authored
+  `0.0015` became `0.002` in the document — a 33% change, applied on OPEN,
+  before any edit — and the renderer got the rounded value, so the file, the
+  document and the picture disagreed with nothing to say so. Terrain's
+  `grossScale` sits one decimal from the same fate.
+
+  `x-scale: 'log'` already says a quantity is multiplicative, so it now also
+  says how to round it: `roundSignificant` keeps three significant FIGURES.
+  `0.0015` stays `0.0015`, `20.651162790697676` still becomes `20.7`.
+
 - **`buildEnsemble` reported "20 of 20 built, zero problems" and put no
   geometry in the scene** (manta-recon#3). `pieces` counted every piece it
   REACHED, not every piece it gave a body to, so a caller could not tell

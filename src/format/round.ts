@@ -36,6 +36,24 @@ never rounds TO zero: it falls back to three significant figures, which keeps
 
 `x-precision` on a property overrides the default where a field genuinely needs
 more.
+
+## A LOG-SCALED field is rounded to significant FIGURES, not decimals
+
+⚠️ Decimal places are a linear idea, and they are wrong for a quantity whose
+useful values span decades. Fog density runs `0 .. 1` with everything anyone
+wants below `0.01`, so three decimals turns the author's `0.0015` into `0.002`
+— a 33% change, applied on OPEN, before an edit. Terrain's `grossScale` runs
+`0.005 .. 0.3` and sits one decimal from the same fate.
+
+`x-scale: 'log' | 'log2'` already says "this quantity is multiplicative", so it
+is also the answer to how to round it: three significant figures keeps `0.0015`
+and `0.09` and `1200` all equally readable, which is exactly the property a log
+scale claims about the field.
+
+Found by the scene lane. Loading `standard-scene.json` put `0.002` in the
+document where the file said `0.0015`, and the fog reaching the renderer was
+the rounded value — so the file, the document and the picture disagreed and
+nothing said so.
 */
 /*{"parent":"Format","order":8}*/
 
@@ -49,6 +67,18 @@ export const DEFAULT_PRECISION = 3;
  * normalising them — they are a bug somewhere upstream, and quietly turning
  * them into a number hides it.
  */
+/**
+ * Round a MULTIPLICATIVE quantity — three significant figures, not decimals.
+ *
+ * For a field the schema marks `x-scale: 'log'`. `0.0015` stays `0.0015`,
+ * `0.09` stays `0.09`, and `1234.5678` becomes `1230` — each keeping the same
+ * relative precision, which is what "spans decades" means.
+ */
+export function roundSignificant(value: number, sf = 3): number {
+  if (!Number.isFinite(value) || value === 0) return value;
+  return Number(value.toPrecision(sf));
+}
+
 export function roundNumber(value: number, dp = DEFAULT_PRECISION): number {
   if (!Number.isFinite(value)) return value;
   const rounded = Number(value.toFixed(dp));
@@ -69,10 +99,19 @@ export function roundNumber(value: number, dp = DEFAULT_PRECISION): number {
  * mutating because the caller's value may be shared with the widget that is
  * still holding it.
  */
-export function roundDeep<T>(value: T, dp = DEFAULT_PRECISION): T {
-  if (typeof value === "number") return roundNumber(value, dp) as T;
+export function roundDeep<T>(
+  value: T,
+  dp = DEFAULT_PRECISION,
+  /** Round to significant FIGURES instead — for an `x-scale: log` field. */
+  significant = false
+): T {
+  if (typeof value === "number") {
+    return (
+      significant ? roundSignificant(value) : roundNumber(value, dp)
+    ) as T;
+  }
   if (Array.isArray(value)) {
-    return value.map((item) => roundDeep(item, dp)) as T;
+    return value.map((item) => roundDeep(item, dp, significant)) as T;
   }
   /*
     PLAIN OBJECTS ONLY. A `Date`, a `RegExp` or a class instance would be
@@ -82,7 +121,7 @@ export function roundDeep<T>(value: T, dp = DEFAULT_PRECISION): T {
   if (value && typeof value === "object" && isPlainObject(value)) {
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      out[key] = roundDeep(item, dp);
+      out[key] = roundDeep(item, dp, significant);
     }
     return out as T;
   }

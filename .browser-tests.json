@@ -1,5 +1,5 @@
 {
-  "passed": 5,
+  "passed": 6,
   "failed": 0,
   "pages": {
     "ensemble-element.ts": {
@@ -31,9 +31,13 @@
         {
           "name": "a second build REUSES the singletons rather than stacking them",
           "passed": true
+        },
+        {
+          "name": "a rebuild does not move the picture — structural, not pixels",
+          "passed": true
         }
       ],
-      "totalPassed": 4,
+      "totalPassed": 5,
       "totalFailed": 0
     }
   }

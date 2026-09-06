@@ -57,7 +57,7 @@ globalThis.__featureDemo = {
 // The fence has its OWN import scope — the example's imports are not in it —
 // and specifiers must be SINGLE-quoted, which is the parser's rule rather than
 // JavaScript's (filed as tosijs-ui#141).
-import { buildEnsemble, placeMesh } from 'tosijs-3d-ensemble'
+import { buildEnsemble, placeMesh, sceneFloorplan, floorplanDiff } from 'tosijs-3d-ensemble'
 
 const el = await waitFor('tosi-b3d', 5000)
 const demo = globalThis.__featureDemo
@@ -130,6 +130,29 @@ test('an authored value survives the trip to the renderer', async () => {
   // authored `linear` ran EXP2 upstream, and a `none` we offered ran LINEAR.
   expect(scene.fogMode).toBe(2)
   expect(Math.round(scene.fogDensity * 1e6) / 1e6).toBe(0.0015)
+})
+
+test('a rebuild does not move the picture — structural, not pixels', async () => {
+  // The visual-regression assertion, with no image in it. `sceneFloorplan`
+  // snapshots what the camera can SEE, at world geometry; `floorplanDiff`
+  // compares two snapshots with a tolerance you set rather than one the GPU
+  // sets for you. A rectangle in the same place, or very nearly, versus
+  // absent — that is signal. 3.2% of pixels differing is not.
+  //
+  // This is the assertion an editor most needs and could least make: it
+  // rebuilds on every edit, so 'the rebuild moved something' is the whole
+  // risk, and nothing short of looking could previously say.
+  await waitMs(400)
+  const before = sceneFloorplan(scene, { ignore: /^ensemble-editor-/ })
+  expect(before.length > 0).toBe(true)
+
+  const again = buildEnsemble(demo.ensemble, { scene, placePiece: placeMesh })
+  await waitMs(500)
+  const changes = floorplanDiff(before, sceneFloorplan(scene, { ignore: /^ensemble-editor-/ }))
+  // A failure NAMES the thing — 'ground: moved (0,0,0) → (0,-12,0)' — instead
+  // of handing you a heat map to interpret.
+  expect(changes.map((c) => c.name + ':' + c.kind)).toEqual([])
+  again.dispose()
 })
 
 test('a second build REUSES the singletons rather than stacking them', async () => {

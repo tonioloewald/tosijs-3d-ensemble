@@ -60,6 +60,28 @@ gets broken (`src/peer-range.test.ts`).
 
 ### Added
 
+- **`sceneFloorplan` / `floorplanDiff` — visual regression without pixels.** A
+  structural snapshot of what the camera can see, at world geometry, and a
+  named diff between two of them.
+
+  Tonio's observation about `tosijs-floorplan`, applied to a renderer: floorplan
+  compares a DOM page as `{caption, bounds}` records rather than as an image,
+  and **a scene graph already is that data** — Babylon keeps an authoritative
+  post-culling draw list because it has to. An image diff reports "3.2% of
+  pixels changed" and leaves you to decide whether antialiasing moved or the
+  ground did; this reports `ground: moved (0,0,0) → (0,-12,0)`. Tolerance is a
+  number you set rather than a rendering artefact you fight.
+
+  It deliberately does not capture colour, material or lighting — it makes the
+  LAYOUT claim, not the appearance one. What it buys is that layout no longer
+  has to borrow the picture's flakiness in order to get checked.
+
+  The split is the tier argument in one module: taking the snapshot needs a
+  real renderer and lives in a fence; deciding what changed is pure data and
+  runs in `bun test` in a millisecond. The fence uses it for the assertion an
+  editor most needs and could least make — **a rebuild must not move the
+  picture** — since it rebuilds on every edit.
+
 - **Feature tests as ` ```test ` fences, next to the features they test.**
   tosijs-ui's doc browser runs every page-with-tests in hidden iframes and
   resolves `window.__docTestResults`, so one navigation gates the corpus —

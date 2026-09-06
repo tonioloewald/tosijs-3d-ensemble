@@ -108,6 +108,11 @@ export {
   meshesByLibrary,
 } from "./runtime/libraries.js";
 export { registerSceneFeatures } from "./runtime/features-scene.js";
+export { sceneFloorplan, floorplanDiff } from "./runtime/scene-floorplan.js";
+export type {
+  FloorplanRecord,
+  FloorplanChange,
+} from "./runtime/scene-floorplan.js";
 // The one-line embed. A RUNTIME affordance, not an editor one: a game that
 // loads a scene as data wants this and nothing else in this file's last section.
 export { TosiEnsemble, ensemble } from "./runtime/ensemble-element.js";

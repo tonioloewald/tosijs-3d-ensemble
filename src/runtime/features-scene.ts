@@ -12,6 +12,143 @@ registerSceneFeatures()
 await loadEnsemble('/ensembles/standard-scene.json', { scene })
 ```
 
+## Each feature, in isolation and in combination
+
+The example below builds ONE scene and the fences under it assert what each
+feature put in the renderer. Isolation and combination in the same place is the
+point: a feature that works alone and breaks beside another is the failure mode
+a per-feature unit test cannot see, and `fog` + `skybox` are wired together on
+purpose (`syncSkybox`).
+
+```js
+import { b3d } from 'tosijs-3d'
+import { buildEnsemble, placeMesh, registerSceneFeatures } from 'tosijs-3d-ensemble'
+
+registerSceneFeatures()
+
+const scene = b3d({})
+preview.append(scene)
+
+// One document naming six primitives, built the way a game builds one.
+globalThis.__featureDemo = {
+  scene,
+  ensemble: {
+    name: 'feature-demo',
+    pieces: [
+      { id: 'view', at: [0, 1, 0], features: { camera: { distance: 14 } } },
+      { id: 'fill', at: [0, 1, 0], features: { light: { intensity: 0.6 } } },
+      { id: 'sun', at: [-0.4, 1, 0.3], features: { sun: { intensity: 1.2 } } },
+      { id: 'sky', at: [0, 0, 0], features: { skybox: { timeOfDay: 9 } } },
+      { id: 'floor', at: [0, 0, 0], features: { ground: { width: 60, height: 60 } } },
+      { id: 'haze', at: [0, 0, 0], features: { fog: { mode: 'exp2', density: 0.0015 } } },
+    ],
+  },
+  build: () =>
+    buildEnsemble(globalThis.__featureDemo.ensemble, {
+      scene,
+      placePiece: placeMesh,
+    }),
+}
+```
+
+```test
+// LINE COMMENTS ONLY in a fence: a block comment would end the enclosing doc
+// comment at its first close token, because block comments do not nest.
+// The fence has its OWN import scope — the example's imports are not in it —
+// and specifiers must be SINGLE-quoted, which is the parser's rule rather than
+// JavaScript's (filed as tosijs-ui#141).
+import { buildEnsemble, placeMesh } from 'tosijs-3d-ensemble'
+
+const el = await waitFor('tosi-b3d', 5000)
+const demo = globalThis.__featureDemo
+
+// Wait for the SCENE rather than a duration — the engine mounts on a task.
+for (let i = 0; i < 200 && !el.scene; i++) await waitMs(50)
+const scene = el.scene
+const built = demo.build()
+
+test('every feature reported no problem AND put something in the renderer', async () => {
+  // `problems` is the format's own report. It has been wrong in the direction
+  // that matters — 20 of 20 "built" with an empty scene — so it is checked
+  // ALONGSIDE the renderer, never instead of it.
+  expect(built.problems.filter((p) => p.severity === 'error')).toEqual([])
+  expect(built.pieces.size).toBe(6)
+
+  await waitMs(400)
+  const kinds = scene.lights.map((l) => l.getClassName())
+  expect(kinds.includes('DirectionalLight')).toBe(true)   // sun
+  expect(kinds.includes('HemisphericLight')).toBe(true)   // light
+  expect(scene.meshes.some((m) => m.name.startsWith('skybox'))).toBe(true)
+  expect(scene.meshes.some((m) => m.name.startsWith('ground'))).toBe(true)
+  expect(Boolean(scene.activeCamera)).toBe(true)
+})
+
+test('the camera can actually SEE it — the cheap version of "looks right"', async () => {
+  // The programmatic stand-in for a human refreshing the page and glancing at
+  // it. Not a screenshot: a screenshot comparison is flaky, and this project
+  // has already had `readPixels` report [1,1,1] for a frame that was visibly
+  // red, so pixels are not a trustworthy witness either.
+  //
+  // `getActiveMeshes()` is: it is the post-frustum-culling draw list, so a
+  // non-empty one means the camera is pointed at geometry that is being
+  // rendered THIS frame. That catches the whole family of "it built fine and
+  // the page is black" — an empty scene, a camera looking the wrong way, a
+  // ground plane a thousand units below the eye — none of which a mesh count
+  // or a problems array can see.
+  await waitMs(600)
+  expect(Boolean(scene.activeCamera)).toBe(true)
+  const drawn = scene.getActiveMeshes().length
+  expect(drawn > 0).toBe(true)
+
+  // And the loop is turning. A frozen render loop is the other way a correct
+  // scene shows nothing — a throw inside a render observer kills it silently,
+  // and Babylon does not re-queue.
+  expect(el.engine.getFps() > 0).toBe(true)
+})
+
+test('an authored value survives the trip to the renderer', async () => {
+  await waitMs(400)
+
+  // ⚠️ `sun.intensity` is NOT the light's intensity once a `skybox` is in the
+  // same ensemble. b3d-shadows says so — "overridden by skybox when present" —
+  // and a b3dSkybox sets a flag after which the sun stops writing
+  // `light.intensity` at all, driving it from time-of-day and treating the
+  // authored number as a multiplier.
+  //
+  // Worth an assertion rather than a note, because it is an authoring trap:
+  // set 1.2, read something else, and nothing is wrong. This is also the case
+  // for testing features in COMBINATION — alone, the sun owns its light.
+  const sun = scene.lights.find((l) => l.getClassName() === 'DirectionalLight')
+  expect(Boolean(sun)).toBe(true)
+  expect(sun.intensity > 0).toBe(true)
+
+  const ground = scene.meshes.find((m) => m.name.startsWith('ground'))
+  const half = ground.getBoundingInfo().boundingBox.extendSizeWorld.x
+  expect(Math.round(half)).toBe(30) // width 60
+
+  // Fog reaches the SCENE, which is where it was once silently dead: an
+  // authored `linear` ran EXP2 upstream, and a `none` we offered ran LINEAR.
+  expect(scene.fogMode).toBe(2)
+  expect(Math.round(scene.fogDensity * 1e6) / 1e6).toBe(0.0015)
+})
+
+test('a second build REUSES the singletons rather than stacking them', async () => {
+  // A game builds once; the editor rebuilds on every edit, so this is the
+  // difference between a session that stays put and one that degrades.
+  //
+  // The scene primitives are singletons on purpose — one sun, one sky, one
+  // fog — so a second build must not add a second of each. My first version of
+  // this test asserted the opposite and failed, which is the harness earning
+  // its place: the assumption was wrong, not the code.
+  await waitMs(300)
+  const before = scene.lights.length
+  const extra = buildEnsemble(demo.ensemble, { scene, placePiece: placeMesh })
+  await waitMs(400)
+  expect(scene.lights.length).toBe(before)
+  extra.dispose()
+})
+```
+
 That is the point of the format, and it is not a combat format: `describe an
 arrangement, consume it anywhere`. A fortification is one kind of ensemble; so
 is the standard demo scene, a botanical garden, or an architectural site.

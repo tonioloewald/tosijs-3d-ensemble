@@ -27,8 +27,13 @@ disappears at 100 000 is a worse outcome than terrain that was never a
 combatant:
 
 ```js
-import { registerSceneFeatures } from "tosijs-3d-ensemble"; // sun, sky, ground, terrain, water…
-import { registerCombatPreset } from "tosijs-3d-ensemble/presets/combat"; // …only if you want it
+// sun, sky, ground, terrain, water…
+import { registerSceneFeatures } from 'tosijs-3d-ensemble';
+// …and the fortification vocabulary, only if you want it
+import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat';
+
+registerSceneFeatures();
+registerCombatPreset();
 ```
 
 **Status:** the format, validation, the registry and the instantiator are built and
@@ -48,14 +53,21 @@ imports the first two; the editor is never reached and tree-shakes away.
 
 ```js
 // a game
-import {
-  buildEnsemble,
-  validate,
-  registerBuiltInFeatures,
-} from "tosijs-3d-ensemble";
+import { buildEnsemble, validate, placeMesh } from 'tosijs-3d-ensemble';
 
 // an author
-import { ensembleEditor } from "tosijs-3d-ensemble";
+import { ensembleEditor } from 'tosijs-3d-ensemble';
+
+// All four are real exports, which is not something this block could always
+// claim: it named `registerBuiltInFeatures` — a function this package has
+// never had — for as long as the example was unrunnable, and nothing noticed
+// because nothing ran it.
+console.log(
+  typeof buildEnsemble,
+  typeof validate,
+  typeof placeMesh,
+  typeof ensembleEditor
+);
 ```
 
 One package, because that is what makes the editor and the game call the _same_

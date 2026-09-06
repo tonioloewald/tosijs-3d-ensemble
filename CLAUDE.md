@@ -69,8 +69,8 @@ The format, the instantiator AND the editor ship from here as **one package**,
 away.
 
 ```js
-import { buildEnsemble, validate } from "tosijs-3d-ensemble"; // a game
-import { ensembleEditor } from "tosijs-3d-ensemble"; // an author
+import { buildEnsemble, validate } from 'tosijs-3d-ensemble'; // a game
+import { ensembleEditor } from 'tosijs-3d-ensemble'; // an author
 ```
 
 ⚠️ **Two earlier answers are still readable in the git history and partly in
@@ -443,6 +443,15 @@ bun run tests       # both
 bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
 ```
+
+⚠️ **`.prettierrc` forces SINGLE quotes in markdown, and that is load-bearing.**
+tosijs-ui's live-example parser accepts only single-quoted import specifiers,
+while Prettier normalises fenced code in `.md` to double — so `bun format`
+silently converted every README example into a non-running one, and the only
+symptom was a build warning that reads as advisory. That is how the README's
+headline example sat unrunnable for the life of the repo, and how nothing
+noticed it named `registerBuiltInFeatures`, a function this package has never
+exported. Filed as tosijs-ui#141; remove the override when it lands.
 
 `bun run build` runs BOTH typechecks and the live-example checker, and fails the
 build on either. It is the gate that catches an example teaching a broken

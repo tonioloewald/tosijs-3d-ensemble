@@ -60,6 +60,35 @@ gets broken (`src/peer-range.test.ts`).
 
 ### Added
 
+- **Feature tests as ` ```test ` fences, next to the features they test.**
+  tosijs-ui's doc browser runs every page-with-tests in hidden iframes and
+  resolves `window.__docTestResults`, so one navigation gates the corpus —
+  `tests/doc-tests.pw.ts` is now the whole browser lane, and Playwright's job is
+  reduced to driving a browser and reading one promise. The assertions live in
+  the docs, run in a plain browser, and are visible to a human who refreshes the
+  page: the same signal, automated rather than replaced.
+
+  `runtime/features-scene.ts` tests the scene primitives in ISOLATION and in
+  COMBINATION, which immediately mattered — `sun.intensity` stops being the
+  light's intensity once a `skybox` is in the same ensemble, because the skybox
+  takes ownership of the day/night cycle and treats the authored number as a
+  multiplier. A per-feature unit test cannot see that; it is a property of the
+  pair.
+
+  It also carries the cheap stand-in for "does it look right":
+  `scene.getActiveMeshes()` is the post-culling draw list, so a non-empty one
+  means the camera is pointed at geometry being rendered this frame. That
+  catches "it built fine and the page is black" — an empty scene, a camera
+  facing the wrong way, a floor below the eye — none of which a mesh count or a
+  problems array can see, and without the flakiness of comparing screenshots.
+
+- **Two defects in the README's most-read example**, found by the corpus's free
+  "example loads without error" test within a minute of switching it on: it had
+  never run, and it named `registerBuiltInFeatures` — a function this package
+  has never exported. The cause was quoting, of all things (tosijs-ui#141), and
+  `.prettierrc` now pins single quotes in markdown so `bun format` stops
+  re-breaking it.
+
 - **A scene lane — real Chromium, real WebGL, asserting the renderer.**
   `tests/*.pw.ts`, run with `bun run test:scene`. Everything else here runs
   under happy-dom, which has no WebGL, no layout and no render loop, so
@@ -376,8 +405,8 @@ gets broken (`src/peer-range.test.ts`).
   install:
 
   ```js
-  import { validate } from "tosijs-3d-ensemble/format/validate";
-  import { migrate } from "tosijs-3d-ensemble/format/migrate";
+  import { validate } from 'tosijs-3d-ensemble/format/validate';
+  import { migrate } from 'tosijs-3d-ensemble/format/migrate';
   ```
 
 ## [0.1.2] — 2026-09-04

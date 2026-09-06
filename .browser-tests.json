@@ -1,0 +1,40 @@
+{
+  "passed": 5,
+  "failed": 0,
+  "pages": {
+    "ensemble-element.ts": {
+      "passed": true,
+      "tests": [
+        {
+          "name": "the standard scene reaches the renderer",
+          "passed": true
+        }
+      ],
+      "totalPassed": 1,
+      "totalFailed": 0
+    },
+    "features-scene.ts": {
+      "passed": true,
+      "tests": [
+        {
+          "name": "every feature reported no problem AND put something in the renderer",
+          "passed": true
+        },
+        {
+          "name": "an authored value survives the trip to the renderer",
+          "passed": true
+        },
+        {
+          "name": "the camera can actually SEE it — the cheap version of \"looks right\"",
+          "passed": true
+        },
+        {
+          "name": "a second build REUSES the singletons rather than stacking them",
+          "passed": true
+        }
+      ],
+      "totalPassed": 4,
+      "totalFailed": 0
+    }
+  }
+}

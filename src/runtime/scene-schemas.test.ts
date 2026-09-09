@@ -124,14 +124,15 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         kills the tab, and a schema cannot say "…unless reach is large".
       - `terrain.biome` stays a BOOLEAN because a JSON document has real
         booleans; `'on'|'off'` is an HTML-attribute concern and the bind maps it.
-      - `terrain.radius` gets a log scale over its six decades.
+      (`terrain.radius` used to be a fourth: we gave it a log scale over its
+      six decades, and tosijs-3d@0.8.1 added the same upstream — so the
+      override went, and this test is what noticed by failing on the upgrade.)
     */
     expect(restated.sort()).toEqual(
       [
         'terrain.biome.enum: undefined (ours) vs ["off","on"] (upstream)',
         "terrain.seed.maximum: 9999 (ours) vs undefined (upstream)",
         "terrain.tileSize.minimum: 32 (ours) vs 1 (upstream)",
-        'terrain.radius.x-scale: "log" (ours) vs undefined (upstream)',
       ].sort()
     );
   });

@@ -1086,8 +1086,15 @@ export function registerSceneFeatures(): void {
           seed: { type: "integer", maximum: 9999, default: 111 },
           // An ensemble's terrain is a landscape. A cylinder is a planet.
           surfaceType: { default: "plane" },
-          // Six decades of travel, so a linear track is unusable.
-          radius: { "x-scale": "log", default: 1000 },
+          /*
+            ⚠️ NO `x-scale` HERE ANY MORE. We added one because six decades of
+            travel make a linear track unusable; tosijs-3d@0.8.1 added the same
+            to `terrainSchema()`, so restating it is exactly the drift this
+            file exists to stop. The drift test is what noticed — it failed on
+            the upgrade because our exception list still claimed a deviation
+            that had stopped being one.
+          */
+          radius: { default: 1000 },
           /*
             THE FORMAT KEEPS A BOOLEAN. Upstream spells this `'on' | 'off'`
             because an absent HTML boolean attribute reads false, but that is

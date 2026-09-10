@@ -113,15 +113,62 @@ tileset serves many maps and outlives all of them:
 ```
 
 - **Several meshes per code** is the variety mechanism — "multiple tiles for the
-  same grid position so you can vary landscape". Chosen by a seeded hash of the
-  cell coordinate, so a map renders identically every time. The format's
-  reproducibility rule already demands that.
+  same grid position so you can vary landscape". Which one you get is seeded;
+  see below.
 - **`footprint`** is read from the kit manifest where possible and only
   overridden here. `road-curve` really is 2 × 2 while `road-bend` is 1 × 1;
   without this the compiler places a double-size curve in one cell and nothing
   says so.
 - **`themes`** is a name substitution, because that is empirically what a theme
   IS in these kits.
+
+## Variety is seeded, and the seed is the consumer's to change
+
+Tonio's call: **seeded, and overridable by the consumer.** Three things follow
+from that, and they are the design rather than a detail.
+
+**The seed is DECORATIVE ONLY.** It selects among meshes that are already
+interchangeable for a cell — same code, same footprint — so changing it can
+never change what the level IS. A road stays a road, a corner stays a corner;
+you get a different boulder. That property is what makes a consumer override
+safe to offer at all: if the seed could move a wall, handing it to a game would
+be handing it a level editor it did not ask for.
+
+Worth a test rather than a promise: **the same map at two different seeds must
+produce the same edge code in every cell.**
+
+**Hash the coordinate; do not walk a PRNG.** `variant = hash(seed, level, x, y)
+% choices.length`. A sequential generator would be simpler and is wrong here:
+inserting one cell shifts every subsequent draw, so painting a tile in the
+top-left reshuffles the whole map underneath the author's hands. Hashing the
+coordinate makes each cell independent, which is what an editor needs and what
+makes a diff of a hand-edited map readable.
+
+**Precedence, most specific first:**
+
+|                       | wins over         | because                                   |
+| --------------------- | ----------------- | ----------------------------------------- |
+| a cell in `overrides` | everything        | the author pinned that one on purpose     |
+| `ctx.seed` (consumer) | the file's `seed` | "give me another variation of this level" |
+| `seed` in the file    | the default       | the author chose a look                   |
+| `0`                   | —                 | absent means reproducible, not random     |
+
+So an author who likes one corner's boulder pins that cell and keeps it through
+every reseed, which is the answer to the question this replaced: `overrides`
+stays the escape hatch, because the seed is now cheap to re-roll without losing
+the parts you cared about.
+
+**Where the consumer's seed goes.** `BuildOptions.seed`, surfaced as
+`ctx.seed` — not a tilemap-only option, because any feature with a choice to
+make wants the same reproducibility rule and the same override. One number for
+the build is the simple version; per-piece (`seeds: { town: 12 }`) can follow
+if one map in a scene ever needs to differ from another, and nothing about the
+simple version blocks it.
+
+⚠️ Absent means **`0`, not `Math.random()`**. An ensemble is a static
+description and has to render the same twice — the same argument that makes
+`realtimeScale` default to a still sky. A consumer who genuinely wants a
+different world each run passes a random seed and has said so.
 
 **Bootstrapping**: a script can generate a draft tileset from the manifest —
 names, categories, footprints, sizes are all there — leaving a human to fill in
@@ -226,14 +273,14 @@ is obvious until you place a chair.
 
 ## Milestones
 
-|       | what                                                                                  | done when                                                                 |
-| ----- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **0** | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand | the draft round-trips through `validate`                                  |
-| **1** | `tilemap` feature: square lattice, `floor` model, 1 × 1 only, seeded variants         | a bitmap renders a road network in the browser, verified by a scene fence |
-| **2** | `solid` model (mini-dungeon), multi-cell footprints, overrides                        | a dungeon bitmap renders walls that agree with their neighbours           |
-| **3** | Levels, stairs, lifts; portal Points and interior Zones                               | two levels connected by a stair, and an interior you can enter            |
-| **4** | Editor: paint cells, pick layers, drop accessories on anchors                         | clicking out a level is faster than writing the JSON                      |
-| **5** | `edge` model (`modular-buildings` façades), doors as edge annotations                 | a building with windows and a door that is on the wall between two cells  |
+|       | what                                                                                                  | done when                                                                 |
+| ----- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **0** | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                 | the draft round-trips through `validate`                                  |
+| **1** | `tilemap` feature: square lattice, `floor` model, 1 × 1 only, coordinate-hashed variants + `ctx.seed` | a bitmap renders a road network in the browser, verified by a scene fence |
+| **2** | `solid` model (mini-dungeon), multi-cell footprints, overrides                                        | a dungeon bitmap renders walls that agree with their neighbours           |
+| **3** | Levels, stairs, lifts; portal Points and interior Zones                                               | two levels connected by a stair, and an interior you can enter            |
+| **4** | Editor: paint cells, pick layers, drop accessories on anchors                                         | clicking out a level is faster than writing the JSON                      |
+| **5** | `edge` model (`modular-buildings` façades), doors as edge annotations                                 | a building with windows and a door that is on the wall between two cells  |
 
 Hex stays designed-for and unbuilt until something wants it.
 
@@ -254,7 +301,5 @@ Hex stays designed-for and unbuilt until something wants it.
    reconstructs a thinner version from node extras. We can parse the file
    ourselves, but a tileset generator would rather ask the library. Worth
    filing.
-5. **How much variety is too much?** Seeded selection makes a map reproducible,
-   but changing the seed reshuffles every cell. An author who likes one
-   corner's boulder wants to pin it — hence `overrides`, which may want to be
-   the primary mechanism rather than an escape hatch.
+5. ~~**How much variety is too much?**~~ **Decided** — see "Variety is seeded,
+   and the seed is the consumer's to change" above.

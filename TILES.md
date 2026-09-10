@@ -609,8 +609,8 @@ A tile assembled from five pieces, used two hundred times, is a thousand nodes.
 Tonio: bake a tile into a single mesh, or at least a smaller set, allowing for
 parts that are optional or loosely placed.
 
-**The prerequisite holds, measured.** Every kit is one material, one texture,
-one primitive per mesh:
+**The prerequisite holds for the kits that matter most, measured** — but it is
+not universal, and the difference decides how merging has to be written:
 
 | kit                 | materials | textures | meshes |
 | ------------------- | --------- | -------- | ------ |
@@ -619,8 +619,16 @@ one primitive per mesh:
 | `city-kit-suburban` | **1**     | 1        | 40     |
 | `mini-dungeon`      | **1**     | 1        | 29     |
 
-So any subset of a kit can merge into one geometry with no atlasing work. That
-is not typical of asset packs and it is what makes this cheap.
+| `space-kit` | **11** | — | 153 |
+
+For the first four, any subset merges into one geometry with no atlasing work —
+which is not typical of asset packs and is what makes this cheap. `space-kit`
+is the counter-example, so **merging groups by material** rather than assuming
+one. That is standard and costs nothing; assuming otherwise would have produced
+a merger that silently welded two materials into whichever it kept.
+
+⚠️ I claimed "every kit" here on the strength of four. `space-kit` was the
+fifth. Worth leaving the correction visible rather than tidying it away.
 
 ### Two optimisations, and they are not the same one
 
@@ -688,6 +696,57 @@ needs no new artifact and no build step, and the numbers above say it is cheap.
 A build-time bake producing a merged `.glb` per tile variant is a later option
 and a bigger commitment: it adds a generated file to keep in step with the
 tileset that produced it.
+
+## Why this generalises: spaceships
+
+Tonio's observation, and `space-kit` (153 items) is the check on it rather than
+the illustration:
+
+| family                                                | items   | reading                                               |
+| ----------------------------------------------------- | ------- | ----------------------------------------------------- |
+| `corridor`, `_corner`, `_cross`, `_split`, `_end`     | 1 × 1   | a **path** set                                        |
+| `corridor_wall`, `corridor_wallCorner`                | 1 × 1   | the **boundary** set beside it                        |
+| `monorail_trackStraight/_CornerLarge/_Slope/_Support` | —       | a **second** path network, with a vertical transition |
+| `pipe`                                                | 18      | a **third**                                           |
+| `hangar`, `platform`, `rocket`                        | various | props, not tiles                                      |
+
+So a ship is the same three loci: corridors are paths on faces, hull plating is
+the boundary of the pressurised region, airlocks are edges. It is 3D from the
+start, which the six-bit code already covers — a ladder between decks is an
+elbow and a lift shaft is a straight, and neither needs a special field.
+Interior and exterior are the portal Points and Zones the plan already uses,
+and a fleet is the baking argument at its most favourable: bake the ship once,
+instance it.
+
+**Three requirements it adds that a town did not.**
+
+1. **Several independent path networks in one map.** Corridors, monorail and
+   pipes are three, and they overlap without interacting — a pipe may run
+   through a corridor's cell. So layers are not a short list of known kinds
+   (roads, lots, fences); a map has N layers, each with its own tileset and its
+   own codes, and only some pairs interact.
+2. **A cell carries FEATURES, not only geometry.** An engine cell, a reactor, a
+   door that opens. The format already has this — a piece has `features` — so a
+   tilemap cell must be able to say so too, or every functional cell has to be
+   hand-placed alongside the grid and kept in step with it. Worth building in
+   from the start rather than retrofitting.
+3. **Symmetry.** Ships are overwhelmingly mirror-symmetric and towns are not.
+   An editor that mirrors an edit across an axis is the difference between
+   building half a ship and building all of it twice. That is an editor
+   affordance rather than a format one, but it should be designed for before
+   the editor's grid painting is written.
+
+**And the connectivity graph wants to be output.** The codes already describe a
+graph — which cells connect to which, through which faces — and a ship is where
+that stops being an implementation detail: power, fuel and atmosphere route
+along it, and a hull breach is a change to it. The plan already says the cell
+CLASSIFICATION is output; the graph is the same argument one step further, and
+it is the thing that makes a tilemap useful to a game rather than only to a
+renderer.
+
+None of that changes the design. It is the case that most rewards it, which is
+the useful kind of confirmation — and `manta-recon` is the consumer that would
+reach for it first.
 
 ## Levels, stairs, shafts
 

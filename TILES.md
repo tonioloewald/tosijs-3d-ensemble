@@ -603,6 +603,92 @@ the editor this morning.
 That also gives the editor a job it does not have yet and obviously should:
 **select some pieces, save them as a tile.**
 
+## Baking at a boundary — and where the boundary is
+
+A tile assembled from five pieces, used two hundred times, is a thousand nodes.
+Tonio: bake a tile into a single mesh, or at least a smaller set, allowing for
+parts that are optional or loosely placed.
+
+**The prerequisite holds, measured.** Every kit is one material, one texture,
+one primitive per mesh:
+
+| kit                 | materials | textures | meshes |
+| ------------------- | --------- | -------- | ------ |
+| `city-kit-roads`    | **1**     | 1        | 72     |
+| `modular-buildings` | **1**     | 1        | 108    |
+| `city-kit-suburban` | **1**     | 1        | 40     |
+| `mini-dungeon`      | **1**     | 1        | 29     |
+
+So any subset of a kit can merge into one geometry with no atlasing work. That
+is not typical of asset packs and it is what makes this cheap.
+
+### Two optimisations, and they are not the same one
+
+- **Instancing** — one geometry, many transforms, one draw call. Variability is
+  free because each instance carries its own matrix.
+- **Merging** — several _different_ geometries in fixed relative positions,
+  welded into one. Per-part transforms are gone.
+
+An assembled tile is many different meshes, so instancing alone does nothing
+for it. **The point of baking is to make the tile instanceable**: merge the
+assembly once per tile variant, then instance that single geometry across every
+occurrence. Two hundred uses of a five-part tile go from a thousand nodes to
+one geometry and two hundred instances.
+
+### The boundary is where variability starts
+
+Parts get classified, and the classification IS the boundary:
+
+| class      | example                                | treatment                                                |
+| ---------- | -------------------------------------- | -------------------------------------------------------- |
+| `fixed`    | walls, floor, trim                     | merged into the tile's baked geometry                    |
+| `optional` | "this bed may or may not be here"      | excluded; instanced by its own mesh across the whole map |
+| `placed`   | "this lamp goes somewhere around here" | excluded; instanced, carrying its jitter                 |
+
+⚠️ **Do not bake per combination.** Three optional parts is eight variants; ten
+is a thousand and twenty-four. Excluding them costs one extra instanced
+geometry each — shared across the entire map rather than per tile — which is
+both cheaper and bounded.
+
+### Three more things that must not be baked, for reasons other than variety
+
+The boundary is not only about variability, and each of these is a way to lose
+something that used to work:
+
+- **Anything interactive.** A door that opens needs its own transform, and
+  doors are edge pieces, which the plan already treats separately.
+- **Anything a feature binds to.** A lamp with a light program, a destroyable
+  crate — `bind` returns a handle to a thing, and merging dissolves the thing.
+- **Anything the editor must select.** Which means **baking is off in the
+  editor by construction**, not by a flag someone remembers: the editor's whole
+  job is picking pieces apart, and it already rebuilds hundreds of times a
+  session where a game builds once.
+
+### The invariant worth testing
+
+Merging must not change the picture, and "looks the same" is not checkable. Two
+things are:
+
+- **Total triangle count is preserved.** Merging regroups geometry; it does not
+  add or remove any.
+- **The union bounding box is preserved.** Same extent, differently grouped.
+
+Both are cheap, exact, and catch the real failure — a part silently dropped
+from the bake, which otherwise shows up as a hole somebody notices in a
+screenshot three weeks later.
+
+⚠️ A `sceneFloorplan` diff will NOT be empty across a bake, and should not be:
+five records become one, by design. Comparing floorplans is the wrong tool
+here, and saying so is worth more than a test that appears to check something.
+
+### Where it happens
+
+Load-time first — merge in the browser after the grid compiles — because it
+needs no new artifact and no build step, and the numbers above say it is cheap.
+A build-time bake producing a merged `.glb` per tile variant is a later option
+and a bigger commitment: it adds a generated file to keep in step with the
+tileset that produced it.
+
 ## Levels, stairs, shafts
 
 `levels[]` with an explicit `y`, and `levelHeight` from the tileset (measured:
@@ -666,16 +752,17 @@ is obvious until you place a chair.
 
 ## Milestones
 
-|        | what                                                                                                                       | done when                                                                         |
-| ------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                      | the draft round-trips through `validate`                                          |
-| **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`                              | a bitmap renders a road network in the browser, verified by a scene fence         |
-| **1c** | Ensemble-as-library: `LibraryRef.kind: "ensemble"`, ids as items, cycle detection, the centred/`y=0` rule enforced         | a hand-assembled tile authored in the editor autotiles beside a Kenney one        |
-| **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles | a suburban block renders, houses face the street, and it is worth showing someone |
-| **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                             | a dungeon bitmap renders walls that agree with their neighbours                   |
-| **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                    | two levels connected by a stair, and an interior you can enter                    |
-| **4**  | Editor: paint cells, pick layers, drop accessories on anchors                                                              | clicking out a level is faster than writing the JSON                              |
-| **5**  | `edge` model (`modular-buildings` façades), doors as edge annotations                                                      | a building with windows and a door that is on the wall between two cells          |
+|        | what                                                                                                                        | done when                                                                                 |
+| ------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                       | the draft round-trips through `validate`                                                  |
+| **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`                               | a bitmap renders a road network in the browser, verified by a scene fence                 |
+| **1c** | Ensemble-as-library: `LibraryRef.kind: "ensemble"`, ids as items, cycle detection, the centred/`y=0` rule enforced          | a hand-assembled tile authored in the editor autotiles beside a Kenney one                |
+| **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles  | a suburban block renders, houses face the street, and it is worth showing someone         |
+| **1d** | Bake: classify parts `fixed` / `optional` / `placed`, merge the fixed core per tile variant, instance it; off in the editor | a 100 × 100 block renders at a sane draw count, triangle count and union bounds unchanged |
+| **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                              | a dungeon bitmap renders walls that agree with their neighbours                           |
+| **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                     | two levels connected by a stair, and an interior you can enter                            |
+| **4**  | Editor: paint cells, pick layers, drop accessories on anchors                                                               | clicking out a level is faster than writing the JSON                                      |
+| **5**  | `edge` model (`modular-buildings` façades), doors as edge annotations                                                       | a building with windows and a door that is on the wall between two cells                  |
 
 Hex stays designed-for and unbuilt until something wants it.
 

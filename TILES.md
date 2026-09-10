@@ -409,6 +409,62 @@ which a nested array of integers is not. One character per cell, and the
 character selects a **layer** within the tileset (`.` empty, `#` road, `~`
 water) rather than a mesh.
 
+## Most of Kenney's kits are tile ASSEMBLY kits — and that is the same machinery
+
+Tonio's generalisation, and the measurement backs it: only a minority of these
+kits autotile. `city-kit-roads`, tower-defense's paths and hexagon's
+paths/rivers are true tilesets. Everything else — `modular-buildings`,
+`castle-kit`, `mini-dungeon`, the suburban lot — is a kit of PARTS you assemble
+something out of.
+
+The temptation is to conclude that assembly needs its own system. It does not,
+and `modular-buildings` shows why:
+
+| piece                       | size             | what it is             |
+| --------------------------- | ---------------- | ---------------------- |
+| `building-block`            | 1 × 0.63 × 1     | a straight run of wall |
+| `building-corner`           | 1 × 0.63 × 1     | a corner               |
+| `roof-flat-center`          | 1 × **0.11** × 1 | roof interior          |
+| `roof-flat-border-straight` | 1 × **0.21** × 1 | roof edge              |
+| `roof-flat-border-corner`   | 1 × 0.21 × 1     | roof outer corner      |
+| `roof-flat-corner`          | 1 × 0.11 × 1     | the other corner form  |
+
+Those are **boundary sets** — the same six canonical codes — applied not to the
+map but to **a building's own footprint**. Walls are the boundary of the
+footprint region; the roof is the same region read at the face locus, with
+`center` inside and `border-*` around the edge. The height difference is the
+physical tell: the centre is 0.11 and the border is 0.21, because the border
+carries the parapet. That is exactly why a boundary set has to exist at all.
+
+### So an assembly kit is autotile sets over NESTED regions
+
+One region — a building's cells — read three ways at once:
+
+| locus                      | gives you                                     |
+| -------------------------- | --------------------------------------------- |
+| **face**                   | floors, and the roof (`center` / `border-*`)  |
+| **boundary** (vertex/edge) | walls (`block` / `corner`), fences            |
+| **stacked**                | storeys, at the kit's vertical module (0.625) |
+
+And the map's road network is the same compiler pointed at a bigger region.
+There is no "assembly system" to build: **the tiling machinery IS the assembly
+machinery, scoped to a region instead of to the map.**
+
+That is worth stating because it changes what milestone 1b costs. A building is
+not a new subsystem — it is a region, a tileset per locus, a storey count and a
+roof. The parts that genuinely remain unshared are the _composition rules_: a
+door goes on the ground floor on the street-facing edge, a window does not go
+where a door is, and a chimney goes on the roof. Those are placement
+constraints over an already-tiled region, which is the accessory/anchor problem
+one level up.
+
+⚠️ **Where this stops.** `mini-dungeon` and `castle-kit` really are just parts —
+`wall`, `wall-half`, `wall-narrow`, `wall-opening`, `wall-corner`, and no
+inner/outer pair anywhere. They have a corner piece but not a corner SET, so a
+compiler can place them from a region boundary but cannot pick between
+variants, because there are none to pick. Recognising which kind of kit you
+have is a tileset-authoring judgement, not something to infer at build time.
+
 ## Buildings are not tiles — and that is what makes the demo worth building
 
 Tonio: roads alone are not compelling; combine them with a building kit. Right,

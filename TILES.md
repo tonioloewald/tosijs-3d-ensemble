@@ -532,6 +532,77 @@ tiles, and a nested ensemble — which is considerably more of the design than
 a road network alone would have tested, and is the argument for building it
 this way round rather than adding buildings afterwards.
 
+## An ensemble as a resource for another ensemble
+
+Tonio's closing move, and it is the one that makes the rest of this cohere: if
+a tile can be an assembly of smaller pieces, then **an ensemble is a set of
+tiles**, and one ensemble should be usable as a source for another the way a
+`.glb` is.
+
+That makes the format self-hosting. A fancy wall segment — block, window
+insert, trim, a lamp bracket — is authored ONCE as a small arrangement, and
+then autotiles exactly like a mesh does. Nothing about the tiling machinery
+changes; only where a role's geometry comes from.
+
+### Two mechanisms, and they are not the same one
+
+Worth separating, because the format already half-has both and conflating them
+is how this gets muddled:
+
+|                         | what it does                                             | status                                                               |
+| ----------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
+| **nesting**             | place ONE instance of another ensemble at a position     | `Piece.ensemble` exists, reserved, "the loader does not flatten yet" |
+| **ensemble-as-library** | name MANY reusable parts that others instantiate by name | new                                                                  |
+
+The second is the request. `LibraryRef` is currently `{ name, url }` pointing
+at a `.glb`; the smallest honest change is to let the url point at an ensemble
+and say so:
+
+```jsonc
+"libraries": [
+  { "name": "roads", "url": "https://cdn.tosijs.net/kenney/libraries/city-kit-roads.glb" },
+  { "name": "trim",  "url": "/tiles/fancy-walls.json", "kind": "ensemble" }
+]
+```
+
+…and then `mesh: "trim/fancy-window"` resolves against it. **`kind` explicit
+rather than sniffed from the extension**: a URL without one is normal, a
+content-type is a network round trip before you can validate, and guessing is
+how a `.json` that happens to be a manifest becomes a confusing error.
+
+### What an ensemble exposes, and the origin convention
+
+Its **top-level piece ids**. A single-mesh tile is one piece; a multi-part tile
+is a piece that is itself a nested ensemble, which is the first mechanism doing
+its job inside the second. No new concept, and no `parts:` map to keep in step
+with the pieces it describes.
+
+⚠️ **A tile ensemble must be authored centred in X/Z and sitting on `y = 0`.**
+Not an arbitrary rule — it is what all six measured kits already do, so a tile
+authored here drops into a grid beside a Kenney tile with no offset table. An
+ensemble used as a library that does not follow it produces content that is
+subtly misaligned in a way that looks like a tiling bug, so `validate` should
+say so rather than let it through.
+
+### Cycles
+
+A resource graph can loop: A uses B uses A. `validate` returns problems and
+never throws, so the answer is a `cyclic-resource` error naming the path, and a
+loader that refuses to expand rather than recursing until the tab dies. Cheap
+to add now, and the sort of thing that is discovered at 3am otherwise.
+
+### Why this is the right shape rather than a convenience
+
+It closes the loop the rest of this plan opened. An assembly kit is autotile
+sets over nested regions; a region's tiles can themselves be assemblies; and an
+assembly is an arrangement, which is the thing this format exists to describe.
+So a "tileset" stops being a special artifact — it is metadata over a source,
+and the source may be a `.glb` from Kenney or an ensemble somebody authored in
+the editor this morning.
+
+That also gives the editor a job it does not have yet and obviously should:
+**select some pieces, save them as a tile.**
+
 ## Levels, stairs, shafts
 
 `levels[]` with an explicit `y`, and `levelHeight` from the tileset (measured:
@@ -599,6 +670,7 @@ is obvious until you place a chair.
 | ------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                      | the draft round-trips through `validate`                                          |
 | **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`                              | a bitmap renders a road network in the browser, verified by a scene fence         |
+| **1c** | Ensemble-as-library: `LibraryRef.kind: "ensemble"`, ids as items, cycle detection, the centred/`y=0` rule enforced         | a hand-assembled tile authored in the editor autotiles beside a Kenney one        |
 | **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles | a suburban block renders, houses face the street, and it is worth showing someone |
 | **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                             | a dungeon bitmap renders walls that agree with their neighbours                   |
 | **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                    | two levels connected by a stair, and an interior you can enter                    |

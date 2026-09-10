@@ -748,6 +748,56 @@ None of that changes the design. It is the case that most rewards it, which is
 the useful kind of confirmation — and `manta-recon` is the consumer that would
 reach for it first.
 
+## Generated ships, and the one requirement that changes
+
+Tonio, as a direction rather than a commitment: generate ship floor plans
+**together with their system spec** — Starfield's ship builder with a combat
+system worth the name.
+
+Three things about that are already the plan, and one is not.
+
+**Already the plan.** A generator is a first-class consumer of this format —
+`validate` returns problems rather than throwing precisely so a generator can
+decide whether to emit, and `build.js` imports under plain Node so it can. And
+it is the strongest argument yet for the grid staying a grid: a generator
+emitting ten thousand pieces is producing something nobody can read or diff,
+while a generator emitting a bitmap is producing the thing it was actually
+reasoning about.
+
+**The spec is a reduction over the graph.** A ship with three reactor cells and
+eight thruster cells has a power budget and a thrust figure; those are computed
+from the layout, not authored beside it and kept in step by hand. That is why
+cells carrying features and the connectivity graph being OUTPUT both matter —
+they are the substrate a spec reduces over. What the reductions ARE is domain
+(power, thrust, heat, crew), so they belong in a preset the way combat does,
+not in the format. The format's job is to expose enough that a preset can
+compute them and nothing more.
+
+**⚠️ What is new: the map has to change at RUNTIME.** A combat system worth
+having damages the ship — a hull breach removes cells, a severed corridor
+splits the power graph, and the spec recomputes because the layout did. So a
+tilemap cannot be a build-time expansion that is thereafter frozen. It needs:
+
+- **incremental edits** — change these cells, re-tile their neighbourhood,
+  without rebuilding the map
+- **an incrementally maintained graph**, since recomputing connectivity for a
+  whole ship on every hit is the obvious thing that will not hold up
+- **a bake that survives it**, which is the awkward one: baked geometry is
+  frozen by construction, so a damaged region has to fall back to unbaked
+  pieces, or re-bake. Worth designing the bake so a region can be re-baked
+  rather than only the whole map.
+
+The happy accident is that **the editor needs the same three things.** It
+rebuilds on every edit, wants only the touched neighbourhood re-tiled, and must
+not bake what it is editing. So incremental re-tiling is not a feature for a
+hypothetical game — it is the editor's own requirement with a second customer,
+which is the best possible reason to build it properly the first time.
+
+I have not put it in the milestones. It changes what milestone 1's compiler
+should look like on the inside — a function from a whole grid to a whole scene
+is the wrong shape if the second caller wants to change nine cells — and that
+is the sort of thing worth knowing before writing it rather than after.
+
 ## Levels, stairs, shafts
 
 `levels[]` with an explicit `y`, and `levelHeight` from the tileset (measured:
@@ -811,17 +861,17 @@ is obvious until you place a chair.
 
 ## Milestones
 
-|        | what                                                                                                                        | done when                                                                                 |
-| ------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                       | the draft round-trips through `validate`                                                  |
-| **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`                               | a bitmap renders a road network in the browser, verified by a scene fence                 |
-| **1c** | Ensemble-as-library: `LibraryRef.kind: "ensemble"`, ids as items, cycle detection, the centred/`y=0` rule enforced          | a hand-assembled tile authored in the editor autotiles beside a Kenney one                |
-| **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles  | a suburban block renders, houses face the street, and it is worth showing someone         |
-| **1d** | Bake: classify parts `fixed` / `optional` / `placed`, merge the fixed core per tile variant, instance it; off in the editor | a 100 × 100 block renders at a sane draw count, triangle count and union bounds unchanged |
-| **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                              | a dungeon bitmap renders walls that agree with their neighbours                           |
-| **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                     | two levels connected by a stair, and an interior you can enter                            |
-| **4**  | Editor: paint cells, pick layers, drop accessories on anchors                                                               | clicking out a level is faster than writing the JSON                                      |
-| **5**  | `edge` model (`modular-buildings` façades), doors as edge annotations                                                       | a building with windows and a door that is on the wall between two cells                  |
+|        | what                                                                                                                                                                                                                      | done when                                                                                 |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                                                                                                                     | the draft round-trips through `validate`                                                  |
+| **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`. **Compile per NEIGHBOURHOOD, not per map** — the editor and a damage model both need it, and the shape is hard to retrofit | a bitmap renders a road network in the browser, verified by a scene fence                 |
+| **1c** | Ensemble-as-library: `LibraryRef.kind: "ensemble"`, ids as items, cycle detection, the centred/`y=0` rule enforced                                                                                                        | a hand-assembled tile authored in the editor autotiles beside a Kenney one                |
+| **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles                                                                                                | a suburban block renders, houses face the street, and it is worth showing someone         |
+| **1d** | Bake: classify parts `fixed` / `optional` / `placed`, merge the fixed core per tile variant, instance it; off in the editor                                                                                               | a 100 × 100 block renders at a sane draw count, triangle count and union bounds unchanged |
+| **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                                                                                                                            | a dungeon bitmap renders walls that agree with their neighbours                           |
+| **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                                                                                                                   | two levels connected by a stair, and an interior you can enter                            |
+| **4**  | Editor: paint cells, pick layers, drop accessories on anchors                                                                                                                                                             | clicking out a level is faster than writing the JSON                                      |
+| **5**  | `edge` model (`modular-buildings` façades), doors as edge annotations                                                                                                                                                     | a building with windows and a door that is on the wall between two cells                  |
 
 Hex stays designed-for and unbuilt until something wants it.
 

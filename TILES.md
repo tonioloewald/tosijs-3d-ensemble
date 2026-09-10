@@ -42,23 +42,221 @@ intersectionH`. Kenney enumerates hex topology with LETTERS. Nothing in the
 (4) is the whole reason this needs an authored layer. Which is what Tonio
 predicted: _"this might involve adding metadata to a kit."_
 
-## Three tiling models, not one
+## One code space, three loci — and the two families are duals
 
-The kits disagree about what a cell means, and a design that assumes one of
-these silently breaks the other two:
+Tonio's observation, which reorganised this plan: a 16-value tileset always
+splits into tiles that **bound an interior** and tiles that **define paths**,
+and topologically the two are duals.
 
-- **`floor`** — a cell holds a tile; its role is **which edges are open**.
-  `city-kit-roads`, `tower-defense-kit`, `hexagon-kit`'s paths.
-- **`solid`** — a cell is filled or empty; a wall's LOOK depends on its
-  neighbours. `mini-dungeon`, `castle-kit`. This is a roguelike bitmap, and it
-  is the same compiler as `floor` with the mask inverted.
-- **`edge`** — a piece sits on the boundary BETWEEN cells.
-  `modular-buildings` is a façade kit: `building-block`, `building-corner`,
-  `building-window`, `building-door` are wall faces stacked 0.625 per storey.
+That is exactly right, and it is worth stating precisely because the precise
+version tells you where to put the mesh.
 
-**A door is always an edge**, in all three. `building-door`, `wall-opening`,
-`wall-doorway`, `metal-gate`, `door-brown` — a door is a property of the
-boundary between two cells, never of a cell. That is the invariant to build on.
+A square lattice has three kinds of place:
+
+| locus                        | where                   | what lives there   |
+| ---------------------------- | ----------------------- | ------------------ |
+| **face** (cell centre)       | `(x, z)`                | floors, path tiles |
+| **edge** (between two cells) | `(x+½, z)` / `(x, z+½)` | façades, **doors** |
+| **vertex** (four cells meet) | `(x+½, z+½)`            | region boundaries  |
+
+- A **path** tile sits on a FACE, and its code is which of the four **edges**
+  the path crosses.
+- A **boundary** tile sits on a VERTEX, and its code is which of the four
+  **faces** around it are inside.
+
+Faces and vertices exchange under the dual, so those are the same 16 codes and
+the same rotation algebra — **the boundary tileset is the path tileset offset
+by half a cell in both axes.** One compiler, one code space, one rotation
+table; the only difference is where the origin sits and what you sample.
+
+And the third locus is the interesting one: an **edge is self-dual** — the edge
+set maps to itself. Which is why "a door is always an edge" held across every
+kit I measured. It is not a coincidence about doors; it is the only place that
+means the same thing in both readings.
+
+### The same six canonical codes, meaning different things
+
+| code   | as a PATH (edges of a face) | as a BOUNDARY (faces round a vertex)      |
+| ------ | --------------------------- | ----------------------------------------- |
+| `0000` | nothing                     | outside                                   |
+| `1000` | dead end                    | **outer** (convex) corner                 |
+| `1100` | corner                      | straight run of wall                      |
+| `1010` | straight through            | ⚠️ **saddle** — two diagonal cells inside |
+| `1110` | tee                         | **inner** (concave) corner                |
+| `1111` | crossroads                  | fully enclosed                            |
+
+This is the reading that explains the kits. `tower-defense-kit` ships BOTH
+families and the vocabulary says which is which: `tile-straight`,
+`tile-crossing`, `tile-split`, `tile-end` are paths, while
+**`tile-corner-inner` and `tile-corner-outer` are boundaries** — a convex/
+concave distinction that cannot exist for a path, because a path corner has
+only one form. `tile-wide-straight` / `tile-wide-corner` are the same route
+read as a boundary PAIR rather than a centre line.
+
+⚠️ **`1010` is the one that bites.** As a path it is an unremarkable straight.
+As a boundary it is the classic marching-squares ambiguity: two diagonally
+opposite cells inside, and you may join them or separate them. Both are
+defensible, they look completely different, and an implementation that does not
+choose deliberately produces a map that is subtly wrong in a way nobody can
+name. The tileset declares which: `"saddle": "join" | "separate"`.
+
+### What this replaces
+
+The earlier draft called these "three tiling models" — `floor`, `solid`, `edge`
+— and treated them as three compilers. They are one compiler with a declared
+locus:
+
+```jsonc
+"locus": "face"    // path tiles, floors        (city-kit-roads, TD paths)
+"locus": "vertex"  // region boundaries         (TD's corner-inner/outer)
+"locus": "edge"    // façades and doors         (modular-buildings)
+```
+
+`mini-dungeon` and `castle-kit` turn out not to be autotile sets at all —
+`wall`, `wall-half`, `wall-narrow`, `wall-opening`, `wall-corner` and no
+inner/outer pair. They are cell-filling blocks, which is `locus: "face"` with a
+solid/empty layer rather than a boundary set. Worth knowing before building a
+marching-squares compiler for a kit that cannot use one.
+
+## In 3D: volumes and manifolds, and the duality stops being exact
+
+Extend to six bits — the faces of a cube — and Tonio's two families become
+**volumes** and **manifolds**. Degenerate cases are what name them: an isolated
+solid cell is a **pillar** or a floating blob; a highly connected path network
+is a **mesh** in the scaffolding sense, a lattice of tubes.
+
+The numbers, computed rather than recalled (`scratchpad/canon.mjs`, Burnside by
+brute force over the rotation group):
+
+|                                        | codes | canonical, up to rotation |
+| -------------------------------------- | ----- | ------------------------- |
+| 2D paths — 4 edges of a face           | 16    | **6**                     |
+| 2D boundaries — 4 faces round a vertex | 16    | **6**                     |
+| 3D paths — 6 faces of a cell           | 64    | **10**                    |
+| 3D surfaces — 8 corners of a cell      | 256   | **23**                    |
+
+⚠️ **The duality is exact in 2D and NOT in 3D.** The square lattice is
+self-dual: a face has four edges, a vertex has four faces, so both families are
+16 codes and both reduce to the same six. The cubic lattice is not — its dual
+is the octahedral one. A cell has **six** faces but a vertex is surrounded by
+**eight** cells, so paths and surfaces diverge: 64 against 256, ten canonical
+classes against twenty-three.
+
+That asymmetry is the whole practical story:
+
+- **Ten path classes is an afternoon.** Degrees `0,1,2,2,3,3,4,4,5,6` — a
+  blob, a stub, a straight, an elbow, a tee, a tripod, and so on up to the
+  six-way junction. A kit can plausibly ship all ten, and a tileset can name
+  them.
+- **Twenty-three surface classes is a modelling job**, and it is why marching
+  cubes is a library that generates geometry rather than a tileset that indexes
+  it. If we ever want smooth volumes, the honest route is to generate the mesh,
+  not to author twenty-three tiles per theme — and that is a different feature
+  from this one.
+
+(The familiar "15 cases" figure for marching cubes quotients by reflection and
+complement as well as rotation. Up to rotation alone it is 23, which is the
+number that matters if you are indexing authored meshes, because a mirrored
+tile is a different model.)
+
+### Stairs, shafts and lifts stop being special
+
+**Seven of the ten path classes touch ±Y.** Vertical connectivity is just two
+more bits, so a stair is a 3D elbow (one lateral, one vertical), a shaft is a
+straight through ±Y, and a lift is a shaft with a moving part. None of them
+needs its own field.
+
+That deletes something from the earlier draft. It proposed:
+
+```jsonc
+{ "at": [4, 0, 6], "connects": "up", "mesh": "stairs" }
+```
+
+which is a special case for a thing the code already says. `connects` goes; a
+cell's vertical links are bits of its code like any other. What genuinely
+remains is that a lift **moves**, which is a feature bound to the cell rather
+than a property of its topology — and features are already a registry.
+
+### Both families degenerate, and the two fixes are dual
+
+Tonio's next step, and it is the one that makes the classification earn its
+keep: once you can name a pillar or a blob, you can **strip** it.
+
+**Volumes: a cell with no exposed face is invisible.** Count the faces adjacent
+to something non-solid. Zero means every neighbour is solid, so the cell
+contributes no surface and can be omitted entirely — the shell renders, the
+fill does not. On any solid region bigger than a few cells this is most of the
+cells. It is a pure optimisation: nothing visible changes, so it can default to
+on.
+
+Six means fully exposed, which is the **pillar** — and that one is usually
+deliberate.
+
+**Manifolds: a saturated region is not a network, it is a place.** The dual
+statement, and the one Tonio named: a block of road cells that are all
+fully-connected is not a mesh of crossroads, it is a **parking lot**. Rendering
+it as `road-crossroad` next to `road-crossroad` is technically correct and
+looks wrong, because the thing being described stopped being a road.
+
+**The kit already ships this**, which is the best evidence the reading is
+right:
+
+| piece             | footprint | what it is                               |
+| ----------------- | --------- | ---------------------------------------- |
+| `road-crossroad`  | 1 × 1     | a junction                               |
+| `road-curve`      | **2 × 2** | four cells of tight corner, as one sweep |
+| `road-roundabout` | **3 × 3** | a saturated junction, as one place       |
+
+So the mechanism is **promotion**: where a pattern matches, replace a block of
+cells with the single larger piece the kit provides. Roundabouts and sweeping
+curves are not special-cased content — they are what saturation collapse looks
+like when the kit has been designed by someone who already knew this.
+
+```jsonc
+"degenerate": {
+  "interior": "strip",     // volume: no exposed face, no geometry
+  "isolated": "pillar",    // volume: fully exposed, and usually meant
+  "saturated": { "min": 2, "mesh": "road-square" }
+},
+"promote": [
+  { "match": "curve", "size": [2, 2], "mesh": "road-curve" },
+  { "match": "cross", "size": [3, 3], "mesh": "road-roundabout" }
+]
+```
+
+⚠️ **The two are not equally safe, and should not default the same way.**
+Stripping an interior cell changes nothing anybody can see, so it is on by
+default. Promotion is a JUDGEMENT — a 2 × 2 of crossroads might be four
+deliberate junctions in a dense grid — so it is opt-in, carries a minimum size,
+and loses to `overrides`. An author who pinned a cell has already said what
+they want there.
+
+**Classification is output, not just an internal step.** Each cell gets a label
+— `interior`, `shell`, `isolated`, `saturated` — and it is readable, because
+that is what lets a consumer reason about the map rather than only look at it:
+a pathfinder wants the saturated regions as areas, an occlusion system wants
+the shell, and a lighting pass wants to know which pillars stand alone. Marking
+them is what makes stripping them safe.
+
+(One consequence for testing: stripping means a map with N filled cells does
+NOT produce N meshes, so a scene test that asserts a count has to count the
+shell. `sceneFloorplan` reads the post-cull draw list, which is the right
+number for "what does this look like" and the wrong one for "did every cell
+compile" — those are two different questions and the second wants `problems`.)
+
+### Both families need an answer for the degenerate end
+
+The zero and one cases are where a generator produces something silly and says
+nothing:
+
+- an isolated **path** cell — code `000000`, connected to nothing — is a
+  floating node, and almost always an authoring slip
+- an isolated **solid** cell is a pillar, which is sometimes exactly what you
+  meant
+
+So the tileset says which: `"isolated": "pillar" | "omit" | "warn"`. Defaulting
+to `warn` for paths and `pillar` for volumes matches what each usually means,
+and neither silently invents geometry.
 
 ## The core idea: edge codes, and rotation as data
 
@@ -216,17 +414,18 @@ water) rather than a mesh.
 `levels[]` with an explicit `y`, and `levelHeight` from the tileset (measured:
 0.625 for `modular-buildings`, 1.1 for `mini-dungeon`, 1.31 for `castle-kit`).
 
-A vertical connector is a cell whose role says it links levels:
+Vertical connectors need no special field — see "Stairs, shafts and lifts stop
+being special" above. In a 3D code a stair is an elbow and a shaft is a
+straight; the kits have the geometry (`stairs`, `stairs-stone`,
+`wall-narrow-stairs`, `tile-slope`, `tile-straight-slope-large`).
 
-```jsonc
-{ "at": [4, 0, 6], "connects": "up", "mesh": "stairs" }
-```
+⚠️ A **2D** map with `levels[]` is the cheap version and it does need one: with
+4-bit codes there is no bit that means "up", so a level-linking cell has to be
+declared. That is an argument for going to 6-bit codes sooner rather than
+bolting `connects` onto the 2D compiler and then deleting it.
 
-The kits have the vocabulary: `stairs`, `stairs-stone`, `wall-narrow-stairs`,
-`tile-slope`, `tile-straight-slope-large`. A **shaft** or **lift** is the same
-thing with no geometry between levels — which is exactly why it needs to be
-declared rather than inferred: an empty cell above an empty cell is a hole, and
-only the author knows whether that is a lift or a mistake.
+What a lift needs beyond topology is that it MOVES, which is a feature bound to
+the cell rather than a fact about its shape.
 
 ## Interiors, exteriors, and the meta-elements
 

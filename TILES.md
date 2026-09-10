@@ -409,6 +409,73 @@ which a nested array of integers is not. One character per cell, and the
 character selects a **layer** within the tileset (`.` empty, `#` road, `~`
 water) rather than a mesh.
 
+## Buildings are not tiles — and that is what makes the demo worth building
+
+Tonio: roads alone are not compelling; combine them with a building kit. Right,
+and measuring the building kits changed the design rather than just the demo.
+
+| kit                   | building footprints                                  |
+| --------------------- | ---------------------------------------------------- |
+| `city-kit-commercial` | **0.5 × 0.5** (14 of them), skyscrapers ~1.36 × 1.36 |
+| `city-kit-suburban`   | ~1.03 × 1.03 to 1.3 × 1.03                           |
+
+**None of those is a grid module.** Four commercial buildings fit in one road
+cell; a suburban house is _slightly bigger_ than a cell; a skyscraper overflows
+one and does not fill two. These are free-standing props with organic sizes,
+not tiles that tile.
+
+So the two layers are different kinds of thing, and pretending otherwise is how
+you end up with a city on a lattice that looks like a spreadsheet:
+
+- **Roads are a tileset.** Autotiled from a bitmap, edge codes, rotation.
+- **Buildings are props with a placement rule.** A cell is marked _buildable_;
+  what lands there is chosen from a kit, placed with an anchor and a jitter,
+  and **rotated to face the street**.
+
+### A layer reads another layer
+
+That last clause is the whole demo. A lot's orientation is not authored — it is
+**derived from the road layer**: look at the cell's four neighbours, find the
+road-facing edge, face that way. A corner lot has two candidates and picks one.
+
+This is the thing that makes clicking out a city feel like more than filling in
+cells, and it is a real design commitment: **a layer may read another layer's
+codes.** Everything else in this plan is per-cell and local; this is not, and it
+is worth being explicit that it is the exception rather than discovering later
+that half the features want it.
+
+### A cell can host an ENSEMBLE, not just a mesh
+
+`city-kit-suburban` ships the rest of a plot: `driveway-long` / `driveway-short`,
+`fence` and `fence-1x2` … `fence-3x3` (sized in cell units), `path-stones-*`,
+`planter`, `tree-large` / `tree-small`.
+
+A suburban lot is therefore not one mesh — it is a house, a driveway meeting
+the street, a fence along the boundary and a tree. Which is an **arrangement**,
+which is the thing this format already describes. `Piece.ensemble` exists and
+is reserved for exactly this ("the loader does not flatten yet"), so a lot is a
+small ensemble instanced per cell and rotated as one.
+
+That also lands the fence in the right place without inventing anything: a
+fence is on the lot BOUNDARY, and a boundary is the edge locus — the self-dual
+one, where doors already live.
+
+### The example this argues for
+
+A suburban block, in one map:
+
+| layer  | locus          | source                                           |
+| ------ | -------------- | ------------------------------------------------ |
+| roads  | face           | `city-kit-roads`, autotiled from a bitmap        |
+| lots   | face           | cells adjacent to a road, hosting a lot ensemble |
+| fences | edge           | lot boundaries, sized pieces                     |
+| trees  | face, jittered | filler on empty cells                            |
+
+It exercises two tilesets, two loci, a derived rotation, props-that-are-not-
+tiles, and a nested ensemble — which is considerably more of the design than
+a road network alone would have tested, and is the argument for building it
+this way round rather than adding buildings afterwards.
+
 ## Levels, stairs, shafts
 
 `levels[]` with an explicit `y`, and `levelHeight` from the tileset (measured:
@@ -472,14 +539,15 @@ is obvious until you place a chair.
 
 ## Milestones
 
-|       | what                                                                                                  | done when                                                                 |
-| ----- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **0** | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                 | the draft round-trips through `validate`                                  |
-| **1** | `tilemap` feature: square lattice, `floor` model, 1 × 1 only, coordinate-hashed variants + `ctx.seed` | a bitmap renders a road network in the browser, verified by a scene fence |
-| **2** | `solid` model (mini-dungeon), multi-cell footprints, overrides                                        | a dungeon bitmap renders walls that agree with their neighbours           |
-| **3** | Levels, stairs, lifts; portal Points and interior Zones                                               | two levels connected by a stair, and an interior you can enter            |
-| **4** | Editor: paint cells, pick layers, drop accessories on anchors                                         | clicking out a level is faster than writing the JSON                      |
-| **5** | `edge` model (`modular-buildings` façades), doors as edge annotations                                 | a building with windows and a door that is on the wall between two cells  |
+|        | what                                                                                                                       | done when                                                                         |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **0**  | Tileset schema + a generated draft for `city-kit-roads`, edge codes filled in by hand                                      | the draft round-trips through `validate`                                          |
+| **1**  | `tilemap` feature: square lattice, face locus, 1 × 1, coordinate-hashed variants + `ctx.seed`                              | a bitmap renders a road network in the browser, verified by a scene fence         |
+| **1b** | **Roads + buildings in one map** — a second layer of props, rotation derived from the road layer, lots as nested ensembles | a suburban block renders, houses face the street, and it is worth showing someone |
+| **2**  | `solid` model (mini-dungeon), multi-cell footprints, overrides                                                             | a dungeon bitmap renders walls that agree with their neighbours                   |
+| **3**  | Levels, stairs, lifts; portal Points and interior Zones                                                                    | two levels connected by a stair, and an interior you can enter                    |
+| **4**  | Editor: paint cells, pick layers, drop accessories on anchors                                                              | clicking out a level is faster than writing the JSON                              |
+| **5**  | `edge` model (`modular-buildings` façades), doors as edge annotations                                                      | a building with windows and a door that is on the wall between two cells          |
 
 Hex stays designed-for and unbuilt until something wants it.
 

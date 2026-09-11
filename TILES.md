@@ -584,6 +584,13 @@ ensemble used as a library that does not follow it produces content that is
 subtly misaligned in a way that looks like a tiling bug, so `validate` should
 say so rather than let it through.
 
+That convention is the same one SPEC's `placement` field turns out to need (see
+"How an ensemble meets the world"), reached from the other end: an ensemble that
+declares itself ground-relative is promising its origin is the contact point,
+which for a tile is exactly "centred, sitting on `y = 0`". A tile's own
+`placement` is `free` — a tiler owns the cell transform — but the origin rule is
+shared, and one check can serve both.
+
 ### Cycles
 
 A resource graph can loop: A uses B uses A. `validate` returns problems and

@@ -314,6 +314,130 @@ Shipped roles: `structure` · `target` · `power` · `generator` · `shield` ·
   layer to key on. Deliberately open: a closed enum needs revising every time
   the fiction grows.
 
+### How an ensemble meets the world — one field, four values
+
+From a conversation with manta: an engine placing an ensemble into a larger
+context needs to know **what the ensemble's origin means**. A bunker sits on
+ground. A dock sits on water if there is water and on the bank if there is not.
+A cave shrine sits on a floor that is not the topmost surface at that
+coordinate. A space station sits wherever it was put.
+
+Today nothing says which, so every consumer hard-codes it per file — which is
+an arrangement plus a spoken instruction, the exact failure `libraries` was
+added to fix.
+
+```jsonc
+"placement": "ground"   // terrain, ignoring anything on top of it
+"placement": "surface"  // terrain or water or ice — whichever is HIGHER
+"placement": "any"      // any solid surface: tunnels, caves, overhangs, decks
+"placement": "free"     // resolves against nothing: station, tile, assemblage
+```
+
+**This is a declaration, not a placer.** This package has no terrain, no
+heightmap and no raycast, and it must not grow one — the moment `ground`
+resolves itself, the format knows what terrain is and the domain-free property
+is gone. `placePiece` is already the shape: the host passes in the function
+that puts a thing in a world, and `placement` is _input to that function_. Our
+three jobs are to carry it, validate what can be validated, and show it in the
+editor.
+
+#### Why one enum rather than flags
+
+All four are answers to the same question — which candidate surface does the
+origin resolve against — with `free` as the "none" member:
+
+| value     | what the host resolves against                    | the case that needs it                       |
+| --------- | ------------------------------------------------- | -------------------------------------------- |
+| `ground`  | terrain only                                      | a lighthouse on a sea rock                   |
+| `surface` | the highest of terrain and any medium above it    | a dock, a boat, a lily pad                   |
+| `any`     | a _set_ of candidates; the caller picks           | a tunnel mouth, a cave, a lift shaft landing |
+| `free`    | nothing — the caller supplies the whole transform | a station, a tile, a fragment                |
+
+`ground` and `surface` differ in a way that is easy to miss and expensive to get
+wrong: a lighthouse wants `ground` _even where water is higher_, and a dock
+wants `surface` _even where it is not_. "Snap to the top" is not a general
+answer, which is why this cannot be a boolean.
+
+`any` is the odd one and worth stating precisely: it does not name a different
+surface, it says **more than one answer is legitimate here**, so a host must not
+assume the topmost hit. That is the tunnels-and-caves case, and it is also what
+a multi-level building needs.
+
+#### It is a promise about the ORIGIN, and that part is checkable
+
+`placement: 'ground'` asserts that the ensemble's origin is its **contact
+point** — otherwise "sits on the ground" resolves a `y` that buries half of it.
+So the field quietly fixes an origin convention that has so far been folklore,
+and `validate` can check it weakly and cheaply: union the pieces' local bounds,
+and warn if an ensemble claiming `ground` or `surface` extends materially below
+`y = 0`.
+
+That is the same rule TILES.md already wants for a tile ensemble ("centred in
+X/Z, sitting on `y = 0`"), arrived at from the other direction — which is a
+small piece of evidence that it is the right convention rather than a tiling
+quirk.
+
+Warning, not error: a rig with a subsea section legitimately hangs below its
+deck-level origin, and the right response is to make the author look, not to
+refuse the file.
+
+#### It applies to the ROOT of a build, and to nothing else
+
+A nested ensemble is placed by its parent at a local offset, and its own
+`placement` is **ignored**. This follows directly from nesting being a black
+box: if it applied at every level, a lamp-post nested inside a plaza would
+ground-snap itself out of the plaza's frame and into the world's, and the
+failure would look like a broken offset rather than a rule nobody stated.
+
+Same for a tile, which is the same mechanism: a tiler owns the cell transform
+entirely.
+
+#### Absent means unstated, and unstated behaves as `free`
+
+Adding a field must not move any existing content, and `free` is the only value
+that changes nothing for a host that never looked. So absent and `free` produce
+the same behaviour — but they are distinguishable in the data, which is what
+lets the editor nudge an author who has not decided without inventing a fifth
+value nobody would ever write.
+
+#### Orthogonal to what the ensemble is FOR
+
+Tonio's point, and it is what makes this a separate field rather than more
+overloading of `kind`. An ensemble can be a place, a tileset, a library of
+parts, or a fragment somebody saved out of a selection — and any of those can
+be ground-relative or free. The two axes do not interact.
+
+There is one useful correlation, though, and it is worth writing down rather
+than enforcing: **a resource is almost always `free`.** A tile, a wall segment,
+a library member is never placed in a world at all — it is expanded into
+something that is. `free` is therefore doing double duty, covering both "placed,
+but relative to nothing" and "not placed directly at all", and those collapse
+cleanly because in both the caller holds the full transform.
+
+#### The half this does NOT solve
+
+`y` is one of two questions a hillside asks. The other is orientation, and it
+has three genuinely different answers:
+
+| a hut        | tilts to the surface normal           |
+| ------------ | ------------------------------------- |
+| a radio mast | stays upright and cuts into the slope |
+| a road tile  | **deforms** to follow the ground      |
+
+Only the first two are cheap; the third is a mesh operation. And behind both
+sits a third question — whether the ensemble _modifies_ the ground it lands on
+(the flatten-a-pad case, which SPEC's "Provinces" section already circles).
+
+Naming these as a family rather than shipping a guess: `placement` answers the
+question that has a clean four-value answer, and the other two wait for a
+consumer that needs them. A partial field that is honest about its scope beats
+a complete-looking one that silently means "upright" forever.
+
+> ⚠️ **Not called `anchor`.** TILES.md uses `anchors` for where an accessory may
+> sit within a tile — a lamp on the ceiling, a bookcase against the north wall.
+> Two unrelated meanings one letter apart is a documentation bug waiting to be
+> written.
+
 ### Validation
 
 `validate(ensemble, knownMeshes?) → Problem[]` — returns problems, never throws
@@ -344,7 +468,7 @@ Ships as a configurable component, not an application:
 
 ```javascript
 ensembleEditor({
-  libraries: [{ url: "/enemies.glb", type: "enemies" }],
+  libraries: [{ url: '/enemies.glb', type: 'enemies' }],
   schema: MANTA_SCHEMA, // see Part 3
   scenarios: MANTA_SCENARIOS, // see Part 4
   onSave: async (ensemble) => {
@@ -458,60 +582,60 @@ therefore a table of **widgets**, not of types.
 const MANTA_SCHEMA = {
   features: {
     destroyable: {
-      label: "Destroyable",
+      label: 'Destroyable',
       fields: {
-        hp: { type: "number", min: 1, max: 9999, default: 12 },
-        armor: { type: "number", min: 0, max: 100000, default: 0 },
-        explode: { type: "boolean", default: true },
+        hp: { type: 'number', min: 1, max: 9999, default: 12 },
+        armor: { type: 'number', min: 0, max: 100000, default: 0 },
+        explode: { type: 'boolean', default: true },
       },
     },
     turret: {
-      label: "Turret",
+      label: 'Turret',
       fields: {
-        range: { type: "number", min: 20, max: 2000, default: 260, unit: "m" },
+        range: { type: 'number', min: 20, max: 2000, default: 260, unit: 'm' },
         fireRate: {
-          type: "number",
+          type: 'number',
           min: 0.1,
           max: 20,
           default: 1.1,
-          unit: "/s",
+          unit: '/s',
         },
-        damage: { type: "number", min: 1, max: 200, default: 4 },
+        damage: { type: 'number', min: 1, max: 200, default: 4 },
         smart: {
-          type: "boolean",
+          type: 'boolean',
           default: false,
-          help: "leads its target instead of firing where you are",
+          help: 'leads its target instead of firing where you are',
         },
       },
     },
     launchpad: {
-      label: "Launch pad",
+      label: 'Launch pad',
       fields: {
-        craft: { type: "mesh", library: "enemies" }, // pick list from library
-        interval: { type: "number", min: 1, max: 300, unit: "s" },
+        craft: { type: 'mesh', library: 'enemies' }, // pick list from library
+        interval: { type: 'number', min: 1, max: 300, unit: 's' },
       },
     },
     protector: {
-      label: "Shield field",
+      label: 'Shield field',
       fields: {
-        protection: { type: "number", min: 0, max: 200, default: 12 },
-        source: { type: "ref", roles: ["power", "generator"] }, // ref to a PIECE
+        protection: { type: 'number', min: 0, max: 200, default: 12 },
+        source: { type: 'ref', roles: ['power', 'generator'] }, // ref to a PIECE
       },
     },
   },
 
   roles: {
     power: {
-      label: "Power source",
+      label: 'Power source',
       features: { destroyable: { hp: 16 }, blip: {} },
     },
     // …consumer-defined
   },
 
   zones: {
-    escort: { label: "Escort zone", fields: { capacity: { type: "number" } } },
+    escort: { label: 'Escort zone', fields: { capacity: { type: 'number' } } },
   },
-  points: { spawn: { label: "Spawn", fields: { craft: { type: "mesh" } } } },
+  points: { spawn: { label: 'Spawn', fields: { craft: { type: 'mesh' } } } },
 };
 ```
 
@@ -550,7 +674,7 @@ So a feature is a **registration**, not a case in a switch:
 
 ```javascript
 registerFeature({
-  name: "turret",
+  name: 'turret',
   schema: turretSchema, // JSON Schema (+ x- UI annotations)
   bind(piece, cfg, ctx) {
     // JSON -> live behaviour
@@ -639,10 +763,10 @@ Consumer-supplied:
 
 ```javascript
 const MANTA_SCENARIOS = {
-  "escort — 3 idle fighters": (ctx) =>
-    ctx.spawn("Light Fighter", 3, { radius: 320 }),
-  "kill the reactor": (ctx) => ctx.damageRole("power", 9999),
-  "player pass at 200m": (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
+  'escort — 3 idle fighters': (ctx) =>
+    ctx.spawn('Light Fighter', 3, { radius: 320 }),
+  'kill the reactor': (ctx) => ctx.damageRole('power', 9999),
+  'player pass at 200m': (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
 };
 ```
 

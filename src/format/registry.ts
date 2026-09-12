@@ -263,6 +263,55 @@ export function registerFeature<Handle>(
 }
 
 /** Look up one feature registration. */
+/**
+ * A feature's config, narrowed to the keys its SCHEMA declares.
+ *
+ * ⚠️ **This is a trust boundary, and it was open.** Ten of the thirteen scene
+ * features hand their config to an element as `{...cfg}` or through
+ * `updateAttrs`, and a tosijs element creator applies unknown keys as
+ * PROPERTIES. So a key an author never wrote — and a schema never declared —
+ * reached the DOM verbatim:
+ *
+ * ```text
+ * b3dLight({ intensity: 0.9, innerHTML: '<img src=x onerror=…>' })
+ *   -> <tosi-b3d-light><img src="x" onerror="…"></tosi-b3d-light>
+ * ```
+ *
+ * Confirmed executing in real Chromium. Nothing gated it on the way in:
+ * `parseEnsemble` is `JSON.parse` plus an `Array.isArray` check, `validate`
+ * checks only that the feature NAME is registered, and no schema sets
+ * `additionalProperties`. Opening a shared ensemble file ran script in the
+ * page's origin — which holds every `ensemble:*` draft, and the host app's
+ * session wherever `<tosi-ensemble>` is embedded.
+ *
+ * An allow-list rather than a denylist, because the set of dangerous property
+ * names is not enumerable — `innerHTML`, `outerHTML`, `srcdoc`, every `on*`,
+ * and whatever a future element adds. The schema is already the exact list of
+ * what a feature accepts: it drives validation and the property panel, so a
+ * key outside it is one no author could have set through the editor either.
+ *
+ * A registration with no declared properties is passed through unchanged —
+ * there is nothing to check against, and inventing an empty allow-list would
+ * silently disable such a feature. Those are the ones to look at if this ever
+ * needs tightening further.
+ */
+export function declaredConfig(
+  registration: { schema?: FeatureSchema } | undefined,
+  cfg: Record<string, unknown>
+): Record<string, unknown> {
+  const declared = registration?.schema?.properties;
+  if (!declared || !Object.keys(declared).length) return cfg;
+  let dropped = false;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(cfg)) {
+    if (Object.prototype.hasOwnProperty.call(declared, key)) out[key] = cfg[key];
+    else dropped = true;
+  }
+  // Returning the SAME object when nothing was dropped keeps the identity
+  // checks in `update` paths meaningful and costs nothing in the common case.
+  return dropped ? out : cfg;
+}
+
 export function featureRegistration(
   name: string
 ): FeatureRegistration<never> | undefined {

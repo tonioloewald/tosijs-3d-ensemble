@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { validate } from "./validate.js";
 import { registerFeature, unregisterFeature } from "./registry.js";
 import { registerCheck } from "./validate.js";
-import type { Ensemble } from "./types.js";
+import type { Ensemble, Vec3 } from "./types.js";
 
 const minimal = (over: Partial<Ensemble> = {}): Ensemble => ({
   name: "test",
@@ -349,5 +349,87 @@ describe("an unchecked mesh set says so", () => {
       pieces: [{ id: "sky", at: [0, 0, 0], features: { skybox: {} } }],
     } as unknown as Ensemble;
     expect(codes(sky, { checkRegistry: false, meshes: undefined })).toEqual([]);
+  });
+});
+
+describe("a PARTIAL library mount is 'cannot check', not 'checked'", () => {
+  /*
+    The 0.3.0 review's M2, and the hole was in the honesty warning itself.
+
+    `meshesByLibrary` only adds an entry for a library that RETURNED names, so
+    one slow or 404ing kit out of several yields a non-empty Map — which read
+    as "checkable", so no warning was emitted and every mesh from the missing
+    kit came back as a hard `unknown-mesh` ERROR. That is the false accusation
+    the whole skip exists to prevent, arriving through the door marked checked.
+
+    `static/ensembles/city-block.json` is a shipped four-library ensemble whose
+    twenty pieces are all library-qualified.
+  */
+  const twoLibraries = {
+    name: "block",
+    libraries: [
+      { name: "kit-a", url: "/a.glb" },
+      { name: "kit-b", url: "/b.glb" },
+    ],
+    pieces: [
+      { id: "one", library: "kit-a", mesh: "wall", at: [0, 0, 0] as Vec3 },
+      { id: "two", library: "kit-b", mesh: "barrel", at: [1, 0, 0] as Vec3 },
+    ],
+  };
+  // Only kit-a answered.
+  const partial = new Map([["kit-a", new Set(["wall"])]]);
+
+  it("warns, and names the library that did not answer", () => {
+    const problems = validate(twoLibraries, {
+      meshes: partial,
+      libraries: ["kit-a", "kit-b"],
+    });
+    const warning = problems.find((p) => p.code === "meshes-unchecked");
+    expect(warning?.severity).toBe("warning");
+    expect(warning?.message).toContain('"kit-b"');
+    // And it must NOT name the one that answered perfectly well.
+    expect(warning?.message).not.toContain('"kit-a"');
+  });
+
+  it("does not accuse a mesh that lives in the kit which never arrived", () => {
+    const problems = validate(twoLibraries, {
+      meshes: partial,
+      libraries: ["kit-a", "kit-b"],
+    });
+    expect(problems.filter((p) => p.code === "unknown-mesh")).toEqual([]);
+  });
+
+  it("an UNQUALIFIED piece is not checked against a partial union either", () => {
+    // The union of mounted libraries is only a valid answer once every
+    // declared library has answered: a mesh missing from it may simply live in
+    // the kit that has not arrived.
+    const problems = validate(
+      { ...twoLibraries, pieces: [{ id: "p", mesh: "barrel", at: [0, 0, 0] as Vec3 }] },
+      { meshes: partial, libraries: ["kit-a", "kit-b"] }
+    );
+    expect(problems.filter((p) => p.code === "unknown-mesh")).toEqual([]);
+  });
+
+  it("STILL reports a typo once every library has answered", () => {
+    /*
+      The companion. Without it the fix could pass by never checking anything
+      again — trading a false accusation for a silence, which is the failure
+      one layer down and the reason `meshes-unchecked` exists at all.
+    */
+    const full = new Map([
+      ["kit-a", new Set(["wall"])],
+      ["kit-b", new Set(["barrel"])],
+    ]);
+    const problems = validate(
+      {
+        ...twoLibraries,
+        pieces: [
+          { id: "p", library: "kit-b", mesh: "barrle", at: [0, 0, 0] as Vec3 },
+        ],
+      },
+      { meshes: full, libraries: ["kit-a", "kit-b"] }
+    );
+    expect(problems.some((p) => p.code === "unknown-mesh")).toBe(true);
+    expect(problems.some((p) => p.code === "meshes-unchecked")).toBe(false);
   });
 });

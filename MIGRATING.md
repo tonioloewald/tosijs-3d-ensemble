@@ -67,14 +67,14 @@ indistinguishable from a built-in — Manta registering its own is that property
 being exercised, not a gap being filled:
 
 ```ts
-import { registerFeature } from "tosijs-3d-ensemble";
+import { registerFeature } from 'tosijs-3d-ensemble';
 
 registerFeature({
-  name: "radar",
-  icon: "📡",
+  name: 'radar',
+  icon: '📡',
   schema: {
-    type: "object",
-    title: "Radar",
+    type: 'object',
+    title: 'Radar',
     properties: {
       /* … */
     },
@@ -89,8 +89,8 @@ registerFeature({
 
 ```ts
 // was
-import { validatePrefab, type Prefab } from "./prefab";
-import { buildPrefab } from "./prefab-runtime";
+import { validatePrefab, type Prefab } from './prefab';
+import { buildPrefab } from './prefab-runtime';
 
 // now
 import {
@@ -98,8 +98,8 @@ import {
   buildEnsemble,
   registerSceneFeatures,
   type Ensemble,
-} from "tosijs-3d-ensemble";
-import { registerCombatPreset } from "tosijs-3d-ensemble/presets/combat";
+} from 'tosijs-3d-ensemble';
+import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat';
 
 registerSceneFeatures(); // sun, sky, ground, terrain, water, lamp…
 registerCombatPreset(); // destroyable, turret, launcher, protector, blip,
@@ -113,12 +113,12 @@ since it was written from them.
 ### Building one
 
 ```js
-import { buildEnsemble, placeMesh } from "tosijs-3d-ensemble";
+import { buildEnsemble, placeMesh } from 'tosijs-3d-ensemble';
 
 const built = buildEnsemble(ensemble, {
   scene, // <tosi-b3d>
   origin, // where the ensemble's local origin sits
-  library: "enemies", // fallback for pieces that name no library of their own
+  library: 'enemies', // fallback for pieces that name no library of their own
   placePiece: placeMesh, // ⚠️ REQUIRED for any ensemble with meshes
 });
 ```
@@ -133,6 +133,27 @@ load, while `buildEnsemble` imports cleanly under plain Node — which is what
 lets a generator validate and build headlessly. So the DOM dependency is yours
 to declare. Omitting it now reports `no-placer`, and a piece the placer
 declines reports `no-body`.
+
+⚠️ **Headless means the DEEP import.** A generator with no browser writes:
+
+```typescript
+import { buildEnsemble } from 'tosijs-3d-ensemble/runtime/build';
+import { validate } from 'tosijs-3d-ensemble/format/validate';
+```
+
+The package's main entry also exports `ensembleEditor`, a custom element, so
+evaluating the barrel needs `HTMLElement` and throws under Node. Tree-shaking
+saves a bundler; a plain `import()` evaluates the whole module graph. In a
+browser or through a bundler, import from `'tosijs-3d-ensemble'` as usual.
+
+⚠️ **Three problem codes are new, and two are errors.** `no-placer` and
+`no-body` report at severity `error`, and `meshes-unchecked` as a warning — so a
+document that validated clean under 0.2.0 can report problems under 0.3.0
+without having changed. Each of them is a silence being broken rather than a
+new rule: the old behaviour is what let a build report "20 of 20 built, zero
+problems" with nothing in the scene. If your gate is
+`problems.some((p) => p.severity === 'error')`, expect it to fire on a build
+that never passed `placePiece`.
 
 Two differences worth knowing:
 

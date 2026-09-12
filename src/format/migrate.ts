@@ -79,6 +79,36 @@ export function slugify(name: string): string {
  * Returns a NEW document plus what changed; the input is not mutated, because a
  * caller may be migrating a file it also intends to diff against.
  */
+/**
+ * The scene-primitive vocabularies this migration rewrites AGAINST.
+ *
+ * ⚠️ **Hand-copied, and that is exactly what 0.3.0 stopped doing everywhere
+ * else.** `features-scene.ts` now takes every range, unit, enum and scale from
+ * tosijs-3d's `sceneSchemas`, because hand-copying drifted in every direction
+ * at once and every drift was silent. These three are the same vocabulary, in
+ * the one module that must NOT import `sceneSchemas` — `src/format/` is the
+ * engine-free kernel, pinned by `tree-shaking.test.ts`.
+ *
+ * So they are exported instead, and `src/runtime/migrate-vocabulary.test.ts`
+ * asserts they still equal upstream. Without that, an upstream addition makes
+ * the editor's picker offer a preset (the panel comes from `sceneSchemas`), an
+ * author sets it, and `migrate` rewrites the valid value back to `"motes"` —
+ * a migration destroying a setting and recording a note claiming the scene had
+ * been rendering `"motes"` all along, in a tool whose whole contract is to make
+ * a document SAY what it already DOES.
+ *
+ * Verified equal to tosijs-3d 0.8.1 when written.
+ */
+export const migrateVocabulary: {
+  AMBIENT_PRESETS: string[];
+  AMBIENT_WHERE: string[];
+  FOG_MODES: string[];
+} = {
+  AMBIENT_PRESETS: ["motes", "bubbles", "rain", "snow", "dust", "leaves"],
+  AMBIENT_WHERE: ["always", "underwater", "above"],
+  FOG_MODES: ["linear", "exp", "exp2"],
+};
+
 export function migrate(input: Ensemble): Migration {
   const changes: Change[] = [];
   const ensemble: Ensemble = structuredClone(input);
@@ -144,16 +174,7 @@ export function migrate(input: Ensemble): Migration {
     file already written, which is what this is for — the point of a migration
     is to make a document SAY what it already DOES.
   */
-  const AMBIENT_PRESETS = [
-    "motes",
-    "bubbles",
-    "rain",
-    "snow",
-    "dust",
-    "leaves",
-  ];
-  const AMBIENT_WHERE = ["always", "underwater", "above"];
-  const FOG_MODES = ["linear", "exp", "exp2"];
+  const { AMBIENT_PRESETS, AMBIENT_WHERE, FOG_MODES } = migrateVocabulary;
 
   pieces.forEach((piece, index) => {
     const features = piece.features as

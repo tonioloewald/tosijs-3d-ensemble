@@ -41,6 +41,7 @@ console. Every element this module creates is appended explicitly.
 /*{"parent":"Runtime","order":1}*/
 import { featuresOf } from "../format/roles.js";
 import {
+  declaredConfig,
   featureRegistration,
   linkPayload,
   linkRegistration,
@@ -93,6 +94,14 @@ export interface BuildOptions {
    * which needs a DOM at module load — while `build.js` imports cleanly under
    * plain Node today, which is what lets a generator validate and build
    * headlessly. So the DOM dependency is the caller's to declare.
+   *
+   * ⚠️ **The deep import, not the barrel.** A generator writes
+   * `from 'tosijs-3d-ensemble/runtime/build'`; the package's main entry also
+   * exports `ensembleEditor`, a custom element, so evaluating it needs
+   * `HTMLElement` and throws under Node. Tree-shaking saves a bundler — a
+   * plain `import()` evaluates the whole graph. Pinned in
+   * `src/node-import.test.ts`, because this is the v0.1.3 failure's shape and
+   * every deep-import test was green that time too.
    *
    * Omitting it is no longer silent: a piece that names a mesh and ends with no
    * body is reported as `no-placer` (nothing was supplied) or `no-body` (the
@@ -293,7 +302,13 @@ export function buildEnsemble(
       // in the editor the author is mid-edit, and a half-built scene they can
       // see beats an empty one they cannot diagnose.
       try {
-        const handle = reg.bind(piece, cfg, ctx);
+        /*
+          NARROWED TO WHAT THE SCHEMA DECLARES. A feature's config comes
+          straight out of a JSON document that may have been shared, and ten of
+          the scene features hand it to an element as `{...cfg}` — where an
+          undeclared key lands as a DOM property. See `declaredConfig`.
+        */
+        const handle = reg.bind(piece, declaredConfig(reg, cfg), ctx);
         built.handles.set(name, handle);
         if (isBody(name) && isElement(handle)) built.element = handle;
         bound.push({ built, feature: name, ctx });
@@ -355,8 +370,10 @@ export function buildEnsemble(
         ⚠️ `placePiece` DOES NOT DEFAULT to `placeMesh`, though this file's own
         doc comment claimed it did for as long as the option has existed. It
         cannot: `placeMesh` imports tosijs-3d, which needs a DOM at module
-        load, and `build.js` is importable under plain Node today — measured —
-        which is what lets a generator validate and build headlessly. Every
+        load, and `build.js` is importable under plain Node today — measured,
+        via the DEEP import `tosijs-3d-ensemble/runtime/build`, since the
+        barrel carries the editor and needs a DOM — which is what lets a
+        generator validate and build headlessly. Every
         call site in this repo passes `placePiece` explicitly and every test
         stubs it, so nothing here could ever have noticed the default was a
         sentence in a comment.
@@ -364,7 +381,7 @@ export function buildEnsemble(
       problems.push({
         severity: "error",
         code: "no-placer",
-        message: `${bodiless.length} piece(s) name a mesh and nothing placed them: no "placePiece" was supplied. It does NOT default — pass \`placePiece: placeMesh\` from this package. (buildEnsemble stays DOM-free so a generator can import it under Node; placeMesh is the part that knows about tosijs-3d.)`,
+        message: `${bodiless.length} piece(s) name a mesh and nothing placed them: no "placePiece" was supplied. It does NOT default — pass \`placePiece: placeMesh\` from this package. (buildEnsemble stays DOM-free so a generator can import it under Node from "tosijs-3d-ensemble/runtime/build"; placeMesh is the part that knows about tosijs-3d.)`,
         path: "/pieces",
       });
     } else {
@@ -419,10 +436,15 @@ export function buildEnsemble(
       if (!reg) continue;
       try {
         reg.bind(
-          (cfg && typeof cfg === "object" ? cfg : { value: cfg }) as Record<
-            string,
-            unknown
-          >,
+          // Same trust boundary as a piece's features: a link payload comes out
+          // of the same shared document.
+          declaredConfig(
+            reg,
+            (cfg && typeof cfg === "object" ? cfg : { value: cfg }) as Record<
+              string,
+              unknown
+            >
+          ),
           {
             link,
             from: pieces.get(link.from),

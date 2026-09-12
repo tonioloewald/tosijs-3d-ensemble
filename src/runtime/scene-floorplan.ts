@@ -184,14 +184,46 @@ export function floorplanDiff(
       });
       continue;
     }
-    for (let i = 0; i < olds.length; i++) {
-      const o = olds[i]!;
-      const n = news[i]!;
-      if (far(o.at, n.at)) {
-        changes.push({ name, kind: "moved", before: o.at, after: n.at });
-      } else if (far(o.size, n.size)) {
-        changes.push({ name, kind: "resized", before: o.size, after: n.size });
+    /*
+      PAIR BY POSITION, NOT BY INDEX.
+
+      `sceneFloorplan` sorts by NAME only, and `Array.sort` is stable, so
+      same-named records keep scene order — the ordering the comment above
+      calls non-visual and deliberately refuses to report on. Pairing
+      `olds[i]` with `news[i]` smuggled it straight back in: two barrels at
+      (0,0,0) and (10,0,0), created in the opposite order across a rebuild,
+      reported TWO `moved` changes for a pixel-identical picture.
+
+      That is the precise failure this module exists not to have. It is also
+      realistic here rather than theoretical: the draw list is post-cull,
+      library instances are created inside `lib.ready.then(...)` plus a render
+      observer retry, and `getNames()` strips `.model` and `_primitiveN`, which
+      makes same-name collisions MORE likely, not less.
+
+      So match each old record to an unclaimed new one at the same place first,
+      and only then treat what is left over as movement. Same count, same
+      positions, any order → no changes.
+    */
+    const unclaimed = news.slice();
+    const leftovers: FloorplanRecord[] = [];
+    for (const o of olds) {
+      const at = unclaimed.findIndex((n) => !far(o.at, n.at));
+      if (at === -1) {
+        leftovers.push(o);
+        continue;
       }
+      const n = unclaimed.splice(at, 1)[0]!;
+      // Same place: the only thing left that can differ is how big it is.
+      if (far(o.size, n.size))
+        changes.push({ name, kind: "resized", before: o.size, after: n.size });
+    }
+    // Whatever could not be matched in place genuinely moved. Pairing these by
+    // order is a guess, but it is a guess among records that all changed.
+    for (let i = 0; i < leftovers.length; i++) {
+      const o = leftovers[i]!;
+      const n = unclaimed[i];
+      if (!n) continue;
+      changes.push({ name, kind: "moved", before: o.at, after: n.at });
     }
   }
   for (const [name] of b) {

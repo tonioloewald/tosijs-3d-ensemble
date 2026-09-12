@@ -41,6 +41,11 @@ export default defineSiteConfig({
     "SPEC.md",
     "PLAN.md",
     "UPSTREAM.md",
+    // The adopter's FIRST code, shipped in the npm tarball and — until 0.3.0 —
+    // parsed by nothing. Its examples went unchecked, and `prettier --check`
+    // failed on a double-quoted import specifier, the exact spelling
+    // tosijs-ui's live-example parser rejects (tosijs-ui#141).
+    "MIGRATING.md",
   ],
   bundleEntry: "./demo/site.ts",
   staticDirs: ["static"],

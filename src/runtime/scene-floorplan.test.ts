@@ -163,3 +163,42 @@ describe("floorplanDiff", () => {
     ]);
   });
 });
+
+describe("same-named meshes are paired by PLACE, not by order", () => {
+  /*
+    The 0.3.0 review's M4. `sceneFloorplan` sorts by name only and `Array.sort`
+    is stable, so same-named records keep SCENE order — which the module's own
+    comment calls non-visual and refuses to report on. Pairing by index put it
+    straight back: a pixel-identical picture reported two `moved` changes.
+  */
+  const rec = (name: string, at: [number, number, number]) => ({
+    name,
+    at,
+    size: [1, 1, 1] as [number, number, number],
+  });
+
+  it("reports nothing when two barrels swap creation order", () => {
+    const before = [rec("barrel", [0, 0, 0]), rec("barrel", [10, 0, 0])];
+    const after = [rec("barrel", [10, 0, 0]), rec("barrel", [0, 0, 0])];
+    expect(floorplanDiff(before, after)).toEqual([]);
+  });
+
+  it("still reports a barrel that genuinely moved", () => {
+    // The companion. Without it the fix could pass by reporting nothing ever,
+    // which is the failure mode one layer down from the one it repairs.
+    const before = [rec("barrel", [0, 0, 0]), rec("barrel", [10, 0, 0])];
+    const after = [rec("barrel", [0, 0, 0]), rec("barrel", [10, 0, 5])];
+    const changes = floorplanDiff(before, after);
+    expect(changes).toEqual([
+      { name: "barrel", kind: "moved", before: [10, 0, 0], after: [10, 0, 5] },
+    ]);
+  });
+
+  it("reports a resize at an unchanged place", () => {
+    const before = [rec("crate", [0, 0, 0])];
+    const after = [{ ...rec("crate", [0, 0, 0]), size: [2, 1, 1] as [number, number, number] }];
+    expect(floorplanDiff(before, after)).toEqual([
+      { name: "crate", kind: "resized", before: [1, 1, 1], after: [2, 1, 1] },
+    ]);
+  });
+});

@@ -51,3 +51,9 @@ static/*.glb
 docs.last-good/
 test-results/
 playwright-report/
+
+# Written into the repo root by tosijs-ui's dev server, so `bun start` and
+# the Playwright webServer both dirty it mid-release. Nothing reads it, and a
+# stale `passed: 6, failed: 0` standing in for a gate that no longer runs is
+# worse than no file — see tosijs-ui#158.
+.browser-tests.json

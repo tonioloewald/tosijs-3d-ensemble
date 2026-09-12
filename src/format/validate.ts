@@ -161,6 +161,25 @@ export function validate(
     }
   });
 
+  /*
+    WHICH DECLARED LIBRARIES DID NOT ANSWER.
+
+    `meshesByLibrary` only adds an entry for a library that returned names, so
+    a two-library ensemble with one slow or 404ing kit yields a Map of size 1 —
+    non-empty, therefore "checkable", therefore no warning. Everything that
+    lives in the missing kit is then reported `unknown-mesh` at severity ERROR:
+    the exact false accusation the skip exists to prevent, arriving through the
+    door marked checked.
+
+    `city-block.json` is a shipped four-library ensemble whose twenty pieces are
+    all library-qualified, so one slow kit filled the panel with errors about
+    perfectly good content.
+  */
+  const missing =
+    meshes instanceof Map
+      ? (askedFor ?? []).filter((name) => !meshes.get(name)?.size)
+      : [];
+
   const knownMeshes = (library?: string): Set<string> | undefined => {
     if (!meshes) return undefined;
     /*
@@ -177,7 +196,13 @@ export function validate(
       const named = meshes.get(library);
       return named?.size ? named : undefined;
     }
-    // No qualifier: the mesh may come from any mounted library.
+    /*
+      No qualifier: the mesh may come from any mounted library — so the union
+      is only a valid answer once EVERY declared library has answered. While
+      one is missing, a mesh absent from the union may simply live in the kit
+      that has not arrived, and "cannot check" is the only honest reading.
+    */
+    if (missing.length) return undefined;
     const all = new Set<string>();
     for (const names of meshes.values()) for (const n of names) all.add(n);
     return all.size ? all : undefined;
@@ -444,14 +469,16 @@ export function validate(
     libraries to derive from — it is the ONLY thing to do. That is exactly the
     caller who most needs telling that this document went unchecked.
   */
-  const unchecked =
-    !meshes || (meshes instanceof Set ? meshes.size === 0 : meshes.size === 0);
+  const unchecked = !meshes || meshes.size === 0 || missing.length > 0;
   if (unchecked && (ensemble.pieces ?? []).some((piece) => piece?.mesh)) {
     problems.push({
       severity: "warning",
       code: "meshes-unchecked",
-      message: askedFor?.length
-        ? `mesh names were NOT validated: no mounted library answered for ${askedFor
+      message: (missing.length ? missing : askedFor)?.length
+        ? `mesh names were NOT validated: no mounted library answered for ${(missing.length
+            ? missing
+            : askedFor!
+          )
             .map((name) => `"${name}"`)
             .join(", ")}. A typo'd mesh will not be reported until one does.`
         : `mesh names were NOT validated: no "meshes" set was supplied, so there is nothing to check them against. A typo'd mesh name will pass silently.`,

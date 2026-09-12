@@ -132,3 +132,84 @@ describe("a schema dispatches to the right widget", () => {
     expect(built.length).toBe(2);
   });
 });
+
+/*
+  WHAT WAS BOUND, NOT WHAT COULD HAVE BEEN — the 0.3.0 release blocker.
+
+  The editor skips its own write for a bound field, because a bound widget has
+  already written through its box. It decided that by re-deriving the rule from
+  `boundIfSet`, which answers "is there a box for this key" — not "did the
+  widget use one". Those agreed by inspection until a branch received a box it
+  could not use: `ui.inputField` types `value` as `string`, so the string and
+  colour branch never binds.
+
+  Result: every already-set string or colour wrote NOTHING. The editor declined
+  because a box existed; the widget never wrote through it; no error. Ten fields
+  across the registered scene schemas, two of them set by shipped samples on
+  open — which is the whole of "strings are editable now, including colours".
+
+  So the fact is reported out of the call rather than recomputed, and these
+  tests assert the REPORT, which is what the guard now reads.
+*/
+describe("schemaWidgets reports which keys it actually bound", () => {
+  const boundFor = (
+    properties: Record<string, unknown>,
+    values: Record<string, unknown>
+  ) => {
+    const boundKeys = new Set<string>();
+    schemaWidgets({
+      schema: { properties },
+      values,
+      handleChange: () => {},
+      box,
+      boundKeys,
+    } as never);
+    return boundKeys;
+  };
+
+  it("does NOT claim a set string, because the field cannot bind one", () => {
+    // The blocker in one assertion. `texture` is set, so `boundIfSet` answers
+    // with a box — and the widget still writes through `handleChange`, so the
+    // caller must not skip it.
+    const bound = boundFor(
+      { texture: { type: "string" } },
+      { texture: "/grid-10.svg" }
+    );
+    expect(bound.has("texture")).toBe(false);
+  });
+
+  it("does NOT claim a set colour either", () => {
+    // `light.diffuse` and `ground.texture` are both set by shipped samples.
+    const bound = boundFor(
+      { diffuse: { type: "string", format: "color" } },
+      { diffuse: "#ffeedd" }
+    );
+    expect(bound.has("diffuse")).toBe(false);
+  });
+
+  it("DOES claim a set number, which binds for real", () => {
+    // The companion that stops the assertions above passing vacuously: if
+    // nothing were ever reported, the guard would never fire and every bound
+    // widget would double-write — the bug this guard exists to prevent.
+    const bound = boundFor(
+      { latitude: { type: "number", minimum: -90, maximum: 90 } },
+      { latitude: 40 }
+    );
+    expect(bound.has("latitude")).toBe(true);
+  });
+
+  it("DOES claim a set boolean", () => {
+    expect(
+      boundFor({ applyFog: { type: "boolean" } }, { applyFog: false })
+    ).toContain("applyFog");
+  });
+
+  it("claims nothing for a key the document has not set", () => {
+    // An unset field is unbound by design — it shows its default and writes
+    // through `handleChange`, gaining the key. The guard must not fire there
+    // either, and for a different reason.
+    expect(
+      boundFor({ latitude: { type: "number", minimum: -90 } }, {}).size
+    ).toBe(0);
+  });
+});

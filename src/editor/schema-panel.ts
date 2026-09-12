@@ -164,6 +164,25 @@ export interface SchemaPanelOptions {
    */
   box?: (key: string) => unknown;
   /**
+   * OUT: the keys whose widget actually ended up bound to a box.
+   *
+   * A caller that skips its own write for bound fields has to know which those
+   * are, and the only honest source is what happened here — a caller that
+   * re-derives the rule from `boundIfSet` is asserting that every branch which
+   * receives a box also USES it, and one branch does not.
+   *
+   * ⚠️ That is not hypothetical: `ui.inputField` types `value` as `string`, so
+   * the string/colour branch cannot bind at all. Re-deriving the rule made
+   * every already-set string and colour field a silent no-op — the caller
+   * declined to write because a box existed, and the widget never wrote
+   * through it. Ten fields across the scene schemas, including two that
+   * shipped samples set on open.
+   *
+   * Filled synchronously during the call, so it is complete before any widget
+   * callback can fire.
+   */
+  boundKeys?: Set<string>;
+  /**
    * A GESTURE finished — write it to the document, one undo step.
    *
    * Widgets with a drag report twice: `handleChange` continuously so the scene can
@@ -195,7 +214,8 @@ export const boundIfSet = (
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, handleChange, handleCommit, box } = options;
+  const { schema, values, handleChange, handleCommit, box, boundKeys } =
+    options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 
@@ -268,7 +288,17 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       through `handleChange` exactly as a tool option does, the document gains
       the key, and the next render binds it for real.
     */
-    const bound = boundIfSet(values, key, box);
+    const rawBound = boundIfSet(values, key, box);
+    /*
+      RECORD AT THE POINT OF USE. `bound` is a function, not a constant, so a
+      branch that does not call it does not get counted — which is the whole
+      distinction the caller needs and the one that got lost when the rule was
+      re-derived from `boundIfSet` alone.
+    */
+    const bound = () => {
+      if (rawBound !== undefined) boundKeys?.add(key);
+      return rawBound;
+    };
 
     /*
       WIDGETS THAT OWN A COMPOSITE, handed the whole field.
@@ -327,7 +357,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             is held locally. So one call site serves a bound document field and
             an unbound tool option without either knowing about the other.
           */
-          value: (bound as boolean | undefined) ?? value === true,
+          value: (bound() as boolean | undefined) ?? value === true,
           handleChange: (v: boolean) => handleChange(key, v),
         })
       );
@@ -339,7 +369,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
         select3d({
           label,
           value:
-            (bound as string | number | undefined) ??
+            (bound() as string | number | undefined) ??
             (value as string | number) ??
             spec.enum[0]!,
           options: spec.enum.map((option) => {
@@ -365,7 +395,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         slider3d({
           label,
-          value: (bound as number | undefined) ?? (Number(value) || 0),
+          value: (bound() as number | undefined) ?? (Number(value) || 0),
           min,
           max,
           step: spec.type === "integer" ? 1 : undefined,

@@ -113,7 +113,11 @@ import {
   type Beacon,
   type BeaconView,
 } from "./beacon-view.js";
-import { featureRegistration, registeredFeatures } from "../format/registry.js";
+import {
+  declaredConfig,
+  featureRegistration,
+  registeredFeatures,
+} from "../format/registry.js";
 import type { EditorRay } from "./input/pointer.js";
 import type { CatalogEntry, ToolContext } from "./tools/tool-registry.js";
 import { placeMesh } from "../runtime/place-mesh.js";
@@ -625,7 +629,10 @@ export class EnsembleEditor extends Component {
         if (
           !registration.update(
             handle as never,
-            now as Record<string, unknown>,
+            // Narrowed, exactly as `buildEnsemble` narrows a bind: the live
+            // update path reaches the same elements from the same document,
+            // and an allow-list applied on only one of two roads is not one.
+            declaredConfig(registration, now as Record<string, unknown>),
             piece
           )
         ) {
@@ -1477,7 +1484,12 @@ export class EnsembleEditor extends Component {
     if (generation !== this._loadGeneration) return; // superseded while fetching
     // The ensemble declares its own libraries; mount them before building so
     // pieces resolve to real meshes on the first pass rather than boxes.
-    if (this._scene) await mountLibraries(data, this._scene);
+    if (this._scene) {
+      // Idempotent, so this is a cheap re-check rather than a second mount:
+      // a load can arrive before the scene was ready enough to mount it.
+      this._mountAuthoredLibrary();
+      await mountLibraries(data, this._scene);
+    }
     if (generation !== this._loadGeneration) return; // superseded while mounting
     this.ensemble = data;
     // Belt and braces: `mountLibraries` waits, but a library mounted by some
@@ -1493,12 +1505,20 @@ export class EnsembleEditor extends Component {
     await this.handleSave?.(this._ensemble);
   }
 
-  /** Problems with the ensemble as it currently stands. */
+  /**
+   * Problems with the ensemble as it currently stands.
+   *
+   * ⚠️ Passes the MAP and the library list, not a flattened Set. Flattening
+   * threw away the per-library attribution, so a piece qualified
+   * `library: 'kit-b'` was checked against the union of whatever happened to be
+   * mounted — and while one of several kits was still loading, every mesh in it
+   * came back `unknown-mesh` at severity ERROR with no warning. The panel filled
+   * with accusations about perfectly good content; `city-block.json` is a
+   * shipped four-library ensemble that does exactly this.
+   */
   get problems() {
-    return validate(
-      this._ensemble,
-      this._meshNames() ? { meshes: this._meshNames()! } : {}
-    );
+    const known = this._meshesByLibrary();
+    return validate(this._ensemble, known ?? {});
   }
 
   /**
@@ -1539,14 +1559,28 @@ export class EnsembleEditor extends Component {
    * `libraryNames(ensemble, this.library)`, so the wait for this library was
    * written and correct. Only the mount was missing.
    */
-  private _mountAuthoredLibrary(): void {
+  /**
+   * The name the authored library mounts under — ONE definition.
+   *
+   * The mount and the palette computed this separately and disagreed on
+   * whitespace, which is the same two-expressions-of-one-rule shape that made
+   * every set string field a no-op. Once is the fix for both.
+   */
+  private _authoredLibraryName(): string {
     const url = this.libraryUrl.trim();
-    if (!url || !this._scene) return;
+    if (!url) return "";
     // A url with no `library` still names something: the basename is what an
     // author would write in a piece, and leaving it unnamed would mount a
     // catalogue nothing can address.
-    const name = this.library.trim() || basenameOf(url);
-    if (!name) return;
+    return this.library.trim() || basenameOf(url);
+  }
+
+  private _mountAuthoredLibrary(): void {
+    const url = this.libraryUrl.trim();
+    if (!url || !this._scene) return;
+    const name = this._authoredLibraryName();
+    if (!name || this._authoredLibraryMounted === `${name}\u0000${url}`) return;
+    this._authoredLibraryMounted = `${name}\u0000${url}`;
     void mountLibraries(
       { ...this._ensemble, libraries: [{ name, url }] },
       this._scene
@@ -1570,7 +1604,10 @@ export class EnsembleEditor extends Component {
   /** Every library the palette can offer: the ensemble's, plus the shelf. */
   private _availableLibraries(): string[] {
     const names = libraryNames(this._ensemble, this.library || undefined);
-    const authored = this.libraryUrl.trim() && basenameOf(this.libraryUrl);
+    // TRIMMED, like the mount. They disagreed: a url with whitespace mounted
+    // under one name and was offered under another, so the palette listed a
+    // library nothing could resolve against.
+    const authored = this._authoredLibraryName();
     if (authored && !names.includes(authored)) names.push(authored);
     for (const ref of this._shelf())
       if (!names.includes(ref.name)) names.push(ref.name);
@@ -1617,14 +1654,30 @@ export class EnsembleEditor extends Component {
 
   /** Every mesh name reachable, across the ensemble's libraries and any the
    *  page forced via the `library` attribute. */
-  private _meshNames(): Set<string> | null {
+  /**
+   * What each declared library answered with, and which ones were asked.
+   *
+   * `validate` needs both: the Map to check a qualified piece against the kit
+   * it names, and the list to notice that a declared kit answered with nothing
+   * — which is a partial mount, and therefore "cannot check" rather than
+   * "checked and these are all wrong".
+   */
+  private _meshesByLibrary(): {
+    meshes: Map<string, Set<string>>;
+    libraries: string[];
+  } | null {
     if (!this._scene) return null;
-    const byLibrary = meshesByLibrary(
-      this._scene,
-      libraryNames(this._ensemble, this.library || undefined)
-    );
+    const libraries = libraryNames(this._ensemble, this.library || undefined);
+    if (!libraries.length) return null;
+    return { meshes: meshesByLibrary(this._scene, libraries), libraries };
+  }
+
+  /** Every mesh name the scene can currently resolve, flattened. */
+  private _meshNames(): Set<string> | null {
+    const known = this._meshesByLibrary();
+    if (!known) return null;
     const all = new Set<string>();
-    for (const names of byLibrary.values())
+    for (const names of known.meshes.values())
       for (const name of names) all.add(name);
     return all.size ? all : null;
   }
@@ -1717,6 +1770,21 @@ export class EnsembleEditor extends Component {
     this._marker?.dispose();
     this._marker = null;
     this._backdrop.clear();
+    /*
+      MOUNT RECORDS ARE SCENE STATE, so they die with the scene.
+
+      Both of these say "a `<tosi-b3d-library>` for this already exists". After
+      a disposal it does not: a re-parent hands us a brand new `<tosi-b3d>` with
+      a brand new Babylon scene, and everything cached from the old one is
+      rubbish — the lesson CLAUDE.md records from the DOM-move bug.
+
+      `_shelfMounted` was already missing here, which left the Insert palette
+      permanently empty after any scene disposal, with the spinner never shown
+      because nothing thought there was anything to load.
+    */
+    this._shelfMounted = false;
+    this._shelfLoading = 0;
+    this._authoredLibraryMounted = "";
   }
 
   private _stopWatchingDisposal: (() => void) | null = null;
@@ -3032,10 +3100,50 @@ export class EnsembleEditor extends Component {
         this._shelfLoading = 0;
         if (this.isConnected) this._renderChrome();
       });
-    // The mount above may resolve synchronously from cache, so redraw only if
-    // it did not — otherwise the spinner flashes for one frame.
-    if (this._shelfLoading && this.isConnected) this._renderChrome();
+    /*
+      ⚠️ NOT A DIRECT CALL — this runs INSIDE `_renderChrome`.
+
+      The only caller of `_mountShelf` is `_renderLibraryPalette`, which
+      `_renderChrome` calls; so re-rendering here re-entered the pass that was
+      already running. The inner render removed every panel, reset the stack
+      and rebuilt all five; control then returned to the OUTER
+      `_renderLibraryPalette`, which added its palette on top, and
+      `_renderProperties` added a second properties panel — seven panels, two
+      of them duplicates, for the whole shelf load. Worse, `_renderProperties`
+      does `this._detachFields?.()` before re-attaching, so the outer pass
+      detached the inner panel's field group: a visible property panel whose
+      inputs were wired to no keyboard, which is this project's own named
+      cardinal sin, in exactly the window the spinner exists to be honest
+      about. Deterministic, not racy, and live on the documented four-kit demo
+      the first time anyone opens Insert.
+
+      A microtask puts the redraw after the current pass completes. `isConnected`
+      is re-checked at that point rather than now, because the editor may be
+      gone by then.
+
+      The comment this replaces said the mount "may resolve synchronously from
+      cache" — `mountLibraries` is an `async function`, so its `.then` cannot
+      run before the next statement here. The guard was never about caching.
+    */
+    if (this._shelfLoading)
+      queueMicrotask(() => {
+        if (this.isConnected) this._renderChrome();
+      });
   }
+
+  /**
+   * The `name\u0000url` already mounted from `library` + `libraryUrl`.
+   *
+   * Makes `_mountAuthoredLibrary` idempotent so it can be called from more
+   * than one path without stacking library elements. Cleared on scene
+   * disposal, because the element it remembers goes with the scene.
+   *
+   * ⚠️ Read at MOUNT and on load, not on attribute change: setting
+   * `libraryUrl` on a live element does not mount anything today. The
+   * ensemble's own `libraries` are the live path; this prop is for a host
+   * configuring the editor up front, which is how the doc example uses it.
+   */
+  private _authoredLibraryMounted = "";
 
   private _shelfMounted = false;
   /** How many shelf kits are still arriving; `0` when none are. */
@@ -3735,9 +3843,26 @@ export class EnsembleEditor extends Component {
         this._changesPanelShape(name, key)
           ? undefined
           : boundIfSet(values, key, (k) => this._box(selected.id, name, k));
+      /*
+        WHAT WAS ACTUALLY BOUND, not what COULD have been.
+
+        `boxFor` answers "is there a box for this key"; the guard below needs
+        "did the widget use one". Those were the same rule expressed twice, and
+        they disagreed the moment a branch received a box it could not use:
+        `ui.inputField` types `value` as `string`, so every already-set string
+        and colour field wrote nothing at all — the guard declined, the widget
+        never wrote through the box, and there was no error. Ten fields across
+        the scene schemas; `standard-scene.json` and `pirate-cove.json` both
+        hit it on open.
+
+        `schemaWidgets` fills this synchronously, so it is complete before any
+        callback below can fire.
+      */
+      const boundKeys = new Set<string>();
       const widgets = schemaWidgets({
         schema: registration.schema,
         values,
+        boundKeys,
         /*
           BOUND, so the widget reads and writes the document itself and tosijs
           keeps it current. Nothing here re-renders to show a number.
@@ -3765,7 +3890,7 @@ export class EnsembleEditor extends Component {
           not cover.
         */
         handleChange: (key, value) => {
-          if (boxFor(key)) return;
+          if (boundKeys.has(key)) return;
           this.updateFeature(selected.id, name, key, value, undefined, true);
         },
         /*

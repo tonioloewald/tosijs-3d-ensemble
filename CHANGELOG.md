@@ -8,7 +8,7 @@ All notable changes to this project are documented here, in
 A **minor**: the peer floor moved, which is a decision about who gets broken
 (`src/peer-range.test.ts`).
 
-### ⚠️ Breaking — the peer floor moved
+### ⚠️ Breaking
 
 - **`tosijs-3d` is now `^0.8.1`** (was `^0.7.8`) and **`tosijs` is `^1.10.1`**
   (was `^1.7.8`). Both are floors we develop against, not versions we merely
@@ -19,44 +19,18 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   whose old spelling is removed in 0.9. Sitting on the old floor only makes the
   same migration bigger later.
 
-### Fixed
+- **`validate` and `buildEnsemble` report problems on documents that used to
+  come back clean.** Three new codes: `no-placer` and `no-body` at severity
+  **error**, `meshes-unchecked` as a warning. All three are honesty fixes — the
+  old silence is what let manta-recon see "20 of 20 built, zero problems" and
+  no geometry — but a consumer whose gate is
+  `problems.some((p) => p.severity === 'error')`, which is the DOCUMENTED gate,
+  behaves differently on upgrade.
 
-- **An attribute that had no type, for as long as it has existed.** tosijs
-  1.10.0 removed `Component`'s `[key: string]: any` index signature
-  (tosijs#36), which propagated to every subclass and made any misspelling on
-  `this` compile. One thing fell out of it here: `seabed` is in the editor's
-  `initAttributes` and never got a matching `declare` line, so `this.seabed`
-  typed as `any`.
-
-  Nothing was broken at runtime — but the same omission on a name that did NOT
-  exist would have compiled just as quietly, which is the worst shape a type
-  error can have: the tool that exists to catch it reports success.
-
-  Both components now type their attributes FROM the values, so there is no
-  second declaration to drift:
-
-  ```ts
-  export interface EnsembleEditor
-    extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
-  ```
-
-  ⚠️ Not `withAttributes()`, which is what tosijs's own migration note
-  recommends. Its return type is not nameable from `'tosijs'`, so declaration
-  emit fails with TS2742 and `bun run build` refuses — filed as tosijs#38,
-  already fixed upstream and unpublished. `bun run build` running the SECOND
-  typecheck is the only reason we know; `bun run typecheck` passes either way.
-
-- **The peer-floor test guarded one peer of three.** It has said since 0.1.0
-  that we develop against the FLOOR of the range we advertise — because that is
-  how 0.1.0 shipped a symbol its own range did not guarantee — and it only ever
-  checked `tosijs-3d`. Meanwhile the `tosijs` floor was raised by hand twice in
-  one day with nothing checking it, and `tosijs` is precisely the dependency
-  whose types we compile against.
-
-  It now loops over every peer, with an exemption list that must carry a
-  reason. It failed on its first run: the `tosijs` devDependency was a caret,
-  free to float above the floor on any install, exactly as the comment in that
-  file warns.
+  This sits in Breaking rather than in Fixed because that is where somebody
+  deciding whether to take the version will look. Nothing about a document
+  changed; what changed is what we are willing to say about it. See
+  MIGRATING.md.
 
 ### Added
 
@@ -130,7 +104,266 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   extent and fog mode/density, each read from the FILE rather than hard-coded so
   editing the sample cannot leave the test asserting history.
 
+- **The piece list is a filtered table with per-row actions.** One field
+  narrows hundreds of rows; a row's ⋯ offers Enable/Disable, Duplicate and
+  Delete.
+
+  The filter reaches the LIVE tables through `setFilter` rather than
+  re-rendering the panel, which is the whole reason the feature had to be
+  upstream (tosijs-3d#67, ours): re-rendering would discard the scroll
+  position, the selection and the focus index the table owns — and the field
+  itself, mid-word. Measured: filtering out the selected `flagship` left it
+  selected, and it came back when the filter cleared. Hiding is a view state.
+
+  Delete and Duplicate run the REGISTERED commands rather than reimplementing
+  them, so a consumer that replaces `delete` replaces it here too and the undo
+  entry reads the same however it was invoked.
+
+  ⚠️ **`kind: 'icon'` is deliberately NOT used**, though that is what we asked
+  #64 for. An icon column reads its value as an `iconGlyph` NAME, and our
+  feature icons are EMOJI — `registerFeature({ icon: '☀️' })` is the registry's
+  contract, and it is what lets a consumer's own feature appear in this list
+  with a glyph the editor never knew about. Names would make every consumer
+  register an SVG icon too, to gain nothing an author can see.
+
+- **The kit shelf says it is loading.** The insert palette opens listing
+  whatever is already mounted — usually the ensemble's own one library — and a
+  few seconds later silently became four. Nothing marked the gap, so the honest
+  reading of the first frame was "this kit is all there is" (tosijs-3d#60,
+  ours). Measured with cache-busted kit URLs: "loading 4 kits…" up from 1.0s to
+  2.0s, then gone. It clears on failure too — a spinner that never stops is a
+  lie about work still being done.
+
+- **The schema dispatch is pinned by test.** `x-widget: 'curve'` and
+  `'light-program'` have never run in this repo — the lamp hands its whole
+  `settings` field to `lightEditor3d`, so the nested curves never reach the
+  dispatch. They are not dead code: they are the receiving end of a contract,
+  and the first schema to use one will come from OUTSIDE (a consumer's feature,
+  or tosijs-3d's `provinceClimateSchema()`, whose three channels are curves
+  today). That is exactly the arrangement where a broken branch is found by
+  somebody else, months later, as "the panel shows a label where a curve should
+  be".
+
+- **Strings are editable, including colours.** This branch rendered a muted
+  label — "show the value rather than hide the field", pending the SVG
+  keyboard. The keyboard has been available since 0.7.4 and the label stayed,
+  so every string property in every scene feature was read-only:
+  `ground.texture`, `water.normalMap`, `clouds.model`, and — once we adopted
+  tosijs-3d's own scene schemas — seven colour fields, four on the sky alone.
+
+  ⚠️ A colour deserves better than a hex field and there is nothing to give it:
+  tosijs-3d has no colour control at all, and its own `skyboxSchema()` declares
+  four `format: 'color'` properties its widget set cannot edit. Filed as
+  tosijs-3d#72 rather than hand-rolled — a widget belongs to its owner.
+  `x-widget: "color"` is preserved so a picker drops in without touching a
+  schema.
+
+- **The format kernel is pinned as engine-free and DOM-free.** It has been true
+  in practice — `placePiece` deliberately does not default to `placeMesh` so
+  `build.js` imports under plain Node — but nothing was checking it, and the
+  layering question in #9 wants to build on it.
+
+  Measured: the format layer alone is six modules, 13.71 KB, zero Babylon, zero
+  tosijs-3d, zero DOM globals, and it validates a document under plain Node 22.
+
+  The existing "no engine binding" test could not have caught a regression: it
+  marks the engine EXTERNAL, so a format module importing tosijs-3d leaves an
+  untouched import statement and still passes its marker checks. The new
+  assertion looks for the import SPECIFIER, which is exactly what external
+  leaves behind — with a companion asserting a runtime placer DOES import
+  tosijs-3d, so it cannot pass vacuously.
+
+### Changed
+
+- **The sky's `realtimeScale` is a log slider with a zero stop, not a cycler.**
+  The named-decade enum (`Off / realtime / 10× / 1 min/s …`) stood in for a
+  control that could span 0..3600 and still reach zero, and 0.8.0's `slider3d`
+  has one (tosijs-3d#62, ours) — which is how upstream's own `skyboxSchema()`
+  already spells it. `schema-panel` reads `x-zero-stop`. A still sky is still
+  the default, because an ensemble is a static description and has to be
+  reproducible.
+
+- **Callbacks passed to tosijs-3d widgets are `handleX`.** `handleChange`,
+  `handleSelect`, `handleClick`, `handleCommit` — at every call site in
+  `ensemble-editor.ts` and `schema-panel.ts`, and on `SchemaPanelOptions`
+  itself, which is ours.
+
+  Both spellings work through tosijs-3d 0.8.x and `onX` is removed in 0.9, so
+  this is not urgent — but a _half_-migrated codebase is what caused three of
+  the bugs 0.8.0 fixed upstream, where one widget took `handleChange` and its
+  neighbour took `onChange` and neither complained about the other. Renaming
+  ours too means there is no longer a spelling question to get wrong.
+
+- **`scene.whenDisposed` is no longer optional-chained.** It was written before
+  the method existed (tosijs-3d#22), and `?.()` meant a missing method left the
+  editor silently never observing scene disposal — precisely the failure the
+  callback exists to prevent, arriving as nothing at all. The peer floor now
+  guarantees it.
+
+- **`src/editor/tosi-store.test.ts` asserts the FIXED behaviour of a held
+  proxy.** tosijs 1.9.2 fixed tosijs#35 (ours): `.value`, `valueOf()` and
+  `toJSON()` follow the path now instead of returning the object the proxy was
+  created over. The test pinned the bug, so the upgrade is what failed it —
+  which is what a test like that is for. `_store` stays a getter.
+
+- **The licence is Apache-2.0, and there is now a file.** `package.json` said
+  `MIT` and no `LICENSE` shipped at all — which is neither of the two things a
+  licence has to be: present, and the same as the rest of the ecosystem.
+  `tosijs`, `tosijs-ui` and `tosijs-3d` are all Apache-2.0. Caught by the
+  mechanical release gate, and the canonical Apache text is used rather than a
+  reworded one.
+
+- **`peer-range` exemptions now carry a reason, and `@babylonjs/core` has one**
+  — tosijs-3d owns that range and we only re-declare it, so the floor rule that
+  applies to `tosijs` and `tosijs-3d` would be a false positive here.
+
 ### Fixed
+
+- **Editing an already-set string or colour property wrote NOTHING.** Found by
+  the pre-release review and the reason it returned BLOCK — it is the release's
+  own headline editor entry, "strings are editable now, including colours".
+
+  `ui.inputField` types `value` as `string`, so the string/colour branch cannot
+  bind a box. The editor, meanwhile, skipped its own write whenever a box
+  EXISTED for the key — a rule it re-derived from `boundIfSet` rather than
+  learning from the widget. The two agreed by inspection until a branch got a
+  box it could not use: guard declines, widget never writes through it, no
+  error. Ten fields across the registered scene schemas, and shipped samples
+  hit it on open (`standard-scene.json` sets `ground.texture`,
+  `pirate-cove.json` sets `light.diffuse`). Unset fields wrote once, then died
+  at the next panel rebuild.
+
+  ⚠️ **This is the same defect as "unbinding those fields stopped them writing
+  at all" above, in the other direction, and the comment written at the time
+  named re-deriving the rule as the cause.** It got re-derived anyway. So
+  `schemaWidgets` now REPORTS the keys it actually bound, through a
+  `boundKeys` set it fills as each branch uses its box, and the guard reads
+  that fact instead of recomputing the rule.
+
+- **A feature's config was written verbatim onto DOM elements, so an ensemble
+  file could execute script in the host page.** Ten of thirteen scene features
+  hand their config to an element as `{...cfg}` or through `updateAttrs`, and a
+  tosijs element creator applies unknown keys as PROPERTIES. Confirmed
+  executing in real Chromium:
+
+  ```text
+  b3dLight({ intensity: 0.9, innerHTML: '<img src=x onerror=…>' })
+    -> <tosi-b3d-light><img src="x" onerror="…"></tosi-b3d-light>
+  ```
+
+  Nothing gated it: `parseEnsemble` is `JSON.parse` plus `Array.isArray`,
+  `validate` checks only that the feature NAME is registered, and no schema set
+  `additionalProperties`. Opening a file somebody shared ran script in the
+  page's origin — which holds every `ensemble:*` draft, and the host app's
+  session wherever `<tosi-ensemble>` is embedded. Latent since 0.2.0; what
+  changed is that this release made scene features the documented authoring
+  surface.
+
+  `declaredConfig` narrows a config to the keys its schema declares, applied on
+  all three roads from document to element: `bind`, link `bind`, and the
+  editor's live `update`. An ALLOW-list, because the set of dangerous property
+  names is not enumerable — `innerHTML`, `outerHTML`, `srcdoc`, every `on*`,
+  and whatever an element adds next. The schema is already the exact list of
+  what a feature accepts, so a key outside it is one no author could have set
+  through the editor either. `src/runtime/hostile-input.test.ts` is its
+  anti-vacuity companion, confirmed to fail without the filter.
+
+- **A PARTIAL library mount read as "checked", and accused good content.**
+  `meshesByLibrary` only records a library that ANSWERED, so one slow or
+  404ing kit out of several left a non-empty Map — therefore checkable,
+  therefore no `meshes-unchecked` warning — and every mesh in the missing kit
+  came back `unknown-mesh` at severity **error**. The exact false accusation
+  the skip exists to prevent, arriving through the door marked checked.
+  `city-block.json` is a shipped four-library ensemble that does this.
+
+  The hole was in the honesty warning added earlier in this same release. It is
+  per-library now: a declared library that answered with nothing is named in
+  the warning, and the union fallback for unqualified pieces is suppressed
+  while any declared library is still missing. The editor passes the MAP and
+  the library list rather than a flattened Set, which had thrown away the
+  attribution that makes a qualified piece checkable at all.
+
+- **`_renderChrome()` re-entered itself on the Insert tool.** `_mountShelf()`
+  runs inside `_renderLibraryPalette`, which `_renderChrome` calls — so the
+  redraw it fired rebuilt the panel stack mid-pass. Seven panels, palette and
+  properties doubled, for the whole shelf load; and because `_renderProperties`
+  detaches the field group before re-attaching, the outer pass detached the
+  inner panel's keyboard: **a visible property panel whose inputs were wired to
+  nothing**, in exactly the window the new spinner exists to be honest about.
+  Deterministic rather than racy, and live on the documented four-kit demo.
+  Deferred to a microtask. The comment claiming the mount "may resolve
+  synchronously from cache" described something an `async function` cannot do.
+
+- **`floorplanDiff` paired same-named meshes by array index**, so two barrels
+  swapping creation order across a rebuild reported two `moved` changes for a
+  pixel-identical picture — in the module whose entire selling point is
+  non-flaky signal. `sceneFloorplan` sorts by name only and `Array.sort` is
+  stable, so same-named records keep scene order, which the module's own
+  comment calls non-visual and refuses to report on. It matches by PLACE first
+  now; only what cannot be matched in place is movement.
+
+- **Scene-derived mount records survived a scene disposal.** `_shelfMounted`
+  was never cleared in `_onSceneDisposed`, so after any disposal the Insert
+  palette stayed permanently empty — with no spinner, because nothing thought
+  there was anything to load. A re-parent hands us a brand new `<tosi-b3d>`
+  with a brand new Babylon scene, and everything cached from the old one is
+  rubbish; that lesson was recorded for `_sceneReady` and not applied here.
+
+- **The barrel does not import under Node, and this release had started saying
+  it does.** `node -e "import('./dist/index.js')"` throws
+  `ReferenceError: HTMLElement is not defined`, because the entry exports
+  `ensembleEditor` — a custom element — and evaluating it needs a DOM.
+  `dist/runtime/build.js` and `dist/format/validate.js` both import fine, which
+  is what `placePiece` not defaulting actually buys.
+
+  **Same shape as v0.1.3** ("the published package could not be imported by
+  Node at all"), and it recurred because every deep-import test was green both
+  times. The docs now name the deep import a generator should use, and
+  `src/node-import.test.ts` pins all three facts — including that the barrel
+  does NOT import, so nobody "fixes" that by moving the editor into a game's
+  runtime.
+
+- **`libraryUrl` computed its library name twice and disagreed on whitespace**,
+  so a url with spaces mounted under one name and was offered in the palette
+  under another. One definition now. (Both halves were added earlier in this
+  same release; the review caught them within the hour.)
+
+- **An attribute that had no type, for as long as it has existed.** tosijs
+  1.10.0 removed `Component`'s `[key: string]: any` index signature
+  (tosijs#36), which propagated to every subclass and made any misspelling on
+  `this` compile. One thing fell out of it here: `seabed` is in the editor's
+  `initAttributes` and never got a matching `declare` line, so `this.seabed`
+  typed as `any`.
+
+  Nothing was broken at runtime — but the same omission on a name that did NOT
+  exist would have compiled just as quietly, which is the worst shape a type
+  error can have: the tool that exists to catch it reports success.
+
+  Both components now type their attributes FROM the values, so there is no
+  second declaration to drift:
+
+  ```ts
+  export interface EnsembleEditor
+    extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
+  ```
+
+  ⚠️ Not `withAttributes()`, which is what tosijs's own migration note
+  recommends. Its return type is not nameable from `'tosijs'`, so declaration
+  emit fails with TS2742 and `bun run build` refuses — filed as tosijs#38,
+  already fixed upstream and unpublished. `bun run build` running the SECOND
+  typecheck is the only reason we know; `bun run typecheck` passes either way.
+
+- **The peer-floor test guarded one peer of three.** It has said since 0.1.0
+  that we develop against the FLOOR of the range we advertise — because that is
+  how 0.1.0 shipped a symbol its own range did not guarantee — and it only ever
+  checked `tosijs-3d`. Meanwhile the `tosijs` floor was raised by hand twice in
+  one day with nothing checking it, and `tosijs` is precisely the dependency
+  whose types we compile against.
+
+  It now loops over every peer, with an exemption list that must carry a
+  reason. It failed on its first run: the `tosijs` devDependency was a caret,
+  free to float above the floor on any install, exactly as the comment in that
+  file warns.
 
 - **A load was overtaken by the page's own `src`.** The mount defers, sets
   `_loadedSrc` and starts fetching — a guard about STARTING a load, not about
@@ -284,125 +517,6 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   mechanism_. The attribute was set, the element accepted it, the tests passed,
   and the turret aimed exactly where it would have with no `smart` at all.
 
-### Added
-
-- **The piece list is a filtered table with per-row actions.** One field
-  narrows hundreds of rows; a row's ⋯ offers Enable/Disable, Duplicate and
-  Delete.
-
-  The filter reaches the LIVE tables through `setFilter` rather than
-  re-rendering the panel, which is the whole reason the feature had to be
-  upstream (tosijs-3d#67, ours): re-rendering would discard the scroll
-  position, the selection and the focus index the table owns — and the field
-  itself, mid-word. Measured: filtering out the selected `flagship` left it
-  selected, and it came back when the filter cleared. Hiding is a view state.
-
-  Delete and Duplicate run the REGISTERED commands rather than reimplementing
-  them, so a consumer that replaces `delete` replaces it here too and the undo
-  entry reads the same however it was invoked.
-
-  ⚠️ **`kind: 'icon'` is deliberately NOT used**, though that is what we asked
-  #64 for. An icon column reads its value as an `iconGlyph` NAME, and our
-  feature icons are EMOJI — `registerFeature({ icon: '☀️' })` is the registry's
-  contract, and it is what lets a consumer's own feature appear in this list
-  with a glyph the editor never knew about. Names would make every consumer
-  register an SVG icon too, to gain nothing an author can see.
-
-- **The kit shelf says it is loading.** The insert palette opens listing
-  whatever is already mounted — usually the ensemble's own one library — and a
-  few seconds later silently became four. Nothing marked the gap, so the honest
-  reading of the first frame was "this kit is all there is" (tosijs-3d#60,
-  ours). Measured with cache-busted kit URLs: "loading 4 kits…" up from 1.0s to
-  2.0s, then gone. It clears on failure too — a spinner that never stops is a
-  lie about work still being done.
-
-- **The schema dispatch is pinned by test.** `x-widget: 'curve'` and
-  `'light-program'` have never run in this repo — the lamp hands its whole
-  `settings` field to `lightEditor3d`, so the nested curves never reach the
-  dispatch. They are not dead code: they are the receiving end of a contract,
-  and the first schema to use one will come from OUTSIDE (a consumer's feature,
-  or tosijs-3d's `provinceClimateSchema()`, whose three channels are curves
-  today). That is exactly the arrangement where a broken branch is found by
-  somebody else, months later, as "the panel shows a label where a curve should
-  be".
-
-- **Strings are editable, including colours.** This branch rendered a muted
-  label — "show the value rather than hide the field", pending the SVG
-  keyboard. The keyboard has been available since 0.7.4 and the label stayed,
-  so every string property in every scene feature was read-only:
-  `ground.texture`, `water.normalMap`, `clouds.model`, and — once we adopted
-  tosijs-3d's own scene schemas — seven colour fields, four on the sky alone.
-
-  ⚠️ A colour deserves better than a hex field and there is nothing to give it:
-  tosijs-3d has no colour control at all, and its own `skyboxSchema()` declares
-  four `format: 'color'` properties its widget set cannot edit. Filed as
-  tosijs-3d#72 rather than hand-rolled — a widget belongs to its owner.
-  `x-widget: "color"` is preserved so a picker drops in without touching a
-  schema.
-
-### Changed
-
-- **The sky's `realtimeScale` is a log slider with a zero stop, not a cycler.**
-  The named-decade enum (`Off / realtime / 10× / 1 min/s …`) stood in for a
-  control that could span 0..3600 and still reach zero, and 0.8.0's `slider3d`
-  has one (tosijs-3d#62, ours) — which is how upstream's own `skyboxSchema()`
-  already spells it. `schema-panel` reads `x-zero-stop`. A still sky is still
-  the default, because an ensemble is a static description and has to be
-  reproducible.
-
-- **Callbacks passed to tosijs-3d widgets are `handleX`.** `handleChange`,
-  `handleSelect`, `handleClick`, `handleCommit` — at every call site in
-  `ensemble-editor.ts` and `schema-panel.ts`, and on `SchemaPanelOptions`
-  itself, which is ours.
-
-  Both spellings work through tosijs-3d 0.8.x and `onX` is removed in 0.9, so
-  this is not urgent — but a _half_-migrated codebase is what caused three of
-  the bugs 0.8.0 fixed upstream, where one widget took `handleChange` and its
-  neighbour took `onChange` and neither complained about the other. Renaming
-  ours too means there is no longer a spelling question to get wrong.
-
-- **`scene.whenDisposed` is no longer optional-chained.** It was written before
-  the method existed (tosijs-3d#22), and `?.()` meant a missing method left the
-  editor silently never observing scene disposal — precisely the failure the
-  callback exists to prevent, arriving as nothing at all. The peer floor now
-  guarantees it.
-
-- **`src/editor/tosi-store.test.ts` asserts the FIXED behaviour of a held
-  proxy.** tosijs 1.9.2 fixed tosijs#35 (ours): `.value`, `valueOf()` and
-  `toJSON()` follow the path now instead of returning the object the proxy was
-  created over. The test pinned the bug, so the upgrade is what failed it —
-  which is what a test like that is for. `_store` stays a getter.
-
-- **The licence is Apache-2.0, and there is now a file.** `package.json` said
-  `MIT` and no `LICENSE` shipped at all — which is neither of the two things a
-  licence has to be: present, and the same as the rest of the ecosystem.
-  `tosijs`, `tosijs-ui` and `tosijs-3d` are all Apache-2.0. Caught by the
-  mechanical release gate, and the canonical Apache text is used rather than a
-  reworded one.
-
-- **`peer-range` exemptions now carry a reason, and `@babylonjs/core` has one**
-  — tosijs-3d owns that range and we only re-declare it, so the floor rule that
-  applies to `tosijs` and `tosijs-3d` would be a false positive here.
-
-### Added
-
-- **The format kernel is pinned as engine-free and DOM-free.** It has been true
-  in practice — `placePiece` deliberately does not default to `placeMesh` so
-  `build.js` imports under plain Node — but nothing was checking it, and the
-  layering question in #9 wants to build on it.
-
-  Measured: the format layer alone is six modules, 13.71 KB, zero Babylon, zero
-  tosijs-3d, zero DOM globals, and it validates a document under plain Node 22.
-
-  The existing "no engine binding" test could not have caught a regression: it
-  marks the engine EXTERNAL, so a format module importing tosijs-3d leaves an
-  untouched import statement and still passes its marker checks. The new
-  assertion looks for the import SPECIFIER, which is exactly what external
-  leaves behind — with a companion asserting a runtime placer DOES import
-  tosijs-3d, so it cannot pass vacuously.
-
-### Fixed
-
 - **The drift test caught upstream agreeing with us.** tosijs-3d 0.8.1 added
   `x-scale: log` to `terrainSchema()`'s `radius`, which we had been overriding
   for the same reason — so the override stopped being a deviation and became a
@@ -415,26 +529,6 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   `detailScale` now carry `x-unit: '1/m'` and `x-wavelength`, so the schema
   says outright that they are FREQUENCIES, which is what we got wrong twice by
   hand.
-
-### Known limitations
-
-- ⚠️ **The doc-test corpus gate is not running.** tosijs-ui 1.14 removed
-  `doc-browser` from the barrel and documents `import 'tosijs-ui/doc-browser'`
-  as the fix — but that module has no top-level side effect, so the import is a
-  no-op the bundler removes. Measured on a clean build: `tosi-tests-done`,
-  `pagesWithTests` and `createDocBrowser` are all absent from the emitted
-  bundle while `live-example`'s strings are present. The site renders and
-  `window.__docTestResults` never appears.
-
-  So the in-page ` ```test ` fences still run when a human opens a page, but
-  nothing gates them. Marked `test.fixme` rather than `skip` or deleted, so
-  "we didn't look" and "we looked and it's fine" do not produce the same
-  output. Filed as tosijs-ui#158.
-
-- **`x-useful` and `x-wavelength` are not read yet.** Soft bounds on a slider
-  are the obvious use and are not urgent.
-
-### Fixed
 
 - **`EnsembleEditor.libraryUrl` was declared, documented and never read** (#10).
   It appeared exactly twice in `ensemble-editor.ts` — once in the class doc's
@@ -505,6 +599,24 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   Also records that **the insertion API cannot do this yet**: `BuildOptions`
   offers `origin` and nothing else, and the placer contract has no slot for an
   orientation to arrive in.
+
+### Known limitations
+
+- ⚠️ **The doc-test corpus gate is not running.** tosijs-ui 1.14 removed
+  `doc-browser` from the barrel and documents `import 'tosijs-ui/doc-browser'`
+  as the fix — but that module has no top-level side effect, so the import is a
+  no-op the bundler removes. Measured on a clean build: `tosi-tests-done`,
+  `pagesWithTests` and `createDocBrowser` are all absent from the emitted
+  bundle while `live-example`'s strings are present. The site renders and
+  `window.__docTestResults` never appears.
+
+  So the in-page ` ```test ` fences still run when a human opens a page, but
+  nothing gates them. Marked `test.fixme` rather than `skip` or deleted, so
+  "we didn't look" and "we looked and it's fine" do not produce the same
+  output. Filed as tosijs-ui#158.
+
+- **`x-useful` and `x-wavelength` are not read yet.** Soft bounds on a slider
+  are the obvious use and are not urgent.
 
 ## [0.2.0] — 2026-09-04
 

@@ -503,6 +503,75 @@ unsay:
 that is honest about its scope beats a complete-looking one that silently means
 "upright" forever.
 
+#### Inserting an ensemble needs a full transform, and today it has a position
+
+Tonio: whatever an ensemble _declares_, the insertion API must let a host place
+it at an arbitrary orientation when it wants to. That is the same precedence
+rule one layer down — the engine decides — and it is currently **not
+possible**.
+
+`BuildOptions` offers `origin?: Vec3` and nothing else. `ensemble.scale` is a
+property of the FILE, not of the insertion, so the same ensemble cannot be
+placed at two sizes either. Turning one today means editing its pieces.
+
+The more interesting half of the gap is that the placer contract has no slot
+for an orientation to arrive in:
+
+```typescript
+placePiece?: (piece, at, scale, ctx) => Placement | null
+```
+
+Position, scale, no rotation — `placeMesh` reads `piece.rot` off the piece
+itself. So adding a field to `BuildOptions` is necessary and not sufficient;
+the rotation has to reach the thing that builds a node.
+
+##### Two ways, and they are not equally good
+
+|                            | how                                                                     |
+| -------------------------- | ----------------------------------------------------------------------- |
+| **A — compose per piece**  | rotate each `at` by the insertion euler; compose each piece's own `rot` |
+| **B — one root transform** | parent every piece's node under a single `TransformNode` and turn that  |
+
+**B, and the first reason is a mistake this repo already made.** Composing
+euler by addition is wrong — SPEC records it above: `rot[i] += delta` is an
+edit in euler space that coincides with a rotation only while the piece has no
+prior rotation, so turning an already-turned piece goes somewhere nobody asked
+for. A does not have to be written that way, but it has to be written
+carefully, every time, and it produces quaternions that `applyEuler` explicitly
+nulls.
+
+B needs no composition at all: parent holds the insertion transform, child
+holds the piece's, and Babylon multiplies them. It also delivers position,
+rotation and uniform scale as **one** thing rather than three fields that
+accrete, and it hands `BuiltEnsemble` something it cannot express today — a
+**live handle**. A carrier under way, a station spinning, a ship taking a hit
+and being shoved: today all of those mean rebuild.
+
+Insertion scale should be **scalar**, for the reason `ensemble.scale` already
+is: a non-uniform scale applied to an arrangement shears every piece that
+carries a rotation.
+
+##### What B costs, and the one thing to measure first
+
+`at` stops being world and becomes local-to-the-root, because a parented node's
+position is local. That is a change to `placePiece`'s contract and therefore to
+every consumer placer, manta's included — worth doing before 1.0, not after.
+
+And the landmine is the one CLAUDE.md names twice: **an element that manages a
+node owns its transform**, rewriting `mesh.position` from `x`/`y`/`z` every
+frame. Under a parent that write is a LOCAL write, which is exactly what B
+wants — but "should be exactly right" is how three transform attributes in this
+project turned out to do nothing at all while their tests passed. Measure a
+parented `b3d-destroyable` over several frames before building on it.
+
+##### What an insertion rotation cannot turn
+
+A scene primitive has no orientation. Fog, ambient life, sky and a terrain
+province are features whose body IS the world, so an ensemble containing them
+will ignore the rotation silently — rotate the standard scene and the sun does
+not move. That is correct behaviour and a bad surprise, so it belongs in the
+doc comment rather than in a bug report.
+
 > ⚠️ **Not called `anchor`.** TILES.md uses `anchors` for where an accessory may
 > sit within a tile — a lamp on the ceiling, a bookcase against the north wall.
 > Two unrelated meanings one letter apart is a documentation bug waiting to be

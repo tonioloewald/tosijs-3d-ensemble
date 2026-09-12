@@ -414,24 +414,94 @@ something that is. `free` is therefore doing double duty, covering both "placed,
 but relative to nothing" and "not placed directly at all", and those collapse
 cleanly because in both the caller holds the full transform.
 
-#### The half this does NOT solve
+#### The half this does NOT solve — and why its shape is not a verb
 
-`y` is one of two questions a hillside asks. The other is orientation, and it
-has three genuinely different answers:
+`y` is one of two questions a hillside asks. The other is angle, and it has
+three genuinely different answers:
 
 | a hut        | tilts to the surface normal           |
 | ------------ | ------------------------------------- |
 | a radio mast | stays upright and cuts into the slope |
 | a road tile  | **deforms** to follow the ground      |
 
-Only the first two are cheap; the third is a mesh operation. And behind both
-sits a third question — whether the ensemble _modifies_ the ground it lands on
-(the flatten-a-pad case, which SPEC's "Provinces" section already circles).
+Only the first two are cheap; the third is a mesh operation. And behind all
+three sits a fourth question — whether the ensemble _modifies_ the ground it
+lands on (the flatten-a-pad case, which "Provinces" already circles).
 
-Naming these as a family rather than shipping a guess: `placement` answers the
-question that has a clean four-value answer, and the other two wait for a
-consumer that needs them. A partial field that is honest about its scope beats
-a complete-looking one that silently means "upright" forever.
+**The engine has an opinion, and it outranks ours.** Tonio's point, and it is
+what decides the shape rather than merely deferring it: a generator placing city
+prefabs has already chosen where a city goes and quite possibly already levelled
+the block. It does not want to be told to tilt to a normal it deliberately
+removed. In the common case the placer holds the strongest opinion in the
+system, because it is the only party that knows the plan.
+
+So everything in this family is **advisory**. The ensemble says what it wants
+and what it can stand; the engine decides, and is right to.
+
+##### Requirement and response are different fields
+
+Splitting them is what makes the advisory part usable rather than ignorable:
+
+- a **requirement** is negotiable — "I need ground within 4° of level across a
+  12 m radius". An engine can satisfy it by _choosing_ a site, by _flattening_
+  one, or by declining.
+- a **response** is what to do with whatever slope survives — upright, tilt,
+  deform. That one is closer to a property of the geometry (a road tile is
+  modelled to deform; a hut is not), but an engine may still override it, and a
+  city generator that levelled everything will.
+
+The requirement is the more valuable half, and the reason is that **one number
+answers three questions**:
+
+| asked by                 | question                                      |
+| ------------------------ | --------------------------------------------- |
+| a site selector          | where may this go?                            |
+| a terrain modifier       | how much must I change, and over what radius? |
+| a placer, after the fact | did this land somewhere wrong?                |
+
+A verb — `tilt: true` — answers none of them. It is an instruction to one
+consumer at one moment, and the two consumers that matter most run _before_
+that moment.
+
+##### It is read before the build, not during it
+
+Site selection asks "what does this need?" while deciding where to put it, so
+the requirement has to be legible without instantiating anything. It is
+top-level JSON, so it already is — but that is a property worth protecting, and
+it argues against the requirement living inside pieces or being derived from a
+built scene.
+
+Footprint is the other half of "where may this go", and there the answer is
+**derive, do not declare**: union the pieces' bounds. A declared footprint is
+one more thing to keep in step with the content, and the content is the truth.
+The escape hatch is for when bounds lie — a crane's jib, a bridge's span, a
+cantilever that overhangs ground it does not need.
+
+##### Three parties, and the author is not the loser
+
+Author, content, engine. The engine wins, but it can only win _well_ if it
+knows what the author wanted — which is the whole argument for recording the
+preference even though it is overridable. An engine that levels the block and
+stands everything upright has made a good decision _because_ it could see that
+the hut wanted to tilt and the mast did not.
+
+##### Still not shipping it
+
+Two things are not settled enough to write, and both would be expensive to
+unsay:
+
+- **Slope tolerance is probably not a scalar.** A stair or a ramp _wants_
+  slope, and wants it along a particular axis; a terrace tolerates cross-slope
+  differently from along-slope. One number is the common case and the wrong
+  general case.
+- **"Modifies the ground" is a terrain operation**, and this package owning one
+  is the domain-free line again. It is almost certainly a declared requirement
+  the host executes, which is the same conclusion as `placement` — but "almost
+  certainly" is not a schema.
+
+`placement` ships because it has a clean four-value answer. A partial field
+that is honest about its scope beats a complete-looking one that silently means
+"upright" forever.
 
 > ⚠️ **Not called `anchor`.** TILES.md uses `anchors` for where an accessory may
 > sit within a tile — a lamp on the ceiling, a bookcase against the north wall.

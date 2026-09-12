@@ -73,4 +73,38 @@ describe("tree-shaking", () => {
     expect(code).not.toContain("b3dDestroyable");
     expect(code).not.toContain("b3dTerrain");
   });
+
+  /*
+    THE KERNEL IS ENGINE-FREE AND DOM-FREE, AND THAT IS NOW A TEST.
+
+    Asked directly by tosijs-3d#9: if a UI format were to share this format
+    kernel, would an adopter need Babylon to validate a menu? The answer has
+    been "no, in practice" — `build.js` imports under plain Node, which is why
+    `placePiece` deliberately does not default to `placeMesh`. But "in practice"
+    is a property nothing was checking, and the layering question above wants
+    to build on it.
+
+    The test above cannot answer it: `bundle` marks the engine EXTERNAL, so a
+    format module importing tosijs-3d would leave an untouched `import` and
+    still pass its marker checks. Here the import SPECIFIER is what is asserted,
+    which is exactly what external leaves behind.
+
+    Measured when written: 13.7 KB, six modules, and it validates a document
+    under plain Node 22 with no globals beyond the language.
+  */
+  const ENGINE_IMPORTS = ["tosijs-3d", "@babylonjs"];
+  const DOM_GLOBALS = ["customElements", "HTMLElement", "document."];
+
+  it("the format kernel imports no engine and touches no DOM", async () => {
+    const code = await bundle("./src/format/validate.ts");
+    for (const spec of ENGINE_IMPORTS) expect(code).not.toContain(spec);
+    for (const g of DOM_GLOBALS) expect(code).not.toContain(g);
+  });
+
+  it("a runtime placer DOES import the engine (the check can fail)", async () => {
+    // Without this, the assertion above would pass just as happily if the
+    // specifier had been renamed or the bundle had come out empty.
+    const code = await bundle("./src/runtime/place-mesh.ts");
+    expect(code).toContain("tosijs-3d");
+  });
 });

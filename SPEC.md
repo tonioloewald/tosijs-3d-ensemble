@@ -314,24 +314,38 @@ Shipped roles: `structure` · `target` · `power` · `generator` · `shield` ·
   layer to key on. Deliberately open: a closed enum needs revising every time
   the fiction grows.
 
-### How an ensemble meets the world — one field, four values
+### How an ensemble meets the world — one field, four modes
 
 From a conversation with manta: an engine placing an ensemble into a larger
 context needs to know **what the ensemble's origin means**. A bunker sits on
 ground. A dock sits on water if there is water and on the bank if there is not.
-A cave shrine sits on a floor that is not the topmost surface at that
-coordinate. A space station sits wherever it was put.
+A cave shrine sits on a floor that is not the topmost surface at
+that coordinate. A space station sits wherever it was put.
 
 Today nothing says which, so every consumer hard-codes it per file — which is
 an arrangement plus a spoken instruction, the exact failure `libraries` was
 added to fix.
 
 ```jsonc
-"placement": "ground"   // terrain, ignoring anything on top of it
-"placement": "surface"  // terrain or water or ice — whichever is HIGHER
-"placement": "any"      // any solid surface: tunnels, caves, overhangs, decks
-"placement": "free"     // resolves against nothing: station, tile, assemblage
+"placement": { "mode": "ground" },              // terrain only, ignoring water
+"placement": { "mode": "surface", "offset": 3 } // higher of terrain and water, +3m
+"placement": { "mode": "solid", "from": 12 },   // nearest solid BELOW y=12
+"placement": { "mode": "free" }                 // station, tile, assemblage
 ```
+
+⚠️ **`solid` replaces an earlier `any`, and manta had already built the thing
+that shows why** (#7, working, fifteen unit tests). `any` said "more than one
+answer is legitimate here, so the caller picks" — which leaves the host
+guessing which surface the author meant. `solid` takes a **reference height**
+and resolves the nearest solid below it, so a turret on a tunnel roof and a
+crate on its floor stop being the same document. That is the part that is easy
+to get wrong on paper, and it is why the field is an object rather than a
+string: a mode alone cannot carry a reference height or an offset.
+
+`offset` is the owner's "or a certain distance above ground", and it is what
+makes one declaration serve a class of content rather than a piece: the same
+`surface` + `offset: 3` rides water over the seabed and land over the peak,
+with **no special case at the shoreline** — the crossing is just `max`.
 
 **This is a declaration, not a placer.** This package has no terrain, no
 heightmap and no raycast, and it must not grow one — the moment `ground`
@@ -346,22 +360,72 @@ editor.
 All four are answers to the same question — which candidate surface does the
 origin resolve against — with `free` as the "none" member:
 
-| value     | what the host resolves against                    | the case that needs it                       |
-| --------- | ------------------------------------------------- | -------------------------------------------- |
-| `ground`  | terrain only                                      | a lighthouse on a sea rock                   |
-| `surface` | the highest of terrain and any medium above it    | a dock, a boat, a lily pad                   |
-| `any`     | a _set_ of candidates; the caller picks           | a tunnel mouth, a cave, a lift shaft landing |
-| `free`    | nothing — the caller supplies the whole transform | a station, a tile, a fragment                |
+| value     | what the host resolves against                     | the case that needs it                       |
+| --------- | -------------------------------------------------- | -------------------------------------------- |
+| `ground`  | terrain only                                       | a lighthouse on a sea rock                   |
+| `surface` | the highest of terrain and any medium above it     | a dock, a boat, a lily pad                   |
+| `solid`   | the nearest solid surface BELOW a reference height | a tunnel mouth, a cave, a lift shaft landing |
+| `free`    | nothing — the caller supplies the whole transform  | a station, a tile, a fragment                |
 
 `ground` and `surface` differ in a way that is easy to miss and expensive to get
 wrong: a lighthouse wants `ground` _even where water is higher_, and a dock
 wants `surface` _even where it is not_. "Snap to the top" is not a general
 answer, which is why this cannot be a boolean.
 
-`any` is the odd one and worth stating precisely: it does not name a different
-surface, it says **more than one answer is legitimate here**, so a host must not
-assume the topmost hit. That is the tunnels-and-caves case, and it is also what
-a multi-level building needs.
+`solid` is the odd one, and the reason is that it is the only mode without a
+unique answer: inside a carved volume several solid surfaces stack at one
+(x, z). `ground` and `surface` have exactly one answer per coordinate and can
+be resolved from a heightfield; `solid` needs the volumetric field and the
+author's reference height. That is the tunnels-and-caves case, and it is also
+what a multi-level building needs.
+
+##### Resolution is a PHASE, and its degradation is a `problem`
+
+Four constraints from manta having built this consumer-side (#7) rather than
+reasoned about it, each of which would have been got wrong here:
+
+- **It runs before the build, not as a feature.** `placeMesh` reads `at`, so by
+  the time any feature binds the piece is already somewhere. The pass rewrites
+  `at.y` on a **copy** of the document — a copy because mutating the loaded one
+  compounds offsets when the same URL loads twice. If this lands as a format
+  field it wants an explicit phase with a stated contract about what exists when
+  it runs, which is the `bind`/`link` lesson again and the manta-recon#3 lesson
+  again.
+- **Degradation must be reported, never silent.** A scene with no water cannot
+  answer `surface`; one with no volumetric field cannot answer `solid`. Both
+  correctly fall back to `ground` — and both must _say_ so. Theirs returns
+  `{ y, mode, degraded, note }` and reports `N/M anchors degraded` with reasons.
+  A piece that silently resolved against a different surface than the author
+  asked for is precisely what the `problems` array exists to prevent.
+- **Water comes from the registered medium, not a `b3d-water` attribute.** They
+  paid for that one: an unregistered private sea disagreed with the registered
+  one by up to 35 points. And a medium may be a **sphere** — a planet's ocean —
+  whose surface is not a constant `y` at all, which kills "one sample" as a
+  general claim even though it holds for a flat sea.
+- **The resolver must be a pure function of samplers**, because `surface` is not
+  only an authoring convenience: a hover tank floating over water or land
+  evaluates it every frame. The same code has to serve the placement pass and
+  the movement constraint, which rules out anything that resolves by mutating a
+  built scene.
+
+##### Analytic and physics compose rather than compete
+
+The owner raised physics as an alternative. It is better read as the other half:
+
+|              | answers                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| **analytic** | _where is the surface_ — instant, deterministic, and the only one that works live while dragging                               |
+| **physics**  | _and therefore what the body does_ — resting on other pieces, slope orientation, settling into geometry no sampler knows about |
+
+Which is the same division already made for media: upstream owns "where is the
+boundary", we own "and therefore what".
+
+For authoring, the strong hybrid is the classic level-editor move — **settle
+with physics in the editor, bake the result into `at`.** Accuracy comes from
+physics, the document stays deterministic and diffable, and a consumer needs no
+physics engine to load a level. Resolving physically at load would make one
+document produce slightly different worlds, which is the property a format
+exists to remove.
 
 #### It is a promise about the ORIGIN, and that part is checkable
 

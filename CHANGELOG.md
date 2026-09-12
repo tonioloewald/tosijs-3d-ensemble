@@ -3,14 +3,14 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [0.3.0] — 2026-09-13
 
-A **minor** when it ships: the peer floor moved, which is a decision about who
-gets broken (`src/peer-range.test.ts`).
+A **minor**: the peer floor moved, which is a decision about who gets broken
+(`src/peer-range.test.ts`).
 
 ### ⚠️ Breaking — the peer floor moved
 
-- **`tosijs-3d` is now `^0.8.0`** (was `^0.7.8`) and **`tosijs` is `^1.10.0`**
+- **`tosijs-3d` is now `^0.8.1`** (was `^0.7.8`) and **`tosijs` is `^1.10.1`**
   (was `^1.7.8`). Both are floors we develop against, not versions we merely
   tolerate, so an adopter must move with us.
 
@@ -372,6 +372,95 @@ gets broken (`src/peer-range.test.ts`).
   `toJSON()` follow the path now instead of returning the object the proxy was
   created over. The test pinned the bug, so the upgrade is what failed it —
   which is what a test like that is for. `_store` stays a getter.
+
+- **The licence is Apache-2.0, and there is now a file.** `package.json` said
+  `MIT` and no `LICENSE` shipped at all — which is neither of the two things a
+  licence has to be: present, and the same as the rest of the ecosystem.
+  `tosijs`, `tosijs-ui` and `tosijs-3d` are all Apache-2.0. Caught by the
+  mechanical release gate, and the canonical Apache text is used rather than a
+  reworded one.
+
+- **`peer-range` exemptions now carry a reason, and `@babylonjs/core` has one**
+  — tosijs-3d owns that range and we only re-declare it, so the floor rule that
+  applies to `tosijs` and `tosijs-3d` would be a false positive here.
+
+### Added
+
+- **The format kernel is pinned as engine-free and DOM-free.** It has been true
+  in practice — `placePiece` deliberately does not default to `placeMesh` so
+  `build.js` imports under plain Node — but nothing was checking it, and the
+  layering question in #9 wants to build on it.
+
+  Measured: the format layer alone is six modules, 13.71 KB, zero Babylon, zero
+  tosijs-3d, zero DOM globals, and it validates a document under plain Node 22.
+
+  The existing "no engine binding" test could not have caught a regression: it
+  marks the engine EXTERNAL, so a format module importing tosijs-3d leaves an
+  untouched import statement and still passes its marker checks. The new
+  assertion looks for the import SPECIFIER, which is exactly what external
+  leaves behind — with a companion asserting a runtime placer DOES import
+  tosijs-3d, so it cannot pass vacuously.
+
+### Fixed
+
+- **The drift test caught upstream agreeing with us.** tosijs-3d 0.8.1 added
+  `x-scale: log` to `terrainSchema()`'s `radius`, which we had been overriding
+  for the same reason — so the override stopped being a deviation and became a
+  restatement, the one thing `scene-schemas.test.ts` exists to forbid. It
+  failed on the upgrade and named the stale exception.
+
+  That is the test working in the direction nobody designs for: not "upstream
+  broke something" but "upstream fixed something and your workaround is now
+  noise". 0.8.1 also answered tosijs-3d#66 directly — `grossScale` and
+  `detailScale` now carry `x-unit: '1/m'` and `x-wavelength`, so the schema
+  says outright that they are FREQUENCIES, which is what we got wrong twice by
+  hand.
+
+### Known limitations
+
+- ⚠️ **The doc-test corpus gate is not running.** tosijs-ui 1.14 removed
+  `doc-browser` from the barrel and documents `import 'tosijs-ui/doc-browser'`
+  as the fix — but that module has no top-level side effect, so the import is a
+  no-op the bundler removes. Measured on a clean build: `tosi-tests-done`,
+  `pagesWithTests` and `createDocBrowser` are all absent from the emitted
+  bundle while `live-example`'s strings are present. The site renders and
+  `window.__docTestResults` never appears.
+
+  So the in-page ` ```test ` fences still run when a human opens a page, but
+  nothing gates them. Marked `test.fixme` rather than `skip` or deleted, so
+  "we didn't look" and "we looked and it's fine" do not produce the same
+  output. Filed as tosijs-ui#158.
+
+- **`x-useful` and `x-wavelength` are not read yet.** Soft bounds on a slider
+  are the obvious use and are not urgent.
+
+### Documentation
+
+- **`TILES.md` — tile-based maps, planned against the real Kenney kits.** Edge
+  codes and rotation as data; the three loci on a lattice (face, edge, vertex)
+  and why the two tile families are duals; what the 3D extension does to that
+  duality; seeded variety with the seed as the consumer's to override; an
+  ensemble as a resource for another ensemble; where baking may and may not
+  happen. A plan, not an implementation — and the milestone list says what
+  "done" means for each step.
+
+- **SPEC gained "How an ensemble meets the world"** — `placement` as declared
+  metadata, in four modes, so an engine placing an ensemble in a larger context
+  knows what the origin MEANS. Three positions in it are load-bearing: it is a
+  DECLARATION rather than a placer (resolving it here would mean this package
+  knows what terrain is), it is a promise that the origin is the contact point
+  (which makes it weakly checkable), and it applies to the ROOT of a build only
+  (nesting is a black box).
+
+  The angle question is recorded as advisory and shaped as a NUMBER rather than
+  a verb: the engine placing the thing has the strongest opinion, so a
+  requirement ("ground within 4° across 12 m") is useful to a site selector, a
+  terrain modifier and an after-the-fact check, where `tilt: true` is useful to
+  none of them.
+
+  Also records that **the insertion API cannot do this yet**: `BuildOptions`
+  offers `origin` and nothing else, and the placer contract has no slot for an
+  orientation to arrive in.
 
 ## [0.2.0] — 2026-09-04
 

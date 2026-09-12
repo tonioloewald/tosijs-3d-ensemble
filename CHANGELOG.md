@@ -219,6 +219,48 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
 
 ### Fixed
 
+- **The safety filter added above deleted real content, and the re-review
+  caught it within the hour.** `declaredConfig` narrowed a feature's config to
+  the keys its SCHEMA declared — but for a scene feature that list is
+  **editorial**: `pick()` chooses which properties an author sees in a panel,
+  17 of terrain's 30, leaving `poolSize` and `fillBudget` out as engine tuning.
+  It is the wrong list for deciding what a DOCUMENT may carry. Measured:
+  `terrain { surfaceType: 'torus', majorRadius: 500, minorRadius: 80 }` came
+  out as `{ surfaceType: 'torus' }` — the panel offering a torus while the
+  format refused to carry its two dimensions.
+
+  A safety filter that silently deletes what it was protecting is worse than
+  the injection it was added to stop. The allow-list now comes from
+  `x-accepts`, the element's FULL upstream property set, so `majorRadius`
+  survives and `innerHTML` still does not.
+
+  ⚠️ **And it is no longer silent.** `validate` reports every dropped key as
+  `unknown-feature-key` (warning), because a key that vanished on the way to
+  the scene looks exactly like a feature that does not work — which is the
+  failure this repo keeps fixing.
+
+- **A link's scalar payload was boxed and then narrowed away.**
+  `links: [{ from, to, delay: 1.5 }]` is the documented scalar convention and
+  arrives as `{ value: 1.5 }`; narrowing that against a schema declaring
+  `delay` handed the feature `{}`. It narrows BEFORE boxing now — a scalar was
+  never a key an author wrote, so there is nothing to check it against.
+
+- **Every property-panel text field was outside the keyboard group, and
+  keystrokes landed on the selected piece's POSITION.** The editor's only
+  `ui.fieldGroup` was built from the piece's position, rotation and scale
+  vectors; `attach()` makes tosijs-3d's window key listener return early for
+  everyone and routes the key to the GROUP's active field. Measured against the
+  real 0.8.1 modules: focus X, tap the colour field (two lit carets), type
+  `123` → the colour field's `handleChange` fired **zero** times and the vector
+  committed `{ x: 1123 }`.
+
+  The tap / on-screen-keyboard route always worked, which is why "strings are
+  editable now" read as true. `schemaWidgets` reports the fields it created,
+  the panel folds them into its group, and the tool-options panel collects into
+  the same one — the properties panel renders last and is where the group is
+  built. Same OUT-parameter shape as `boundKeys`, for the same reason: the fact
+  belongs to the widget that made it.
+
 - **Editing an already-set string or colour property wrote NOTHING.** Found by
   the pre-release review and the reason it returned BLOCK — it is the release's
   own headline editor entry, "strings are editable now, including colours".

@@ -436,15 +436,20 @@ export function buildEnsemble(
       if (!reg) continue;
       try {
         reg.bind(
-          // Same trust boundary as a piece's features: a link payload comes out
-          // of the same shared document.
-          declaredConfig(
-            reg,
-            (cfg && typeof cfg === "object" ? cfg : { value: cfg }) as Record<
-              string,
-              unknown
-            >
-          ),
+          /*
+            Same trust boundary as a piece's features — but narrow BEFORE
+            boxing, never after.
+
+            `links: [{ from, to, delay: 1.5 }]` is this package's documented
+            scalar convention and arrives here as `{ value: 1.5 }`. Narrowing
+            that box against a schema that declares `delay` threw the payload
+            away and handed the feature `{}` — a safety filter deleting the
+            only data in the message. A scalar was never a key an author wrote,
+            so there is nothing to check it against.
+          */
+          cfg && typeof cfg === "object"
+            ? declaredConfig(reg, cfg as Record<string, unknown>)
+            : { value: cfg },
           {
             link,
             from: pieces.get(link.from),

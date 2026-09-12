@@ -2931,6 +2931,20 @@ export class EnsembleEditor extends Component {
     for (const panel of this._panels) panel.remove();
     this._panels = [];
     this._stackTop = { left: 8, right: 8 };
+    /*
+      ONE GROUP OWNS THE KEYBOARD, so it has to own EVERY field on screen.
+
+      A field outside the attached group does not merely fail to focus — the
+      group's window listener returns early for everyone and routes the key to
+      the group's own active field instead. So the tool-options panel collects
+      its text fields here and the properties panel, which renders last and is
+      where the group is built, folds them in.
+
+      When nothing is selected no group is attached at all, and an ungrouped
+      field receives keys normally. That is why this only has to hold for the
+      pass that builds one.
+    */
+    this._pendingFields = [];
     if (this.hideChrome) return;
 
     this._renderPalette();
@@ -3021,6 +3035,8 @@ export class EnsembleEditor extends Component {
     const widgets = schemaWidgets({
       schema: tool.optionsSchema,
       values: this._optionValues(),
+      // Collected for the keyboard group the properties panel builds below.
+      fields: this._pendingFields,
       handleChange: (key, value) => this.setToolOption(key, value),
       /*
         A tool option is not a document edit, so there is nothing to record —
@@ -3143,6 +3159,9 @@ export class EnsembleEditor extends Component {
    * ensemble's own `libraries` are the live path; this prop is for a host
    * configuring the editor up front, which is how the doc example uses it.
    */
+  /** Text fields rendered before the keyboard group is built. See `_renderChrome`. */
+  private _pendingFields: unknown[] = [];
+
   private _authoredLibraryMounted = "";
 
   private _shelfMounted = false;
@@ -3715,7 +3734,9 @@ export class EnsembleEditor extends Component {
       Rotation is still normalised to 0..360 on write; the widget's own
       (-180, 180] is its scrubbing range, not what lands in the file.
     */
-    const inputs: Array<{ fields: unknown[] }> = [];
+    const inputs: Array<{ fields: unknown[] }> = this._pendingFields.length
+      ? [{ fields: this._pendingFields }]
+      : [];
     const position = vector3d({
       value: {
         x: selected.at[0] ?? 0,
@@ -3859,10 +3880,23 @@ export class EnsembleEditor extends Component {
         callback below can fire.
       */
       const boundKeys = new Set<string>();
+      /*
+        AND THE FIELDS, for the same reason and with the same shape.
+
+        The panel's only `ui.fieldGroup` was built from the piece's position,
+        rotation and scale vectors alone, so every schema `inputField` sat
+        OUTSIDE it — and an ungrouped field does not just fail to focus: the
+        group's window listener swallows the key and routes it to the group's
+        own active field. Typing `123` into a colour field committed `x: 1123`
+        on the piece's position. The tap/on-screen route worked, which is how
+        it read as fine.
+      */
+      const panelFields: unknown[] = [];
       const widgets = schemaWidgets({
         schema: registration.schema,
         values,
         boundKeys,
+        fields: panelFields,
         /*
           BOUND, so the widget reads and writes the document itself and tosijs
           keeps it current. Nothing here re-renders to show a number.
@@ -3902,6 +3936,10 @@ export class EnsembleEditor extends Component {
           this.updateFeature(selected.id, name, key, value, describe),
       });
       if (!widgets.length) continue;
+      // Into the keyboard group, not just onto the panel. A field the group
+      // does not know about has its keystrokes routed to one it does.
+      if (panelFields.length)
+        inputs.push({ fields: panelFields } as { fields: unknown[] });
       fields.push(
         label3d({ text: name, muted: true, compact: true }),
         ...(widgets as never[])

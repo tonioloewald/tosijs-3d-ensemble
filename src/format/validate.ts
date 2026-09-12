@@ -31,7 +31,7 @@ message **on the field** rather than in a list at the bottom of the screen.
 */
 /*{"parent":"Format","order":2}*/
 import { featuresOf, roleFeatures } from "./roles.js";
-import { featureRegistration } from "./registry.js";
+import { acceptedKeys, featureRegistration } from "./registry.js";
 import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
 export type Severity = "error" | "warning";
@@ -341,13 +341,41 @@ export function validate(
       );
     }
     if (checkRegistry) {
-      for (const name of Object.keys(p.features ?? {})) {
-        if (!featureRegistration(name)) {
+      for (const [name, cfg] of Object.entries(p.features ?? {})) {
+        const registration = featureRegistration(name);
+        if (!registration) {
           add(
             "warning",
             "unknown-feature",
             `feature "${name}" is not registered`,
             `${at}/features/${name}`
+          );
+          continue;
+        }
+        /*
+          A DROPPED KEY MUST SAY SO.
+
+          `declaredConfig` narrows a feature's config to the keys it accepts,
+          because an undeclared key reached a DOM element as a property and
+          `innerHTML` executed. Necessary — but a filter that silently deletes
+          content is this project's oldest failure wearing a safety hat, and
+          a document whose key vanished on the way to the scene looks exactly
+          like a feature that does not work.
+
+          So the drop is reported. A WARNING: the key really is being ignored,
+          and a build should carry on rather than refuse a document over a
+          field that may just be a typo or a newer upstream than the peer
+          floor.
+        */
+        const allowed = acceptedKeys(registration);
+        if (!allowed || !cfg || typeof cfg !== "object") continue;
+        for (const key of Object.keys(cfg)) {
+          if (allowed.has(key)) continue;
+          add(
+            "warning",
+            "unknown-feature-key",
+            `"${key}" is not a property of feature "${name}" — it will be ignored, not passed to the scene`,
+            `${at}/features/${name}/${key}`
           );
         }
       }

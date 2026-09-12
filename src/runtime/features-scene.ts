@@ -272,6 +272,27 @@ export const schemaDrift: string[] = [];
  * throwing: this runs inside `registerSceneFeatures()` at page load, and a
  * throw there is a black screen. The test is what makes it loud.
  */
+/**
+ * EVERY property upstream's schema declares for a scene primitive.
+ *
+ * Not the same list as `pick()` returns, and the difference is the point.
+ * `pick` is EDITORIAL — which properties an author should see in a panel, 17
+ * of terrain's 30, with `poolSize` and `fillBudget` left out as engine tuning.
+ * That makes it exactly the wrong allow-list for deciding what a DOCUMENT may
+ * carry: a file written by hand or by a generator may legitimately set an
+ * attribute the panel does not offer, and `b3d-terrain`'s `majorRadius` and
+ * `minorRadius` are the two dimensions a torus is made of.
+ *
+ * Narrowing to the curated list silently stripped them — a safety filter
+ * deleting real content, which is worse than the injection it was added to
+ * stop. So `declaredConfig` narrows to THIS, and `innerHTML` is still not in
+ * it.
+ */
+const acceptsOf = (name: keyof typeof sceneSchemas): string[] =>
+  Object.keys(
+    (sceneSchemas[name]() as { properties: Record<string, unknown> }).properties
+  );
+
 const pick = (
   name: keyof typeof sceneSchemas,
   keys: readonly string[],
@@ -618,6 +639,7 @@ export function registerSceneFeatures(): void {
       // `0.9` rather than the element's `1`: a fill sits UNDER a sun, and a
       // full-strength hemispheric wash flattens the shadows the sun is there
       // to cast.
+      "x-accepts": acceptsOf("light"),
       properties: pick("light", ["intensity", "diffuse", "specular"], {
         intensity: { default: 0.9 },
       }),
@@ -758,6 +780,7 @@ export function registerSceneFeatures(): void {
         shadow map — and an ensemble is routinely a coastline. `x`/`y`/`z` are
         not picked: they are the sun's DIRECTION, and the piece's `at` is it.
       */
+      "x-accepts": acceptsOf("sun"),
       properties: pick(
         "sun",
         [
@@ -817,6 +840,7 @@ export function registerSceneFeatures(): void {
         reason a photograph is not taken at dawn: an author needs to SEE the
         thing being arranged, and 6.5 is half-light.
       */
+      "x-accepts": acceptsOf("skybox"),
       properties: pick(
         "skybox",
         [
@@ -863,6 +887,7 @@ export function registerSceneFeatures(): void {
       // A ground plane is the FLOOR of an arrangement, so it opens big enough
       // to stand something on — the element's 4×4 m is a demo prop. `checker`
       // because an untextured grey plane gives an author no sense of scale.
+      "x-accepts": acceptsOf("ground"),
       properties: pick(
         "ground",
         ["width", "height", "color", "texture", "textureTiles"],
@@ -1002,6 +1027,7 @@ export function registerSceneFeatures(): void {
       title: "Reflection probe",
       // `probeSize: 0` is the element's "off"; a probe you have placed on
       // purpose should render, so it opens at a usable resolution.
+      "x-accepts": acceptsOf("reflections"),
       properties: pick(
         "reflections",
         ["probeSize", "refreshRate", "maxDistance", "farDistance"],
@@ -1060,6 +1086,7 @@ export function registerSceneFeatures(): void {
         are engine tuning, not authoring — plus the four overrides, each of
         which is a decision rather than a copy.
       */
+      "x-accepts": acceptsOf("terrain"),
       properties: pick(
         "terrain",
         [
@@ -1165,6 +1192,7 @@ export function registerSceneFeatures(): void {
         128 m, and the colour is a deeper blue than the element's default
         because an arrangement usually sits ON the sea, not in a pool.
       */
+      "x-accepts": acceptsOf("water"),
       properties: pick(
         "water",
         [
@@ -1201,6 +1229,7 @@ export function registerSceneFeatures(): void {
       // Higher, thicker and wider than the element's defaults, which are sized
       // for a scene you can walk across. `castShadows` stays off: the changelog
       // is explicit that it costs a caster pass per frame.
+      "x-accepts": acceptsOf("clouds"),
       properties: pick(
         "clouds",
         [
@@ -1249,6 +1278,7 @@ export function registerSceneFeatures(): void {
         survives: with the enum in place the panel is a picker over the real
         set and the wrong value is unreachable.
       */
+      "x-accepts": acceptsOf("ambient"),
       properties: pick("ambient", [
         "preset",
         "where",
@@ -1281,6 +1311,7 @@ export function registerSceneFeatures(): void {
         fog, and letting them disagree is a mistake the file can make but never
         wants to. `exp2` likewise — atmospheric depth rather than a wall.
       */
+      "x-accepts": acceptsOf("fog"),
       properties: pick(
         "fog",
         ["mode", "color", "density", "start", "end", "syncSkybox"],

@@ -183,6 +183,23 @@ export interface SchemaPanelOptions {
    */
   boundKeys?: Set<string>;
   /**
+   * OUT: the `InputField`s this call created, for the caller's `fieldGroup`.
+   *
+   * ⚠️ **A field outside the group is not merely unfocusable — it steals
+   * nothing and the keystroke goes somewhere else.** tosijs-3d's
+   * `fieldGroup.attach()` sets a module-global that makes the window key
+   * listener return early, and `handleKey` routes only to the GROUP's own
+   * active field. Tapping an ungrouped field lights its caret and sets the
+   * module-global, but never moves `group.active` — so with a piece selected,
+   * typing `123` into a colour field committed `x: 1123` on the piece's
+   * position vector. Two lit carets, and the characters went to the wrong one.
+   *
+   * So a caller that builds a group must be given the fields to put in it, for
+   * the same reason it must be told which keys were bound: the fact belongs to
+   * the widget that made it.
+   */
+  fields?: unknown[];
+  /**
    * A GESTURE finished — write it to the document, one undo step.
    *
    * Widgets with a drag report twice: `handleChange` continuously so the scene can
@@ -214,8 +231,15 @@ export const boundIfSet = (
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const { schema, values, handleChange, handleCommit, box, boundKeys } =
-    options;
+  const {
+    schema,
+    values,
+    handleChange,
+    handleCommit,
+    box,
+    boundKeys,
+    fields,
+  } = options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 
@@ -439,13 +463,13 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
         compact: true,
       })
     );
-    widgets.push(
-      ui.inputField({
-        value: value === undefined || value === null ? "" : String(value),
-        placeholder: isColor ? "#rrggbb" : "—",
-        handleChange: (next: string) => handleChange(key, next),
-      }) as never
-    );
+    const field = ui.inputField({
+      value: value === undefined || value === null ? "" : String(value),
+      placeholder: isColor ? "#rrggbb" : "—",
+      handleChange: (next: string) => handleChange(key, next),
+    });
+    fields?.push(field);
+    widgets.push(field as never);
   }
 
   return widgets;

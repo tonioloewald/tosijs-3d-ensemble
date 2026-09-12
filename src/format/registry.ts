@@ -295,16 +295,40 @@ export function registerFeature<Handle>(
  * silently disable such a feature. Those are the ones to look at if this ever
  * needs tightening further.
  */
+export function acceptedKeys(
+  registration: { schema?: FeatureSchema } | undefined
+): Set<string> | null {
+  const schema = registration?.schema as
+    | (FeatureSchema & { "x-accepts"?: string[] })
+    | undefined;
+  /*
+    `x-accepts` WINS, and the distinction cost a regression to learn.
+
+    A scene feature's `properties` is EDITORIAL — which fields an author sees
+    in a panel, 17 of terrain's 30 — so using it as the allow-list stripped
+    `majorRadius` and `minorRadius` from a torus a document legitimately
+    described. `x-accepts` carries the element's FULL property list, taken
+    from upstream, which is what "a key this feature accepts" actually means.
+
+    Without either, there is nothing to check against.
+  */
+  const accepts = schema?.["x-accepts"];
+  if (accepts?.length) return new Set(accepts);
+  const declared = schema?.properties;
+  const keys = declared ? Object.keys(declared) : [];
+  return keys.length ? new Set(keys) : null;
+}
+
 export function declaredConfig(
   registration: { schema?: FeatureSchema } | undefined,
   cfg: Record<string, unknown>
 ): Record<string, unknown> {
-  const declared = registration?.schema?.properties;
-  if (!declared || !Object.keys(declared).length) return cfg;
+  const allowed = acceptedKeys(registration);
+  if (!allowed) return cfg;
   let dropped = false;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(cfg)) {
-    if (Object.prototype.hasOwnProperty.call(declared, key)) out[key] = cfg[key];
+    if (allowed.has(key)) out[key] = cfg[key];
     else dropped = true;
   }
   // Returning the SAME object when nothing was dropped keeps the identity

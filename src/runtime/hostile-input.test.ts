@@ -2,9 +2,12 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { buildEnsemble } from "./build.js";
 import {
   declaredConfig,
+  featureRegistration,
   registerFeature,
   unregisterFeature,
 } from "../format/registry.js";
+import { validate } from "../format/validate.js";
+import { registerSceneFeatures } from "./features-scene.js";
 import type { Ensemble } from "../format/types.js";
 import type { SceneElement } from "../format/registry.js";
 
@@ -113,5 +116,60 @@ describe("a hostile ensemble reaches a feature already narrowed", () => {
     // Measured at the FEATURE, not at the element: this is the last point the
     // package controls before a config becomes somebody's DOM.
     expect(seen).toEqual([{ intensity: 0.9 }]);
+  });
+});
+
+describe("the allow-list keeps what a DOCUMENT may legitimately carry", () => {
+  /*
+    The regression the first remediation introduced, and the distinction that
+    caused it. A scene feature's `properties` is EDITORIAL — which fields an
+    author sees in a panel, 17 of terrain's 30 — so using it as the allow-list
+    deleted real content: `majorRadius` and `minorRadius` are the two
+    dimensions a torus is made of, and the panel offers `surfaceType: 'torus'`
+    while the format refused to carry its size.
+
+    A safety filter that silently deletes what it was protecting is worse than
+    the injection it was added to stop, so the list now comes from the
+    element's FULL upstream property set via `x-accepts`.
+  */
+  it("keeps an element attribute the PANEL does not offer", () => {
+    registerSceneFeatures();
+    {
+      const terrain = featureRegistration("terrain");
+      const out = declaredConfig(terrain, {
+        surfaceType: "torus",
+        majorRadius: 500,
+        minorRadius: 80,
+        radius: 1000,
+        innerHTML: "<img src=x onerror=BOOM>",
+      });
+      expect(out.majorRadius).toBe(500);
+      expect(out.minorRadius).toBe(80);
+      // …and still drops the one that started all this.
+      expect("innerHTML" in out).toBe(false);
+    }
+  });
+
+  it("says so, rather than dropping in silence", () => {
+    // A document whose key vanished on the way to the scene looks exactly like
+    // a feature that does not work, which is the failure this repo keeps
+    // fixing. `validate` reports the drop as a warning.
+    registerSceneFeatures();
+    {
+      const problems = validate({
+        name: "n",
+        pieces: [
+          {
+            id: "p",
+            at: [0, 0, 0],
+            features: { terrain: { radius: 10, innerHTML: "<b>" } },
+          },
+        ],
+      });
+      const dropped = problems.find((p) => p.code === "unknown-feature-key");
+      expect(dropped?.severity).toBe("warning");
+      expect(dropped?.message).toContain("innerHTML");
+      expect(dropped?.path).toBe("/pieces/0/features/terrain/innerHTML");
+    }
   });
 });

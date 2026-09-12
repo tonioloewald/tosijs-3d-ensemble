@@ -44,6 +44,21 @@ interface SceneWithLibraries {
  * twice, so rebuilding — which the editor does on every edit — does not
  * re-download a multi-megabyte glb each time.
  */
+/**
+ * The library name implied by a `.glb` url — its basename, minus the extension.
+ *
+ * For the case where a host gives a url and no name. Guessing is better than
+ * mounting a catalogue nothing can address, and the basename is what an author
+ * would have written anyway: `/kits/enemies.glb` is `enemies`. Query strings
+ * and fragments are stripped, so a cache-busted url does not produce a library
+ * called `enemies.glb?v=3`.
+ */
+export function basenameOf(url: string): string {
+  const path = url.split(/[?#]/)[0] ?? "";
+  const last = path.split("/").pop() ?? "";
+  return last.replace(/\.[^.]+$/, "");
+}
+
 export async function mountLibraries(
   ensemble: Ensemble,
   scene: SceneElement

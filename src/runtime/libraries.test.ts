@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  basenameOf,
   libraryNames,
   meshesByLibrary,
   mountLibraries,
@@ -132,5 +133,33 @@ describe("mounting waits for the element to upgrade", () => {
     await mounting;
     expect(settled).toBe(true);
     (globalThis as { customElements?: unknown }).customElements = original;
+  });
+});
+
+describe("basenameOf", () => {
+  /*
+    The fallback name for `libraryUrl` with no `library` (#10). A wrong name
+    here is the same silent failure the fix exists to remove: a library mounts,
+    the palette lists nothing, and every piece is a box — because the name the
+    pieces use and the name the element answers to disagree by a suffix.
+  */
+  it("names a library after its file", () => {
+    expect(basenameOf("/enemies.glb")).toBe("enemies");
+    expect(basenameOf("https://cdn.example/kits/city-kit-roads.glb")).toBe(
+      "city-kit-roads"
+    );
+  });
+
+  it("strips a query string and a fragment", () => {
+    // A cache-busted url must not produce a library called `enemies.glb?v=3`.
+    expect(basenameOf("/enemies.glb?v=3")).toBe("enemies");
+    expect(basenameOf("/enemies.glb#frag")).toBe("enemies");
+  });
+
+  it("answers empty for a url with no file", () => {
+    // Empty means "do not mount", which is the honest answer to a trailing
+    // slash: there is no name to address the catalogue by.
+    expect(basenameOf("")).toBe("");
+    expect(basenameOf("https://example.com/")).toBe("");
   });
 });

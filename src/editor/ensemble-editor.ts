@@ -86,6 +86,7 @@ import {
   libraryNames,
   meshesByLibrary,
   mountLibraries,
+  basenameOf,
 } from "../runtime/libraries.js";
 import { FlatPointer } from "./input/flat-pointer.js";
 import { PointerHub } from "./input/pointer.js";
@@ -1514,6 +1515,46 @@ export class EnsembleEditor extends Component {
    * Bad JSON returns nothing rather than throwing: an attribute is typed by
    * hand, and a malformed one should cost you the palette, not the editor.
    */
+  /**
+   * Mount the library named by `library` + `libraryUrl`.
+   *
+   * ⚠️ **This existed as two documented props and no code** (#10). `libraryUrl`
+   * appeared exactly twice in this file — once in the class doc's usage example
+   * and once in `initAttributes` — and nothing read it, so an editor mounted
+   * exactly as the docs show came up with `tosi-b3d-library` 0 elements,
+   * `getNames()` 0 and an empty insert palette, while the `.glb` served a
+   * perfectly good 1.29 MB. Measured by a consumer, not by us.
+   *
+   * The failure was the shape this project keeps warning about: it mounted, it
+   * rendered a backdrop, and it reported `no-pieces` — an accurate, unrelated,
+   * REASSURING message. Nothing said "no library", so the reasonable conclusion
+   * was bad content.
+   *
+   * EAGER, unlike the kit shelf, and that is the distinction between the two:
+   * the shelf is what an author may INSERT from and costs megabytes nobody
+   * asked for, so it waits for the palette. This is what the ensemble's pieces
+   * RENDER from, so waiting means every piece is a placeholder box.
+   *
+   * Nothing else needed changing — `_rebuildWhenLibraryReady` already polls
+   * `libraryNames(ensemble, this.library)`, so the wait for this library was
+   * written and correct. Only the mount was missing.
+   */
+  private _mountAuthoredLibrary(): void {
+    const url = this.libraryUrl.trim();
+    if (!url || !this._scene) return;
+    // A url with no `library` still names something: the basename is what an
+    // author would write in a piece, and leaving it unnamed would mount a
+    // catalogue nothing can address.
+    const name = this.library.trim() || basenameOf(url);
+    if (!name) return;
+    void mountLibraries(
+      { ...this._ensemble, libraries: [{ name, url }] },
+      this._scene
+    ).then(() => {
+      if (this.isConnected) void this._rebuildWhenLibraryReady();
+    });
+  }
+
   private _shelf(): LibraryRef[] {
     if (!this.libraries.trim()) return [];
     try {
@@ -1529,6 +1570,8 @@ export class EnsembleEditor extends Component {
   /** Every library the palette can offer: the ensemble's, plus the shelf. */
   private _availableLibraries(): string[] {
     const names = libraryNames(this._ensemble, this.library || undefined);
+    const authored = this.libraryUrl.trim() && basenameOf(this.libraryUrl);
+    if (authored && !names.includes(authored)) names.push(authored);
     for (const ref of this._shelf())
       if (!names.includes(ref.name)) names.push(ref.name);
     return names;
@@ -1711,6 +1754,7 @@ export class EnsembleEditor extends Component {
         );
       }
       this._syncBackdrop();
+      this._mountAuthoredLibrary();
       if (this._rebuildPending) {
         this._rebuildPending = false;
         this.rebuild();

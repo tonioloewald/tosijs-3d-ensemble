@@ -434,6 +434,50 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
 - **`x-useful` and `x-wavelength` are not read yet.** Soft bounds on a slider
   are the obvious use and are not urgent.
 
+### Fixed
+
+- **`EnsembleEditor.libraryUrl` was declared, documented and never read** (#10).
+  It appeared exactly twice in `ensemble-editor.ts` — once in the class doc's
+  usage example, once in `initAttributes` — with no third occurrence, so no
+  `<tosi-b3d-library>` was ever created. An editor mounted exactly as the docs
+  show came up with zero library elements, `getNames()` 0 and an empty insert
+  palette, while the `.glb` served a perfectly good 1.29 MB. Measured by a
+  consumer, not by us.
+
+  The failure had the shape this project keeps warning about: it mounted, it
+  rendered a backdrop, and it reported `no-pieces` — an accurate, unrelated,
+  **reassuring** message. Nothing said "no library", so the reasonable
+  conclusion was bad content. And it is the prop a first-time adopter is most
+  likely to use, because it is the one in the doc example.
+
+  It mounts EAGERLY, unlike the kit shelf, and that is the distinction between
+  them: the shelf is what an author may INSERT from and costs megabytes nobody
+  asked for, so it waits for the palette; this is what the ensemble's pieces
+  RENDER from, so waiting means every piece is a placeholder box. A
+  `libraryUrl` with no `library` takes its name from the file's basename.
+
+  Nothing else needed changing — `_rebuildWhenLibraryReady` already polls
+  `libraryNames(ensemble, this.library)`, so the wait for this library had been
+  written and was correct. Only the mount was missing.
+
+  `tests/editor-library.pw.ts` asserts the output the consumer measured,
+  inverted: the element exists and the scene can NAME meshes from it. Confirmed
+  to fail without the fix, because "the attribute is set" was always true and is
+  exactly what made this invisible.
+
+- **The milestone 1 gate had been silently skipping since it was MET.**
+  `manta-mvp.test.ts` reads a sibling checkout and skips when absent — right,
+  because a test needing somebody else's working copy is not one anybody else
+  can run. But it hard-coded `static/prefabs`, and manta-recon renamed that
+  directory to `static/assemblies` as part of completing the migration. So the
+  gate stopped reporting at the exact moment it started passing, and a skip read
+  as a pass in the summary line.
+
+  It now looks for either name. **The gate is met**: manta-recon has deleted
+  `prefab.ts` and `prefab-runtime.ts`, depends on `tosijs-3d-ensemble`, and all
+  four of its assemblies load through this package — 13 assertions, zero
+  migration changes needed on any of the four files.
+
 ### Documentation
 
 - **`TILES.md` — tile-based maps, planned against the real Kenney kits.** Edge

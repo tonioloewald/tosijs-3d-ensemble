@@ -20,7 +20,23 @@ import type { Ensemble } from "./format/types.js";
   fixtures, which is a decision about owning another project's data, not a
   tidy-up.
 */
-const DIR = "/Users/tonioloewald/manta-recon/static/prefabs";
+/*
+  ⚠️ TWO PATHS, AND THE RENAME IS THE POINT.
+
+  manta-recon completed this migration and renamed `static/prefabs` to
+  `static/assemblies` — so this test, which hard-coded the old path, quietly
+  started SKIPPING at the exact moment its gate was met. A skip and a pass are
+  not the same result, and here the skip hid good news for days.
+
+  Both names are checked rather than just the new one: the old directory is
+  what every earlier version of this file measured, and a test that can only
+  read the present is one that silently stops working every time somebody
+  tidies up.
+*/
+const ROOT = "/Users/tonioloewald/manta-recon/static";
+const DIR =
+  [`${ROOT}/assemblies`, `${ROOT}/prefabs`].find((d) => existsSync(d)) ??
+  `${ROOT}/assemblies`;
 const present = existsSync(DIR);
 const files = present
   ? readdirSync(DIR).filter((f) => f.endsWith(".json"))

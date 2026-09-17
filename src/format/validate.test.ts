@@ -168,14 +168,36 @@ describe("validate", () => {
   });
 
   it("allows a mesh-less piece when a feature is its body", () => {
-    registerFeature({ name: "terrain", schema: { type: "object" } });
+    /*
+      ⚠️ A STUB NAME NOTHING ELSE USES, and that is not fussiness.
+
+      This used to register a stub called `terrain` and then
+      `unregisterFeature('terrain')` — which does not restore the REAL terrain
+      feature, it deletes it. The suite shares one process and the registry is
+      global, so from here on `featureRegistration('terrain')` was undefined
+      for every later file.
+
+      `insert.test.ts` read that as the fallback branch
+      (`featureRegistration(f)?.insertAt ?? 'point'`) and asserted a primitive
+      lands at the picked point — which is what happens only when the feature
+      does not exist. It was green for as long as this file ran first. CI
+      ordered them the other way and the assertion flipped.
+
+      A test that borrows a real name and then deletes it is indistinguishable
+      from a test that breaks the registry.
+    */
+    registerFeature({ name: "body-stub", schema: { type: "object" } });
     const e = minimal({
       pieces: [
-        { id: "landform", at: [0, 0, 0], features: { terrain: { seed: 1 } } },
+        {
+          id: "landform",
+          at: [0, 0, 0],
+          features: { "body-stub": { seed: 1 } },
+        },
       ],
     });
     expect(validate(e, { meshes: KNOWN })).toEqual([]);
-    unregisterFeature("terrain");
+    unregisterFeature("body-stub");
   });
 
   it("rejects an invalid subsystem regex rather than throwing at load", () => {

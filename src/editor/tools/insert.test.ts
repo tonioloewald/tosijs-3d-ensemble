@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { registerEditorTools } from "./built-in.js";
+import { registerSceneFeatures } from "../../runtime/features-scene.js";
 import { getTool } from "./tool-registry.js";
 import type { ToolContext } from "./tool-registry.js";
 import type { Ensemble, Vec3 } from "../../format/types.js";
@@ -53,6 +54,22 @@ const place = (options: Record<string, unknown>) => {
   cause.
 */
 registerEditorTools();
+/*
+  ⚠️ REGISTER THE FEATURES, or this file tests the fallback instead of the rule.
+
+  `built-in.ts` reads `featureRegistration(feature)?.insertAt ?? 'point'`, so
+  with `terrain` UNregistered every primitive lands at the picked point —
+  which is the branch that runs when the feature does not exist. This file
+  asserted exactly that and was green for as long as it happened to run before
+  anything registered the scene features.
+
+  CI ordered the files the other way (`feature-icons.test.ts` registers them
+  and runs 14 files earlier there) and the assertion flipped: `[3, 0, 0]`
+  became `[0, 0, 0]`, which is the CORRECT answer for a terrain — a terrain has
+  only a height, so dropping it at a click writes coordinates that mean
+  nothing. The test was green because the thing it tested did not exist.
+*/
+registerSceneFeatures();
 
 beforeEach(() => {
   ensemble = { name: "t", pieces: [] };
@@ -61,10 +78,22 @@ beforeEach(() => {
 
 describe("inserting a utility", () => {
   it("places a piece whose feature is its body — no mesh", () => {
+    // A terrain declares `insertAt: 'height'`, so the click supplies only Y.
     place({ feature: "terrain", library: "utilities" });
     expect(ensemble.pieces).toEqual([
-      { id: "terrain", at: [3, 0, 0], features: { terrain: {} } },
+      { id: "terrain", at: [0, 0, 0], features: { terrain: {} } },
     ]);
+  });
+
+  it("honours a feature's own insertAt rule rather than the click", () => {
+    /*
+      The companion, and the reason the assertion above is not just "it lands
+      at the origin": a feature with no rule DOES take the picked point, so
+      these two together show the rule is being read rather than a constant
+      being returned. `interactive` is a decorator with no `insertAt`.
+    */
+    place({ feature: "interactive", library: "utilities" });
+    expect(ensemble.pieces[0]!.at).toEqual([3, 0, 0]);
   });
 
   it("leaves the config EMPTY so the schema's defaults apply", () => {

@@ -15,16 +15,24 @@ export const collectPageErrors = (page: {
   const errors: string[] = [];
   page.on("pageerror", (e) => {
     /*
-      MESSAGE FIRST, STACK APPENDED — not `e.stack ?? String(e)`.
+      THE STACK IF THERE IS ONE, THE MESSAGE IF THERE IS NOT.
 
-      A `pageerror` can carry an EMPTY stack rather than a missing one, and
-      `??` only falls through on nullish, so that spelling recorded `""` and
-      the name-based filter below stopped matching anything. Measured: the
-      dev-server's own failed import came through as a blank entry and failed
-      a test it had always been filtered out of.
+      Two wrong spellings on the way here, both worth naming because they fail
+      in opposite directions:
+
+      - `e.stack ?? String(e)` records `""` when a pageerror carries an EMPTY
+        stack rather than a missing one — `??` only falls through on nullish.
+        The dev server's own failed import then came through blank and failed
+        a test it had always been filtered out of.
+      - appending the stack only when it does NOT already contain the message
+        throws the stack away for every ORDINARY error, because `Error.stack`
+        conventionally begins with the message. That is how a CI failure came
+        back a second time with no more information than the first.
+
+      A non-empty stack already contains the message, so prefer it whole.
     */
-    const stack = e.stack && !e.stack.includes(String(e)) ? `\n${e.stack}` : "";
-    errors.push(`${String(e)}${stack}`);
+    const stack = e.stack?.trim();
+    errors.push(stack ? e.stack! : String(e));
   });
   return errors;
 };

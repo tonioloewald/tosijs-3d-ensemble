@@ -38,10 +38,29 @@ export const collectPageErrors = (page: {
 };
 
 /*
-  `dev.js` is the dev server's live-reload client, served on its own port and
-  absent under `bun bin/site.ts`. Its failed dynamic import is an artifact of
-  the harness, not of the page — filtered by NAME rather than by dropping the
-  check, because a page error nobody asserted on is still a broken page.
+  KNOWN, FILED, AND STILL GATED FOR EVERYTHING ELSE.
+
+  Two errors are filtered BY NAME rather than by dropping the check, because a
+  page error nobody asserted on is still a broken page:
+
+  - **`dev.js`** — the dev server's live-reload client, served on its own port
+    and absent under `bun bin/site.ts`. An artifact of the harness.
+  - **`Cannot redefine property: onBeforeViewRenderObservable`** —
+    tosijs-3d#78. A one-time prototype augmentation double-fires on
+    Linux/SwiftShader and on no machine here, every run, with retries. It is
+    NOT fatal: in both tests that hit it the real assertions pass — the scene
+    builds, the library mounts, the meshes resolve.
+
+  Each entry comes out when its issue lands. A filter with no issue behind it
+  is how a lane stops being evidence.
 */
+const KNOWN: ReadonlyArray<{ match: string; why: string }> = [
+  { match: "/dev.js", why: "dev-server live-reload client, absent in a build" },
+  {
+    match: "Cannot redefine property: onBeforeViewRenderObservable",
+    why: "tosijs-3d#78 — Linux/SwiftShader only, non-fatal",
+  },
+];
+
 export const realErrors = (errors: string[]): string[] =>
-  errors.filter((e) => !e.includes("/dev.js"));
+  errors.filter((e) => !KNOWN.some((k) => e.includes(k.match)));

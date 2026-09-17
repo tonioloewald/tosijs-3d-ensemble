@@ -49,6 +49,11 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Correctness and safety
 
+- [ ] **Remove the `onBeforeViewRenderObservable` filter** from
+      `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype
+      augmentation double-fires on Linux/SwiftShader; non-fatal, but a filtered
+      error is only honest while an issue is behind it.
+
 - [ ] **Library URLs get no scheme check.** `validate` requires only
       non-empty, so a shared ensemble decides which host the viewer's browser
       calls on open. No code execution — `javascript:` in a fetch does nothing

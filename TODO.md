@@ -80,6 +80,14 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Housekeeping
 
+- [ ] **Delete the three `bound() as …` casts in `schema-panel.ts`** when
+      tosijs-3d#76 lands. `slider3d`/`toggle3d`/`select3d` declare plain
+      `value: number | boolean | string`, so passing the box they are designed
+      to bind fails the typecheck — and the cast erases which widgets can bind
+      and which cannot. That erasure is why the 0.3.0 blocker survived: a
+      fourth branch uses `ui.inputField`, whose `value?: string` cannot bind at
+      all, and all four branches looked identical at the type level.
+
 - [ ] **Remove the `.prettierrc` markdown override** once tosijs-ui#141's fix
       is confirmed in 1.14.x. It forces single quotes because the live-example
       parser rejects double-quoted specifiers.

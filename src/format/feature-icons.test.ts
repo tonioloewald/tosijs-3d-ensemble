@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import { registeredFeatures } from "./registry.js";
 import { registerSceneFeatures } from "../runtime/features-scene.js";
 import { registerWorldPreset } from "../presets/world.js";
@@ -17,9 +17,34 @@ import { registerCombatPreset } from "../presets/combat.js";
   sun, light, water or mesh in it. Asked for in tosijs-3d#64, together with an
   icon COLUMN type for `table`, whose cells render `String(v)` today.
 */
+/*
+  PUT IT BACK — and this file did not, which CI caught on its first ever run.
+
+  Registries are GLOBAL and the suite shares one process, so a file that loads
+  a preset and walks away changes the answers in every other file. Two of them
+  assert the format ships no domain — `roles.test.ts` ("ships NO roles") and
+  `validate.test.ts` ("does NOT know about shields") — and both went red on the
+  runner while every local run was green, purely because bun reached the files
+  in a different order there.
+
+  That is the worst shape a test failure has: it is not about the file it
+  fails in, it is order-dependent, and it is invisible on the machine that
+  wrote it. `manta-mvp.test.ts` has carried this rule in a comment since it was
+  written; these two registrations predate the comment and never followed it.
+*/
 registerSceneFeatures();
 registerWorldPreset();
-registerCombatPreset();
+const dropCombat = registerCombatPreset();
+/*
+  ⚠️ Only COMBAT is restored, because only `registerCombatPreset` returns a
+  teardown — `registerSceneFeatures` and `registerWorldPreset` return void, so
+  a file that loads them cannot put them back. That is fine for what is
+  currently asserted (the domain-free tests are about ROLES and about combat's
+  shield rule, and neither of the other two registers a role) and it is a
+  latent version of the same trap. Worth a teardown upstream of here if a test
+  ever needs a registry without them.
+*/
+afterAll(() => dropCombat());
 
 describe("feature icons", () => {
   it("registered enough features to be checking anything", () => {

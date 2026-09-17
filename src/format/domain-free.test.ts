@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { validate } from "./validate.js";
-import { featuresOf, registerRole } from "./roles.js";
+import { featuresOf, registerRole, roleFeatures } from "./roles.js";
 import { registerFeature, unregisterFeature } from "./registry.js";
+import { registerCombatPreset } from "../presets/combat.js";
 import type { Ensemble } from "./types.js";
 
 /*
@@ -115,5 +116,43 @@ describe("the format has no domain", () => {
     expect(featuresOf({ id: "x", at: [0, 0, 0], role: "specimen" })).toEqual({
       labelled: { latin: true },
     });
+  });
+});
+
+describe("a preset's teardown really puts the registry back", () => {
+  /*
+    THE ORDER-INDEPENDENT VERSION OF A LESSON CI TAUGHT US.
+
+    Registries are global and the suite shares one process, so a test file that
+    loads a preset and walks away changes the answers everywhere else. Two
+    files did exactly that, and the suite was green on every local run for as
+    long as they existed — bun happened to reach `roles.test.ts` and
+    `validate.test.ts` BEFORE them here, and reached them after on the runner.
+    First CI run, both went red.
+
+    The fix was teardowns in those files. This is the guard that does not
+    depend on anybody remembering: if `registerCombatPreset`'s teardown ever
+    stops removing what it added, the leak comes back and no amount of
+    discipline in the calling files will catch it.
+  */
+  it("removes every role it added", () => {
+    const roles = [
+      "structure",
+      "target",
+      "power",
+      "generator",
+      "shield",
+      "critical",
+    ];
+    // The precondition IS the domain-free claim — if this file has already been
+    // polluted, the assertion below would pass for the wrong reason.
+    expect(roles.filter((r) => roleFeatures(r))).toEqual([]);
+
+    const drop = registerCombatPreset();
+    // Non-vacuity: the preset must actually have registered something.
+    expect(roles.filter((r) => roleFeatures(r)).length).toBeGreaterThan(0);
+
+    drop();
+    expect(roles.filter((r) => roleFeatures(r))).toEqual([]);
   });
 });

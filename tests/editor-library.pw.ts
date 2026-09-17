@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
   `libraryUrl` MUST ACTUALLY MOUNT A LIBRARY — #10.
@@ -18,8 +19,7 @@ const KIT = "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb";
 test("an editor given libraryUrl can name meshes from it", async ({ page }) => {
   // A cold CDN fetch of a real kit, plus a scene mount, does not fit in 30s.
   test.setTimeout(120_000);
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(String(e)));
+  const errors = collectPageErrors(page);
 
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
   // Wait for the custom element to be defined rather than for the page's own
@@ -79,11 +79,5 @@ test("an editor given libraryUrl can name meshes from it", async ({ page }) => {
   // The consumer measured `tosi-b3d-library 0 elements` and `getNames() 0`.
   expect(result.libs).toBeGreaterThan(0);
   expect(result.names).toBeGreaterThan(0);
-  /*
-    `dev.js` is the dev server's live-reload client, served on its own port and
-    absent under `bun bin/site.ts`. Its failed dynamic import is an artifact of
-    the harness, not of the page, so it is filtered by NAME rather than by
-    dropping the check — a page error nobody asserted on is still a broken page.
-  */
-  expect(errors.filter((e) => !e.includes("/dev.js"))).toEqual([]);
+  expect(realErrors(errors)).toEqual([]);
 });

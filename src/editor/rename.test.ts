@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { registerCombatPreset } from "../presets/combat.js";
 import { featureRegistration } from "../format/registry.js";
 
@@ -29,7 +29,17 @@ const refFields = (
   return out;
 };
 
-beforeAll(() => registerCombatPreset());
+/*
+  PUT IT BACK. The registry is global and the suite shares a process, so
+  leaving the combat vocabulary registered makes `roles.test.ts` and
+  `validate.test.ts` fail — they assert the format ships NO domain. Green
+  locally and red on CI, because only the file ORDER differs.
+*/
+let dropCombat: () => void = () => {};
+beforeAll(() => {
+  dropCombat = registerCombatPreset();
+});
+afterAll(() => dropCombat());
 
 describe("which fields hold a piece id", () => {
   it("finds a reference field by its declared widget", () => {

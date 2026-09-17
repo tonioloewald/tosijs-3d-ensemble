@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
   A SET STRING PROPERTY CAN BE EDITED, AND EDITING IT MOVES NOTHING ELSE.
@@ -41,8 +42,7 @@ import { test, expect } from "@playwright/test";
 */
 test("editing a SET string property reaches the document", async ({ page }) => {
   test.setTimeout(120_000);
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(String(e)));
+  const errors = collectPageErrors(page);
 
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(
@@ -112,5 +112,5 @@ test("editing a SET string property reaches the document", async ({ page }) => {
   expect(result.afterTexture).toBe("/other.svg");
   // Nothing else moved.
   expect(result.afterAt).toEqual(result.beforeAt);
-  expect(errors.filter((e) => !e.includes("/dev.js"))).toEqual([]);
+  expect(realErrors(errors)).toEqual([]);
 });

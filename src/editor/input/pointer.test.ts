@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { PointerHub, closestPointOnRay, distance, pointOnRay } from "./pointer.js";
+import {
+  PointerHub,
+  closestPointOnRay,
+  distance,
+  pointOnRay,
+} from "./pointer.js";
 import type { EditorPointer, EditorRay, Gesture } from "./pointer.js";
 import type { Vec3 } from "../../format/types.js";
 

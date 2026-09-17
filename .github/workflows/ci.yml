@@ -1,0 +1,104 @@
+name: CI
+
+# ⚠️ THIS REPO HAD NO CI UNTIL 0.3.0 SHIPPED, AND THAT IS HOW THE GATE ROTTED.
+#
+# Four lanes — `bun test`, `typecheck`, `build` (which runs a SECOND typecheck
+# plus the live-example checker) and the Playwright scene lane — were all
+# hand-run. The measured cost: the doc-test corpus went from passing to
+# silently skipped across an upstream upgrade and nobody noticed, which is
+# exactly the failure mode tosijs-ui's own ci.yml records from the other side
+# ("the Playwright lane sat red across 23 tags in ~4 weeks").
+#
+# A lane that is not in CI will rot. Name every lane and run every lane.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Everything that does not need a browser.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - name: Unit suite (happy-dom)
+        run: bun test
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      # NOT redundant with the step above. `bun run build` runs the BUILD
+      # typecheck (`tsconfig.build.json`, which emits declarations) and the
+      # live-example checker, and each has caught things the root typecheck
+      # cannot see: `withAttributes()` fails declaration emit with TS2742 while
+      # `bun run typecheck` passes either way, and the example checker is what
+      # finally reported that the README's headline example had never run and
+      # was naming a function this package has never exported.
+      - name: Build (second typecheck + live-example checker)
+        run: bun run build
+
+      # AFTER the build, deliberately: the doc system rewrites source markdown
+      # as a side effect of building (tosijs-ui#165), so a check run before it
+      # measures a tree no developer ever has.
+      - name: Formatting
+        run: bun run format:check
+
+      # A build that dirties a tracked file is a generated file nobody is
+      # gating. Cheaper and more durable than maintaining a list of which files
+      # are generated — a list cannot omit the next one, and it always does.
+      - name: The build leaves the tree clean
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::the build modified tracked files:"
+            git status --porcelain
+            git diff
+            exit 1
+          fi
+
+  # The scene lane: real Chromium, real WebGL2 (SwiftShader), asserting the
+  # RENDERER rather than the element. Everything in `unit` runs under happy-dom,
+  # which has no WebGL, no layout and no render loop — so what the features
+  # actually DO is invisible to it. Six defects reached 0.3.0's changelog that
+  # only a real scene could have caught.
+  scene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      # The dev server serves HTTPS and refuses to start without a cert.
+      # Locally that is an mkcert-trusted one; here a throwaway self-signed
+      # cert is enough, because the tests run with `ignoreHTTPSErrors` (and
+      # mkcert would want sudo).
+      - name: Throwaway dev TLS cert
+        run: |
+          mkdir -p tls
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout tls/key.pem -out tls/certificate.pem \
+            -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+
+      - name: Install Playwright Chromium (+ system deps)
+        run: bunx playwright install --with-deps chromium
+
+      # `workers: 1` is set in playwright.config.ts, and not out of timidity:
+      # every test here drives a WebGL context and Chrome hard-caps live
+      # contexts per process, force-losing the oldest past the limit. Parallel
+      # scene tests evict each other's contexts and fail in whichever order
+      # they happened to run.
+      - name: Scene lane
+        run: bunx playwright test
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

@@ -38,6 +38,7 @@
     "tests": "bun test && bunx playwright test",
     "typecheck": "bunx tsc -p tsconfig.json --noEmit",
     "format": "bun prettier --write .",
+    "format:check": "bun prettier --check .",
     "tls": "tosijs-dev-certs",
     "tunnel": "tosijs-tunnel",
     "deploy": "tosijs-deploy"

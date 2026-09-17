@@ -6,3 +6,26 @@ docs/
 docs.last-good/
 demo/docs.json
 node_modules/
+
+# Build output. `dist/` is gitignored and regenerated on every build, so
+# formatting it is 70 files of churn that no human reads and that `--check`
+# can never keep green — which is how a formatting gate ends up disabled and
+# real drift in hand-written code goes unnoticed.
+dist/
+
+# Test-runner output, both gitignored.
+test-results/
+playwright-report/
+.browser-tests.json
+
+# Pre-release review reports are filed VERBATIM, as the record of what was
+# found and what was not fixed. Reformatting an agent's report edits evidence.
+reviews/
+
+# ⚠️ ONE EXCEPTION, AND IT IS THE WRONG ONE — tosijs-ui#165.
+# The doc system rewrites this file's `<!-- toc -->` block on every build and
+# emits it without the blank line Prettier's markdown formatter always inserts,
+# so `format` and `build` undo each other and a `--check` gate can never stay
+# green. Ignoring it means the repo's one hand-written doc PAGE is the only
+# file the formatter does not check; remove this line the moment #165 lands.
+editor.md

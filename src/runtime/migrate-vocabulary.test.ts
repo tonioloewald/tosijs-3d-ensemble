@@ -37,7 +37,9 @@ describe("migrate's vocabulary still equals upstream's", () => {
   });
 
   it("ambient placement", () => {
-    expect(migrateVocabulary.AMBIENT_WHERE).toEqual(enumOf("ambient", "where")!);
+    expect(migrateVocabulary.AMBIENT_WHERE).toEqual(
+      enumOf("ambient", "where")!
+    );
   });
 
   it("fog modes", () => {

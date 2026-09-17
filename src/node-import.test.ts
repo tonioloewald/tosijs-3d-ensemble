@@ -26,11 +26,16 @@ import { existsSync } from "node:fs";
   A skip is NOT a pass — `bun run build` is part of the release gate, and
   `release-doctor` runs both.
 */
-const built = existsSync("dist/index.js") && existsSync("dist/runtime/build.js");
+const built =
+  existsSync("dist/index.js") && existsSync("dist/runtime/build.js");
 
 const importsUnderNode = async (specifier: string) => {
   const proc = Bun.spawn(
-    ["node", "-e", `import('${specifier}').then(()=>process.exit(0),()=>process.exit(1))`],
+    [
+      "node",
+      "-e",
+      `import('${specifier}').then(()=>process.exit(0),()=>process.exit(1))`,
+    ],
     { stdout: "ignore", stderr: "pipe" }
   );
   return (await proc.exited) === 0;

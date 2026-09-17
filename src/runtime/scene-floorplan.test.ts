@@ -196,7 +196,12 @@ describe("same-named meshes are paired by PLACE, not by order", () => {
 
   it("reports a resize at an unchanged place", () => {
     const before = [rec("crate", [0, 0, 0])];
-    const after = [{ ...rec("crate", [0, 0, 0]), size: [2, 1, 1] as [number, number, number] }];
+    const after = [
+      {
+        ...rec("crate", [0, 0, 0]),
+        size: [2, 1, 1] as [number, number, number],
+      },
+    ];
     expect(floorplanDiff(before, after)).toEqual([
       { name: "crate", kind: "resized", before: [1, 1, 1], after: [2, 1, 1] },
     ]);

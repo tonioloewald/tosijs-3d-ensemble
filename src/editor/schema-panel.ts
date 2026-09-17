@@ -231,15 +231,8 @@ export const boundIfSet = (
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
-  const {
-    schema,
-    values,
-    handleChange,
-    handleCommit,
-    box,
-    boundKeys,
-    fields,
-  } = options;
+  const { schema, values, handleChange, handleCommit, box, boundKeys, fields } =
+    options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
 

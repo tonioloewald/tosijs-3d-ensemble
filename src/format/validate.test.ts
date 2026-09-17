@@ -404,7 +404,10 @@ describe("a PARTIAL library mount is 'cannot check', not 'checked'", () => {
     // declared library has answered: a mesh missing from it may simply live in
     // the kit that has not arrived.
     const problems = validate(
-      { ...twoLibraries, pieces: [{ id: "p", mesh: "barrel", at: [0, 0, 0] as Vec3 }] },
+      {
+        ...twoLibraries,
+        pieces: [{ id: "p", mesh: "barrel", at: [0, 0, 0] as Vec3 }],
+      },
       { meshes: partial, libraries: ["kit-a", "kit-b"] }
     );
     expect(problems.filter((p) => p.code === "unknown-mesh")).toEqual([]);

@@ -19,6 +19,14 @@ import { featureRegistration } from "../format/registry.js";
     applyFog       defaulted true; the element defaults false
     skybox         exposed 6 of 16 properties, and nobody decided the other 10
 
+  ⚠️ **This file checks the FLOOR, and that is only half the range.** It
+  compares against the INSTALLED tosijs-3d, which `peer-range.test.ts` pins to
+  the floor of what we advertise — so a consumer on any version above it gets
+  exactly the silent drift described above, and nothing here would know. CI's
+  `drift` job installs the newest tosijs-3d and runs this file against that,
+  which is the other half; it is a separate job because the rest of the suite
+  fails on purpose once the pin is broken.
+
   `pick()` takes the SHAPE from `sceneSchemas` (tosijs-3d#63, our ask), so none
   of that can be restated wrongly — it is not restated at all. What is left to
   get wrong is the part that stays ours: WHICH keys we name, and the handful of

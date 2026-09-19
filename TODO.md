@@ -79,12 +79,16 @@ release, or verified and too large for one. Both reviews are filed under
       `[Unreleased]` as breaking, since a document that validated clean under
       0.3.0 can fail now.
 
-- [ ] **The scene-schema drift guard only checks the peer FLOOR.**
-      `scene-schemas.test.ts` compares `pick()` against the installed
-      tosijs-3d, pinned to the floor by `peer-range.test.ts`, while the
-      advertised peer is `^0.8.1`. A consumer on 0.8.2+ gets exactly the silent
-      panel drift the mechanism exists to prevent, with only a module-load
-      `console.warn` as signal.
+- [x] ~~**The scene-schema drift guard only checks the peer FLOOR.**~~ CI has a
+      `drift` job now: it installs the newest tosijs-3d and runs the two drift
+      guards against it. Separate job, because the rest of the suite fails on
+      purpose once the floor pin is broken — and blocking, because a failure
+      means either the drift is real and we adopt it, or the exception list
+      needs a new entry with a reason.
+
+      Latest is 0.8.1 today, the same as our floor, so the job currently
+      re-checks the floor and says so in its log rather than implying it
+      tested a ceiling that does not exist yet.
 
 ## Format and runtime work the design is waiting on
 

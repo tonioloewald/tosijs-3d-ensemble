@@ -83,6 +83,49 @@ jobs:
             exit 1
           fi
 
+  # ── the peer CEILING ────────────────────────────────────────────────────
+  #
+  # We develop against the FLOOR of the range we advertise, which is right and
+  # is enforced by `peer-range.test.ts`. But `scene-schemas.test.ts` compares
+  # our panel's property list against the INSTALLED tosijs-3d — so it has only
+  # ever checked the floor, while the range says `^0.8.1` and a consumer may
+  # be on anything above it.
+  #
+  # That is the exact silent drift the mechanism exists to prevent, one
+  # version away: upstream adds a property or changes a range, our panel keeps
+  # showing the old one, and nothing says so until somebody looks at a slider
+  # that lies. Here we install the LATEST and run the two drift guards against
+  # it.
+  #
+  # A separate job so a red ceiling never hides a red unit lane, and blocking
+  # rather than advisory: if it fails, either the drift is real and we adopt
+  # it, or the exception list needs a new entry with a reason. Both are work,
+  # and neither should wait for a consumer to report it.
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+
+      - name: Install the newest tosijs-3d our range admits
+        run: |
+          bun add tosijs-3d@latest
+          FLOOR=$(node -p "require('./package.json').peerDependencies['tosijs-3d'].replace(/^\^/, '')")
+          NOW=$(node -p "require('./node_modules/tosijs-3d/package.json').version")
+          echo "floor $FLOOR · testing against $NOW"
+          if [ "$FLOOR" = "$NOW" ]; then
+            echo "::notice::latest IS the floor today, so this run re-checks the floor rather than the ceiling"
+          fi
+
+      # ONLY the drift guards. The rest of the suite would fail on purpose:
+      # `peer-range.test.ts` asserts the devDependency is pinned to the floor,
+      # and we have just deliberately unpinned it.
+      - name: Schema drift guards
+        run: bun test src/runtime/scene-schemas.test.ts src/runtime/migrate-vocabulary.test.ts
+
   # The scene lane: real Chromium, real WebGL2 (SwiftShader), asserting the
   # RENDERER rather than the element. Everything in `unit` runs under happy-dom,
   # which has no WebGL, no layout and no render loop — so what the features

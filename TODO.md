@@ -56,12 +56,15 @@ release, or verified and too large for one. Both reviews are filed under
       "nobody looked" but "looking is currently unreliable, and here is why".
       Raise `REPARENT_TRIPS` toward 20 and drop the `fixme` when #79 lands.
 
-- [ ] **No bundle-size signal.** `bun run build` prints the doc site's sizes,
-      never the library entry a consumer ships and never a delta.
-      `tree-shaking.test.ts` is the natural home, but its game-import fixture
-      is a pure re-export barrel that Bun shakes to a 101-byte stub — so a
-      ceiling added today would assert against 101 bytes. Change the fixture to
-      one that CONSUMES the exports first.
+- [x] ~~**No bundle-size signal.**~~ `tree-shaking.test.ts` now asserts the
+      GZIPPED size of a game's entry, between 4 kB and 14 kB (8.5 kB today).
+      Loose on purpose — a smoke alarm, not a budget, because a test that
+      fails on 2% drift gets its number bumped without being read.
+
+      The prerequisite was real: the fixture was a bare re-export that Bun
+      shook to a 101-byte stub, so a ceiling would have asserted against 101
+      bytes while the entry grew without limit. It consumes its imports now.
+      Confirmed non-vacuous: adding `ensembleEditor` takes it to 26 kB.
 
 ## Correctness and safety
 

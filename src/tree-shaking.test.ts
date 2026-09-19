@@ -101,6 +101,37 @@ describe("tree-shaking", () => {
     for (const g of DOM_GLOBALS) expect(code).not.toContain(g);
   });
 
+  /*
+    A SIZE CEILING, because nothing was watching the number at all.
+
+    `bun run build` prints the DOC SITE's sizes — never the library entry a
+    consumer ships, and never a delta. The thing that would actually hurt an
+    adopter is a step change: the editor leaking into a game's bundle takes it
+    from 8 kB to 74 kB, and the marker assertions above catch exactly that one
+    cause. This catches the others — a heavy dependency pulled in by a feature,
+    a preset that stops being opt-in — without anybody having to think of them
+    in advance.
+
+    GZIPPED, because that is what crosses the wire, and it is far less noisy
+    than raw bytes under a minifier's whims.
+
+    The ceiling is deliberately loose. This is a smoke alarm, not a budget: a
+    test that fails on a 2% drift gets its number bumped without being read,
+    and then it is furniture. Measured at 8.5 kB when written.
+  */
+  it("a game's bundle stays about the size a game's bundle should be", async () => {
+    const code = await bundle("./src/__fixtures__/game-import.ts");
+    const gzipped = Bun.gzipSync(Buffer.from(code)).byteLength;
+    /*
+      ⚠️ The fixture CONSUMES its imports, and that is load-bearing for this
+      assertion. It used to be a bare re-export, which Bun shook down to a
+      101-byte stub — so a ceiling here would have been asserting against 101
+      bytes while the real entry grew without limit.
+    */
+    expect(gzipped).toBeGreaterThan(4_000);
+    expect(gzipped).toBeLessThan(14_000);
+  });
+
   it("a runtime placer DOES import the engine (the check can fail)", async () => {
     // Without this, the assertion above would pass just as happily if the
     // specifier had been renamed or the bundle had come out empty.

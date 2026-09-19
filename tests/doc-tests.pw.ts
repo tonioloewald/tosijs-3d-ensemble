@@ -45,23 +45,26 @@ declare global {
 
 test.describe("the doc corpus", () => {
   /*
-    ⚠️ `fixme`, NOT `skip`, and not deleted — tosijs-ui#158.
+    ⚠️ IT WAS `fixme` FOR A WEEK, AND THE DIAGNOSIS WAS ONE LAYER OFF.
 
-    tosijs-ui 1.14 removed `doc-browser` from the barrel for bundle size and
-    documents `import 'tosijs-ui/doc-browser'` as the fix. That module has no
-    top-level side effect, so the import is a no-op the bundler removes:
-    measured on a clean build, `tosi-tests-done`, `pagesWithTests` and
-    `createDocBrowser` are all absent from the emitted bundle while
-    `live-example`'s strings are present. The site renders perfectly and
-    `window.__docTestResults` never appears.
+    tosijs-ui 1.14 removed `doc-browser` from the barrel and documents
+    `import 'tosijs-ui/doc-browser'` as the fix. We added that import, the
+    corpus still never appeared, and it was filed as tosijs-ui#158 on the
+    theory that the import was a no-op the bundler removed.
 
-    `fixme` because Playwright reports it distinctly from a pass. A green suite
-    with a silently disabled gate is the exact failure this gate exists to
-    catch — "we didn't look" and "we looked and it's fine" must not produce the
-    same output. Remove this line when #147 lands; the assertions below are
-    unchanged and were passing before the upgrade.
+    The real cause was next door: 1.14 also removed the DOC SYSTEM from the
+    barrel (tosijs-ui#133), and `<tosi-doc-system>` is what the doc browser
+    runs inside. Measured on the published site,
+    `customElements.get('tosi-doc-system')` was FALSE — so no live examples
+    anywhere, every fence rendering as inert `<pre>`, and no corpus. Importing
+    `tosijs-ui/doc-system/doc-system.js` explicitly restored all of it at once:
+    3 examples on the home page, and 6 passed / 0 failed here.
+
+    The lesson is the repo's own: a bare import that LOOKS like the documented
+    fix is not evidence the thing it registers exists. Ask the browser whether
+    the element is defined.
   */
-  test.fixme("every in-page test passes", async ({ page }) => {
+  test("every in-page test passes", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
 

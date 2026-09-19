@@ -16,16 +16,14 @@ release, or verified and too large for one. Both reviews are filed under
       headline investment is a verification lane with nothing to run it on a
       push, a PR or a tag — and that is precisely how the doc-corpus gate went
       from passing to skipped without anyone noticing.
-- [ ] **The doc-corpus gate is off** (`tests/doc-tests.pw.ts`, `test.fixme`),
-      so every ` ```test ` fence in the package is inert: the standard-scene
-      renderer assertions in `runtime/ensemble-element.ts` and all four in
-      `runtime/features-scene.ts`. Blocked on **tosijs-ui#158** — the
-      documented `import 'tosijs-ui/doc-browser'` is a no-op the bundler
-      removes. Highest-leverage open upstream item for this repo.
-      ⚠️ While it is off, CLAUDE.md's claim that the scene lane covers
-      "sun, fill, skybox, camera, ground extent and fog mode/density" is
-      unverified. Either restore the runner or downgrade the wording — a claim
-      of coverage is worse than a gap when the gate is dark.
+- [x] ~~**The doc-corpus gate is off.**~~ Fixed, and the original diagnosis
+      was one layer off. 1.14 removed the doc SYSTEM from the barrel too
+      (tosijs-ui#133), and `<tosi-doc-system>` is what the doc browser runs
+      inside — so importing `tosijs-ui/doc-system/doc-system.js` explicitly
+      restored the corpus (6 passed / 0 failed), every live example on the
+      site, and syntax highlighting, all at once. `doc-tests.pw.ts` is no
+      longer `fixme`.
+
 - [x] ~~**No test drives a physical keystroke through the property panel.**~~
       Done — `tests/property-keystroke.pw.ts` clicks the field and types
       through the window, then asserts the document changed AND the piece did

@@ -14,10 +14,9 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   the selected piece's position).
 
   Driving a real keystroke needs a pointer tap on the field's SVG to make it
-  the group's active field, and that is worth writing — it is the only thing
-  that would have caught the routing bug. It is filed as a follow-up rather
-  than faked here, because a test that appears to cover routing and does not is
-  worse than the gap it hides.
+  the group's active field. That now exists as `property-keystroke.pw.ts` and
+  is the only test that covers routing; this one is kept because it isolates
+  the WRITE path, so a failure in one of the two says which half broke.
 
   The position assertion below is the closest this level can get: it fails if
   an edit to a feature ever lands on the piece's transform.

@@ -26,12 +26,18 @@ release, or verified and too large for one. Both reviews are filed under
       "sun, fill, skybox, camera, ground extent and fog mode/density" is
       unverified. Either restore the runner or downgrade the wording — a claim
       of coverage is worse than a gap when the gate is dark.
-- [ ] **No test drives a physical keystroke through the property panel.**
-      `tests/property-panel.pw.ts` drives the component API, so it covers the
-      WRITE path and not the ROUTING path — and routing is the half that
-      silently committed `x: 1123` on a piece's position when you typed into a
-      colour field. Needs a pointer tap on the field's SVG to make it the
-      group's active field, then a real `keydown`.
+- [x] ~~**No test drives a physical keystroke through the property panel.**~~
+      Done — `tests/property-keystroke.pw.ts` clicks the field and types
+      through the window, then asserts the document changed AND the piece did
+      not move. Confirmed to fail with either 0.3.0 fix reverted: the write
+      path (guard back to `boxFor`) and the routing path (fields out of the
+      `fieldGroup`).
+
+      ⚠️ It needs a 1400x1100 viewport. At Playwright's default 1280x720 the
+      property panel renders below the fold, `elementFromPoint` at the field
+      is `null`, and the click silently hits nothing — which reads exactly
+      like a field that refuses input. That cost the first three runs.
+
 - [ ] **The 480-line editor change is verified by "it mounts."** The adopted
       filtered table, row menu and shelf spinner, the `ComponentAttrs`
       retyping, and the curve panels have no browser assertion. Both of the

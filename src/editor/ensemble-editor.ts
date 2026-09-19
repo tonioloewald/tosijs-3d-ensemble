@@ -3162,6 +3162,26 @@ export class EnsembleEditor extends Component {
   /** Text fields rendered before the keyboard group is built. See `_renderChrome`. */
   private _pendingFields: unknown[] = [];
 
+  /**
+   * Remember a text field so the keyboard group gets it, and hand it back.
+   *
+   * ⚠️ EVERY `ui.inputField` IN THIS FILE MUST GO THROUGH HERE. A field
+   * outside the attached group is not merely unfocusable — `attach()` makes
+   * tosijs-3d's window key listener return early for everyone and routes the
+   * key to the GROUP's active field. So an ungrouped field is worse than
+   * disabled: it silently types into whatever else is focused, which on this
+   * page is usually the selected piece's position.
+   *
+   * Four fields have been found this way, one at a time, each by somebody
+   * trying to use it: the schema panel's strings, the tool options, the piece
+   * filter, and both rename fields. Wrapping the constructor is the only
+   * version of this rule that does not depend on remembering it.
+   */
+  private _collectField<T>(field: T): T {
+    this._pendingFields.push(field);
+    return field;
+  }
+
   private _authoredLibraryMounted = "";
 
   private _shelfMounted = false;
@@ -3371,11 +3391,15 @@ export class EnsembleEditor extends Component {
       "left",
       panel3d(
         { width: PANEL_WIDTH, padding: 8, gap: 4 },
-        ui.inputField({
-          value: this._ensemble.name ?? "",
-          placeholder: "untitled",
-          handleChange: (value: string) => this.rename(value),
-        }) as never,
+        // Into the keyboard group — see `_renderChrome`. Ungrouped, this was
+        // untypable whenever a piece was selected.
+        this._collectField(
+          ui.inputField({
+            value: this._ensemble.name ?? "",
+            placeholder: "untitled",
+            handleChange: (value: string) => this.rename(value),
+          })
+        ) as never,
         /*
           TWO BUTTONS, UNTIL THERE ARE MENUS.
 
@@ -3593,13 +3617,26 @@ export class EnsembleEditor extends Component {
       preserve — plus the field itself, mid-word. So the text lives here, the
       field holds its own, and `setFilter` is called on the LIVE tables.
     */
-    out.push(
-      ui.inputField({
-        value: this._pieceFilter,
-        placeholder: "filter…",
-        handleChange: (text: string) => this._setPieceFilter(text),
-      }) as never
-    );
+    /*
+      ⚠️ INTO THE KEYBOARD GROUP — the third field in this file to need it.
+
+      An `inputField` outside the panel's `ui.fieldGroup` does not merely fail
+      to focus: `attach()` makes tosijs-3d's window key listener return early
+      for EVERYONE and routes the key to the group's own active field. With a
+      piece selected — which on this page is the resting state — clicking the
+      filter and typing sent the characters to the selected piece's position
+      vector, and the filter never narrowed anything.
+
+      Measured: click the field, type "palm", and its placeholder is still
+      "filter…" while the list shows all sixteen rows. Found by writing the
+      test for the behaviour the changelog claimed.
+    */
+    const filterField = ui.inputField({
+      value: this._pieceFilter,
+      placeholder: "filter…",
+      handleChange: (text: string) => this._setPieceFilter(text),
+    });
+    out.push(this._collectField(filterField) as never);
 
     const environment = this._ensemble.pieces.filter((p) => !p.mesh);
     const content = this._ensemble.pieces.filter((p) => p.mesh);
@@ -3734,9 +3771,23 @@ export class EnsembleEditor extends Component {
       Rotation is still normalised to 0..360 on write; the widget's own
       (-180, 180] is its scrubbing range, not what lands in the file.
     */
-    const inputs: Array<{ fields: unknown[] }> = this._pendingFields.length
-      ? [{ fields: this._pendingFields }]
-      : [];
+    /*
+      ⚠️ SEEDED BY REFERENCE, AND NOT WITH A GUARD.
+
+      This used to be `this._pendingFields.length ? [{fields: …}] : []` — so
+      on any render where nothing had been collected YET, the array reference
+      was never captured and every field collected later in this same pass was
+      dropped. The piece's own id field is created below, so it was lost
+      exactly when the list was empty, and renaming a piece did nothing.
+
+      One rule expressed twice again: whether a field reaches the keyboard
+      depends on WHEN it was collected. Seeding unconditionally makes the
+      order irrelevant, which is the only version that survives somebody
+      adding a field.
+    */
+    const inputs: Array<{ fields: unknown[] }> = [
+      { fields: this._pendingFields },
+    ];
     const position = vector3d({
       value: {
         x: selected.at[0] ?? 0,
@@ -3995,13 +4046,16 @@ export class EnsembleEditor extends Component {
         row3d(
           { gap: 6, weights: [1, 8], align: "middle" },
           label3d({ text: this._kindIcon(selected) }),
-          ui.inputField({
-            value: selected.id,
-            placeholder: "id",
-            handleChange: (value: string) => {
-              this.renamePiece(selected.id, value);
-            },
-          }) as never
+          // Same group. A rename field you cannot type into renames nothing.
+          this._collectField(
+            ui.inputField({
+              value: selected.id,
+              placeholder: "id",
+              handleChange: (value: string) => {
+                this.renamePiece(selected.id, value);
+              },
+            })
+          ) as never
         ),
         /*
           The mesh, when there is one, is information rather than a repeat: a

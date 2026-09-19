@@ -68,6 +68,18 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Correctness and safety
 
+- [ ] **The piece-id rename field does not accept keystrokes.** Clicking it
+      and typing changes nothing in the document, every time.
+      `tests/piece-list.pw.ts` has the reproduction as a `fixme`. Three
+      candidate causes have been eliminated: the field is on screen and
+      locatable (x=1131, the properties panel), it goes through
+      `_collectField` like every other field, and the keyboard group is seeded
+      unconditionally so a field collected late is no longer dropped. Those
+      last two were real bugs found on the way and are fixed.
+
+      The same defect in the piece-list FILTER is fixed and covered, so the
+      shape is known — this one has something else wrong with it.
+
 - [ ] **Remove the `onBeforeViewRenderObservable` filter** from
       `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype
       augmentation double-fires on Linux/SwiftShader; non-fatal, but a filtered

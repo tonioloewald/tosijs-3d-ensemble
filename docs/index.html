@@ -39,7 +39,7 @@
   <link rel="icon" href="favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="docs.json?v=54f06a482560" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="docs.json?v=0da27fc021ed" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>tosijs-3d-ensemble</h1>
 <!--{"pin":"top","order":1}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
@@ -61,12 +61,26 @@ most scenes can never be shot — and terrain that quietly accumulates damage an
 disappears at 100 000 is a worse outcome than terrain that was never a
 combatant:</p>
 <pre><code class="language-js">// sun, sky, ground, terrain, water…
-import { registerSceneFeatures } from &#39;tosijs-3d-ensemble&#39;;
+import { registerSceneFeatures, registeredFeatures } from &#39;tosijs-3d-ensemble&#39;;
 // …and the fortification vocabulary, only if you want it
 import { registerCombatPreset } from &#39;tosijs-3d-ensemble/presets/combat&#39;;
 
 registerSceneFeatures();
 registerCombatPreset();
+
+/*
+  Both calls are idempotent, and this page has already made them — which is
+  why the list below shows the combat vocabulary too. A game that never
+  imports the second line simply does not have `destroyable`, `turret` or
+  `protector` in this list, and `validate` does not know what a shield is.
+*/
+preview.append(
+  Object.assign(document.createElement(&#39;p&#39;), {
+    textContent: registeredFeatures()
+      .map((f) =&gt; f.name)
+      .join(&#39;, &#39;),
+  })
+);
 </code></pre>
 <p><strong>Status:</strong> the format, validation, the registry and the instantiator are built and
 tested; the editor is a working scaffold on the doc site. See <code>PLAN.md</code> for what
@@ -91,11 +105,17 @@ import { ensembleEditor } from &#39;tosijs-3d-ensemble&#39;;
 // claim: it named `registerBuiltInFeatures` — a function this package has
 // never had — for as long as the example was unrunnable, and nothing noticed
 // because nothing ran it.
-console.log(
-  typeof buildEnsemble,
-  typeof validate,
-  typeof placeMesh,
-  typeof ensembleEditor
+preview.append(
+  Object.assign(document.createElement(&#39;p&#39;), {
+    textContent: [
+      [&#39;buildEnsemble&#39;, buildEnsemble],
+      [&#39;validate&#39;, validate],
+      [&#39;placeMesh&#39;, placeMesh],
+      [&#39;ensembleEditor&#39;, ensembleEditor],
+    ]
+      .map(([name, value]) =&gt; `${name}: ${typeof value}`)
+      .join(&#39; · &#39;),
+  })
 );
 </code></pre>
 <p>One package, because that is what makes the editor and the game call the <em>same</em>

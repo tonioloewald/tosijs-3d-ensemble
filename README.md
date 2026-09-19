@@ -28,12 +28,26 @@ combatant:
 
 ```js
 // sun, sky, ground, terrain, water…
-import { registerSceneFeatures } from 'tosijs-3d-ensemble';
+import { registerSceneFeatures, registeredFeatures } from 'tosijs-3d-ensemble';
 // …and the fortification vocabulary, only if you want it
 import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat';
 
 registerSceneFeatures();
 registerCombatPreset();
+
+/*
+  Both calls are idempotent, and this page has already made them — which is
+  why the list below shows the combat vocabulary too. A game that never
+  imports the second line simply does not have `destroyable`, `turret` or
+  `protector` in this list, and `validate` does not know what a shield is.
+*/
+preview.append(
+  Object.assign(document.createElement('p'), {
+    textContent: registeredFeatures()
+      .map((f) => f.name)
+      .join(', '),
+  })
+);
 ```
 
 **Status:** the format, validation, the registry and the instantiator are built and
@@ -62,11 +76,17 @@ import { ensembleEditor } from 'tosijs-3d-ensemble';
 // claim: it named `registerBuiltInFeatures` — a function this package has
 // never had — for as long as the example was unrunnable, and nothing noticed
 // because nothing ran it.
-console.log(
-  typeof buildEnsemble,
-  typeof validate,
-  typeof placeMesh,
-  typeof ensembleEditor
+preview.append(
+  Object.assign(document.createElement('p'), {
+    textContent: [
+      ['buildEnsemble', buildEnsemble],
+      ['validate', validate],
+      ['placeMesh', placeMesh],
+      ['ensembleEditor', ensembleEditor],
+    ]
+      .map(([name, value]) => `${name}: ${typeof value}`)
+      .join(' · '),
+  })
 );
 ```
 

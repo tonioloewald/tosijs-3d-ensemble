@@ -23,7 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # PINNED, and it has to be. `docs/` is the published site and is
+      # COMMITTED, and the tree-clean gate below asserts a rebuild reproduces
+      # it — so CI must bundle with the same toolchain a developer did. It
+      # did not: CI pulled bun 1.4.2 against a `docs/` built with 1.4.0, the
+      # chunk contents differed, and the gate went red on output nobody had
+      # changed.
+      #
+      # ⚠️ A bun upgrade therefore means rebuilding `docs/` and committing it
+      # in the same change. That is the point rather than a nuisance: the
+      # published site should be built by the toolchain the project claims to
+      # use, and a red gate is how you find out it is not.
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - run: bun install --frozen-lockfile
 
       - name: Unit suite (happy-dom)
@@ -54,9 +67,11 @@ jobs:
       - name: The build leaves the tree clean
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::the build modified tracked files:"
+            echo "::error::the build modified tracked files — either a generated file was not committed, or the toolchain drifted from the pinned bun version above (in which case rebuild docs/ and commit it):"
             git status --porcelain
-            git diff
+            # Names only. The bundles are megabytes of minified output and a
+            # full diff buries the one line that says WHICH file moved.
+            git diff --stat
             exit 1
           fi
 
@@ -69,7 +84,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # PINNED, and it has to be. `docs/` is the published site and is
+      # COMMITTED, and the tree-clean gate below asserts a rebuild reproduces
+      # it — so CI must bundle with the same toolchain a developer did. It
+      # did not: CI pulled bun 1.4.2 against a `docs/` built with 1.4.0, the
+      # chunk contents differed, and the gate went red on output nobody had
+      # changed.
+      #
+      # ⚠️ A bun upgrade therefore means rebuilding `docs/` and committing it
+      # in the same change. That is the point rather than a nuisance: the
+      # published site should be built by the toolchain the project claims to
+      # use, and a red gate is how you find out it is not.
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
       - run: bun install --frozen-lockfile
 
       # The dev server serves HTTPS and refuses to start without a cert.

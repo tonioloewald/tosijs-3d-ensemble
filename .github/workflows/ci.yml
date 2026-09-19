@@ -66,12 +66,20 @@ jobs:
       # are generated — a list cannot omit the next one, and it always does.
       - name: The build leaves the tree clean
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
+          # ONE NAMED EXCEPTION, and it is not drift. `docs/version.json`
+          # records the COMMIT AND TIME that built the site, so it cannot
+          # match a rebuild at a later commit by construction — CI always
+          # builds at least one commit past the one that produced the
+          # committed file. Excluded by name rather than by ignoring `docs/`,
+          # which is where the drift this gate exists for would actually
+          # live.
+          DIRTY="$(git status --porcelain -- . ':!docs/version.json')"
+          if [ -n "$DIRTY" ]; then
             echo "::error::the build modified tracked files — either a generated file was not committed, or the toolchain drifted from the pinned bun version above (in which case rebuild docs/ and commit it):"
-            git status --porcelain
+            echo "$DIRTY"
             # Names only. The bundles are megabytes of minified output and a
             # full diff buries the one line that says WHICH file moved.
-            git diff --stat
+            git diff --stat -- . ':!docs/version.json'
             exit 1
           fi
 

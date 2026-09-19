@@ -458,3 +458,76 @@ describe("a PARTIAL library mount is 'cannot check', not 'checked'", () => {
     expect(problems.some((p) => p.code === "meshes-unchecked")).toBe(false);
   });
 });
+
+describe("a library url decides who the reader's browser talks to", () => {
+  /*
+    The rule the owner set: **https in general.** An ensemble is a document
+    people share, and the only check used to be that the url was non-empty —
+    so a shared file could point a reader's browser at any host on open, and
+    `javascript:` or `data:` reached an element attribute unexamined.
+  */
+  const withUrl = (url: string) =>
+    codes(
+      minimal({
+        libraries: [{ name: "kit", url }],
+        pieces: [{ id: "a", library: "kit", mesh: "X", at: [0, 0, 0] as Vec3 }],
+      }),
+      { checkRegistry: false }
+    );
+
+  it("accepts https", () => {
+    expect(withUrl("https://cdn.example/kit.glb")).not.toContain(
+      "insecure-library-url"
+    );
+  });
+
+  it("accepts a relative url, which inherits whatever served the page", () => {
+    expect(withUrl("/kits/kit.glb")).not.toContain("unsupported-library-url");
+    expect(withUrl("./kit.glb")).not.toContain("unsupported-library-url");
+  });
+
+  it("rejects plain http", () => {
+    expect(withUrl("http://cdn.example/kit.glb")).toContain(
+      "insecure-library-url"
+    );
+  });
+
+  it("allows http from localhost, because local development is not the threat", () => {
+    expect(withUrl("http://localhost:8080/kit.glb")).not.toContain(
+      "insecure-library-url"
+    );
+    expect(withUrl("http://127.0.0.1:8080/kit.glb")).not.toContain(
+      "insecure-library-url"
+    );
+  });
+
+  it("rejects javascript: and data:, which is the point", () => {
+    expect(withUrl("javascript:alert(1)")).toContain("unsupported-library-url");
+    expect(withUrl("data:model/gltf-binary;base64,AAA")).toContain(
+      "unsupported-library-url"
+    );
+  });
+
+  it("rejects file: and anything else exotic", () => {
+    expect(withUrl("file:///etc/passwd")).toContain("unsupported-library-url");
+    expect(withUrl("ftp://example/kit.glb")).toContain(
+      "unsupported-library-url"
+    );
+  });
+
+  it("reports it as an ERROR, so a generator refuses to emit", () => {
+    // The severity IS the contract: an editor shows everything and keeps
+    // working, a generator decides whether to emit. A warning here would let
+    // a build ship a document that chooses its reader's network.
+    const problems = validate(
+      minimal({
+        libraries: [{ name: "kit", url: "javascript:alert(1)" }],
+        pieces: [{ id: "a", library: "kit", mesh: "X", at: [0, 0, 0] as Vec3 }],
+      }),
+      { checkRegistry: false }
+    );
+    expect(
+      problems.find((p) => p.code === "unsupported-library-url")?.severity
+    ).toBe("error");
+  });
+});

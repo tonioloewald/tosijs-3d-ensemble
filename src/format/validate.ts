@@ -104,6 +104,64 @@ const isVec3 = (v: unknown): v is Vec3 =>
   v.length === 3 &&
   v.every((n) => typeof n === "number" && Number.isFinite(n));
 
+/**
+ * Why a library url is not acceptable, or `null`.
+ *
+ * ⚠️ **A url in an ensemble decides who the viewer's browser talks to.** The
+ * format's whole pitch is a document people share, and the only check used to
+ * be that the string was non-empty — so a file could point a reader's browser
+ * at any host on open, and `javascript:` or `data:` reached an element
+ * attribute unexamined.
+ *
+ * The rule, set by the owner: **https in general.**
+ *
+ * | url                       | verdict                                     |
+ * | ------------------------- | ------------------------------------------- |
+ * | `https://…`               | fine                                        |
+ * | `/kits/x.glb`, `./x.glb`  | fine — relative, so it inherits the page    |
+ * | `http://localhost/…`      | fine — local development is not the threat  |
+ * | `http://cdn.example/…`    | ERROR: insecure                             |
+ * | anything else             | ERROR: unsupported scheme                   |
+ *
+ * `blob:` is deliberately NOT allowed. The editor's only `createObjectURL` is
+ * the file DOWNLOAD, so no library url is ever a blob today — and admitting a
+ * scheme "just in case" is how an allow-list stops being one.
+ *
+ * An ERROR rather than a warning, because "require" is what was asked for and
+ * a severity is how `validate` says a generator should refuse to emit. It can
+ * therefore fail a document that validated clean before — see the changelog.
+ */
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+function urlProblem(url: string): { code: string; message: string } | null {
+  // No scheme at all: a relative url, which resolves against the page and is
+  // therefore exactly as secure as whatever served it.
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return {
+      code: "unsupported-library-url",
+      message: `library url "${url}" is not a valid url`,
+    };
+  }
+
+  if (parsed.protocol === "https:") return null;
+  if (parsed.protocol === "http:") {
+    if (LOCAL_HOSTS.has(parsed.hostname)) return null;
+    return {
+      code: "insecure-library-url",
+      message: `library url "${url}" is http — an ensemble is a document people share, so a library must be served over https (http is allowed only from localhost)`,
+    };
+  }
+  return {
+    code: "unsupported-library-url",
+    message: `library url "${url}" uses "${parsed.protocol}" — only https (and relative urls) are supported, so that a shared ensemble cannot choose what a reader's browser executes or fetches`,
+  };
+}
+
 /** Validate an ensemble. Returns problems; never throws. */
 export function validate(
   ensemble: Ensemble,
@@ -158,6 +216,10 @@ export function validate(
         `library "${library.name}" has no url`,
         `/libraries/${i}/url`
       );
+    } else {
+      const problem = urlProblem(library.url);
+      if (problem)
+        add("error", problem.code, problem.message, `/libraries/${i}/url`);
     }
   });
 

@@ -3,6 +3,38 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### ⚠️ Breaking
+
+- **A library url must be https** (or relative, or `http://localhost`).
+  `validate` reported nothing but "is it non-empty" before, so a shared
+  ensemble could point a reader's browser at any host the moment they opened
+  it, and `javascript:` or `data:` reached an element attribute unexamined.
+  An ensemble is a document people share; that is the whole pitch, and it is
+  also the threat.
+
+  | url                      | verdict                                    |
+  | ------------------------ | ------------------------------------------ |
+  | `https://…`              | fine                                       |
+  | `/kits/x.glb`, `./x.glb` | fine — relative, so it inherits the page   |
+  | `http://localhost/…`     | fine — local development is not the threat |
+  | `http://cdn.example/…`   | `insecure-library-url` (error)             |
+  | anything else            | `unsupported-library-url` (error)          |
+
+  **ERROR, not warning**, because the severity IS the contract: an editor
+  shows everything and keeps working, a generator decides whether to emit. A
+  warning would let a build ship a document that chooses its reader's network.
+  So a document that validated clean under 0.3.0 can fail under this one
+  without having changed — check your library urls before upgrading.
+
+  `blob:` is deliberately not allowed. The editor's only `createObjectURL` is
+  the file download, so no library url is ever a blob today, and admitting a
+  scheme "just in case" is how an allow-list stops being one.
+
+  Owner: _"we should require https in general."_ Related: tosijs#43, the same
+  trust boundary one layer down.
+
 ## [0.3.0] — 2026-09-13
 
 A **minor**: the peer floor moved, which is a decision about who gets broken

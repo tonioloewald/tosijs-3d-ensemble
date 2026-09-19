@@ -38,7 +38,16 @@ dist/
 
 # Doc-site output. Track this only once a Pages deploy points at it — until
 # then it is a 10 MB rebuild artifact that would land in every commit.
-docs/
+# ⚠️ `docs/` IS THE PUBLISHED SITE AND IS COMMITTED — GitHub Pages serves it
+# from `main` at ensemble.tosijs.net. Every sibling does the same (tosijs 59
+# tracked files, tosijs-ui 164, tosijs-3d 2663); this repo ignoring it is why
+# Pages has never once succeeded here.
+#
+# The SOURCE MAPS are the exception, following tosijs' precedent: they are
+# 79 MB of the 106 MB and nothing reads them from the published site.
+docs/*.map
+docs/_chunks/*.map
+docs.last-good/
 llms.txt
 
 # Asset collections live on the CDN, NOT in this repo.
@@ -48,7 +57,6 @@ llms.txt
 # Keep them in static/ locally so the dev server serves them; the deployed site
 # and the ensembles point at cdn.tosijs.net.
 static/*.glb
-docs.last-good/
 test-results/
 playwright-report/
 

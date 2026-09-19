@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>Editor pointers — tosijs-3d-ensemble</title>
+  <meta name="description" content="A tool is written once and driven by a mouse or by a hand. That is the whole point of this file: nothing downstream of it may name a mouse, a click, a screen" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Editor pointers — tosijs-3d-ensemble" />
+  <meta property="og:description" content="A tool is written once and driven by a mouse or by a hand. That is the whole point of this file: nothing downstream of it may name a mouse, a click, a screen" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>Editor pointers</h1>
+<p>A tool is written <strong>once</strong> and driven by a mouse or by a hand. That is the whole
+point of this file: nothing downstream of it may name a mouse, a click, a screen
+coordinate or a DOM event.</p>
+<p>VR is not the initial focus, but starting flat-only is the trap — a flat-only
+contract bakes mouse assumptions into every tool, and each one has to be found
+and removed later. So the contract is XR-shaped from the start and the flat
+pointer is simply its first implementation.</p>
+<h2>What a pointer is</h2>
+<pre><code class="language-typescript">interface EditorPointer {
+  ray(): EditorRay | null   // far interaction: point at a thing
+  grip(): Vec3 | null       // near interaction: reach out and hold it
+  active: boolean           // trigger / primary button
+  secondary: boolean        // squeeze / secondary button
+}
+</code></pre>
+<p>Two ways to grab, because both are real: a hand inside a handle grabs it
+directly, and anything out of reach is grabbed by pointing. An ensemble is
+routinely larger than arm&#39;s reach, so near-grab alone would mean flying the
+world around to edit it; ray alone throws away the thing a headset is for.</p>
+<h2>Hands are symmetric until they aren&#39;t</h2>
+<p>There is no fixed &quot;right hand is the tool&quot;. Whichever pointer starts a gesture
+is its PRIMARY, and whatever else is present becomes the helper <strong>for that
+gesture</strong>. That is what makes two-handed actions expressible later — dragging an
+object along a path with one hand while the other drops keyframes — without a
+left/right special case in every tool.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link current" href="../pointer/" aria-current="page">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

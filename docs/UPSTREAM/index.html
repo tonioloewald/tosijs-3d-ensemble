@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
+  <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Upstream — what we&#39;re waiting on — tosijs-3d-ensemble" />
+  <meta property="og:description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>Upstream — what we&#39;re waiting on</h1>
+<!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
+context, the workaround and the suggestion live there, self-contained for
+someone who has never seen this repo. Keeping a second copy here would drift —
+the issue gets refined in discussion while the local copy quietly ages into a
+description of a problem that has moved (<code>practices/cross-project.md</code>).</p>
+<p>So each row is a link and one line. Mark <code>✅ RESOLVED (fixed in pkg@version)</code>
+when it lands, and close the issue.</p>
+<h2>tosijs-3d</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Finding</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>No way to touch a mesh. <strong>Accepted and BUILT on main</strong> as <code>&lt;tosi-b3d-interactive&gt;</code>, shipping in 0.7.3 — adopt it and port our world rules onto it</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/36">#36</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.7.4">tosijs-3d@0.7.4</a>–0.7.5) — <code>vector3d</code>/<code>euler3d</code>, <code>ui.fieldGroup</code>, a summonable on-screen keyboard, <code>select3d</code> menus, <code>iconGrid3d</code>, and popups that escape their panel. Panels size to content, which retires every hand-tuned height</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/37">#37</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>No manipulator, and <code>b3d-panel</code>&#39;s coloured axes look exactly like one</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/38">#38</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.7.2">tosijs-3d@0.7.2</a>) — <code>destroyable=&quot;off&quot;</code> landed, credited to this project</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/39">#39</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>b3d-turret</code>/<code>b3d-launcher</code> take no <code>library</code>, so a turret cannot have its own mesh</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/34">#34</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>b3d-spawner</code> is player-relative — no way to spawn at an authored place</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/40">#40</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>A scene-owned clock: effect timing can be scaled, craft motion cannot</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/41">#41</a></td>
+</tr>
+<tr>
+<td>9</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.7.4">tosijs-3d@0.7.4</a>) — <code>getManifest()</code>, <code>getInfo(name)</code> without instantiating, and <code>getNames()</code> narrows to declared items. Measured upstream at 559 raw nodes vs 131 declared</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/45">#45</a></td>
+</tr>
+<tr>
+<td>10</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.7.4">tosijs-3d@0.7.4</a>) — the normal map is generated procedurally, so there is no file and no path; an explicit <code>normalMap</code> that fails now logs instead of silently checkerboarding</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/46">#46</a></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>b3d-destroyable</code> cannot scale a library-backed piece at all — <code>size</code> is the placeholder cube&#39;s edge and is ignored once <code>library</code> is set. Measured: width identical at scale 1, 2 and 4</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/47">#47</a></td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>b3d-destroyable</code> drops <code>rx</code>/<code>ry</code>/<code>rz</code> — <code>instantiate</code> is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored <code>rot: [0,45,0]</code> left the footprint identical</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/48">#48</a></td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>b3d-destroyable</code> removed before its <code>lib.ready.then</code> instantiate resolves ORPHANS the node — nothing disposes it, ever. Measured: 4 rapid edits left 4 copies and 210 meshes where there were 81, and it never recovered</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/49">#49</a></td>
+</tr>
+<tr>
+<td>14</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.7.4">tosijs-3d@0.7.4</a>) — numeric fields scrub and type; <code>slider3d</code>&#39;s <code>step</code> always quantised and is now documented. Our snap cyclers STAY: they carry a <code>0</code> sentinel plus a doubling series, which is a cycler&#39;s job, not a slider&#39;s</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/50">#50</a></td>
+</tr>
+<tr>
+<td>15</td>
+<td><del>Sky renders black on some loads</del> — <strong>CLOSED, and it was OURS.</strong> Bisected in one page: <code>&lt;tosi-ensemble&gt;</code> in a plain <code>&lt;tosi-b3d&gt;</code> renders perfectly, and the editor with <code>hideChrome</code> renders perfectly, while the full editor beside them renders dark. The editor CHROME breaks the scene. The GL evidence (<code>gl.isProgram</code> false, <code>glError</code> 1282) was real; my explanation of it — a shared SkyMaterial program deleted by material churn — was not, and reducing to one SkyMaterial did not fix it</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/51">#51</a></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>A STILL sky updates once and never recovers.</strong> <code>b3d-skybox</code> re-runs <code>updateSky</code> from its frame observer only when <code>timeOfDay !== _lastSkyTime</code>, and <code>updateSky</code> writes <code>sunPosition</code>/<code>rayleigh</code>/<code>turbidity</code> only inside <code>if (sunEl?.light != null)</code>. The sun is a separate element whose light appears on its own schedule, so a first call that lands too early leaves the SkyMaterial at its defaults — a dark sky that reads as night. The default <code>realtimeScale: 10</code> hides this by drifting the clock so the gate reopens every tick; set it to 0 for a reproducible scene and four loads in five come up dark. Ask: re-run when the INPUTS change (or when a sun appears), not only when the clock does</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/55">#55</a></td>
+</tr>
+<tr>
+<td>25</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>slider3d</code> gained <code>scale: &#39;log&#39; | &#39;log2&#39;</code>, <code>snap</code> and <code>zeroStop</code>, and <code>skyboxSchema()</code> ships <code>realtimeScale</code> as <code>x-scale: log</code> + <code>x-zero-stop</code>. <strong>ADOPTED</strong> — <code>schema-panel</code> reads <code>x-zero-stop</code> and the cycler is gone</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/62">#62</a></td>
+</tr>
+<tr>
+<td>26</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>tosijs-3d/scene-schemas</code> ships JSON Schema for all nine primitives plus the hemispheric light, headless (verified importing it under Node here), with an <code>extra</code> override argument and <code>SCENE_OMITTED</code> naming the positional attributes a feature panel should drop. <strong>ADOPTED</strong> — <code>pick()</code> in <code>features-scene.ts</code> takes the shape of all ten from upstream, and <code>runtime/scene-schemas.test.ts</code> fails if we restate a range, unit, enum or scale. It found four more silent-nothing controls on the way in (<code>underwaterFog</code> typed boolean, <code>preset: birds</code>, <code>where: air</code>, <code>mode: none</code>), all four now migrated in existing files</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/63">#63</a></td>
+</tr>
+<tr>
+<td>24</td>
+<td>✅ <strong>RESOLVED; RECEIVING END READY, NO CALLER YET</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — plain-JSON curves, <code>normalizeCurve</code>, and <code>evaluateCurve(points, t)</code> with no DOM (verified under Node here), plus <code>curveProgram3d</code> / <code>curveMarkers</code> with <code>handleCommit(value, describe)</code>. <code>schema-panel</code> dispatches <code>x-widget: &#39;curve&#39;</code> and <code>&#39;light-program&#39;</code> and both are pinned by test — but <strong>nothing in this repo declares a curve</strong>: the lamp hands its whole <code>settings</code> to <code>lightEditor3d</code>. The natural first caller is <code>provinceClimateSchema()</code>, whose three channels are curves; upstream shipped it deliberately without a consumer, because the province REGISTRY has to exist first and that is written down as their step 1. Nothing to build here, and nothing to file</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/61">#61</a></td>
+</tr>
+<tr>
+<td>23</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>spinner3d</code> runs in the insert palette while the shelf mounts. Measured with cache-busted kit URLs: &quot;loading 4 kits…&quot; up from 1.0s to 2.0s, then gone. Indeterminate rather than <code>progress3d</code>, because <code>mountLibraries</code> resolves once for the whole shelf and faking a fraction is worse than admitting there is none</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/60">#60</a></td>
+</tr>
+<tr>
+<td>27</td>
+<td>✅ <strong>RESOLVED, PARTLY ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>kind: &#39;button&#39;</code> + <code>menu(row)</code> is adopted: the piece list has per-row Enable/Disable, Duplicate and Delete. <strong><code>kind: &#39;icon&#39;</code> deliberately NOT adopted</strong> — an icon column reads its value as an <code>iconGlyph</code> NAME, and our feature icons are EMOJI by the registry&#39;s contract (<code>registerFeature({ icon: &#39;☀️&#39; })</code>), which is what lets a consumer&#39;s own feature appear with a glyph the editor never knew. Names would make every consumer register an SVG too, to gain nothing an author sees. So the missing scene vocabulary is moot for us</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/64">#64</a></td>
+</tr>
+<tr>
+<td>28</td>
+<td>🟡 <strong>HALF</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <strong>ADOPTED for the schema</strong> — <code>terrainSchema()</code> retired the invented units and the unbounded <code>reach</code>; our floor on <code>tileSize</code> stays, because it is the PRODUCT of two sliders that kills the tab and a schema cannot say that. No terrain EDITOR yet, and regenerate-on-change is still ours</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/66">#66</a></td>
+</tr>
+<tr>
+<td>29</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — the piece list is a <code>table</code> per group with one filter field driving <code>setFilter</code> on the LIVE tables, so scroll, selection and focus survive typing. Measured here: filtering out the selected <code>flagship</code> left it selected and it came back when the filter cleared</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/67">#67</a></td>
+</tr>
+<tr>
+<td>30</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — source specifiers carry <code>.js</code>, and a test asserts it of the SOURCE so it fails at authoring time rather than after a publish. Deep package subpaths too. Verified here: <code>import &#39;tosijs-3d/scene-schemas&#39;</code> and <code>&#39;tosijs-3d/curve&#39;</code> both resolve under Node</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/69">#69</a></td>
+</tr>
+<tr>
+<td>28</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>lightEditor3d</code>&#39;s teaching copy is opt-in now, so an embedded widget no longer ships demo prose into a consumer&#39;s panel</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/65">#65</a></td>
+</tr>
+<tr>
+<td>22</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>) — <code>scene.whenDisposed(cb)</code> exists and returns an unsubscribe. We had already written against it; with the peer floor at 0.8.0 the call is no longer optional-chained, so a missing method would be loud rather than silently never observing disposal</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/58">#58</a></td>
+</tr>
+<tr>
+<td>21</td>
+<td>🟡 <strong>FIXED UPSTREAM, UNVERIFIED HERE</strong> (<a href="mailto:tosijs-3d@0.8.0">tosijs-3d@0.8.0</a>, #58) — &quot;a move no longer costs a scene, and a genuine removal disposes the engine&quot;. Our deferred mount and lazy kit shelf are MITIGATIONS for this and #56 and stay until ~20 SPA round trips say otherwise. n=4 cannot tell &quot;fixed&quot; from &quot;rarer&quot;</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/58">#58</a></td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>A popup on the DOM layer cannot be moved.</strong> The move/close glyphs are picking-driven and scene-only, so nothing renders in the flat presentation — measured, zero <code>data-presentation</code> nodes in the layer. A keyboard summoned from a right-hand panel opens at x 1471, 360 wide, in a 1719 viewport: 112px off-screen with no way to recover it. Asked for drag on the DOM layer, or a viewport clamp</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/57">#57</a></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Constructing a b3d scene inside another component&#39;s rAF render pass corrupts materials</strong> — dark sky, WHITE meshes, empty scene, half-loaded scene, ~70% of loads, all one cause. Isolated by side-by-side comparison in one page. We defer our mount to a macrotask and it goes to zero; filed informationally in case <code>b3d</code> should defer its own engine creation, or the rule should be documented</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/56">#56</a></td>
+</tr>
+<tr>
+<td>17</td>
+<td>✅ <strong>RESOLVED in 0.7.6</strong> — <code>b3d-shadows</code> no longer writes <code>receiveShadows</code> on instanced meshes. The write was already a no-op, so nothing that received shadows stops. Verified here: a full editor load now logs zero of them, where it was ~10,000</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/53">#53</a></td>
+</tr>
+<tr>
+<td>18</td>
+<td>✅ <strong>RESOLVED in 0.7.6</strong> — the icon LANGUAGE works on the texture path, so mirrored names resolve everywhere and no <code>iconFlipX</code> on <code>IconGridItem</code> is needed. Root cause was a trailing space in <code>icon-data</code> making a redirect unparseable as a name. Undo is a real ↰ again. ⚠️ <code>iconExists()</code> was added for exactly this check but is NOT re-exported from the barrel, so a consumer still cannot reach it</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/54">#54</a></td>
+</tr>
+<tr>
+<td>16</td>
+<td>Touch camera: two-finger drag zooms instead of panning, and ⌃drag does not exist on touch — so a tablet cannot pan at all</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/52">#52</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td>✅ <strong>RESOLVED in part</strong> (<a href="mailto:tosijs-3d@0.7.2">tosijs-3d@0.7.2</a>) — <code>exports</code> is a map now, but it names <code>./demo-utils</code> explicitly rather than a <code>./*</code> pattern, so an arbitrary subpath is still unreachable. Closed upstream; we are not reopening, because the case that motivated it (a published, importable subpath) works</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/42">#42</a></td>
+</tr>
+</tbody></table>
+<h3>Stopgaps we own, and what retires them</h3>
+<p>Each of these is local complexity we carry <strong>because</strong> of a row above. When the
+issue lands, the workaround goes — a stopgap that outlives its reason is a fork
+nobody declared. One has already been collected: see the struck-through row.</p>
+<p>| Ours                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Retired by                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| <del><code>destroyable</code> registers <code>body: true</code></del> — <strong>gone in 0.7.2.</strong> Placement is uniform and destruction decorates a body it no longer has to create                                                                                                                                                                                                                                                                                                                                                                                                               | ✅ #39                                                                                                                                                                                                                                                                                                                                                      |
+| <code>launchpad</code> is registered <code>editorOnly</code> — authorable, and honestly marked as something the runtime will not build                                                                                                                                                                                                                                                                                                                                                                                                                                             | #40                                                                                                                                                                                                                                                                                                                                                         |
+| <del><code>numberField</code> + DOM key routing + our own active-field tracking</del> — <strong>gone in 0.7.4.</strong> <code>vector3d</code>/<code>euler3d</code> put a coordinate on ONE row and <code>ui.fieldGroup</code> owns exclusivity, commit-on-leave and key routing                                                                                                                                                                                                                                                                                                                                              | ✅ #37 (items 1, 7)                                                                                                                                                                                                                                                                                                                                         |
+| <code>handles-view.ts</code>, and the drag maths in <code>handles.ts</code>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | #38                                                                                                                                                                                                                                                                                                                                                         |
+| <code>ctx.simTime()</code> defaulting to wall-clock                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | #41                                                                                                                                                                                                                                                                                                                                                         |
+| <code>presets/world</code>&#39;s own <code>interactive</code> (reach, activation, refusal)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 🔜 #36 in 0.7.3                                                                                                                                                                                                                                                                                                                                             |
+| The family-cycler + separate list standing in for a hierarchical palette                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | #37 (list virtualisation still open)                                                                                                                                                                                                                                                                                                                        |
+| <del>Hand-tuned panel heights</del> — <strong>gone in 0.7.5.</strong> <code>height: &#39;fit&#39;</code> is the default and <code>maxHeight</code> scrolls; three separate clipping bugs came from guessing this number                                                                                                                                                                                                                                                                                                                                                                                        | ✅ #37                                                                                                                                                                                                                                                                                                                                                      |
+| Deriving palette categories from NAME PREFIXES, when the library now declares real ones                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | #45                                                                                                                                                                                                                                                                                                                                                         |
+| <del>Our own copy of <code>waterbump.png</code></del> — <strong>deleted in 0.7.4.</strong> The map is procedural now                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | ✅ #46                                                                                                                                                                                                                                                                                                                                                      |
+| <code>runtime/node-transform.ts</code> — writing rotation AND scale past the element onto the instance root, plus <code>whenMeshed</code>&#39;s retry, because the instance does not exist when the element is appended                                                                                                                                                                                                                                                                                                                                                                | tosijs-3d #47, #48                                                                                                                                                                                                                                                                                                                                          |
+| <strong><code>Cannot redefine property: onBeforeViewRenderObservable</code></strong> on Linux/SwiftShader, every run — a one-time prototype augmentation guarded by a module-scope flag, double-firing. Non-fatal (the scene builds, the library mounts, the meshes resolve) but it is an uncaught page error, and our scene lane asserts a page throws nothing. Filtered BY NAME in <code>tests/page-errors.ts</code> with a pointer, so every other page error still fails the build; the filter comes out when this lands. Only found because we added CI — it reproduces on no machine here | <a href="https://github.com/tonioloewald/tosijs-3d/issues/78">tosijs-3d #78</a>                                                                                                                                                                                                                                                                                        |
+| <code>place-mesh.ts</code>&#39;s <code>reapOrphan</code> — watching for an instance that arrives after its element was removed, and disposing it                                                                                                                                                                                                                                                                                                                                                                                                                                       | tosijs-3d #49                                                                                                                                                                                                                                                                                                                                               |
+| <del>The sky&#39;s <code>realtimeScale</code> spelled as an <code>enum</code> so it renders as a cycler</del> — <strong>gone in 0.8.0.</strong> <code>x-scale: log</code> + <code>x-zero-stop</code> is a slider that spans decades and still reaches Off. The TOOL snap cyclers stay: a doubling series with a <code>0</code> sentinel is a cycler&#39;s job, not a slider&#39;s                                                                                                                                                                                                                                                                   | tosijs-3d #50                                                                                                                                                                                                                                                                                                                                               |
+| <strong>The doc system rewrites <code>editor.md</code>&#39;s <code>&lt;!-- toc --&gt;</code> block on every build</strong>, without the blank line Prettier&#39;s markdown formatter always inserts — so <code>format</code> and <code>build</code> undo each other and a <code>--check</code> gate cannot stay green. Surfaced by adding CI. <code>editor.md</code> is in <code>.prettierignore</code> meanwhile, which makes the repo&#39;s one hand-written doc page the only file the formatter does not check                                                                                                                                                       | <a href="https://github.com/tonioloewald/tosijs-ui/issues/165">tosijs-ui #165</a>                                                                                                                                                                                                                                                                                      |
+| <code>editor.md</code>&#39;s <code>calc(100dvh - 4rem)</code>, a hand-tuned navbar offset                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | tosijs-ui #115                                                                                                                                                                                                                                                                                                                                              |
+| Nulling the camera input&#39;s private <code>_pointA</code>/<code>_pointB</code> on re-attach                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Babylon (third-party; no upstream row)                                                                                                                                                                                                                                                                                                                      |
+| 31                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | <strong>No colour control, while <code>scene-schemas</code> declares eight <code>format: &#39;color&#39;</code> properties</strong> — four on the sky alone. <code>FieldType</code> has no <code>color</code>, and <code>lightEditor3d</code> sidesteps it with a hue slider. Anyone doing what #63 invites lands here at once. We use a hex <code>inputField</code> meanwhile: no swatch, no preview, and <code>#eeeff</code> is accepted and silently wrong | <a href="https://github.com/tonioloewald/tosijs-3d/issues/72">#72</a> |</p>
+<h2>tosijs</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Finding</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs@1.9.2">tosijs@1.9.2</a>) — a held boxed proxy is a live view of its path. <code>.value</code> used to resolve for SCALAR proxies and return the captured target for OBJECT ones, so one API disagreed with itself and it presents as a failed WRITE. Cost an afternoon here. Our test asserted the bug and is what failed on upgrade</td>
+<td><a href="https://github.com/tonioloewald/tosijs/issues/35">#35</a></td>
+</tr>
+<tr>
+<td>F</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs@1.10.0">tosijs@1.10.0</a>) — <code>Component</code>&#39;s <code>[key: string]: any</code> index signature is gone, so <code>tsc</code> finally checks our components. It found <code>this.seabed</code>, an attribute whose <code>declare</code> line was never written and which therefore typed as <code>any</code> for as long as it has existed</td>
+<td><a href="https://github.com/tonioloewald/tosijs/issues/36">#36</a></td>
+</tr>
+<tr>
+<td>H</td>
+<td><strong>An unknown prop is assigned as a PROPERTY</strong>, so a props object built from untrusted data can set <code>innerHTML</code> and execute script — confirmed in real Chromium. <code>elements.ts</code> opens by promising construction without <code>innerHTML</code>, and tosijs#26 states the opposite runtime model outright (&quot;an unknown prop is silently dropped&quot;), which is the reading we built on. Half of it was genuinely ours (<code>updateAttrs</code> is <code>element[key] = value</code>) and is fixed here by <code>declaredConfig</code>; the library half protects every other consumer who turns document data into props</td>
+<td><a href="https://github.com/tonioloewald/tosijs/issues/43">#43</a></td>
+</tr>
+<tr>
+<td>G</td>
+<td><strong><code>withAttributes()</code> breaks our <code>.d.ts</code> emit</strong> — its return type is not nameable from <code>&#39;tosijs&#39;</code>, so <code>tsc -p tsconfig.build.json</code> fails TS2742 and <code>bun run build</code> refuses. It is the shape tosijs&#39;s own migration note recommends, and we cannot take it. Using the documented <code>ComponentAttrs</code> alternative meanwhile; <strong>fixed upstream and unpublished</strong>, so switch when it lands</td>
+<td><a href="https://github.com/tonioloewald/tosijs/issues/38">#38</a></td>
+</tr>
+</tbody></table>
+<h2>haltija</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Finding</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D</td>
+<td>An agent driving a BACKGROUND tab cannot verify rendered output — <code>rAF</code> is throttled, a self-pausing scene stops, and hand-driving the frame loop changed the semantics enough to produce two false diagnoses in one session. Asks for a leased, reusable foreground instance</td>
+<td><a href="https://github.com/tonioloewald/haltija/issues/41">#41</a></td>
+</tr>
+</tbody></table>
+<h2>tosijs-ui</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Finding</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E</td>
+<td><strong>The documented <code>import &#39;tosijs-ui/doc-browser&#39;</code> is a no-op</strong>, so 1.14 silently removed our doc-test corpus. That module has no top-level side effect, so the bare import is dropped; measured on a clean build, <code>tosi-tests-done</code>/<code>pagesWithTests</code>/<code>createDocBrowser</code> are all absent while <code>live-example</code>&#39;s strings are present. The site renders perfectly and <code>window.__docTestResults</code> never appears — our gate went from 5s to a 30s timeout, and without it the corpus would just have stopped existing</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/158">#158</a></td>
+</tr>
+<tr>
+<td>A</td>
+<td>Dev-server auth sessions live in <code>new Map()</code>, so every restart invalidates every issued edit link while the 30-day cookie stays valid — it presents as Safari eating cookies</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/114">#114</a></td>
+</tr>
+<tr>
+<td>B</td>
+<td>A full-screen page that is ONE element: markdown wraps it in a <code>&lt;p&gt;</code> and nothing in the chain has a definite height, so <code>height: 100%</code> collapses. Suggested fix is raw <code>.html</code> doc pages</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/115">#115</a></td>
+</tr>
+<tr>
+<td>C</td>
+<td>The dev server answers a missing asset with the SPA shell — HTML at 200 — so a 404 presents as a silently wrong render</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/116">#116</a></td>
+</tr>
+<tr>
+<td>D</td>
+<td><code>describeHolder()</code> with no holder returns a rendered &quot;pid undefined&quot; warning rather than saying there is none — the reader added by #118 tells a caller the opposite of the truth</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/123">#123</a></td>
+</tr>
+</tbody></table>
+<h3>Not filed, deliberately</h3>
+<p><strong><code>prefab</code> means three things.</strong> tosijs-3d exports <code>prefab</code> for a registered
+<code>(ctx) =&gt; Element[]</code> factory (wrecks, debris, spawns); Unity means a serialized
+scene object with code; Manta&#39;s <code>prefab.ts</code> meant our format&#39;s ancestor. Not a
+request — nobody should rename anything over it — but a reader coming from Unity
+meets a second meaning in the same dependency graph, and it is worth knowing
+that is why this project&#39;s word is <strong>ensemble</strong>.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link current" href="../UPSTREAM/" aria-current="page">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

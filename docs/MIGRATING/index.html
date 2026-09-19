@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
+  <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Migrating manta-recon onto tosijs-3d-ensemble" />
+  <meta property="og:description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
+<p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
+<code>src/prefab-runtime.ts</code> are its ancestors, extracted for the reasons in
+<code>SPEC.md</code>. This is the guide for putting it back, and it is short because the
+formats barely diverged.</p>
+<blockquote>
+<p>Tracked as
+<a href="https://github.com/tonioloewald/manta-recon/issues/1">manta-recon#1</a>. The
+cross-project rule holds: nothing in this document changes a file in that repo
+— it says what its owner should do, and this copy ships with the package so it
+is reachable by anyone who only installed it.</p>
+</blockquote>
+<blockquote>
+<p><strong>Requires <code>tosijs-3d@^0.7.8</code>.</strong> 0.1.0 advertised <code>^0.7.0</code> and imported a
+symbol only 0.7.8 exports, so it could not be imported on 0.7.4–0.7.7 — see
+the changelog. Use 0.1.1 or later.</p>
+</blockquote>
+<h2>Where it stands, measured</h2>
+<p>Run against <code>static/prefabs/*.json</code> as they are today:</p>
+<table>
+<thead>
+<tr>
+<th>prefab</th>
+<th>validates</th>
+<th>builds</th>
+<th>needs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>shielded-target.json</code></td>
+<td>clean</td>
+<td>all 4 pieces</td>
+<td><strong>nothing</strong></td>
+</tr>
+<tr>
+<td><code>ocean-rig.json</code></td>
+<td>one warning</td>
+<td>all 3 pieces</td>
+<td>a <code>radar</code> registration</td>
+</tr>
+<tr>
+<td><code>dome-facility.json</code></td>
+<td>7 errors</td>
+<td>all 7 pieces</td>
+<td><code>migrate</code></td>
+</tr>
+<tr>
+<td><code>pyramid-base.json</code></td>
+<td>6 errors</td>
+<td>all 6 pieces</td>
+<td><code>migrate</code></td>
+</tr>
+</tbody></table>
+<p>All four <strong>build every piece</strong> already. The errors are one cause: 13 pieces
+with no <code>id</code>.</p>
+<p>And nothing of Manta&#39;s is lost — <code>subsystems</code>, piece-level <code>values</code>, <code>zones</code>,
+<code>points</code> and top-level <code>values</code> all survive a load/save round trip. That was the
+risk worth checking first, because a format that quietly drops a consumer&#39;s data
+cannot be adopted and would not have shown up as an error.</p>
+<p>The gate lives at <code>src/manta-mvp.test.ts</code> in this repo and re-runs the whole
+table; it skips when the sibling checkout is absent.</p>
+<h2>Four steps</h2>
+<h3>1. Migrate the files</h3>
+<pre><code class="language-bash">cd ../tosijs-3d-ensemble
+bun bin/migrate.ts ../manta-recon/static/prefabs/*.json          # report
+bun bin/migrate.ts --write ../manta-recon/static/prefabs/*.json  # apply
+</code></pre>
+<p>Dry by default. It is idempotent, so re-running it is safe and the dry run
+cannot differ from the write.</p>
+<p>It gives each id-less piece an id <strong>from its mesh name</strong> — <code>&quot;Dome Mystery&quot;</code> →
+<code>dome-mystery</code> — and moves <code>hp</code> from the piece into <code>features.destroyable.hp</code>.
+Ids are not derived from the array index on purpose: that is the fault this
+format exists to refuse, and baking it into a file people hand-edit would make
+it permanent.</p>
+<p><code>docs/prefabs/*.json</code> appear to be copies; migrate them too or delete them.</p>
+<h3>2. Register <code>radar</code></h3>
+<p><code>ocean-rig</code> uses a <code>radar</code> feature nobody has registered, so <code>validate</code> warns and
+the feature does nothing at build. <strong>This should not come from us.</strong> Features are
+a registry open to consumers, and a consumer&#39;s feature is meant to be
+indistinguishable from a built-in — Manta registering its own is that property
+being exercised, not a gap being filled:</p>
+<pre><code class="language-ts">import { registerFeature } from &#39;tosijs-3d-ensemble&#39;;
+
+registerFeature({
+  name: &#39;radar&#39;,
+  icon: &#39;📡&#39;,
+  schema: {
+    type: &#39;object&#39;,
+    title: &#39;Radar&#39;,
+    properties: {
+      /* … */
+    },
+  },
+  bind: (piece, cfg, ctx) =&gt; {
+    /* whatever prefab-runtime did */
+  },
+});
+</code></pre>
+<h3>3. Swap the imports</h3>
+<pre><code class="language-ts">// was
+import { validatePrefab, type Prefab } from &#39;./prefab&#39;;
+import { buildPrefab } from &#39;./prefab-runtime&#39;;
+
+// now
+import {
+  validate,
+  buildEnsemble,
+  registerSceneFeatures,
+  type Ensemble,
+} from &#39;tosijs-3d-ensemble&#39;;
+import { registerCombatPreset } from &#39;tosijs-3d-ensemble/presets/combat&#39;;
+
+registerSceneFeatures(); // sun, sky, ground, terrain, water, lamp…
+registerCombatPreset(); // destroyable, turret, launcher, protector, blip,
+// launchpad, and the roles Manta&#39;s files already use
+</code></pre>
+<p>The combat preset registers exactly the roles those prefabs use — <code>structure</code>,
+<code>target</code>, <code>power</code>, <code>generator</code>, <code>shield</code>, <code>critical</code> — which is unsurprising,
+since it was written from them.</p>
+<h3>Building one</h3>
+<pre><code class="language-js">import { buildEnsemble, placeMesh } from &#39;tosijs-3d-ensemble&#39;;
+
+const built = buildEnsemble(ensemble, {
+  scene, // &lt;tosi-b3d&gt;
+  origin, // where the ensemble&#39;s local origin sits
+  library: &#39;enemies&#39;, // fallback for pieces that name no library of their own
+  placePiece: placeMesh, // ⚠️ REQUIRED for any ensemble with meshes
+});
+</code></pre>
+<p>⚠️ <strong><code>placePiece</code> does not default.</strong> It looks like it should, and this
+package&#39;s own doc comment claimed it did until manta-recon#3 — with it omitted,
+every piece is <em>recorded</em> and none is <em>placed</em>, which reported &quot;20 of 20 built,
+zero problems&quot; and put no geometry in the scene.</p>
+<p>It cannot default: <code>placeMesh</code> imports tosijs-3d, which needs a DOM at module
+load, while <code>buildEnsemble</code> imports cleanly under plain Node — which is what
+lets a generator validate and build headlessly. So the DOM dependency is yours
+to declare. Omitting it now reports <code>no-placer</code>, and a piece the placer
+declines reports <code>no-body</code>.</p>
+<p>⚠️ <strong>Headless means the DEEP import.</strong> A generator with no browser writes:</p>
+<pre><code class="language-typescript">import { buildEnsemble } from &#39;tosijs-3d-ensemble/runtime/build&#39;;
+import { validate } from &#39;tosijs-3d-ensemble/format/validate&#39;;
+</code></pre>
+<p>The package&#39;s main entry also exports <code>ensembleEditor</code>, a custom element, so
+evaluating the barrel needs <code>HTMLElement</code> and throws under Node. Tree-shaking
+saves a bundler; a plain <code>import()</code> evaluates the whole module graph. In a
+browser or through a bundler, import from <code>&#39;tosijs-3d-ensemble&#39;</code> as usual.</p>
+<p>⚠️ <strong>Three problem codes are new, and two are errors.</strong> <code>no-placer</code> and
+<code>no-body</code> report at severity <code>error</code>, and <code>meshes-unchecked</code> as a warning — so a
+document that validated clean under 0.2.0 can report problems under 0.3.0
+without having changed. Each of them is a silence being broken rather than a
+new rule: the old behaviour is what let a build report &quot;20 of 20 built, zero
+problems&quot; with nothing in the scene. If your gate is
+<code>problems.some((p) =&gt; p.severity === &#39;error&#39;)</code>, expect it to fire on a build
+that never passed <code>placePiece</code>.</p>
+<p>Two differences worth knowing:</p>
+<ul>
+<li><strong><code>validate</code> returns <code>{severity, code, message, path}[]</code> and never throws.</strong> An
+editor shows everything and keeps working; a generator decides whether to
+emit. Filter on <code>severity === &#39;error&#39;</code> where <code>validatePrefab</code> used to throw.</li>
+<li><strong><code>registerCombatPreset()</code> returns a teardown</strong>, so the vocabulary can be
+swapped rather than only added.</li>
+</ul>
+<h3>4. Delete <code>prefab.ts</code> and <code>prefab-runtime.ts</code></h3>
+<p>754 lines. <code>src/main.ts</code> and <code>src/prefab-editor.ts</code> are the only importers.</p>
+<p><code>prefab-editor.ts</code>, <code>bench-gizmo.ts</code> and <code>bench-view.ts</code> are a separate question
+— this package has its own editor (<code>ensembleEditor</code>) but it is not yet a
+drop-in replacement for the bench, so keep them until it is.</p>
+<h2>What &quot;done&quot; means</h2>
+<p><code>bun test</code> in this repo, with the sibling checked out, reports all four prefabs
+validating clean and building every piece. That is milestone 1, and it is the
+proof the API is right — which is why it comes before building anything else on
+top of it.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link current" href="../MIGRATING/" aria-current="page">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>tosijs-3d-ensemble — project plan</title>
+  <meta name="description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="tosijs-3d-ensemble — project plan" />
+  <meta property="og:description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>tosijs-3d-ensemble — project plan</h1>
+<!--{"pin":"bottom","parent":"Project","order":2}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
+<p>An <em>ensemble</em> is a reusable, JSON-described arrangement of library meshes with
+declared capabilities and relationships — a rig, a dome facility, a floating
+fortress of shields, platforms, lift units, turrets and generators. No code, no
+engine types: plain data a game loads, a tool authors, and a generator can emit.</p>
+<p><strong><code>SPEC.md</code> is the specification.</strong> It is the primary document: format, editor
+affordances, schema system, test scenarios, and five design questions answered
+with recommendations. This file is the <em>plan</em> — what to build, in what order,
+with what, and what &quot;done&quot; means at each step.</p>
+<hr>
+<h2>Where this sits in the ecosystem</h2>
+<p>Three concerns, deliberately split (SPEC.md §&quot;Where each piece lives&quot;):</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>lives in</th>
+<th>audience</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ensemble <strong>format</strong> (types, defaults, validation)</td>
+<td><code>tosijs-3d-ensemble</code></td>
+<td>every consumer shipping levels</td>
+</tr>
+<tr>
+<td>ensemble <strong>instantiator</strong> (JSON → scene)</td>
+<td><code>tosijs-3d-ensemble</code></td>
+<td>every consumer shipping levels</td>
+</tr>
+<tr>
+<td>the <strong>editor</strong></td>
+<td><code>tosijs-3d-ensemble</code>, tree-shaken out of a game&#39;s bundle</td>
+<td>authors only</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Revised — see SPEC.md open question 5.</strong> These first two used to sit in
+tosijs-3d. The reason to move them is CADENCE, not layering: a format is only
+finished once something has generated content with it, and the thing that will
+shake it out is the editor. Hosting it in the framework makes every format
+revision a framework release, gated by a framework&#39;s compatibility promises,
+while the format is still learning what it is.</p>
+<p><strong>ONE package, not two.</strong> Owner: <em>&quot;I don&#39;t think two packages is right, just
+the editor should be thoroughly tree-shakeable if you just want to consume
+ensembles.&quot;</em> The property that mattered — the editor writes exactly what the
+runtime reads, because it is the same code — is strongest this way: there is
+no version at which the tool and the runtime can disagree. What a game must
+not pay for is the EDITOR, and the mechanism that guarantees that is a
+bundler. <code>src/tree-shaking.test.ts</code> bundles exactly what a game imports and
+fails if any editor module survives — a stray import is how this rots, and
+nothing else would notice.</p>
+<p>Promotion into tosijs-3d later remains the right end state if the format proves
+universal; keeping it dependency-free is what keeps that cheap.</p>
+</blockquote>
+<p>The line, from the owner: <em>&quot;The &#39;prefab&#39; structure and the tool for instantiating
+it belong in tosijs-3d, the editor is simply a tool for creating those
+graphically.&quot;</em> — later refined to: <em>&quot;it could be a lightweight and separable
+import from the editor library. Maybe the latter makes more sense.&quot;</em> The split
+between format and editor is unchanged; only its address moved.</p>
+<p>A shipped game carries the format and the loader and <strong>no editor at all</strong> — the
+common case, and it must not pay for authoring. This project depends on
+tosijs-3d for both, which means <strong>the editor and the game call the same
+instantiator</strong>: &quot;what you author is what you get&quot; holds by construction rather
+than by discipline.</p>
+<h3>Dependencies</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>tosijs-3d</code></td>
+<td>the scene, <strong>and the SVG UI the editor&#39;s chrome is built on</strong></td>
+</tr>
+<tr>
+<td><code>tosijs-ui</code></td>
+<td>the <strong>build/doc system</strong> (<code>tosijs-ui/site</code>), and DOM widgets where the editor is not</td>
+</tr>
+<tr>
+<td><code>tosijs-schema</code></td>
+<td>schemas as JSON Schema → types + validation; tjs predicates later</td>
+</tr>
+<tr>
+<td><code>tosijs</code></td>
+<td>state</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Build it the ecosystem&#39;s way</h2>
+<p>This is a first-class tosijs project, not a side tool. Before substantive work,
+read <code>../tosijs-coding-practices/README.md</code> (the index) and the practice doc for
+the task at hand. <code>CLAUDE.md</code> records the non-negotiables; the ones that shape
+this project most:</p>
+<ul>
+<li><strong>Use the tosijs-ui build and doc system.</strong> Do not hand-roll a bundler, a dev
+server, or a docs page. The prototype&#39;s bench was raw HTML with a bespoke
+stylesheet and that was a mistake the owner caught: <em>&quot;I&#39;m a bit puzzled why you
+don&#39;t leverage the tosijs-ui build system and the actual tosijs-ui widget
+library instead of rolling everything by hand.&quot;</em> One UI surface across the
+ecosystem is a stated goal, and an authoring tool that looks foreign to the
+thing it authors for is a failure of that goal.</li>
+<li><strong>The chrome is tosijs-3d&#39;s SVG UI, not DOM widgets — SPEC.md open question 5
+is answered.</strong> This bullet used to say &quot;use tosijs-ui widgets&quot; flatly, which
+quietly committed the project to flat-only, browser-only editing. The SVG UI
+(<code>widgets3d</code>/<code>box</code>/<code>surface</code>/<code>table</code>/<code>keyboard</code>/<code>popup-surface</code>) is one
+implementation that renders BOTH as a DOM overlay and as an in-scene texture —
+so it buys the headset without giving up the browser. Editing a 3D arrangement
+is a spatial task, and a tool for arranging things in space that cannot be used
+<em>in</em> that space is conceding its best affordance. Milestone 0a below is the
+cheap falsifiable test of that answer; run it before the scaffold hardens.
+Either way: if a widget is missing, that is an issue for its owner, not a
+licence to write one here.</li>
+<li><strong>Observant model, not reactive.</strong> Read <code>practices/observant-model.md</code> first.
+DOM is static by default with pin-point updates; guessing React semantics here
+costs time.</li>
+<li><strong>tosijs for state</strong>, not ad-hoc module globals. The prototype used plain
+mutable objects because it was a bench; a product should not.</li>
+<li><strong>Stay in your repo.</strong> Gaps in tosijs-3d or tosijs-ui get <strong>issues filed
+there</strong>, not worked around here (<code>practices/cross-project.md</code>). The prototype
+accumulated eight upstream workarounds before that became visible as a
+pattern; the same instinct applies from day one.</li>
+<li><strong>Docs are a deliverable</strong>, via the tosijs-ui doc system — an editor whose
+format is undocumented is a format nobody else can generate for.</li>
+<li><strong>Testing:</strong> <code>practices/testing.md</code>. The format and validation are pure and
+should be unit-tested properly; the editor UI wants the browser-test lane.</li>
+<li><strong>Releasing:</strong> <code>practices/releasing.md</code>, including &quot;Bypassing the publish
+loop&quot; — unpublished dependency tarballs live in <code>../local-packages/</code> with a
+<code>PROVENANCE.md</code> and a sha256, never in a session scratchpad.</li>
+</ul>
+<hr>
+<h2>Milestones</h2>
+<h3>0a — settle the UI question first — <strong>half done</strong></h3>
+<p>The piece list and a property panel are BUILT in the SVG UI and verified in a
+browser: selecting a piece through the component&#39;s API swaps the property panel
+and its sliders. <strong>The headset half has not been run</strong>, and one thing found
+already argues for running it soon — clicking a <code>list3d</code> row highlights it but
+does not fire <code>onSelect</code> (see UPSTREAM.md), so selection currently works through
+the API and not through the pointer.</p>
+<p>Original framing, kept because the test is still the test:</p>
+<p>Before the scaffold hardens around a widget set, build the <strong>piece list and one
+property panel</strong> in tosijs-3d&#39;s SVG UI and <strong>try them in a headset</strong>. That is the
+cheapest possible test of open question 5, and it probes the SVG UI&#39;s weakest
+area: it has label/slider/toggle/select/button/list, but no FORM layer, and a
+schema-driven property panel is a form generator.</p>
+<p><strong>Done when:</strong> you can select a piece from a list and change one number, in VR.
+If that feels wrong, question 5 answers itself and the scaffold goes to
+tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice.</p>
+<h3>0 — scaffold ✅ DONE</h3>
+<ul>
+<li>Bun + TypeScript strict (both typechecks clean), <code>tosijs-ui/site</code> wired as the
+build/dev/doc system — no hand-rolled bundler, dev server or docs page.</li>
+<li><code>site.config.ts</code> + <code>bin/site.ts</code> + <code>demo/site.ts</code>, the ecosystem&#39;s shape.</li>
+<li>The editor is a <strong>component</strong> (<code>&lt;tosi-ensemble-editor&gt;</code>); the doc site carries
+it as a full-screen route at <code>/editor/</code>, which is a page that USES the
+component and has no privileged access to anything.</li>
+<li><strong>Done:</strong> <code>bun start</code> serves it on :8032, <code>bun run build</code> produces the bundle
+and 12 static pages, <code>bun test</code> is green.</li>
+</ul>
+<h3>1 — the format + registry — <strong>mostly done</strong></h3>
+<p>Importable by a game with no editor. Asserted by <code>src/tree-shaking.test.ts</code>,
+not by intention.</p>
+<p>Done: types, roles-as-presets with per-feature merge, <code>validate</code> returning
+<code>{severity, code, message, path}</code>, the registry with two-phase <code>bind</code>/<code>link</code>,
+<code>buildEnsemble</code>/<code>loadEnsemble</code> with dispose, built-in feature registrations, and
+<strong>environment primitives</strong> (<code>terrain</code>, <code>water</code>, <code>clouds</code>, <code>ambient</code>, <code>fog</code>) as
+features with no mesh — see SPEC.md open question 2.</p>
+<p>Not done: JSON Schema via tosijs-schema for the format itself (feature schemas
+are already JSON Schema), nested-ensemble flattening (<code>validate</code> reports it
+rather than half-doing it), and the manta-recon migration below.</p>
+<ul>
+<li>JSON Schema for <code>ensemble</code>, <code>piece</code>, <code>feature</code>, <code>link</code>, <code>point</code>, <code>zone</code> via
+tosijs-schema — types and validation from one source (SPEC.md §Part 3).</li>
+<li><code>validate()</code> returning problems, never throwing.</li>
+<li><code>buildEnsemble(data, origin)</code> / <code>loadEnsemble(url, origin)</code>.</li>
+<li><strong><code>registerFeature({ name, schema, bind })</code></strong> — open for extension, with
+tosijs-3d shipping registrations for its own components. A consumer&#39;s feature
+must be indistinguishable from a built-in in the format, the editor and the
+file.</li>
+<li><strong><code>id</code> is mandatory</strong> — not defaulted from array index (SPEC.md open question
+3; derived ids mean every insertion renumbers the world).</li>
+<li><strong>Done when:</strong> <code>../manta-recon</code> deletes <code>src/prefab.ts</code> and
+<code>src/prefab-runtime.ts</code> and loads its four ensembles through the upstream API
+with no behavioural change. That migration is the proof the API is right, and
+it should happen before the editor is built on top of it.</li>
+</ul>
+<h3>2 — inspect — <strong>started</strong></h3>
+<p>Already in: the backdrop (land/aquatic, pinned to origin), placement, a first
+cut of fit-to-bounds framing, live non-blocking validation in the panel, and
+placeholder cubes when a piece&#39;s library is absent so the ARRANGEMENT still
+reads. Still to do: the library palette, camera re-fit as async models load,
+named angles, the ortho toggle, animation transport, and continuous shadow
+registration.</p>
+<p>Read-only, and useful on its own — this is the testbed the ecosystem has been
+missing (cf. tosijs-3d#20, which asked for exactly this kind of reference
+scene).</p>
+<ul>
+<li>Library palette from <code>getNames()</code>; load an ensemble and render it.</li>
+<li>Placement: <strong>land</strong> (ground at 0) and <strong>aquatic</strong> (water at 0, seabed at a
+variable depth). Both planes <strong>pinned to the origin</strong> — a bench looks at one
+thing from many angles, so the world holds still and the camera moves.</li>
+<li>Camera: fit-to-bounds, <strong>re-fitting as async models load</strong>; named angles;
+<strong>orthographic as a toggle independent of angle</strong> (ortho for judging
+alignment, perspective for judging how it reads).</li>
+<li>Animations: play / pause / scrub / speed. Library groups arrive <strong>stopped</strong>.</li>
+<li>Shadows: ground receives, pieces cast, registered <strong>continuously</strong> because
+runtime-added meshes never join a one-time list.</li>
+<li>Live, non-blocking validation display.</li>
+<li><strong>Done when:</strong> every ensemble in manta-recon renders identically to the game,
+at the same scale. Different scale = the tool teaches you the wrong thing.</li>
+</ul>
+<h3>3 — edit — <strong>in progress</strong></h3>
+<ul>
+<li><p><strong>A tool palette and a tool-options panel</strong>, added to this milestone after the
+fact: the palette picks the current tool and runs direct commands, and the
+options panel configures whatever tool is current. Tools and commands are a
+REGISTRY, the same shape as features, so a consumer can add one.</p>
+<ul>
+<li>In flat these are floating draggable panels, palette left, options right.</li>
+<li>In XR they pin to the wrists (<code>frame-panel</code>&#39;s <code>left-hand</code>/<code>right-hand</code> +
+<code>anchor: &#39;wrist&#39;</code>), which is why they are grouped by hand rather than laid
+out as one sidebar.</li>
+</ul>
+</li>
+<li><p><strong>The manipulator is XR-capable from the start</strong>, so Babylon&#39;s <code>GizmoManager</code>
+is NOT the foundation — it is mouse-shaped, and adopting it would mean
+building the real thing twice. Grab is near-or-far: a hand inside a handle
+grabs it, anything out of reach is grabbed by pointing.</p>
+</li>
+<li><p><strong>Hands are symmetric until they aren&#39;t.</strong> Whichever pointer starts a gesture
+is primary for it, and the other becomes its helper — not a fixed left/right
+assignment, so two-handed actions stay expressible.</p>
+</li>
+<li><p>✅ Select: viewport click <strong>or</strong> list; picking walks <strong>up</strong> to the owning piece
+(clicking a turret barrel selects the turret).</p>
+</li>
+<li><p>✅ Gizmos: move / rotate / scale, writing back to the JSON <strong>on drag release</strong>,
+in ensemble-local coordinates. <strong>Snapping</strong> (grid and angle) moved OUT of the
+non-goals: it is a tool option, and the options panel exists to hold it.</p>
+<p>Built as a <strong>universal widget fused into Select</strong>, not a separate tool with a
+mode — one tool whose enabled transforms are settings, every affordance drawn
+at once, and the grip you grab saying what the drag means. Shafts move along
+an axis, pads move in a plane, rings turn, cubes scale, and the secondary
+button makes a cube scale the <em>other</em> two axes. Cheetah 3D&#39;s arrangement,
+which is the one everybody who has used it remembers.</p>
+<p>Two things fell out of building it that were not on this list:</p>
+<ul>
+<li><strong>Per-axis scale</strong>, because a per-axis grip that collapsed to uniform on
+release would be a control that lies. <code>Piece.scale</code> is <code>number | Vec3</code> now.</li>
+<li><strong>Scale worked at all.</strong> It never had: <code>b3d-destroyable</code>&#39;s <code>size</code> is ignored
+for a library-backed piece, so <code>piece.scale</code> moved nothing, measured
+identical at 1, 2 and 4. Filed as tosijs-3d#47; we write the instance root&#39;s
+<code>scaling</code> until it lands.</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>This was the schedule risk, and it was upstream.</strong> tosijs-3d has NO
+manipulator — <code>b3d-panel</code>&#39;s coloured axes are a debug readout that looks
+exactly like one, which has already fooled a reader. Babylon&#39;s
+<code>GizmoManager</code> is mouse-shaped, so lifting it would have meant building the
+real manipulator twice once question 5 landed on the SVG UI. It was built
+here instead, pointer-agnostic, and the ask is filed as tosijs-3d#38.
+<strong>Still unverified in a headset</strong> — the near-grab path has never been used
+by an actual hand.</p>
+</blockquote>
+</li>
+<li><p>Bounding box and wireframe toggles.</p>
+</li>
+<li><p>Add / delete / duplicate pieces from the palette.</p>
+</li>
+<li><p><strong>Schema-driven property panel</strong> — the editor must not know what
+<code>destroyable</code> <em>means</em>, only how to render an editor from a description
+(SPEC.md §Part 3). Widgets: <code>number</code>, <code>boolean</code>, <code>string</code>, <code>enum</code>, <code>mesh</code>,
+<code>ref</code>, <code>point</code>, <code>zone</code>, <code>vec3</code>, <code>color</code>.</p>
+</li>
+<li><p><strong>Features come from the registry, not a hardcoded list.</strong> A host registers
+<code>{ name, schema, bind }</code> and its feature becomes first-class: palette entry,
+property panel, <code>ref</code> participation, save/load. tosijs-3d ships registrations
+for its own components; Manta registers escort zones, energy conduits and
+charred wrecks the same way (SPEC.md §&quot;The feature registry&quot;).</p>
+</li>
+<li><p>Points and zones as first-class editable objects.</p>
+</li>
+<li><p>Persistence: load / save / import / export, with the <strong>host</strong> owning
+storage — the component calls handlers, it does not choose a backend.</p>
+</li>
+<li><p><strong>Done when:</strong> an ensemble can be authored from scratch, saved, reloaded, and
+is byte-comparable to a hand-written equivalent.</p>
+</li>
+</ul>
+<h3>4 — test</h3>
+<p>An ensemble is a puzzle; a static render says nothing about whether it is
+solvable or fair.</p>
+<ul>
+<li>Host-supplied scenarios with a context offering <code>spawn</code>, <code>damage</code>/<code>damageRole</code>,
+<code>pieces()</code>, <code>zones()</code>, <code>log()</code>, time control.</li>
+<li>Ship generic ones (spawn N hostiles, destroy by role, flyby) and let a host
+add its own.</li>
+<li><strong>Time control caveat:</strong> effect timing can be scaled by a consumer-side sim
+clock, but <strong>craft motion cannot</strong> — velocity comes from <code>b3d-aircraft</code>
+integrating against the engine delta. Label a speed control for what it
+actually scales. Real slow-motion needs <code>owner.simTime</code>/<code>simDt</code> upstream
+(tosijs-3d#30) and this project is the <strong>second</strong> consumer to want it.</li>
+<li><strong>Done when:</strong> you can watch idle fighters find an escort zone, and watch a
+reactor kill cascade to a shield, without leaving the page.</li>
+</ul>
+<h3>5 — ship it as a component</h3>
+<ul>
+<li><code>ensembleEditor({ libraries, schema, scenarios, onSave, load })</code> — configurable,
+embeddable, not an application.</li>
+<li>Doc site with a live example.</li>
+<li><strong>Done when:</strong> <code>../manta-recon</code> deletes its bench and depends on this.</li>
+</ul>
+<hr>
+<h2>Deliberate non-goals for v1</h2>
+<h3>Sketched, not scheduled — SPEC.md Part 6</h3>
+<p>Four capabilities the owner outlined while the SVG UI backlog lands upstream:
+procedural tile sets, placeable lights with default geometry, points and zones
+with consumer-defined types, and provinces that reshape terrain. None is built.</p>
+<p>Two things they share are worth knowing before any of them starts, because both
+are format decisions rather than editor ones: each is <strong>a rule that produces
+pieces</strong> (so it wants loader expansion, like nested ensembles), and each takes
+its vocabulary from <strong>library annotations</strong> rather than code (tosijs-3d#45).</p>
+<p>The cheapest is points and zones — the format already holds them, and the whole
+gap is an editor affordance plus a consumer-supplied list of kinds. The most
+expensive is provinces, which needs a third build phase: a piece sitting &quot;on the
+ground&quot; cannot resolve its height until the terrain carve has run.</p>
+<h3>Explicitly out of scope for v1</h3>
+<p>Named so they are decisions rather than omissions: undo/redo, <strong>multi-select</strong>
+(still out — the manipulator lands on a single selection first), alignment
+guides, terrain painting, <strong>nested ensembles</strong> (reserve
+the shape — allow <code>&quot;ensemble&quot;: &quot;name&quot;</code> on a piece and flatten at load — but do
+not build live instances), and the <strong>encounter layer</strong> (SPEC.md open question 4:
+<code>ensemble</code> = what a thing IS, <code>encounter</code> = what it is DOING HERE; build it once
+there are enough ensembles for the distinction to bite).</p>
+<hr>
+<h2>Prior art</h2>
+<p>A working prototype lives in <code>../manta-recon</code> — the editor grew inside a game
+and was extracted for the reasons above. Lift from it; do not start clean out of
+tidiness:</p>
+<p><code>src/prefab.ts</code> (format + validation) · <code>src/prefab-runtime.ts</code> (instantiator) ·
+<code>src/bench-gizmo.ts</code> (GizmoManager binding) · <code>src/bench-view.ts</code> (placement,
+framing, ortho, shadow casters) · <code>src/zones.ts</code> (zone registry) ·
+<code>src/prefab-editor.ts</code> + <code>static/prefab.html</code> (the bench)</p>
+<p>SPEC.md §&quot;What Manta contributes back&quot; lists the traps these encode. They are
+not trivia — each cost real time, and the two most expensive were <strong>assuming a
+name instead of listing what is there</strong> and <strong>verifying a mechanism instead of
+an outcome</strong>.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link current" href="../PLAN/" aria-current="page">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

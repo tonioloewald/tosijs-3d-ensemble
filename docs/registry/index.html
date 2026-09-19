@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>The feature registry — tosijs-3d-ensemble</title>
+  <meta name="description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="The feature registry — tosijs-3d-ensemble" />
+  <meta property="og:description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>The feature registry</h1>
+<p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
+format open: a consumer&#39;s feature is indistinguishable from a shipped one in the
+file, in the editor&#39;s palette, in <code>ref</code> pick lists, and in save/load.</p>
+<pre><code class="language-typescript">import { registerFeature } from &#39;tosijs-3d-ensemble&#39;
+
+registerFeature({
+  name: &#39;turret&#39;,
+  schema: {
+    type: &#39;object&#39;,
+    title: &#39;Turret&#39;,
+    properties: {
+      range: { type: &#39;number&#39;, minimum: 20, maximum: 2000, default: 260, &#39;x-unit&#39;: &#39;m&#39; },
+      smart: { type: &#39;boolean&#39;, default: false, description: &#39;leads its target&#39; },
+    },
+  },
+  bind(piece, cfg, ctx) {
+    const el = b3dTurret({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })
+    ctx.scene.appendChild(el)
+    ctx.onDispose(() =&gt; el.remove())
+    return el
+  },
+})
+</code></pre>
+<h2><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
+<p>A <code>protector</code> that resolves its power source during <code>bind</code> works only if the
+reactor happened to bind first — so the same ensemble behaves differently
+depending on the order pieces appear in the file, and reordering them in the
+editor silently changes behaviour. That is a nasty bug class: it looks like an
+intermittent content problem, not a lifecycle one.</p>
+<p>So <strong><code>bind</code> creates and returns a handle, touching nothing else</strong>, and
+<strong><code>link</code> runs after every piece has bound</strong> and is the only place <code>ctx.handle</code>,
+<code>ctx.piecesByRole</code> and zone lookups are legal. Same shape as tosijs-3d&#39;s
+scene-listener contract, for the same reason: a thing that reaches for its
+neighbours cannot run while the neighbours are still arriving.</p>
+<h2>Rebuilding must be idempotent</h2>
+<p>The editor rebuilds an ensemble on <strong>every edit</strong> — hundreds of times a session
+where a game does it once. <code>onDispose</code> is necessary and not sufficient; the test
+worth writing is <em>build → dispose → build</em>, asserting the scene&#39;s mesh, observer
+and material counts return to where they started. A leak a game never notices
+will eat an editing session.</p>
+<h2>Guard your per-frame work</h2>
+<p>A throw inside a Babylon render observer kills the render loop <strong>permanently</strong> —
+<code>notifyObservers</code> has no isolation and the loop does not re-queue, so the page
+goes black with no error where anyone would look. A <code>bind</code>/<code>link</code> that registers
+per-frame work must guard itself.</p>
+<h2>Links are a registry too</h2>
+<p><code>buildEnsemble</code> documented a link phase that wires <code>ensemble.links</code>, and the
+runtime never read them: an ensemble with chain reactions built cleanly,
+reported no problems, and did nothing. Found by the first consumer with links,
+which is exactly who would find it.</p>
+<p>The fix cannot be &quot;implement chain reactions&quot;, because <strong>the format has no
+domain</strong>. A <code>delay</code> that kills one piece after another is a combat rule; a
+<code>beam</code> that draws a conduit is a visual one. Neither belongs in an instantiator
+that also has to load a botanical garden.</p>
+<p>So links get the same treatment features already have: a <strong>registry keyed by
+the payload key</strong>. A piece&#39;s <code>features</code> is a map of name → config; a link&#39;s
+payload is read the same way, so <code>{ from, to, delay: 0.4, beam: true }</code> invokes
+whatever is registered for <code>delay</code> and for <code>beam</code>, and a consumer&#39;s own link
+kind is indistinguishable from a built-in.</p>
+<p>⚠️ <strong>The payload is every key except <code>from</code>, <code>to</code> and <code>kind</code>, merged over
+<code>values</code>.</strong> The type documents <code>values</code>, and the files in the wild put <code>delay</code>
+and <code>beam</code> at the top level — so both are read rather than one being declared
+wrong after the fact. <code>values</code> wins on a collision, being the explicit spelling.</p>
+<p>It also settles an ownership question a feature hook could not. A chain is a
+property of the LINK, not of either endpoint: whichever end wired it would have
+to reach across, and two endpoints both trying leaves it ambiguous who disposes
+it. A link handler owns the link, gets both ends, and disposes once.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link current" href="../registry/" aria-current="page">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

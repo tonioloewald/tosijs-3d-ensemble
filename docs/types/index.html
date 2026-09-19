@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>The ensemble format — tosijs-3d-ensemble</title>
+  <meta name="description" content="An ensemble is a reusable, JSON-described arrangement of library meshes with declared capabilities and relationships — a rig, a dome facility, a fortress of" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="The ensemble format — tosijs-3d-ensemble" />
+  <meta property="og:description" content="An ensemble is a reusable, JSON-described arrangement of library meshes with declared capabilities and relationships — a rig, a dome facility, a fortress of" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>The ensemble format</h1>
+<p>An <strong>ensemble</strong> is a reusable, JSON-described arrangement of library meshes with
+declared capabilities and relationships — a rig, a dome facility, a fortress of
+shields, platforms, turrets and generators.</p>
+<p>Plain JSON. <strong>No functions, no code, no engine types.</strong> Everything here has to
+survive a round trip through a file, a fetch, a text editor and a generator,
+because the format is authored three ways: by hand, by the editor, and by a
+mission compiler.</p>
+<pre><code class="language-jsonc">{
+  &quot;name&quot;: &quot;ocean-rig&quot;,
+  &quot;kind&quot;: &quot;rig&quot;,                    // free-form; consumers group by it
+  &quot;scale&quot;: 2.5,                     // multiplies every offset and piece scale
+  &quot;values&quot;: { &quot;targetValue&quot;: 3, &quot;faction&quot;: &quot;hostile&quot; },   // open map; the format has no opinion
+  &quot;pieces&quot;: [
+    {
+      &quot;id&quot;: &quot;pump&quot;,                 // MANDATORY and stable — see below
+      &quot;mesh&quot;: &quot;Pump Station&quot;,       // PUBLIC library name
+      &quot;at&quot;: [0, 0, 0],              // ensemble-local metres
+      &quot;rot&quot;: [0, 0, 0],             // euler DEGREES
+      &quot;role&quot;: &quot;power&quot;,
+      &quot;features&quot;: { &quot;turret&quot;: { &quot;range&quot;: 260 } }
+    }
+  ],
+  &quot;links&quot;: [{ &quot;from&quot;: &quot;pump&quot;, &quot;to&quot;: &quot;projector&quot;, &quot;kind&quot;: &quot;power&quot;, &quot;values&quot;: { &quot;delay&quot;: 0.4 } }]
+}
+</code></pre>
+<h2>Four rules that are cheap now and painful later</h2>
+<ul>
+<li><strong><code>id</code> is mandatory</strong>, never derived from array position. A derived id
+renumbers the world on every insertion, so a link authored yesterday points
+somewhere else today.</li>
+<li><strong><code>rot</code> is euler DEGREES</strong>, matching tosijs-3d&#39;s <code>rx</code>/<code>ry</code>/<code>rz</code>. Babylon is
+radians; a bare number is valid in either unit, so the wrong one gives you a
+different orientation rather than an error.</li>
+<li><strong><code>mesh</code> is the PUBLIC library name.</strong> <code>getNames()</code> strips <code>.model</code>,
+behaviour suffixes and the glTF loader&#39;s <code>_primitiveN</code>, so
+<code>building_collideCylinder_primitive0</code> is <code>building</code>. Never store what the
+loader happened to call a node.</li>
+<li><strong><code>match</code> is a regex SOURCE STRING</strong>, compiled at load. A <code>RegExp</code> does not
+survive <code>JSON.stringify</code>, and the format stops being a format.</li>
+</ul>
+<p>Positions are <strong>ensemble-local</strong>, so the same ensemble works at sea level or on
+a plateau.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link current" href="../types/" aria-current="page">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

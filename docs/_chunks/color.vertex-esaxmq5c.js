@@ -1,0 +1,4 @@
+import{ZA as a}from"./site-f1eqjztq.js";import"./site-vjcvv95b.js";import"./site-b0586s68.js";import"./site-gvha0p8v.js";import"./site-y76seb3a.js";import"./site-xk1d5e3r.js";import"./site-s2x1pkvg.js";import"./site-e7fcp3dx.js";import"./site-w3a7hzs8.js";import"./site-ara777sk.js";import"./site-x4w78gzw.js";import"./site-xv022249.js";import"./site-eq33q5cn.js";import"./site-dmc53f0j.js";export{a as colorVertexShaderWGSL};
+
+//# debugId=3BA7A34AE5B082A764756E2164756E21
+//# sourceMappingURL=color.vertex-esaxmq5c.js.map

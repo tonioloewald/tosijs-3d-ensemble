@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
+       a 4s safety-net timeout), because an undefined custom element is
+       display:inline, so the pre-rendered page stacked as bare text and hydration
+       reflowed the whole thing. The cost was a blank screen for as long as the
+       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
+       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
+       out as though the chrome were there, so hydration only ADDS the chrome and
+       nothing moves. Paint immediately; don't hide readable content. -->
+  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
+       than hiding it, a dark-mode reader would otherwise get a flash of the light
+       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
+       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
+       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
+       light default, exactly as before. -->
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <title>Writing a transform — tosijs-3d-ensemble</title>
+  <meta name="description" content="An ensemble&#39;s pieces have two kinds of body and they are written to differently. Getting this wrong does not error — it silently does nothing, which is the…" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Writing a transform — tosijs-3d-ensemble" />
+  <meta property="og:description" content="An ensemble&#39;s pieces have two kinds of body and they are written to differently. Getting this wrong does not error — it silently does nothing, which is the…" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=42f5acb6db78" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <article class="doc-content">
+<h1>Writing a transform</h1>
+<p>An ensemble&#39;s pieces have <strong>two kinds of body</strong> and they are written to
+differently. Getting this wrong does not error — it silently does nothing, which
+is the worst failure mode a manipulator can have.</p>
+<table>
+<thead>
+<tr>
+<th>body</th>
+<th>write to</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>an ELEMENT (<code>b3d-destroyable</code>)</td>
+<td><code>el.x/y/z</code>, <code>el.rx/ry/rz</code></td>
+<td>the element OWNS its transform: <code>render()</code> writes <code>mesh.position</code> from those attributes, so a write straight to the mesh is undone the next time anything re-renders</td>
+</tr>
+<tr>
+<td>a NODE (a plain library instance)</td>
+<td><code>node.position</code> / <code>rotation</code> / <code>scaling</code></td>
+<td>nothing manages it, so the node IS the truth</td>
+</tr>
+</tbody></table>
+<h2>Scale is the exception, and <code>size</code> is a trap</h2>
+<p><code>b3d-destroyable</code>&#39;s <code>size</code> is documented as the <em>placeholder cube edge length</em>,
+<strong>ignored when <code>library</code> is set</strong> — so writing it does nothing for any piece
+with a real mesh, which is every mesh piece we place. Measured before relying on
+it: a piece&#39;s rendered width was 5.273 at <code>scale: 1</code>, <code>2</code> and <code>4</code> alike, with
+the root node&#39;s scaling sitting at <code>1,1,1</code> throughout. <code>piece.scale</code> was inert,
+and the editor&#39;s scale control was moving a number nothing read.</p>
+<p>What DOES work is the element&#39;s own node. <code>element.mesh</code> is the library
+instance&#39;s root <code>TransformNode</code>, the element manages its position and rotation
+but not its scaling, and a write there survives: setting <code>2, 1.5, 3</code> held across
+frames and took the width from 5.273 to 10.546. So scale goes to the node in
+both branches, and per-axis comes free — filed upstream as tosijs-3d#47, since
+a scale attribute belongs on the element.</p>
+<p><code>rx</code>/<code>ry</code>/<code>rz</code> are <strong>degrees</strong> on an element (<code>yaw</code>/<code>pitch</code>/<code>roll</code> are aliases
+for <code>ry</code>/<code>rx</code>/<code>rz</code>), matching the format. Babylon nodes are <strong>radians</strong>, so the
+node path converts.</p>
+<h2>The quaternion trap, on our side of the fence</h2>
+<p>A <code>TransformNode</code> <strong>ignores <code>.rotation</code> while it has a <code>rotationQuaternion</code></strong> —
+and the glTF loader always sets one. That is exactly the bug that made
+<code>library.instantiate()</code>&#39;s rotation silently inert until tosijs-3d 0.7.0: it
+wrote <code>.rotation</code>, the quaternion won, and every value produced the model&#39;s
+baked orientation. <code>position</code> worked, which is what made it look wired up.</p>
+<p>So rotating a node here <strong>clears the quaternion first</strong>. Skip that and a
+rotation drag moves nothing, with no error anywhere.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link current" href="../transform-write/" aria-current="page">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+</body>
+</html>

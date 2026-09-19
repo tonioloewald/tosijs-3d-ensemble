@@ -47,6 +47,23 @@ export default defineSiteConfig({
     // tosijs-ui's live-example parser rejects (tosijs-ui#141).
     "MIGRATING.md",
   ],
+  /*
+    HOSTED ON GITHUB PAGES, from `docs/` on main, at ensemble.tosijs.net.
+
+    This preset is what writes `docs/.nojekyll` and `docs/CNAME`, and the
+    first of those is not cosmetic: without it Pages runs the output through
+    JEKYLL, which is why every deploy since this repo began failed with
+    `Conversion error: Jekyll::Converters::Scss` and the site 404'd. The
+    directory was gitignored too, so Jekyll could not even find it —
+    `No such file or directory @ dir_chdir0 - /github/workspace/docs`.
+
+    Both halves had to be wrong at once for nobody to notice, and a red
+    "pages build and deployment" on every push is exactly the signal that
+    stops being read.
+  */
+  host: "github-pages",
+  domain: "ensemble.tosijs.net",
+
   bundleEntry: "./demo/site.ts",
   staticDirs: ["static"],
   /*

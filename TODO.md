@@ -11,11 +11,15 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Verification gaps — the ones that make other claims unsafe
 
-- [ ] **No CI.** `.github/workflows` does not exist. `bun test`, `test:scene`,
-      both typechecks and the live-example checker are all hand-run. 0.3.0's
-      headline investment is a verification lane with nothing to run it on a
-      push, a PR or a tag — and that is precisely how the doc-corpus gate went
-      from passing to skipped without anyone noticing.
+- [x] ~~**No CI.**~~ Two jobs now — `unit` (test, typecheck, build, format,
+      tree-clean) and `scene` (real Chromium + WebGL). It found three test
+      files corrupting the shared registry on its first runs, one of which had
+      forged a passing test by deleting the feature it was asserting against.
+
+      ⚠️ `bun-version` is PINNED in both jobs, because `docs/` is committed and
+      the tree-clean gate asserts a rebuild reproduces it. A bun upgrade means
+      rebuilding `docs/` in the same change.
+
 - [x] ~~**The doc-corpus gate is off.**~~ Fixed, and the original diagnosis
       was one layer off. 1.14 removed the doc SYSTEM from the barrel too
       (tosijs-ui#133), and `<tosi-doc-system>` is what the doc browser runs
@@ -58,13 +62,12 @@ release, or verified and too large for one. Both reviews are filed under
       augmentation double-fires on Linux/SwiftShader; non-fatal, but a filtered
       error is only honest while an issue is behind it.
 
-- [ ] **Library URLs get no scheme check.** `validate` requires only
-      non-empty, so a shared ensemble decides which host the viewer's browser
-      calls on open. No code execution — `javascript:` in a fetch does nothing
-      — which is why it did not block 0.3.0. It needs a scheme _policy_ before
-      a fix: is `data:` legitimate? `blob:`, which the editor may create for a
-      local file? That decision belongs with the trust-boundary question in
-      tosijs#43 rather than squeezed into a release.
+- [x] ~~**Library URLs get no scheme check.**~~ Done, at the owner's call:
+      https required, relative allowed, `http://localhost` allowed, everything
+      else an ERROR (`insecure-library-url` / `unsupported-library-url`). In
+      `[Unreleased]` as breaking, since a document that validated clean under
+      0.3.0 can fail now.
+
 - [ ] **The scene-schema drift guard only checks the peer FLOOR.**
       `scene-schemas.test.ts` compares `pick()` against the installed
       tosijs-3d, pinned to the floor by `peer-range.test.ts`, while the
@@ -96,6 +99,11 @@ release, or verified and too large for one. Both reviews are filed under
       and which cannot. That erasure is why the 0.3.0 blocker survived: a
       fourth branch uses `ui.inputField`, whose `value?: string` cannot bind at
       all, and all four branches looked identical at the type level.
+
+- [ ] **Un-ignore `editor.md`** when tosijs-ui#165 lands. The build rewrites
+      its `<!-- toc -->` block in a shape Prettier undoes, so format and build
+      cannot both be green — and ignoring it makes the repo's one hand-written
+      doc page the only file the formatter does not check.
 
 - [ ] **Remove the `.prettierrc` markdown override** once tosijs-ui#141's fix
       is confirmed in 1.14.x. It forces single quotes because the live-example

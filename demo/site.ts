@@ -8,7 +8,7 @@
 // made a doc page able to go full-screen and keep the global nav; a bespoke
 // page bypassed that nav and quietly drifted from the rest of the site.
 
-import "tosijs-ui"; // registers <tosi-doc-system> and the tosi-* element family
+import "tosijs-ui"; // the tosi-* element family (NOT the doc system — see below)
 /*
   ⚠️ `<tosi-example>` IS A SEPARATE IMPORT, and without it every executable
   fence renders as plain text — including the ` ```test ` blocks, which means
@@ -34,23 +34,18 @@ import "tosijs-ui"; // registers <tosi-doc-system> and the tosi-* element family
 import "tosijs-ui/doc-system/doc-system.js";
 import "tosijs-ui/live-example";
 /*
-  …and the doc BROWSER, which tosijs-ui 1.14's adoption page lists as REQUIRED.
+  ⚠️ NOT NEEDED, and measured rather than assumed.
 
-  ⚠️ It does not currently do what that page says, and measuring it is the only
-  reason we know. `dist/doc-browser.js` has no top-level side effect — its only
-  `elementCreator` is inside a doc comment and the real content is an exported
-  `createDocBrowser` factory — so this bare import is a no-op that the bundler
-  removes. Measured on a clean build: `tosi-tests-done`, `pagesWithTests` and
-  `createDocBrowser` are all absent from `docs/hydrate.js`, while
-  `live-example`'s own strings are present.
+  1.14's adoption note says to import this; we did, filed tosijs-ui#158 when
+  the corpus still did not appear, and the real cause was next door — the DOC
+  SYSTEM had left the barrel too, and the doc browser runs inside it. With the
+  system imported above, removing this changes nothing: `__docTestResults`
+  still resolves with the full corpus, 6 passed / 0 failed.
 
-  The site itself is fine — chrome, nav and live examples all work. What is
-  gone is the background test RUNNER, so `window.__docTestResults` never
-  appears and the doc-test corpus silently stops existing. Filed as
-  tosijs-ui#158. The import stays because the adoption page says so and it
-  costs nothing; the comment stays because it is currently untrue.
+  So it goes. Keeping an import that does nothing is how the next reader
+  concludes it must be load-bearing.
 */
-import "tosijs-ui/doc-browser";
+
 import * as tosijs from "tosijs";
 import * as tosijsui from "tosijs-ui";
 import * as tosijs3d from "tosijs-3d";

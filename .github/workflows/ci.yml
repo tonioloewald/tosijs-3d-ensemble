@@ -129,7 +129,14 @@ jobs:
       # scene tests evict each other's contexts and fail in whichever order
       # they happened to run.
       - name: Scene lane
-        run: bunx playwright test
+        run: bunx playwright test --project=chromium
+
+      # Its own project and its own step, because it builds and tears down an
+      # engine per trip and is ruinously slow downstream of the others. Also
+      # currently `fixme` — see the file — so this step reports a skip rather
+      # than a pass, which is the distinction that matters.
+      - name: Re-parent lane
+        run: bunx playwright test --project=reparent
 
       - name: Upload report on failure
         if: failure()

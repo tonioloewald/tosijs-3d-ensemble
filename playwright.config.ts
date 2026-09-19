@@ -55,7 +55,25 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      // The re-parent test gets its own project, and it is not fastidiousness:
+      // it builds and tears down a Babylon engine on every trip, and several
+      // engines are constructed per re-parent (tosijs-3d#79). Run after the
+      // other scene tests in the same browser it takes 5 MINUTES for five
+      // trips and fails; run in a fresh one it takes 1.5 for eight and passes.
+      // Whatever the contexts those tests leave behind are doing, this is the
+      // cheapest way not to be downstream of it.
+      testIgnore: /reparent\.pw\.ts/,
+    },
+    {
+      name: "reparent",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /reparent\.pw\.ts/,
+    },
+  ],
   webServer: {
     command: `PORT=${PORT} bun bin/site.ts`,
     url: `https://localhost:${PORT}/`,

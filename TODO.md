@@ -44,10 +44,18 @@ release, or verified and too large for one. Both reviews are filed under
       filtered table, row menu and shelf spinner, the `ComponentAttrs`
       retyping, and the curve panels have no browser assertion. Both of the
       0.3.0 review's editor findings were in this unwatched surface.
-- [ ] **The re-parent regression test CLAUDE.md prescribes has never been
-      written** — SPA-navigate back and forth ~20 times and count outcomes,
-      explicitly NOT reload. tosijs-3d#58 stays 🟡 FIXED UPSTREAM, UNVERIFIED
-      HERE until it is.
+- [ ] **The re-parent regression test is written but cannot be trusted yet.**
+      `tests/reparent.pw.ts` exists and reproduces the subject — SPA-navigate
+      away and back, assert the scene comes back healthy, count outcomes. It
+      is `test.fixme`: four trips passed on one run and failed on the next,
+      alone and in a fresh browser, because several engines are constructed
+      per re-parent and Chrome caps live WebGL contexts (tosijs-3d#79). The
+      prescribed twenty trips stalls the page outright.
+
+      So tosijs-3d#58 keeps its 🟡, and for a better reason than before: not
+      "nobody looked" but "looking is currently unreliable, and here is why".
+      Raise `REPARENT_TRIPS` toward 20 and drop the `fixme` when #79 lands.
+
 - [ ] **No bundle-size signal.** `bun run build` prints the doc site's sizes,
       never the library entry a consumer ships and never a delta.
       `tree-shaking.test.ts` is the natural home, but its game-import fixture

@@ -4007,13 +4007,31 @@ export class EnsembleEditor extends Component {
       opt-in and returns its own detacher, which is why the old panel-level
       `keydown` listener and `_activeField` tracking are gone.
     */
-    this._detachFields?.();
-    // `ui.fieldGroup`, not a bare export — the keyboard helpers live on the
-    // `ui` namespace rather than the package root.
-    const group = ui.fieldGroup({
-      fields: inputs.flatMap((i) => i.fields) as never[],
-    });
-    this._detachFields = group.attach();
+    /*
+      ⚠️ THE GROUP IS BUILT AFTER THE PANEL, and that ordering is the whole
+      bug behind the rename field.
+
+      `fieldGroup` iterates `config.fields` ONCE, at construction, to wrap each
+      field's focus callback — that wrapper is how a TAP tells the group which
+      field to make active. A field created after the call is never wrapped,
+      so tapping it reports to nobody, the group's `active` never changes, and
+      its window listener (which returns early for every field outside the
+      group) swallows the key. Not routed somewhere wrong: gone.
+
+      This used to construct the group here and then build the panel below,
+      which creates the piece's id field. Traced:
+
+          COLLECT 0                    the ensemble name field
+          COLLECT 1                    the piece-list filter
+          GROUPBUILD 11 pending 2      <- group closed here
+          COLLECT 2                    the id field, too late
+
+      So the rename field was outside the group it was collected into, and
+      every earlier fix — the collector, the unconditional seeding — was
+      correct and could not have helped.
+
+      Anything that collects a field must therefore run BEFORE this line.
+    */
     this._addPanel(
       "right",
       panel3d(
@@ -4076,6 +4094,26 @@ export class EnsembleEditor extends Component {
         ...(fields as never[])
       )
     );
+
+    /*
+      NOW the group, with every field this pass created — including the id
+      field above, which the previous ordering closed the group before
+      reaching. `attach()` is opt-in and returns its own detacher, which is
+      why the old panel-level `keydown` listener and `_activeField` tracking
+      are gone.
+
+      `fieldGroup` does the three chores that always travel together:
+      exclusivity (two lit fields both claiming the keyboard is worse than
+      none), commit-on-leave (so a half-typed `1.` never survives as a value),
+      and routing real key events.
+    */
+    this._detachFields?.();
+    // `ui.fieldGroup`, not a bare export — the keyboard helpers live on the
+    // `ui` namespace rather than the package root.
+    const group = ui.fieldGroup({
+      fields: inputs.flatMap((i) => i.fields) as never[],
+    });
+    this._detachFields = group.attach();
   }
 
   /** Detaches the property panel's key routing. Re-made on every render. */

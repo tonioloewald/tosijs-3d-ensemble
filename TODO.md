@@ -68,27 +68,13 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Correctness and safety
 
-- [ ] **The piece-id rename field does not accept keystrokes.** Clicking it
-      and typing changes nothing in the document, every time.
-      `tests/piece-list.pw.ts` has the reproduction as a `fixme`. Three
-      candidate causes have been eliminated: the field is on screen and
-      locatable (x=1131, the properties panel), it goes through
-      `_collectField` like every other field, and the keyboard group is seeded
-      unconditionally so a field collected late is no longer dropped. Those
-      last two were real bugs found on the way and are fixed.
-
-      Since eliminated as well: the click lands (the field's own rect is
-      261x40 and the click is inside it), `renamePiece` works when called
-      directly, the `row3d` wrapper is not the cause, and being in the
-      right-hand panel is not either. The keystroke goes NOWHERE — not to the
-      field and not to the position vector — so the group swallows it and
-      routes to an active field that does not exist or writes nothing.
-
-      What is left: this field never becomes the group's ACTIVE field on
-      click, for a reason the filter field — same widget, same collector,
-      same group — does not share. Next step is upstream: read
-      `fieldGroup`/`inputField` for how a tap sets `group.active`, and what
-      about this one fails to.
+- [x] ~~**The piece-id rename field does not accept keystrokes.**~~ Found and
+      fixed: `fieldGroup` iterates its `fields` ONCE at construction to wrap
+      each field's focus callback, and `_renderProperties` built the group
+      BEFORE the panel that creates the id field. Traced —
+      `COLLECT 0, COLLECT 1, GROUPBUILD 11, COLLECT 2` — the id field arriving
+      one step after the group closed. The group is built after the panel now,
+      and `tests/piece-list.pw.ts` covers it.
 
 - [ ] **Remove the `onBeforeViewRenderObservable` filter** from
       `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype

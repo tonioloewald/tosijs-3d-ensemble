@@ -63,7 +63,23 @@ afterAll(() => dropPreset());
 
 describe.skipIf(!present)("manta-recon's prefabs, through this package", () => {
   it("found them", () => {
-    expect(files.length).toBe(4);
+    /*
+      AT LEAST the original four, not exactly four.
+
+      This asserted `toBe(4)` and went red the day manta added four more
+      clusters — a consumer building MORE content through this package is the
+      outcome the milestone exists for, and a gate that fails on it is a gate
+      that punishes success. What matters is that the four the migration was
+      measured on are still here and still load.
+    */
+    expect(files.length).toBeGreaterThanOrEqual(4);
+    for (const known of [
+      "dome-facility.json",
+      "ocean-rig.json",
+      "pyramid-base.json",
+      "shielded-target.json",
+    ])
+      expect(files).toContain(known);
   });
 
   for (const file of files) {

@@ -133,6 +133,25 @@ test("filtering hides rows without touching the selection", async ({
     is seeded unconditionally so late collection cannot be dropped. Both were
     real bugs and both are fixed. Neither fixed this.
 
+  And what was measured since, narrowing it further:
+
+  - the CLICK LANDS. The field's own background rect is 261x40 at x=1121,
+    y=358, and the click is inside it;
+  - `renamePiece('flagship', 'flagshipZ')` called directly on the element
+    works, first time, no error — so the handler and the rename are fine;
+  - it is NOT the `row3d` wrapper. Rendering the field bare changes nothing;
+  - it is not "right-hand panel" either: `property-keystroke.pw.ts` types into
+    `ground.texture` in the same panel and that works;
+  - the keystroke goes NOWHERE. Not to the field, and not to the position
+    vector either — `at`, `rot` and `scale` are all unchanged after typing. So
+    the group is swallowing the key (its window listener returns early for
+    everyone) and routing it to an active field that either does not exist or
+    writes nothing.
+
+  Which leaves: this field never becomes the group's ACTIVE field on click,
+  for a reason the filter field — same widget, same collector, same group —
+  does not share.
+
   So a rename field you cannot type into renames nothing, silently, and that
   ships today. `fixme` rather than deleted because the reproduction is the
   valuable part and it is exact: it will fail the moment somebody fixes the

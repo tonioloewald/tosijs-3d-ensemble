@@ -77,8 +77,18 @@ release, or verified and too large for one. Both reviews are filed under
       unconditionally so a field collected late is no longer dropped. Those
       last two were real bugs found on the way and are fixed.
 
-      The same defect in the piece-list FILTER is fixed and covered, so the
-      shape is known — this one has something else wrong with it.
+      Since eliminated as well: the click lands (the field's own rect is
+      261x40 and the click is inside it), `renamePiece` works when called
+      directly, the `row3d` wrapper is not the cause, and being in the
+      right-hand panel is not either. The keystroke goes NOWHERE — not to the
+      field and not to the position vector — so the group swallows it and
+      routes to an active field that does not exist or writes nothing.
+
+      What is left: this field never becomes the group's ACTIVE field on
+      click, for a reason the filter field — same widget, same collector,
+      same group — does not share. Next step is upstream: read
+      `fieldGroup`/`inputField` for how a tap sets `group.active`, and what
+      about this one fails to.
 
 - [ ] **Remove the `onBeforeViewRenderObservable` filter** from
       `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype

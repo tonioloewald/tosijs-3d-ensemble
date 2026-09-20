@@ -113,6 +113,23 @@ release, or verified and too large for one. Both reviews are filed under
       and implemented in nothing. Milestone 0 is a tileset schema plus a
       generated draft for `city-kit-roads`.
 
+## Design threads with a stake elsewhere
+
+- [ ] **Panel placement has no device-neutral vocabulary** — tosijs-3d#81. Our
+      chrome is a DOM overlay (`style.top` + a CSS side + `useDomLayer`), which
+      is a fourth model the issue's matrix does not list and the one with no VR
+      story at all. `xr-shape.test.ts` enforces device-neutral INPUT and
+      exempts `ensemble-editor.ts` because "it owns the DOM: it mounts the
+      scene and the panels" — so placement is the one thing we deliberately
+      did not make portable, and it is the thing that would have to be rewritten
+      for a headset.
+
+      What would let us delete `_stackTop` and the `style.top` arithmetic: the
+      `eye`/`face`/`body` frames available flat, plus a vocabulary that also
+      covers the stacked-column case. Plus a per-panel opt-out to DOM for the
+      piece LIST, which is the one panel of five where crispness and native
+      text input actually bite.
+
 ## Housekeeping
 
 - [ ] **Delete the three `bound() as …` casts in `schema-panel.ts`** when

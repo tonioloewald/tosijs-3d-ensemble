@@ -112,8 +112,7 @@ release, or verified and too large for one. Both reviews are filed under
       `starfieldCube`) beside the existing `ground.texture`,
       `water.normalMap` and `nebulaTexture`. Same threat — a shared document
       choosing its reader's network — and the same answer, but it needs a way
-      to know which string fields are URLs (`format: 'uri'` upstream, or an
-      `x-url` of ours).
+      to know which string fields are URLs — asked upstream as tosijs-3d#91.
 
 - [ ] **Removing a key from a singleton's config does not reset it.**
       `addSingleton` assigns what the config HAS, so deleting `starfieldData`
@@ -203,4 +202,6 @@ release, or verified and too large for one. Both reviews are filed under
       `<text>` paints over the full-row hit rect and becomes the event target,
       so the left half of every slider is dead to pointer input and says
       otherwise. `tests/schema-readout.pw.ts` finds the track by geometry to
-      work around it; that goes when #84 lands.
+      work around it; that goes when #84 lands. ⚠️ On 0.8.3 hovering the
+      caption DOES peek (measured), so this is probably fixed upstream;
+      drag not re-checked.

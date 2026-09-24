@@ -7,6 +7,12 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
+- **`tosijs-3d` is now `^0.8.3`** (was `^0.8.1`). The cloud deck, the encoded
+  galaxy, the space band and live terrain climate are all 0.8.2–0.8.3, and we
+  develop against the floor. 0.8.3 also moves the sun onto a northern-hemisphere
+  arc and stops `starfieldTilt` moving it — upstream calls that "visible, not
+  breaking", and a scene tuned by eye will look different.
+
 - **A library url must be https** (or relative, or `http://localhost`).
   `validate` reported nothing but "is it non-empty" before, so a shared
   ensemble could point a reader's browser at any host the moment they opened
@@ -37,6 +43,20 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **A document's galaxy never reached the sky.** `b3d-skybox` reads every
+  starfield attribute once, in `sceneReady`, and the editor's backdrop has
+  already made the sky by the time a document loads — so `starfieldData` was
+  assigned to an element that would never read it. Zero requests for the data
+  cube, a sky with no stars, no error. The skybox feature now re-mounts the
+  element when one of those keys changes (tosijs-3d#88), and
+  `tests/land-and-sky.pw.ts` asserts all six faces arrive; with the re-mount
+  removed it fails with "no /sky/ requests at all".
+
+- **The sky panel's `azimuth` slider did nothing, and has gone.** The skybox
+  writes it to a material property it defines with a no-op setter; upstream's
+  schema also calls it degrees while the element calls it a fraction of a turn
+  (tosijs-3d#86). A file that sets it still validates.
+
 - **The rename test was skipped, and the TODO said it was covering the fix.**
   `piece-list.pw.ts`'s id-field test stayed `test.fixme` after the
   group-ordering fix landed, so nothing watched the one interaction that had
@@ -50,6 +70,34 @@ All notable changes to this project are documented here, in
   true. A fix is not covered until the test covering it has run green once.
 
 ### Added
+
+- **The sky, the weather and the climate from tosijs-3d 0.8.3.** An ensemble
+  can now describe a world like upstream's Land and Sky demo, and
+  `static/ensembles/land-and-sky.json` does exactly that:
+
+  - **Sky:** the atmosphere (`rayleigh`, `mieCoefficient`, `mieDirectionalG`
+    beside `turbidity` and `luminance`), the night sky (`starfieldData` and
+    `starfieldCube` — the encoded galaxy, hosted at
+    `https://3d.tosijs.net/sky/stars` and `…/nebula` — plus `starfieldTilt`, the
+    procedural `starfield`/`nebulae` counts and `starfieldSeed`), and the edge
+    of space (`spaceStart`, `spaceFull`, `spaceColor`). The three decode
+    parameters of the data cube are accepted but not offered: they describe how
+    an asset was encoded, not a choice about a sky.
+  - **`cloudDeck`**, a new feature: the layer of cloud you look up at, where
+    `clouds` is the blobs you fly between. Coverage, altitude, thickening,
+    cirrus, wind, evolve, orographic, colours, shadows.
+  - **Terrain climate:** `biomeTemperature`, `biomeMoisture`,
+    `biomeVolcanicScale`, shown when `biome` is on.
+
+  ⚠️ The deck is the one scene feature whose ranges are partly ours, because
+  `sceneSchemas` has no `cloudDeckSchema()` (tosijs-3d#87). Defaults are read
+  live from the element; ranges come from its doc comments where it states one
+  and are marked as ours where it does not.
+
+- **Every shipped sample is validated, warnings included.** A new sweep fails
+  on `unknown-feature` or `unknown-feature-key` in `static/ensembles/`, since
+  in our own files either is a typo that renders as nothing. Falsified with a
+  misspelt `starfeildTilt`.
 
 - **A frequency slider says what it means.** tosijs-3d's scene schemas mark
   `terrain.grossScale` and `detailScale` with `x-unit: '1/m'` and

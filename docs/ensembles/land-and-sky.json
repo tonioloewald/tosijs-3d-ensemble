@@ -1,0 +1,104 @@
+{
+  "name": "land-and-sky",
+  "kind": "location",
+  "pieces": [
+    {
+      "id": "view",
+      "at": [0, 170, 0],
+      "features": {
+        "camera": {
+          "distance": 300,
+          "heading": -55,
+          "elevation": 5,
+          "maxDistance": 3000
+        }
+      }
+    },
+    {
+      "id": "sun",
+      "at": [-0.5, 1, 0.4],
+      "features": {
+        "sun": {
+          "activeDistance": 80
+        }
+      }
+    },
+    {
+      "id": "sky",
+      "at": [0, 0, 0],
+      "features": {
+        "skybox": {
+          "timeOfDay": 18.5,
+          "starfieldData": "https://3d.tosijs.net/sky/stars",
+          "starfieldCube": "https://3d.tosijs.net/sky/nebula",
+          "starfieldTilt": "12,25,58"
+        }
+      }
+    },
+    {
+      "id": "fill",
+      "at": [0, 0, 0],
+      "features": {
+        "light": {
+          "intensity": 0.5
+        }
+      }
+    },
+    {
+      "id": "haze",
+      "at": [0, 0, 0],
+      "features": {
+        "fog": {
+          "syncSkybox": true,
+          "start": 1000,
+          "end": 4000
+        }
+      }
+    },
+    {
+      "id": "land",
+      "at": [0, 0, 0],
+      "features": {
+        "terrain": {
+          "seed": 111,
+          "surfaceType": "plane",
+          "grossScale": 0.01,
+          "detailScale": 0.09,
+          "horizScale": 3.31,
+          "grossAmplitude": 230,
+          "detailAmplitude": 45,
+          "biome": true,
+          "biomeSeaLevel": 147,
+          "biomeLapseRate": 0.0022,
+          "biomeMoisture": 0.72,
+          "tileSize": 128,
+          "lodLevels": 3,
+          "reach": 2000
+        }
+      }
+    },
+    {
+      "id": "weather",
+      "at": [0, 0, 0],
+      "features": {
+        "cloudDeck": {
+          "altitude": 280,
+          "coverage": 0.1,
+          "orographic": 0.8,
+          "wind": 10,
+          "cirrus": 0.25,
+          "evolve": 0.5
+        }
+      }
+    },
+    {
+      "id": "sea",
+      "at": [0, 147, 0],
+      "features": {
+        "water": {
+          "waterSize": 8000
+        }
+      }
+    }
+  ]
+}

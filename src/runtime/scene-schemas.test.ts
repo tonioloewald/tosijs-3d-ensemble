@@ -132,6 +132,11 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         kills the tab, and a schema cannot say "…unless reach is large".
       - `terrain.biome` stays a BOOLEAN because a JSON document has real
         booleans; `'on'|'off'` is an HTML-attribute concern and the bind maps it.
+      - `skybox.spaceStart`/`spaceFull` carry an `x-unit` upstream does not —
+        except upstream DOES say metres, as `unit: 'm'`, the only fields in
+        `scene-schemas` spelled that way. `pick` translates it, like
+        `format: 'color'`. Not ours; a misspelling of theirs, tosijs-3d#85.
+        When it is fixed these two lines go, and this test says so.
       (`terrain.radius` used to be a fourth: we gave it a log scale over its
       six decades, and tosijs-3d@0.8.1 added the same upstream — so the
       override went, and this test is what noticed by failing on the upgrade.)
@@ -141,6 +146,8 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         'terrain.biome.enum: undefined (ours) vs ["off","on"] (upstream)',
         "terrain.seed.maximum: 9999 (ours) vs undefined (upstream)",
         "terrain.tileSize.minimum: 32 (ours) vs 1 (upstream)",
+        'skybox.spaceFull.x-unit: "m" (ours) vs undefined (upstream)',
+        'skybox.spaceStart.x-unit: "m" (ours) vs undefined (upstream)',
       ].sort()
     );
   });
@@ -184,7 +191,33 @@ describe("the drift that started this, pinned as regressions", () => {
 
   it("skybox exposes the colours and the moon nobody decided to drop", () => {
     const sky = propertiesOf("skybox");
-    for (const key of ["duskColor", "moonColor", "moonIntensity", "azimuth"]) {
+    for (const key of ["duskColor", "moonColor", "moonIntensity"]) {
+      expect([key, key in sky]).toEqual([key, true]);
+    }
+  });
+
+  it("skybox does NOT offer azimuth, because azimuth does nothing", () => {
+    /*
+      It used to be in the list above, as a field "nobody decided to drop".
+      Reading the element for 0.8.3 found it dead: written to
+      `material.azimuth`, whose setter b3d-skybox itself defines as a no-op.
+      A control that does nothing is worse than no control. tosijs-3d#86 —
+      when it lives again, this flips.
+    */
+    expect("azimuth" in propertiesOf("skybox")).toBe(false);
+  });
+
+  it("skybox offers the night sky and the edge of space", () => {
+    const sky = propertiesOf("skybox");
+    for (const key of [
+      "starfieldData",
+      "starfieldCube",
+      "starfieldTilt",
+      "nebulae",
+      "spaceColor",
+      "spaceStart",
+      "rayleigh",
+    ]) {
       expect([key, key in sky]).toEqual([key, true]);
     }
   });

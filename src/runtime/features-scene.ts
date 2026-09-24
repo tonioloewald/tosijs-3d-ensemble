@@ -206,6 +206,8 @@ import {
   lightColor,
   lightSettingsSchema,
   b3dClouds,
+  B3dCloudDeck,
+  b3dCloudDeck,
   b3dFog,
   b3dGround,
   b3dLight,
@@ -316,7 +318,17 @@ const pick = (
     // Upstream says `format: 'color'`; our panel reads `x-widget`. One line
     // here beats teaching every call site both spellings.
     const widget = spec.format === "color" ? { "x-widget": "color" } : {};
-    out[key] = { ...spec, ...widget, ...(overrides[key] ?? {}) };
+    /*
+      ⚠️ 0.8.3's new skybox fields say `unit: 'm'` where every other field in
+      `scene-schemas` says `'x-unit'` — so `spaceStart`/`spaceFull`/
+      `starDistance` would reach the panel with no unit at all. Translated
+      here, like `format`, until tosijs-3d#85 lands; drop the line then.
+    */
+    const unit =
+      typeof spec.unit === "string" && spec["x-unit"] === undefined
+        ? { "x-unit": spec.unit }
+        : {};
+    out[key] = { ...spec, ...widget, ...unit, ...(overrides[key] ?? {}) };
   }
   return out;
 };
@@ -483,6 +495,34 @@ export function addSingleton(
  * claim is released and this would remove the sky the next line recreates,
  * which is the churn it exists to prevent.
  */
+/**
+ * The skybox attributes `b3d-skybox` reads only while BUILDING its starfield,
+ * which it does once, in `sceneReady`. See the skybox feature's bind.
+ */
+export const SKY_BUILT_AT_READY = [
+  "starfield",
+  "starfieldCube",
+  "starfieldData",
+  "starfieldDataSize",
+  "starfieldSeed",
+  "starfieldSharpness",
+  "starfieldSizeScale",
+  "starfieldTilt",
+  "nebulae",
+  "nebulaSize",
+  "nebulaTexture",
+  "skyboxSize",
+] as const;
+
+/** Run an element's teardown and setup again by taking it out and back. */
+function remount(element: SceneElement): void {
+  const parent = element.parentNode;
+  if (!parent) return;
+  const next = element.nextSibling;
+  parent.removeChild(element);
+  parent.insertBefore(element, next);
+}
+
 /**
  * Sky config with the clock stopped unless the ensemble asked otherwise.
  *
@@ -847,13 +887,50 @@ export function registerSceneFeatures(): void {
           "timeOfDay",
           "realtimeScale",
           "latitude",
-          "azimuth",
+          /*
+            ⚠️ `azimuth` IS GONE FROM THE PANEL, because it does nothing.
+            `b3d-skybox` writes it to `material.azimuth`, and its own
+            SkyMaterial wrapper defines that property with a no-op setter
+            ("accepted and ignored: ours is always positioned by
+            `sunPosition`"). Upstream's schema also calls it DEGREES 0–360
+            while the element's table calls it a 0–1 FRACTION of a turn, so
+            even alive it would be the wrong slider. tosijs-3d#86. A file may
+            still carry it — `x-accepts` keeps it — it just is not offered.
+          */
+          // The atmosphere: how much air, how hazy, how it scatters.
           "turbidity",
           "luminance",
+          "rayleigh",
+          "mieCoefficient",
+          "mieDirectionalG",
           "sunColor",
           "duskColor",
           "moonColor",
           "moonIntensity",
+          /*
+            THE NIGHT SKY. `starfieldData` + `starfieldCube` are URL ROOTS of
+            the encoded galaxy (`<root>_px.png` …), and tosijs-3d hosts the
+            shipped pair at `https://3d.tosijs.net/sky/stars` and `…/nebula`
+            with CORS open — see `land-and-sky.json`. `starfield`/`nebulae`
+            are the PROCEDURAL alternative, counts where 0 is none.
+
+            The three decode parameters (`starfieldDataSize`, `…Sharpness`,
+            `…SizeScale`) are deliberately not offered: they describe how the
+            data cube was ENCODED and must match it, so they are facts about
+            an asset rather than choices about a sky.
+          */
+          "starfieldData",
+          "starfieldCube",
+          "starfieldTilt",
+          "starfield",
+          "starfieldSeed",
+          "nebulae",
+          "nebulaBrightness",
+          // Leaving the atmosphere: a height BAND over which the sky fades to
+          // `spaceColor`. Off while `spaceFull <= spaceStart`.
+          "spaceStart",
+          "spaceFull",
+          "spaceColor",
           "applyFog",
         ],
         {
@@ -864,12 +941,39 @@ export function registerSceneFeatures(): void {
     },
     bind: (_piece, cfg, ctx) => {
       const still = stillSky(cfg);
+      /*
+        ⚠️ THE NIGHT SKY IS BUILT ONCE. `b3d-skybox` reads every starfield
+        attribute inside `_buildStarfield`, and calls that from `sceneReady`
+        and nowhere else — so on an element that already exists, assigning
+        `starfieldData` does nothing at all. And the sky is a singleton that
+        usually DOES already exist: the editor's backdrop appends one before
+        the document arrives, so a file asking for the galaxy got a daytime
+        sky with no stars, no request for the data cube, and no error.
+        Measured: zero requests to `/sky/` on loading `land-and-sky.json`.
+
+        So when one of those keys CHANGES on a sky that is already there, the
+        element is re-mounted — removed and re-appended, which runs its
+        `sceneDispose` and `sceneReady` and rebuilds the starfield from the
+        new values. Only then: every other edit stays the cheap reactive
+        write. tosijs-3d#88; this goes when those attributes are live.
+      */
+      const existing = (
+        ctx.scene as unknown as {
+          querySelector?: (sel: string) => Record<string, unknown> | null;
+        }
+      ).querySelector?.("tosi-b3d-skybox");
+      const stale =
+        !!existing &&
+        SKY_BUILT_AT_READY.some(
+          (key) => key in still && existing[key] !== still[key]
+        );
       const element = addSingleton(
         ctx,
         "tosi-b3d-skybox",
         () => b3dSkybox({ ...still }),
         still
       );
+      if (stale) remount(element);
       refreshSkyWhenSunExists(element, ctx);
       return element;
     },
@@ -1103,6 +1207,11 @@ export function registerSceneFeatures(): void {
           "biome",
           "biomeSeaLevel",
           "biomeLapseRate",
+          // 0.8.3's live climate: `-1` means the plugin's own default, and the
+          // moisture default (0.45) is steppe — a green world wants ~0.7.
+          "biomeTemperature",
+          "biomeMoisture",
+          "biomeVolcanicScale",
           "tileSize",
           "lodLevels",
           "reach",
@@ -1131,6 +1240,9 @@ export function registerSceneFeatures(): void {
           biome: { type: "boolean", enum: undefined, default: false },
           biomeSeaLevel: { "x-requires": { biome: true } },
           biomeLapseRate: { "x-requires": { biome: true } },
+          biomeTemperature: { "x-requires": { biome: true } },
+          biomeMoisture: { "x-requires": { biome: true } },
+          biomeVolcanicScale: { "x-requires": { biome: true } },
           grossAmplitude: { default: 250 },
           detailAmplitude: { default: 45 },
           horizScale: { default: 8 },
@@ -1254,6 +1366,102 @@ export function registerSceneFeatures(): void {
     },
     bind: (_piece, cfg, ctx) =>
       addSingleton(ctx, "tosi-b3d-clouds", () => b3dClouds({ ...cfg }), cfg),
+  });
+
+  /*
+    THE CLOUD DECK — a layer you look UP at, where `clouds` is blobs you fly
+    between. Upstream's words, and the reason these are two features rather
+    than one with a mode: they are different geometry with different costs.
+
+    ⚠️ **THE ONE SCENE FEATURE WHOSE SCHEMA IS PARTLY OURS**, and only until
+    `cloudDeckSchema()` exists (tosijs-3d#87 — `sceneSchemas` has none). The
+    DEFAULTS are read from `B3dCloudDeck.initAttributes` at registration, so
+    they cannot drift; what we had to supply is the RANGES, and each one below
+    is either the element's own doc comment ("`0…1`", "up to `2`", "`±1`") or
+    marked as our choice. When upstream ships the schema this block becomes a
+    `pick("cloudDeck", …)` like every other, and the drift test's exception
+    entry for it goes.
+
+    `follow` and `shadows` are `'on' | 'off'` on the element, for the usual
+    HTML-boolean reason; the FORMAT keeps booleans, as terrain's `biome` does,
+    and the bind maps them.
+  */
+  const deckDefaults = B3dCloudDeck.initAttributes as Record<string, unknown>;
+  const deck = (
+    key: string,
+    min: number,
+    max: number,
+    extra: Record<string, unknown> = {}
+  ): Spec => ({
+    ...num(min, max, deckDefaults[key] as number),
+    ...extra,
+  });
+  const onOff = (key: string): Spec => ({
+    type: "boolean",
+    default: deckDefaults[key] === "on",
+  });
+  const deckToElement = (cfg: Record<string, unknown>) => ({
+    ...cfg,
+    ...("follow" in cfg ? { follow: cfg.follow ? "on" : "off" } : {}),
+    ...("shadows" in cfg ? { shadows: cfg.shadows ? "on" : "off" } : {}),
+  });
+  registerFeature({
+    name: "cloudDeck",
+    icon: "🌥️",
+    primitive: true,
+    insertAt: [0, 0, 0],
+    update: (handle, cfg) => updateAttrs(handle, deckToElement(cfg)),
+    schema: {
+      type: "object",
+      title: "Cloud deck",
+      "x-accepts": Object.keys(deckDefaults),
+      properties: {
+        // Metres. Our range: the element states none, and the Land and Sky
+        // demo drops the base into its valleys and lifts it over 420 m peaks.
+        altitude: deck("altitude", 0, 5000, { "x-unit": "m" }),
+        // "Clear 0 → solid 1 → THICKENING, up to 2."
+        coverage: deck("coverage", 0, 2),
+        // "how far the cloud TOP stands above altitude at coverage: 2, in
+        // metres" — ours: a thunderhead is several km, the default is 900.
+        thickenDepth: deck("thickenDepth", 0, 5000, { "x-unit": "m" }),
+        // "Rounded heaps 0 → long wispy streaks at ±1."
+        cirrus: deck("cirrus", -1, 1),
+        // m/s — ours: a gale is ~20, a jet stream ~60.
+        wind: deck("wind", 0, 60, { "x-unit": "m/s" }),
+        windHeadingDeg: deck("windHeadingDeg", 0, 360, { "x-unit": "°" }),
+        // "0 rigid → 1 restless."
+        evolve: deck("evolve", 0, 1),
+        // "Orographic cloud, 0…1" — needs a terrain in the scene.
+        orographic: deck("orographic", 0, 1),
+        color: {
+          type: "string",
+          default: deckDefaults.color,
+          "x-widget": "color",
+        },
+        underColor: {
+          type: "string",
+          default: deckDefaults.underColor,
+          "x-widget": "color",
+        },
+        shadows: onOff("shadows"),
+        follow: onOff("follow"),
+        seed: {
+          type: "integer",
+          minimum: 0,
+          maximum: 9999,
+          default: deckDefaults.seed,
+        },
+      },
+    },
+    bind: (_piece, cfg, ctx) => {
+      const attrs = deckToElement(cfg);
+      return addSingleton(
+        ctx,
+        "tosi-b3d-cloud-deck",
+        () => b3dCloudDeck({ ...attrs }),
+        attrs
+      );
+    },
   });
 
   registerFeature({

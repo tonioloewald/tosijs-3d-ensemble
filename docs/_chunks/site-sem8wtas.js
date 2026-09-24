@@ -1,5 +1,0 @@
-import{Ds as p}from"./site-3fcadxwq.js";import{Iu as o}from"./site-rab9t16m.js";import{Nu as a}from"./site-p0rrvqfa.js";import{ev as n}from"./site-8hb0g46e.js";import{jF as u}from"./site-6873nq4n.js";class d extends o{constructor(e){super(e);this.config=e,this.array=this.registerDataInput("array",a),this.index=this.registerDataInput("index",a,new n(-1)),this.value=this.registerDataOutput("value",a)}_updateOutputs(e){let i=this.array.getValue(e),r=this.index.getValue(e);if(r===void 0||r===null){this.value.setValue(null,e);return}let t;if(typeof r==="string"){let s=e.decodeIndexReference(r);if(s===void 0){this.value.setValue(null,e);return}t=s}else t=p(r);if(i&&t>=0&&t<i.length)this.value.setValue(i[t],e);else this.value.setValue(null,e)}serialize(e){super.serialize(e)}getClassName(){return"FlowGraphArrayIndexBlock"}}var l=!1;function h(){if(l)return;l=!0,u("FlowGraphArrayIndexBlock",d)}h();
-export{d as Fn,h as Gn};
-
-//# debugId=DEE704B9882B294164756E2164756E21
-//# sourceMappingURL=site-sem8wtas.js.map

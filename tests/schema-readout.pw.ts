@@ -16,8 +16,8 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   happens, showing a bare `0.015`, which carries no unit and so falls out of
   the filter entirely, leaving the neighbouring caption as the whole received
   string. "The hover did nothing" and "the hover worked and the unit is
-  missing" look identical from here; the assertion two lines below, that the
-  caption is GONE, is what tells them apart.
+  missing" looked identical; reading only the hovered slider's own visible
+  text, below, is what tells them apart.
 
   `terrain.grossScale` is the field the whole annotation exists for — a number
   called a scale that gets SMALLER as the hills get BIGGER. Owner, filing it
@@ -76,6 +76,7 @@ test("a frequency slider shows its unit and its wavelength", async ({
     let group: Element | null = caption ?? null;
     while (group && group.getAttribute?.("data-w3d") !== "slider")
       group = group.parentElement;
+    group?.setAttribute("data-probe", "gross-scale");
 
     // The TRACK: the 6px-high bar. Its centre is over the hit rect and clear
     // of the caption text, which is the combination that actually peeks.
@@ -101,19 +102,29 @@ test("a frequency slider shows its unit and its wavelength", async ({
   await page.mouse.move(found.track!.x, found.track!.y);
   await page.waitForTimeout(400);
 
-  // VISIBLE, not merely present. The readout node exists in the DOM at all
-  // times and is `display: none` until the pointer arrives, so a plain text
-  // scrape would pass without ever peeking.
-  const peek = await page.evaluate(() => {
+  /*
+    VISIBLE, not merely present, and read from THIS slider only. The readout
+    node exists at all times and is `display: none` until the pointer
+    arrives, so a plain scrape would pass without ever peeking.
+
+    ⚠️ This used to also assert the CAPTION disappeared, "which is what peek
+    means". It stopped meaning that in tosijs-3d 0.8.3 — `peek` now toggles
+    the value text and leaves the caption alone — and the test went red on
+    the upgrade for a widget behaviour we do not own. What it was really for
+    is telling "the hover did nothing" (no readout at all) from "the hover
+    worked and the unit is missing" (a bare `0.015`), and reading every
+    visible string in the one slider says both without depending on layout.
+  */
+  const visible = await page.evaluate(() => {
     const ed = document.querySelector("tosi-ensemble-editor") as Element & {
       shadowRoot: ShadowRoot | null;
     };
-    return Array.from(ed.shadowRoot?.querySelectorAll("text") ?? [])
+    const group = ed.shadowRoot?.querySelector('[data-probe="gross-scale"]');
+    return Array.from(group?.querySelectorAll("text") ?? [])
       .filter(
         (t) => getComputedStyle(t as unknown as Element).display !== "none"
       )
-      .map((t) => (t.textContent ?? "").trim())
-      .filter((t) => t.includes("1/m"));
+      .map((t) => (t.textContent ?? "").trim());
   });
 
   /*
@@ -121,9 +132,7 @@ test("a frequency slider shows its unit and its wavelength", async ({
     person thinks in. Not "a format function was passed": the digits, on the
     screen, in the document's own units.
   */
-  expect(peek.join(" | ")).toContain("0.015 1/m ≈66.7 m");
-  // And the caption it replaced is gone, which is what `peek` means.
-  expect(peek.join(" | ")).not.toContain("Gross scale");
+  expect(visible.join(" | ")).toContain("0.015 1/m ≈66.7 m");
 
   expect(realErrors(errors)).toEqual([]);
 });

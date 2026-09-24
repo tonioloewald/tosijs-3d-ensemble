@@ -107,6 +107,23 @@ release, or verified and too large for one. Both reviews are filed under
       re-checks the floor and says so in its log rather than implying it
       tested a ceiling that does not exist yet.
 
+- [ ] **A feature's URLs get no scheme check.** 0.3.x's https rule covers
+      library urls only, and a skybox now carries two more (`starfieldData`,
+      `starfieldCube`) beside the existing `ground.texture`,
+      `water.normalMap` and `nebulaTexture`. Same threat — a shared document
+      choosing its reader's network — and the same answer, but it needs a way
+      to know which string fields are URLs (`format: 'uri'` upstream, or an
+      `x-url` of ours).
+
+- [ ] **Removing a key from a singleton's config does not reset it.**
+      `addSingleton` assigns what the config HAS, so deleting `starfieldData`
+      from a document leaves the galaxy up until reload. Pre-existing for every
+      scene-wide feature; more visible now the sky has twenty fields.
+
+- [ ] **The sky panel is long** — twenty-two fields in one column. Wants
+      grouping (atmosphere / night / space), which `schema-panel` has no
+      vocabulary for.
+
 ## Format and runtime work the design is waiting on
 
 - [ ] **`Piece.ensemble` flattening.** Reserved, documented, unimplemented —

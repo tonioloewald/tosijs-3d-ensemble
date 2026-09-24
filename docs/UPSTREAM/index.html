@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=a4f3ed5f53f0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -233,6 +233,31 @@ when it lands, and close the issue.</p>
 <td><strong><code>slider3d</code>&#39;s caption swallows pointer events.</strong> The first child is a transparent rect the size of the whole 290x42 row — the advertised hit area — and the caption <code>&lt;text&gt;</code> paints on top of it and becomes the event target, so the left half of every slider is dead. Measured: <code>elementFromPoint</code> inside the rect returns the <code>&lt;text&gt;</code>; hover, press and a 60px drag there all produce nothing, no error; the same gestures 120px right over the track work. Worse in a headset, where the caption is the big target and the 6px track is not. Adjacent, same screenshot: the caption clips to <code>Gross scale (fre</code>, mid-word, no ellipsis</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/84">#84</a></td>
 </tr>
+<tr>
+<td>34</td>
+<td><strong>New skybox fields say <code>unit</code> where the rest say <code>x-unit</code></strong> (<code>spaceStart</code>, <code>spaceFull</code>, <code>starDistance</code>). <code>pick()</code> translates it; the drift test lists the two we show as exceptions that go when this lands</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/85">#85</a></td>
+</tr>
+<tr>
+<td>35</td>
+<td><strong><code>azimuth</code> is dead.</strong> The skybox writes it to a material property it defines with a no-op setter, and the schema calls it degrees 0–360 while the element&#39;s table calls it a 0–1 fraction. We shipped the slider for two releases; it is off the panel now, still accepted in a file</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/86">#86</a></td>
+</tr>
+<tr>
+<td>36</td>
+<td><strong>No <code>cloudDeckSchema()</code>.</strong> The deck is the one scene primitive we describe by hand: defaults read live from <code>initAttributes</code>, ranges from its doc comments where they exist, four of ours where they do not</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/87">#87</a></td>
+</tr>
+<tr>
+<td>37</td>
+<td><strong>Starfield attributes are construction-time only.</strong> All of them are read in <code>sceneReady</code> and never again, so the document&#39;s galaxy never reached a sky the backdrop had already made — zero requests, no stars, no error. We re-mount the sky when one changes</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/88">#88</a></td>
+</tr>
+<tr>
+<td>38</td>
+<td><strong>The sky assumes Earth</strong> — feature requests: an airless world (atmosphere as a property, not an altitude), a sky tint, several moons, several suns; and the demos do not expose the atmosphere dials or the sun&#39;s colour</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/89">#89</a></td>
+</tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
 <p>Each of these is local complexity we carry <strong>because</strong> of a row above. When the
@@ -326,6 +351,9 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td></td>
 </tr>
 </tbody></table>
+<p>| <code>pick()</code> translating <code>unit</code> → <code>x-unit</code> (tosijs-3d#85)
+| The cloud deck&#39;s hand-written ranges in <code>features-scene.ts</code> (tosijs-3d#87)
+| Re-mounting the skybox when a starfield key changes — <code>SKY_BUILT_AT_READY</code> and <code>remount</code> (tosijs-3d#88)</p>
 <h2>tosijs</h2>
 <table>
 <thead>

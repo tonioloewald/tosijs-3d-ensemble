@@ -1,5 +1,0 @@
-import{xu as s}from"./site-gx4ww0cp.js";import{Qu as n}from"./site-p0rrvqfa.js";import{jF as l}from"./site-6873nq4n.js";import{kG as a}from"./site-jh68drj2.js";class i extends s{constructor(t){super(t);this.config=t,this.condition=this.registerDataInput("condition",n),this.executionFlow=this._registerSignalOutput("executionFlow"),this.completed=this._registerSignalOutput("completed"),this._unregisterSignalOutput("out")}_execute(t,p){let e=this.condition.getValue(t);if(this.config?.doWhile&&!e)this.executionFlow._activateSignal(t);let o=0;while(e){if(this.executionFlow._activateSignal(t),++o,o>=i.MaxLoopCount){a.Warn("FlowGraphWhileLoopBlock: Max loop count reached. Breaking.");break}e=this.condition.getValue(t)}this.completed._activateSignal(t)}getClassName(){return"FlowGraphWhileLoopBlock"}}i.MaxLoopCount=1000;var r=!1;function u(){if(r)return;r=!0,l("FlowGraphWhileLoopBlock",i)}u();
-export{i as _o,u as $o};
-
-//# debugId=038605CCE868718864756E2164756E21
-//# sourceMappingURL=site-6n97ry7g.js.map

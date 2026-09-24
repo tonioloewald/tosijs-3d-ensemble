@@ -1,0 +1,12 @@
+import{TC as e}from"./site-qntg4d3x.js";var t="lensFlareVertexShader",r=`attribute position: vec2f;uniform viewportMatrix: mat4x4f;varying vUV: vec2f;const madd: vec2f= vec2f(0.5,0.5);
+#define CUSTOM_VERTEX_DEFINITIONS
+@vertex
+fn main(input : VertexInputs)->FragmentInputs {
+#define CUSTOM_VERTEX_MAIN_BEGIN
+vertexOutputs.vUV=vertexInputs.position*madd+madd;vertexOutputs.position=uniforms.viewportMatrix* vec4f(vertexInputs.position,0.0,1.0);
+#define CUSTOM_VERTEX_MAIN_END
+}`;if(!e.ShadersStoreWGSL[t])e.ShadersStoreWGSL[t]=r;var i={name:t,shader:r};
+export{i as di};
+
+//# debugId=23E989A7B09BB5EB64756E2164756E21
+//# sourceMappingURL=site-8cpgpbbx.js.map

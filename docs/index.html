@@ -39,7 +39,7 @@
   <link rel="icon" href="favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="docs.json?v=1c91adf5a4e2" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="docs.json?v=a4f3ed5f53f0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>tosijs-3d-ensemble</h1>
 <!--{"pin":"top","order":1}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
@@ -61,9 +61,9 @@ most scenes can never be shot — and terrain that quietly accumulates damage an
 disappears at 100 000 is a worse outcome than terrain that was never a
 combatant:</p>
 <pre><code class="language-js">// sun, sky, ground, terrain, water…
-import { registerSceneFeatures, registeredFeatures } from &#39;tosijs-3d-ensemble&#39;;
+import { registerSceneFeatures, registeredFeatures } from &quot;tosijs-3d-ensemble&quot;;
 // …and the fortification vocabulary, only if you want it
-import { registerCombatPreset } from &#39;tosijs-3d-ensemble/presets/combat&#39;;
+import { registerCombatPreset } from &quot;tosijs-3d-ensemble/presets/combat&quot;;
 
 registerSceneFeatures();
 registerCombatPreset();
@@ -75,10 +75,10 @@ registerCombatPreset();
   `protector` in this list, and `validate` does not know what a shield is.
 */
 preview.append(
-  Object.assign(document.createElement(&#39;p&#39;), {
+  Object.assign(document.createElement(&quot;p&quot;), {
     textContent: registeredFeatures()
       .map((f) =&gt; f.name)
-      .join(&#39;, &#39;),
+      .join(&quot;, &quot;),
   })
 );
 </code></pre>
@@ -96,25 +96,25 @@ test scenarios, and five design questions answered.</li>
 <p>The format, the instantiator and the editor ship as <strong>one package</strong>. A game
 imports the first two; the editor is never reached and tree-shakes away.</p>
 <pre><code class="language-js">// a game
-import { buildEnsemble, validate, placeMesh } from &#39;tosijs-3d-ensemble&#39;;
+import { buildEnsemble, validate, placeMesh } from &quot;tosijs-3d-ensemble&quot;;
 
 // an author
-import { ensembleEditor } from &#39;tosijs-3d-ensemble&#39;;
+import { ensembleEditor } from &quot;tosijs-3d-ensemble&quot;;
 
 // All four are real exports, which is not something this block could always
 // claim: it named `registerBuiltInFeatures` — a function this package has
 // never had — for as long as the example was unrunnable, and nothing noticed
 // because nothing ran it.
 preview.append(
-  Object.assign(document.createElement(&#39;p&#39;), {
+  Object.assign(document.createElement(&quot;p&quot;), {
     textContent: [
-      [&#39;buildEnsemble&#39;, buildEnsemble],
-      [&#39;validate&#39;, validate],
-      [&#39;placeMesh&#39;, placeMesh],
-      [&#39;ensembleEditor&#39;, ensembleEditor],
+      [&quot;buildEnsemble&quot;, buildEnsemble],
+      [&quot;validate&quot;, validate],
+      [&quot;placeMesh&quot;, placeMesh],
+      [&quot;ensembleEditor&quot;, ensembleEditor],
     ]
       .map(([name, value]) =&gt; `${name}: ${typeof value}`)
-      .join(&#39; · &#39;),
+      .join(&quot; · &quot;),
   })
 );
 </code></pre>

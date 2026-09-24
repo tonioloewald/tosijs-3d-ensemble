@@ -35,6 +35,74 @@ All notable changes to this project are documented here, in
   Owner: _"we should require https in general."_ Related: tosijs#43, the same
   trust boundary one layer down.
 
+### Fixed
+
+- **The rename test was skipped, and the TODO said it was covering the fix.**
+  `piece-list.pw.ts`'s id-field test stayed `test.fixme` after the
+  group-ordering fix landed, so nothing watched the one interaction that had
+  just been repaired. Un-skipped — and it failed, on its own assertion rather
+  than on the editor: a typed character lands at the CARET, so `X` into
+  `flagship` gives `flagXship`, and the test demanded an id that still
+  `includes('flagship')`, which no successful rename can produce. It would have
+  been red on the day the fix shipped, for the opposite reason.
+
+  Nothing about the editor changed here. What changed is that the claim is now
+  true. A fix is not covered until the test covering it has run green once.
+
+### Added
+
+- **A frequency slider says what it means.** tosijs-3d's scene schemas mark
+  `terrain.grossScale` and `detailScale` with `x-unit: '1/m'` and
+  `x-wavelength: true`; the panel now reads both, so the slider's readout is
+  `0.015 1/m ≈66.7 m` instead of `0.015`.
+
+  That field is the reason the annotation exists — a number called a _scale_
+  that gets SMALLER as the hills get BIGGER. Owner, filing it upstream: _"it's
+  not at all obvious when a scale is actually a frequency and where the useful
+  values are."_ The reciprocal UNIT is parsed out of `x-unit` rather than
+  annotated separately, because a second annotation is a second thing that can
+  disagree with the first.
+
+  Any number with an `x-unit` gets it on the value too — `radius` peeks as
+  `1000 m`. Numbers without one keep `slider3d`'s own step-derived formatting;
+  overriding every readout to fix two would be a much larger change than the
+  one being made.
+
+  **`x-useful` is read by nothing, on purpose** (tosijs-3d#83). `slider3d`
+  takes a `min` and a `max` and has nowhere to put a soft band, and both local
+  options are wrong: narrowing the track makes a documented range unreachable,
+  and a glyph in the readout invents a vocabulary the panel has nowhere else.
+  The `FieldSpec` comment says so where a reader will look. Measured, the
+  urgency is low — both annotated fields are also `x-scale: 'log'`, where their
+  useful bands already occupy 32% and 25% of the travel, so the pathology is
+  already fixed and only the _showing_ is missing.
+
+  Pinned by two tests that each cover what the other cannot: `numberReadout`
+  under `bun test` for the arithmetic, which cannot see whether `format` is
+  wired to anything, and `tests/schema-readout.pw.ts` hovering a real slider
+  for what an author sees, which cannot cover the arithmetic. Both fail with
+  the single `format:` line removed.
+
+### Documentation
+
+- **Markdown is Prettier-default again — the single-quote override is gone.**
+  It existed because tosijs-ui's live-example parser accepted only
+  `'single-quoted'` import specifiers while Prettier normalises fenced code in
+  `.md` to double, so formatting the docs silently turned every runnable
+  example into a display-only one. That is how the README's headline example
+  sat unrunnable for the life of the repo, naming a function this package has
+  never exported.
+
+  Fixed upstream in tosijs-ui 1.14.0 (#141), which we have been on since 0.3.0.
+  Every fence in the repo is now double-quoted.
+
+  Checked as a pair rather than a single green run: the build's live-example
+  checker reported **one** unrunnable block with the override on and the **same
+  one** with it off — MIGRATING.md's `./prefab`, which is manta's
+  pre-migration code and cannot resolve by design — and `doc-tests.pw.ts`
+  stayed green. One run after the change would not have told "double quotes
+  work now" apart from "nothing ran".
+
 ## [0.3.0] — 2026-09-13
 
 A **minor**: the peer floor moved, which is a decision about who gets broken
@@ -758,8 +826,8 @@ A **minor**: the peer floor moved, which is a decision about who gets broken
   install:
 
   ```js
-  import { validate } from 'tosijs-3d-ensemble/format/validate';
-  import { migrate } from 'tosijs-3d-ensemble/format/migrate';
+  import { validate } from "tosijs-3d-ensemble/format/validate";
+  import { migrate } from "tosijs-3d-ensemble/format/migrate";
   ```
 
 ## [0.1.2] — 2026-09-04

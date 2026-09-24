@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1c91adf5a4e2" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=a4f3ed5f53f0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Schema-driven panels</h1>
 <p>The editor must not know what <code>destroyable</code> <em>means</em> — only how to render an
@@ -84,6 +84,14 @@ someone added a case for it.</p>
 <p><code>x-unit</code> joins the VALUE for a picker and the label otherwise, because a number
 without its unit is how a
 range of 260 metres gets typed into a field that wanted kilometres.</p>
+<p>A slider ALSO carries it into the readout, along with the wavelength where the
+schema says the number is a frequency (<code>x-wavelength</code>) — so <code>terrain.grossScale</code>
+reads <code>0.015 1/m ≈66.7 m</code> rather than <code>0.015</code>. That one is tosijs-3d&#39;s own
+annotation on its own most misleading field: a thing called a scale that gets
+smaller as the hills get bigger.</p>
+<p>⚠️ The readout only appears while a pointer is on the control
+(<code>slider3d</code>&#39;s default <code>showValue: &#39;peek&#39;</code>), so it is invisible to a text scrape
+at rest. <code>tests/schema-readout.pw.ts</code> hovers a real one.</p>
 <p>Anything unrecognised renders as a <strong>disabled label showing the value</strong>, not
 nothing: a field an author cannot see is a field they will assume is unset.</p>
 

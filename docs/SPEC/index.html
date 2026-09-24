@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1c91adf5a4e2" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=a4f3ed5f53f0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Ensemble Editor — specification</h1>
 <!--{"pin":"bottom","parent":"Project","order":1}--><p><strong>Status:</strong> proposal. Written after building a working prototype inside
@@ -742,7 +742,7 @@ entirely normal until a player spends five minutes failing to kill something</li
 <h2>Part 2 — the editor component</h2>
 <p>Ships as a configurable component, not an application:</p>
 <pre><code class="language-javascript">ensembleEditor({
-  libraries: [{ url: &#39;/enemies.glb&#39;, type: &#39;enemies&#39; }],
+  libraries: [{ url: &quot;/enemies.glb&quot;, type: &quot;enemies&quot; }],
   schema: MANTA_SCHEMA, // see Part 3
   scenarios: MANTA_SCENARIOS, // see Part 4
   onSave: async (ensemble) =&gt; {
@@ -875,60 +875,60 @@ therefore a table of <strong>widgets</strong>, not of types.</p>
 <pre><code class="language-javascript">const MANTA_SCHEMA = {
   features: {
     destroyable: {
-      label: &#39;Destroyable&#39;,
+      label: &quot;Destroyable&quot;,
       fields: {
-        hp: { type: &#39;number&#39;, min: 1, max: 9999, default: 12 },
-        armor: { type: &#39;number&#39;, min: 0, max: 100000, default: 0 },
-        explode: { type: &#39;boolean&#39;, default: true },
+        hp: { type: &quot;number&quot;, min: 1, max: 9999, default: 12 },
+        armor: { type: &quot;number&quot;, min: 0, max: 100000, default: 0 },
+        explode: { type: &quot;boolean&quot;, default: true },
       },
     },
     turret: {
-      label: &#39;Turret&#39;,
+      label: &quot;Turret&quot;,
       fields: {
-        range: { type: &#39;number&#39;, min: 20, max: 2000, default: 260, unit: &#39;m&#39; },
+        range: { type: &quot;number&quot;, min: 20, max: 2000, default: 260, unit: &quot;m&quot; },
         fireRate: {
-          type: &#39;number&#39;,
+          type: &quot;number&quot;,
           min: 0.1,
           max: 20,
           default: 1.1,
-          unit: &#39;/s&#39;,
+          unit: &quot;/s&quot;,
         },
-        damage: { type: &#39;number&#39;, min: 1, max: 200, default: 4 },
+        damage: { type: &quot;number&quot;, min: 1, max: 200, default: 4 },
         smart: {
-          type: &#39;boolean&#39;,
+          type: &quot;boolean&quot;,
           default: false,
-          help: &#39;leads its target instead of firing where you are&#39;,
+          help: &quot;leads its target instead of firing where you are&quot;,
         },
       },
     },
     launchpad: {
-      label: &#39;Launch pad&#39;,
+      label: &quot;Launch pad&quot;,
       fields: {
-        craft: { type: &#39;mesh&#39;, library: &#39;enemies&#39; }, // pick list from library
-        interval: { type: &#39;number&#39;, min: 1, max: 300, unit: &#39;s&#39; },
+        craft: { type: &quot;mesh&quot;, library: &quot;enemies&quot; }, // pick list from library
+        interval: { type: &quot;number&quot;, min: 1, max: 300, unit: &quot;s&quot; },
       },
     },
     protector: {
-      label: &#39;Shield field&#39;,
+      label: &quot;Shield field&quot;,
       fields: {
-        protection: { type: &#39;number&#39;, min: 0, max: 200, default: 12 },
-        source: { type: &#39;ref&#39;, roles: [&#39;power&#39;, &#39;generator&#39;] }, // ref to a PIECE
+        protection: { type: &quot;number&quot;, min: 0, max: 200, default: 12 },
+        source: { type: &quot;ref&quot;, roles: [&quot;power&quot;, &quot;generator&quot;] }, // ref to a PIECE
       },
     },
   },
 
   roles: {
     power: {
-      label: &#39;Power source&#39;,
+      label: &quot;Power source&quot;,
       features: { destroyable: { hp: 16 }, blip: {} },
     },
     // …consumer-defined
   },
 
   zones: {
-    escort: { label: &#39;Escort zone&#39;, fields: { capacity: { type: &#39;number&#39; } } },
+    escort: { label: &quot;Escort zone&quot;, fields: { capacity: { type: &quot;number&quot; } } },
   },
-  points: { spawn: { label: &#39;Spawn&#39;, fields: { craft: { type: &#39;mesh&#39; } } } },
+  points: { spawn: { label: &quot;Spawn&quot;, fields: { craft: { type: &quot;mesh&quot; } } } },
 };
 </code></pre>
 <h3>Field types the editor must support</h3>
@@ -1001,7 +1001,7 @@ A closed feature set would mean those either get pushed upstream where they do
 not belong, or the editor cannot author them.</p>
 <p>So a feature is a <strong>registration</strong>, not a case in a switch:</p>
 <pre><code class="language-javascript">registerFeature({
-  name: &#39;turret&#39;,
+  name: &quot;turret&quot;,
   schema: turretSchema, // JSON Schema (+ x- UI annotations)
   bind(piece, cfg, ctx) {
     // JSON -&gt; live behaviour
@@ -1108,10 +1108,10 @@ ensemble is a puzzle; a static render tells you nothing about whether it is
 solvable or fair.</p>
 <p>Consumer-supplied:</p>
 <pre><code class="language-javascript">const MANTA_SCENARIOS = {
-  &#39;escort — 3 idle fighters&#39;: (ctx) =&gt;
-    ctx.spawn(&#39;Light Fighter&#39;, 3, { radius: 320 }),
-  &#39;kill the reactor&#39;: (ctx) =&gt; ctx.damageRole(&#39;power&#39;, 9999),
-  &#39;player pass at 200m&#39;: (ctx) =&gt; ctx.flyby({ speed: 25, offset: 200 }),
+  &quot;escort — 3 idle fighters&quot;: (ctx) =&gt;
+    ctx.spawn(&quot;Light Fighter&quot;, 3, { radius: 320 }),
+  &quot;kill the reactor&quot;: (ctx) =&gt; ctx.damageRole(&quot;power&quot;, 9999),
+  &quot;player pass at 200m&quot;: (ctx) =&gt; ctx.flyby({ speed: 25, offset: 200 }),
 };
 </code></pre>
 <p>The context object needs, at minimum: <code>spawn</code>, <code>damage</code>/<code>damageRole</code>,

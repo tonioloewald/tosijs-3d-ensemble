@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { boundIfSet, schemaWidgets } from "./schema-panel.js";
+import { boundIfSet, numberReadout, schemaWidgets } from "./schema-panel.js";
 
 /*
   A PANEL THAT LIES IS WORSE THAN ONE THAT DOES NOTHING.
@@ -211,5 +211,76 @@ describe("schemaWidgets reports which keys it actually bound", () => {
     expect(
       boundFor({ latitude: { type: "number", minimum: -90 } }, {}).size
     ).toBe(0);
+  });
+});
+
+/*
+  A FREQUENCY READS AS A WAVELENGTH — tosijs-3d's `x-wavelength`, adopted.
+
+  `grossScale` is a number called a scale that gets SMALLER as the hills get
+  BIGGER, and its schema says so: `x-unit: '1/m'`, `x-wavelength: true`. Owner,
+  filing it upstream: *"it's not at all obvious when a scale is actually a
+  frequency and where the useful values are."*
+
+  So the readout carries both — `0.015 1/m ≈66.7 m` — and the reciprocal UNIT
+  is parsed out of `x-unit` rather than annotated separately, because a second
+  annotation is a second thing that can disagree with the first.
+
+  ⚠️ These test the STRING, which is the mechanism. The output is what an
+  author sees while dragging, and `slider3d`'s default `showValue: 'peek'`
+  means that is only on screen during a pointer gesture — asserted in
+  `tests/schema-readout.pw.ts`, which hovers a real slider. Neither is
+  sufficient alone: this one cannot see whether `format` is wired to anything,
+  and that one cannot cover the arithmetic.
+*/
+describe("numberReadout", () => {
+  it("puts the unit on the value", () => {
+    expect(numberReadout({ "x-unit": "m" }, 8)).toBe("8 m");
+  });
+
+  it("says nothing extra when the schema says nothing", () => {
+    expect(numberReadout({}, 8)).toBe("8");
+  });
+
+  it("shows the wavelength beside a frequency", () => {
+    // 1 / 0.015 = 66.66…, and the reciprocal of `1/m` is `m`.
+    expect(
+      numberReadout({ "x-unit": "1/m", "x-wavelength": true }, 0.015)
+    ).toBe("0.015 1/m ≈66.7 m");
+  });
+
+  it("does not divide by zero", () => {
+    // `x-zero-stop` exists precisely so a decade-spanning field can reach
+    // zero, so a zero WILL arrive here. `1/0` is `Infinity`, and a readout
+    // saying "≈Infinity m" is worse than one that stops at the value.
+    expect(numberReadout({ "x-unit": "1/m", "x-wavelength": true }, 0)).toBe(
+      "0 1/m"
+    );
+  });
+
+  it("keeps significant digits at the small end, not decimal places", () => {
+    /*
+      The whole point of a log track is to reach the bottom of its range.
+      Four DECIMALS would round this to 0.0001 and anything smaller to zero —
+      printing the end of the range as if it were not there.
+    */
+    expect(numberReadout({}, 0.0001234)).toBe("0.0001234");
+    expect(numberReadout({}, 0.015)).toBe("0.015");
+  });
+
+  it("does not print float noise", () => {
+    // Exponentiating on a log track leaves 0.015 looking like
+    // 0.014999999999999999, which is harmless on screen only if nobody prints
+    // it verbatim.
+    expect(numberReadout({}, 0.014999999999999999)).toBe("0.015");
+  });
+
+  it("drops the reciprocal unit rather than guessing one", () => {
+    // `x-wavelength` on a unit that is not written as a reciprocal: the
+    // number is still the useful half, and inventing `1/deg` would be a unit
+    // nobody wrote.
+    expect(numberReadout({ "x-unit": "deg", "x-wavelength": true }, 0.5)).toBe(
+      "0.5 deg ≈2"
+    );
   });
 });

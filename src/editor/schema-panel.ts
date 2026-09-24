@@ -32,6 +32,16 @@ someone added a case for it.
 without its unit is how a
 range of 260 metres gets typed into a field that wanted kilometres.
 
+A slider ALSO carries it into the readout, along with the wavelength where the
+schema says the number is a frequency (`x-wavelength`) — so `terrain.grossScale`
+reads `0.015 1/m ≈66.7 m` rather than `0.015`. That one is tosijs-3d's own
+annotation on its own most misleading field: a thing called a scale that gets
+smaller as the hills get bigger.
+
+⚠️ The readout only appears while a pointer is on the control
+(`slider3d`'s default `showValue: 'peek'`), so it is invisible to a text scrape
+at rest. `tests/schema-readout.pw.ts` hovers a real one.
+
 Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
 */
@@ -55,7 +65,7 @@ import {
 } from "./tools/transform.js";
 import type { FeatureSchema } from "../format/registry.js";
 
-interface PropertySpec {
+export interface PropertySpec {
   type?: string;
   title?: string;
   description?: string;
@@ -138,6 +148,82 @@ interface PropertySpec {
    * that stood in for it.
    */
   "x-zero-stop"?: boolean;
+  /**
+   * The value is a spatial FREQUENCY, so the number a person thinks in is its
+   * RECIPROCAL — a wavelength.
+   *
+   * The most misleading shape in tosijs-3d's scene schemas: terrain's
+   * `grossScale` is called a scale and gets SMALLER as the hills get BIGGER.
+   * Owner, filing it: _"it's not at all obvious when a scale is actually a
+   * frequency and where the useful values are."_
+   *
+   * Read by `numberReadout`, which puts the wavelength beside the value:
+   * `0.015 1/m ≈66.7 m`. The reciprocal UNIT is parsed out of `x-unit` —
+   * `1/m` gives `m` — because the schema already says it and a second
+   * annotation would be a second thing to keep in sync.
+   */
+  "x-wavelength"?: boolean;
+  /**
+   * The sub-range of `[minimum, maximum]` where the values anybody wants live.
+   *
+   * ⚠️ **DECLARED AND NOT RENDERED**, on purpose, and this comment is the only
+   * place that says so. `slider3d` has no soft-bound affordance: it takes a
+   * `min` and a `max` and that is the whole track. The two honest things we
+   * could do with this locally are both wrong —
+   *
+   * - narrowing `min`/`max` to the useful range makes the rest of a documented
+   *   range unreachable, which is a worse failure than a cramped track;
+   * - a glyph in the readout invents a vocabulary the panel has nowhere else.
+   *
+   * And the measurement says the urgency is low: both fields that carry it
+   * (`grossScale`, `detailScale`) also carry `x-scale: 'log'`, and on a log
+   * track their useful bands already occupy 32% and 25% of the travel. The
+   * pathology the owner reported is fixed; what is left is *showing* where the
+   * band is, which wants a shaded region on the track. Filed as tosijs-3d#83.
+   */
+  "x-useful"?: [number, number];
+}
+
+/**
+ * Round to about four significant digits and print the shortest exact form.
+ *
+ * Not `toFixed` with a constant: this serves a control that spans decades, so
+ * four DECIMALS would round 0.0001234 to 0.0001 and anything smaller to zero —
+ * destroying the end of the range a log scale exists to reach. And not raw
+ * `String(v)` either, because exponentiating a float leaves 0.015 looking like
+ * 0.014999999999999999.
+ */
+const sig = (v: number): string => {
+  if (!Number.isFinite(v)) return String(v);
+  if (v === 0) return "0";
+  const a = Math.abs(v);
+  const decimals =
+    a >= 100
+      ? 0
+      : a >= 10
+      ? 1
+      : a >= 1
+      ? 2
+      : Math.min(8, 3 - Math.floor(Math.log10(a)));
+  return String(Number(v.toFixed(decimals)));
+};
+
+/**
+ * The readout for a number field: the value, its unit, and — for a spatial
+ * frequency — the wavelength.
+ *
+ * Only used where the schema has something to add (`x-unit` or
+ * `x-wavelength`). Everywhere else `slider3d`'s own step-derived formatting is
+ * already right, and overriding it for every number would be changing a
+ * hundred readouts to fix two.
+ */
+export function numberReadout(spec: PropertySpec, v: number): string {
+  const unit = spec["x-unit"] ?? "";
+  const head = unit ? `${sig(v)} ${unit}` : sig(v);
+  if (!spec["x-wavelength"] || !Number.isFinite(v) || v === 0) return head;
+  // `1/m` → `m`. A unit that is not a reciprocal still gets the number.
+  const recip = /^1\/(.+)$/.exec(unit)?.[1] ?? "";
+  return `${head} ≈${sig(1 / v)}${recip ? ` ${recip}` : ""}`;
 }
 
 export interface SchemaPanelOptions {
@@ -420,6 +506,9 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             ? { scale: spec["x-scale"] }
             : {}),
           ...(spec["x-zero-stop"] ? { zeroStop: true } : {}),
+          ...(spec["x-unit"] || spec["x-wavelength"]
+            ? { format: (v: number) => numberReadout(spec, v) }
+            : {}),
           handleChange: (v: number) => handleChange(key, v),
         })
       );

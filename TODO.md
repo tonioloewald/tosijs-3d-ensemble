@@ -73,8 +73,17 @@ release, or verified and too large for one. Both reviews are filed under
       each field's focus callback, and `_renderProperties` built the group
       BEFORE the panel that creates the id field. Traced —
       `COLLECT 0, COLLECT 1, GROUPBUILD 11, COLLECT 2` — the id field arriving
-      one step after the group closed. The group is built after the panel now,
-      and `tests/piece-list.pw.ts` covers it.
+      one step after the group closed. The group is built after the panel now.
+
+      ⚠️ **It said "and `tests/piece-list.pw.ts` covers it" for four days, and
+      that was false.** The test was still `test.fixme`, so it asserted
+      nothing — a fixed bug behind a `fixme` reads exactly like a broken one.
+      Un-skipped now, and un-skipping found a second defect in the test itself:
+      the character lands at the CARET, so typing `X` into `flagship` gives
+      `flagXship`, and the assertion demanded an id that still
+      `includes('flagship')` — unsatisfiable by any successful rename. It would
+      have gone red on the day the fix landed, for the opposite reason. **A fix
+      is not covered until the test that covers it has run green once.**
 
 - [ ] **Remove the `onBeforeViewRenderObservable` filter** from
       `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype
@@ -145,8 +154,36 @@ release, or verified and too large for one. Both reviews are filed under
       cannot both be green — and ignoring it makes the repo's one hand-written
       doc page the only file the formatter does not check.
 
-- [ ] **Remove the `.prettierrc` markdown override** once tosijs-ui#141's fix
-      is confirmed in 1.14.x. It forces single quotes because the live-example
-      parser rejects double-quoted specifiers.
-- [ ] **Adopt `x-useful` / `x-wavelength`** for slider soft bounds. tosijs-3d
-      0.8.1 ships them; `schema-panel` does not read them.
+- [x] ~~**Remove the `.prettierrc` markdown override**~~ Done. tosijs-ui#141
+      landed in 1.14.0 and we are on 1.14.1, so `.prettierrc` is now `{}` and
+      every fence is Prettier-default double-quoted.
+
+      Verified as a BEFORE/AFTER, not assumed: the build's live-example checker
+      reported exactly one unrunnable block with the override on and the same
+      one with it off — MIGRATING.md's `./prefab`, which is manta's pre-migration
+      code and cannot resolve by design — and `doc-tests.pw.ts` stayed green.
+      That pairing is the evidence; a single green run after the change would
+      not have distinguished "double quotes work now" from "no example ran".
+
+- [x] ~~**Adopt `x-wavelength`**~~ Done. A unit-bearing slider puts the unit on
+      the VALUE, and a frequency also shows the wavelength:
+      `terrain.grossScale` reads `0.015 1/m ≈66.7 m`. Pinned twice, because
+      neither test alone is enough — `numberReadout` in `schema-panel.test.ts`
+      for the arithmetic (it cannot see whether `format` is wired to anything),
+      and `tests/schema-readout.pw.ts` hovering a real slider for the output
+      (it cannot cover the arithmetic). Both confirmed to fail with the one
+      `format:` line removed.
+
+- [ ] **`x-useful` is declared and deliberately NOT rendered** — tosijs-3d#83.
+      `slider3d` takes a `min` and a `max` and has nowhere to put a soft band;
+      narrowing the track to it makes a documented range unreachable and a
+      glyph in the readout invents a vocabulary. The `FieldSpec` comment is the
+      record. Urgency is low and measured: both annotated fields are also
+      `x-scale: log`, where their useful bands already occupy 32% and 25% of
+      the travel, so the pathology is fixed and only the _showing_ is missing.
+
+- [ ] **Hover the slider TRACK, not its caption** — tosijs-3d#84. The caption
+      `<text>` paints over the full-row hit rect and becomes the event target,
+      so the left half of every slider is dead to pointer input and says
+      otherwise. `tests/schema-readout.pw.ts` finds the track by geometry to
+      work around it; that goes when #84 lands.

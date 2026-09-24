@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1c91adf5a4e2" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=a4f3ed5f53f0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -122,14 +122,14 @@ the feature does nothing at build. <strong>This should not come from us.</strong
 a registry open to consumers, and a consumer&#39;s feature is meant to be
 indistinguishable from a built-in — Manta registering its own is that property
 being exercised, not a gap being filled:</p>
-<pre><code class="language-ts">import { registerFeature } from &#39;tosijs-3d-ensemble&#39;;
+<pre><code class="language-ts">import { registerFeature } from &quot;tosijs-3d-ensemble&quot;;
 
 registerFeature({
-  name: &#39;radar&#39;,
-  icon: &#39;📡&#39;,
+  name: &quot;radar&quot;,
+  icon: &quot;📡&quot;,
   schema: {
-    type: &#39;object&#39;,
-    title: &#39;Radar&#39;,
+    type: &quot;object&quot;,
+    title: &quot;Radar&quot;,
     properties: {
       /* … */
     },
@@ -141,8 +141,8 @@ registerFeature({
 </code></pre>
 <h3>3. Swap the imports</h3>
 <pre><code class="language-ts">// was
-import { validatePrefab, type Prefab } from &#39;./prefab&#39;;
-import { buildPrefab } from &#39;./prefab-runtime&#39;;
+import { validatePrefab, type Prefab } from &quot;./prefab&quot;;
+import { buildPrefab } from &quot;./prefab-runtime&quot;;
 
 // now
 import {
@@ -150,8 +150,8 @@ import {
   buildEnsemble,
   registerSceneFeatures,
   type Ensemble,
-} from &#39;tosijs-3d-ensemble&#39;;
-import { registerCombatPreset } from &#39;tosijs-3d-ensemble/presets/combat&#39;;
+} from &quot;tosijs-3d-ensemble&quot;;
+import { registerCombatPreset } from &quot;tosijs-3d-ensemble/presets/combat&quot;;
 
 registerSceneFeatures(); // sun, sky, ground, terrain, water, lamp…
 registerCombatPreset(); // destroyable, turret, launcher, protector, blip,
@@ -161,12 +161,12 @@ registerCombatPreset(); // destroyable, turret, launcher, protector, blip,
 <code>target</code>, <code>power</code>, <code>generator</code>, <code>shield</code>, <code>critical</code> — which is unsurprising,
 since it was written from them.</p>
 <h3>Building one</h3>
-<pre><code class="language-js">import { buildEnsemble, placeMesh } from &#39;tosijs-3d-ensemble&#39;;
+<pre><code class="language-js">import { buildEnsemble, placeMesh } from &quot;tosijs-3d-ensemble&quot;;
 
 const built = buildEnsemble(ensemble, {
   scene, // &lt;tosi-b3d&gt;
   origin, // where the ensemble&#39;s local origin sits
-  library: &#39;enemies&#39;, // fallback for pieces that name no library of their own
+  library: &quot;enemies&quot;, // fallback for pieces that name no library of their own
   placePiece: placeMesh, // ⚠️ REQUIRED for any ensemble with meshes
 });
 </code></pre>
@@ -180,8 +180,8 @@ lets a generator validate and build headlessly. So the DOM dependency is yours
 to declare. Omitting it now reports <code>no-placer</code>, and a piece the placer
 declines reports <code>no-body</code>.</p>
 <p>⚠️ <strong>Headless means the DEEP import.</strong> A generator with no browser writes:</p>
-<pre><code class="language-typescript">import { buildEnsemble } from &#39;tosijs-3d-ensemble/runtime/build&#39;;
-import { validate } from &#39;tosijs-3d-ensemble/format/validate&#39;;
+<pre><code class="language-typescript">import { buildEnsemble } from &quot;tosijs-3d-ensemble/runtime/build&quot;;
+import { validate } from &quot;tosijs-3d-ensemble/format/validate&quot;;
 </code></pre>
 <p>The package&#39;s main entry also exports <code>ensembleEditor</code>, a custom element, so
 evaluating the barrel needs <code>HTMLElement</code> and throws under Node. Tree-shaking

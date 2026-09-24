@@ -117,101 +117,88 @@ test("filtering hides rows without touching the selection", async ({
 });
 
 /*
-  RENAMING A PIECE, through the field a reader would use — AND IT DOES NOT WORK.
+  RENAMING A PIECE, through the field a reader would use.
 
-  ⚠️ `fixme`, and this one is OURS rather than upstream's. The filter field
-  next door was the same defect and is fixed and covered by the test above;
-  the id field is not, and I could not find why.
+  This was `fixme` for a day and a half with a doc comment cataloguing five
+  eliminated causes, because typing into the id field changed nothing and every
+  obvious explanation was wrong: the click landed, `renamePiece` called
+  directly worked, the `row3d` wrapper was innocent, and the property panel next
+  door accepted keystrokes fine.
 
-  What is measured and certain:
+  The cause was ORDER. `fieldGroup` iterates `config.fields` ONCE at
+  construction to wrap each field's focus callback, and that wrapper is how a
+  tap tells the group which field to make active. `_renderProperties` built the
+  group and THEN built the panel that creates the id field, so the field was
+  never wrapped: tapping it reported to nobody, `active` never changed, and the
+  group's window listener — which returns early for every field, in or out —
+  swallowed the key. Not misrouted. Gone. Filed as tosijs-3d#82.
 
-  - the field is there and in the right place — two `flagship` text nodes, one
-    at x=72 (the list row) and one at x=1131 (the properties panel);
-  - clicking the right-hand one and typing changes NOTHING in the document,
-    every time;
-  - it now goes through `_collectField` like every other field, and the group
-    is seeded unconditionally so late collection cannot be dropped. Both were
-    real bugs and both are fixed. Neither fixed this.
+  ⚠️ **The fix shipped and this test stayed skipped**, with TODO.md claiming it
+  was covered here. It was not: a `fixme` asserts nothing, and a fixed bug
+  behind one is indistinguishable from a broken one. Un-skipping it found the
+  assertion had its own bug — see below.
 
-  And what was measured since, narrowing it further:
-
-  - the CLICK LANDS. The field's own background rect is 261x40 at x=1121,
-    y=358, and the click is inside it;
-  - `renamePiece('flagship', 'flagshipZ')` called directly on the element
-    works, first time, no error — so the handler and the rename are fine;
-  - it is NOT the `row3d` wrapper. Rendering the field bare changes nothing;
-  - it is not "right-hand panel" either: `property-keystroke.pw.ts` types into
-    `ground.texture` in the same panel and that works;
-  - the keystroke goes NOWHERE. Not to the field, and not to the position
-    vector either — `at`, `rot` and `scale` are all unchanged after typing. So
-    the group is swallowing the key (its window listener returns early for
-    everyone) and routing it to an active field that either does not exist or
-    writes nothing.
-
-  Which leaves: this field never becomes the group's ACTIVE field on click,
-  for a reason the filter field — same widget, same collector, same group —
-  does not share.
-
-  So a rename field you cannot type into renames nothing, silently, and that
-  ships today. `fixme` rather than deleted because the reproduction is the
-  valuable part and it is exact: it will fail the moment somebody fixes the
-  cause, which is how they will know they did.
+  ⚠️ The character lands at the CARET, which is where the click was, and the
+  click is the middle of the text. So typing `X` into `flagship` gives
+  `flagXship`, not `flagshipX`. The original assertion asked for an id that
+  still `includes('flagship')`, which no successful rename can satisfy — so it
+  would have failed on the day the fix landed too, for the opposite reason.
+  Assert the rename HAPPENED, not where the letter went.
 */
-test.fixme(
-  "the id field renames the piece in the document",
-  async ({ page }) => {
-    test.setTimeout(120_000);
-    await page.setViewportSize({ width: 1400, height: 1100 });
-    const errors = collectPageErrors(page);
+test("the id field renames the piece in the document", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  const errors = collectPageErrors(page);
 
-    await page.goto("/editor/", { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(
-      () => {
-        const ed = document.querySelector("tosi-ensemble-editor") as
-          | (Element & { ensemble?: { pieces?: unknown[] } })
-          | null;
-        return (ed?.ensemble?.pieces?.length ?? 0) > 10;
-      },
-      null,
-      { timeout: 60_000 }
-    );
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => {
+      const ed = document.querySelector("tosi-ensemble-editor") as
+        | (Element & { ensemble?: { pieces?: unknown[] } })
+        | null;
+      return (ed?.ensemble?.pieces?.length ?? 0) > 10;
+    },
+    null,
+    { timeout: 60_000 }
+  );
 
-    const box = await page.evaluate(() => {
-      const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-        shadowRoot: ShadowRoot | null;
-        select: (id: string) => void;
-      };
-      ed.select("flagship");
-      /*
+  const box = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      shadowRoot: ShadowRoot | null;
+      select: (id: string) => void;
+    };
+    ed.select("flagship");
+    /*
       The id field shows the piece's id — and so does its row in the list, on
       the LEFT. Taking the first match clicked the ROW instead, which merely
       re-selected the piece and sent the keystroke nowhere. The properties
       panel is the right-hand column, so pick the rightmost.
     */
-      const rects = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? [])
-        .filter((t) => (t.textContent ?? "").trim() === "flagship")
-        .map((t) => (t as SVGGraphicsElement).getBoundingClientRect())
-        .sort((a, b) => b.x - a.x);
-      const r = rects[0];
-      return r && { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
-    expect(box, "no id field on screen").toBeTruthy();
+    const rects = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? [])
+      .filter((t) => (t.textContent ?? "").trim() === "flagship")
+      .map((t) => (t as SVGGraphicsElement).getBoundingClientRect())
+      .sort((a, b) => b.x - a.x);
+    const r = rects[0];
+    return r && { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  expect(box, "no id field on screen").toBeTruthy();
 
-    await page.mouse.click(box!.x, box!.y);
-    await page.keyboard.type("X");
-    await page.waitForTimeout(800);
+  await page.mouse.click(box!.x, box!.y);
+  await page.keyboard.type("X");
+  await page.waitForTimeout(800);
 
-    const ids = await page.evaluate(() => {
-      const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-        ensemble?: { pieces?: Array<{ id: string }> };
-      };
-      return (ed.ensemble?.pieces ?? []).map((p) => p.id);
-    });
+  const ids = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      ensemble?: { pieces?: Array<{ id: string }> };
+    };
+    return (ed.ensemble?.pieces ?? []).map((p) => p.id);
+  });
 
-    // The DOCUMENT changed, which is the only claim worth making here.
-    expect(ids.some((id) => id !== "flagship" && id.includes("flagship"))).toBe(
-      true
-    );
-    expect(realErrors(errors)).toEqual([]);
-  }
-);
+  // THE DOCUMENT CHANGED, which is the only claim worth making here.
+  // `flagship` is gone and something that was clearly it is in its place.
+  expect(ids).not.toContain("flagship");
+  expect(ids.filter((id) => id.includes("flag") && id.includes("X"))).toEqual([
+    "flagXship",
+  ]);
+  expect(realErrors(errors)).toEqual([]);
+});

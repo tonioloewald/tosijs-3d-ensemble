@@ -20,6 +20,9 @@ node_modules/
 
 # Finder (macOS)
 .DS_Store
+# Spotlight's "do not index" marker, which appears inside build output and
+# would dirty the tree-clean gate on a Mac while never existing on CI.
+.metadata_never_index
 
 # bun is the canonical package manager: bun.lock is the tracked source of truth.
 bun.lockb

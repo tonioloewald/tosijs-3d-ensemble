@@ -671,7 +671,7 @@ Ships as a configurable component, not an application:
 
 ```javascript
 ensembleEditor({
-  libraries: [{ url: '/enemies.glb', type: 'enemies' }],
+  libraries: [{ url: "/enemies.glb", type: "enemies" }],
   schema: MANTA_SCHEMA, // see Part 3
   scenarios: MANTA_SCENARIOS, // see Part 4
   onSave: async (ensemble) => {
@@ -785,60 +785,60 @@ therefore a table of **widgets**, not of types.
 const MANTA_SCHEMA = {
   features: {
     destroyable: {
-      label: 'Destroyable',
+      label: "Destroyable",
       fields: {
-        hp: { type: 'number', min: 1, max: 9999, default: 12 },
-        armor: { type: 'number', min: 0, max: 100000, default: 0 },
-        explode: { type: 'boolean', default: true },
+        hp: { type: "number", min: 1, max: 9999, default: 12 },
+        armor: { type: "number", min: 0, max: 100000, default: 0 },
+        explode: { type: "boolean", default: true },
       },
     },
     turret: {
-      label: 'Turret',
+      label: "Turret",
       fields: {
-        range: { type: 'number', min: 20, max: 2000, default: 260, unit: 'm' },
+        range: { type: "number", min: 20, max: 2000, default: 260, unit: "m" },
         fireRate: {
-          type: 'number',
+          type: "number",
           min: 0.1,
           max: 20,
           default: 1.1,
-          unit: '/s',
+          unit: "/s",
         },
-        damage: { type: 'number', min: 1, max: 200, default: 4 },
+        damage: { type: "number", min: 1, max: 200, default: 4 },
         smart: {
-          type: 'boolean',
+          type: "boolean",
           default: false,
-          help: 'leads its target instead of firing where you are',
+          help: "leads its target instead of firing where you are",
         },
       },
     },
     launchpad: {
-      label: 'Launch pad',
+      label: "Launch pad",
       fields: {
-        craft: { type: 'mesh', library: 'enemies' }, // pick list from library
-        interval: { type: 'number', min: 1, max: 300, unit: 's' },
+        craft: { type: "mesh", library: "enemies" }, // pick list from library
+        interval: { type: "number", min: 1, max: 300, unit: "s" },
       },
     },
     protector: {
-      label: 'Shield field',
+      label: "Shield field",
       fields: {
-        protection: { type: 'number', min: 0, max: 200, default: 12 },
-        source: { type: 'ref', roles: ['power', 'generator'] }, // ref to a PIECE
+        protection: { type: "number", min: 0, max: 200, default: 12 },
+        source: { type: "ref", roles: ["power", "generator"] }, // ref to a PIECE
       },
     },
   },
 
   roles: {
     power: {
-      label: 'Power source',
+      label: "Power source",
       features: { destroyable: { hp: 16 }, blip: {} },
     },
     // …consumer-defined
   },
 
   zones: {
-    escort: { label: 'Escort zone', fields: { capacity: { type: 'number' } } },
+    escort: { label: "Escort zone", fields: { capacity: { type: "number" } } },
   },
-  points: { spawn: { label: 'Spawn', fields: { craft: { type: 'mesh' } } } },
+  points: { spawn: { label: "Spawn", fields: { craft: { type: "mesh" } } } },
 };
 ```
 
@@ -877,7 +877,7 @@ So a feature is a **registration**, not a case in a switch:
 
 ```javascript
 registerFeature({
-  name: 'turret',
+  name: "turret",
   schema: turretSchema, // JSON Schema (+ x- UI annotations)
   bind(piece, cfg, ctx) {
     // JSON -> live behaviour
@@ -966,10 +966,10 @@ Consumer-supplied:
 
 ```javascript
 const MANTA_SCENARIOS = {
-  'escort — 3 idle fighters': (ctx) =>
-    ctx.spawn('Light Fighter', 3, { radius: 320 }),
-  'kill the reactor': (ctx) => ctx.damageRole('power', 9999),
-  'player pass at 200m': (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
+  "escort — 3 idle fighters": (ctx) =>
+    ctx.spawn("Light Fighter", 3, { radius: 320 }),
+  "kill the reactor": (ctx) => ctx.damageRole("power", 9999),
+  "player pass at 200m": (ctx) => ctx.flyby({ speed: 25, offset: 200 }),
 };
 ```
 

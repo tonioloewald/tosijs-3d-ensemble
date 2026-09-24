@@ -28,9 +28,9 @@ combatant:
 
 ```js
 // sun, sky, ground, terrain, water…
-import { registerSceneFeatures, registeredFeatures } from 'tosijs-3d-ensemble';
+import { registerSceneFeatures, registeredFeatures } from "tosijs-3d-ensemble";
 // …and the fortification vocabulary, only if you want it
-import { registerCombatPreset } from 'tosijs-3d-ensemble/presets/combat';
+import { registerCombatPreset } from "tosijs-3d-ensemble/presets/combat";
 
 registerSceneFeatures();
 registerCombatPreset();
@@ -42,10 +42,10 @@ registerCombatPreset();
   `protector` in this list, and `validate` does not know what a shield is.
 */
 preview.append(
-  Object.assign(document.createElement('p'), {
+  Object.assign(document.createElement("p"), {
     textContent: registeredFeatures()
       .map((f) => f.name)
-      .join(', '),
+      .join(", "),
   })
 );
 ```
@@ -67,25 +67,25 @@ imports the first two; the editor is never reached and tree-shakes away.
 
 ```js
 // a game
-import { buildEnsemble, validate, placeMesh } from 'tosijs-3d-ensemble';
+import { buildEnsemble, validate, placeMesh } from "tosijs-3d-ensemble";
 
 // an author
-import { ensembleEditor } from 'tosijs-3d-ensemble';
+import { ensembleEditor } from "tosijs-3d-ensemble";
 
 // All four are real exports, which is not something this block could always
 // claim: it named `registerBuiltInFeatures` — a function this package has
 // never had — for as long as the example was unrunnable, and nothing noticed
 // because nothing ran it.
 preview.append(
-  Object.assign(document.createElement('p'), {
+  Object.assign(document.createElement("p"), {
     textContent: [
-      ['buildEnsemble', buildEnsemble],
-      ['validate', validate],
-      ['placeMesh', placeMesh],
-      ['ensembleEditor', ensembleEditor],
+      ["buildEnsemble", buildEnsemble],
+      ["validate", validate],
+      ["placeMesh", placeMesh],
+      ["ensembleEditor", ensembleEditor],
     ]
       .map(([name, value]) => `${name}: ${typeof value}`)
-      .join(' · '),
+      .join(" · "),
   })
 );
 ```

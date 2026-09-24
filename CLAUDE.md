@@ -69,8 +69,8 @@ The format, the instantiator AND the editor ship from here as **one package**,
 away.
 
 ```js
-import { buildEnsemble, validate } from 'tosijs-3d-ensemble'; // a game
-import { ensembleEditor } from 'tosijs-3d-ensemble'; // an author
+import { buildEnsemble, validate } from "tosijs-3d-ensemble"; // a game
+import { ensembleEditor } from "tosijs-3d-ensemble"; // an author
 ```
 
 ⚠️ **Two earlier answers are still readable in the git history and partly in
@@ -444,14 +444,23 @@ bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
 ```
 
-⚠️ **`.prettierrc` forces SINGLE quotes in markdown, and that is load-bearing.**
-tosijs-ui's live-example parser accepts only single-quoted import specifiers,
-while Prettier normalises fenced code in `.md` to double — so `bun format`
-silently converted every README example into a non-running one, and the only
-symptom was a build warning that reads as advisory. That is how the README's
-headline example sat unrunnable for the life of the repo, and how nothing
-noticed it named `registerBuiltInFeatures`, a function this package has never
-exported. Filed as tosijs-ui#141; remove the override when it lands.
+⚠️ **`.prettierrc` used to force SINGLE quotes in markdown, and it was
+load-bearing.** tosijs-ui's live-example parser accepted only single-quoted
+import specifiers, while Prettier normalises fenced code in `.md` to double —
+so `bun format` silently converted every README example into a non-running one,
+and the only symptom was a build warning that reads as advisory. That is how
+the README's headline example sat unrunnable for the life of the repo, and how
+nothing noticed it named `registerBuiltInFeatures`, a function this package has
+never exported.
+
+Fixed upstream in tosijs-ui 1.14.0 (#141) and the override is **gone** — every
+fence is double-quoted now. Verified as a before/after rather than assumed: the
+build's live-example checker reported exactly one unrunnable block before the
+reformat and the same one after (MIGRATING.md's `./prefab`, which is manta's
+old code and cannot resolve by design), and the doc corpus stayed green. If you
+ever see that warning name a specifier it should have accepted, check the quote
+handling again before rewriting the example — that is the 40 minutes #141 cost
+its reporter.
 
 `bun run build` runs BOTH typechecks and the live-example checker, and fails the
 build on either. It is the gate that catches an example teaching a broken

@@ -492,11 +492,26 @@ describe("a library url decides who the reader's browser talks to", () => {
     );
   });
 
-  it("allows http from localhost, because local development is not the threat", () => {
-    expect(withUrl("http://localhost:8080/kit.glb")).not.toContain(
-      "insecure-library-url"
-    );
-    expect(withUrl("http://127.0.0.1:8080/kit.glb")).not.toContain(
+  it("refuses http even from localhost, on any page (0.4.0)", () => {
+    /*
+      It was allowed — "local development is not the threat" — and applied on
+      every page, so a shared document could make a reader's browser send
+      plaintext GETs to their own local services. Every loopback spelling
+      normalises, so all of them are refused; local development uses a
+      relative url or https://localhost, which both pass.
+    */
+    for (const url of [
+      "http://localhost:8080/kit.glb",
+      "http://127.0.0.1:8080/kit.glb",
+      "http://127.1/kit.glb",
+      "http://0x7f000001/kit.glb",
+      "http://[::1]/kit.glb",
+    ])
+      expect([url, withUrl(url)]).toEqual([
+        url,
+        expect.arrayContaining(["insecure-library-url"]),
+      ]);
+    expect(withUrl("https://localhost:8032/kit.glb")).not.toContain(
       "insecure-library-url"
     );
   });

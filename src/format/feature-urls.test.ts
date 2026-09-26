@@ -35,12 +35,12 @@ describe("fetched feature urls", () => {
     ).toEqual(["insecure-feature-url /pieces/0/features/skybox/starfieldData"]);
   });
 
-  it("https, relative, localhost and empty are all fine", () => {
+  it("https (including https://localhost), relative and empty are all fine", () => {
     for (const url of [
       "https://3d.tosijs.net/sky/0.8.4/stars",
       "/sky/stars",
       "./sky/stars",
-      "http://localhost:8032/sky/stars",
+      "https://localhost:8032/sky/stars",
       "",
     ])
       expect([

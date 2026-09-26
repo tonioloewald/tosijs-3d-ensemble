@@ -15,8 +15,7 @@ All notable changes to this project are documented here, in
   `starfieldTilt` no longer moves it (0.8.3), and every `PRNG`-seeded output
   re-rolls (0.8.4, xoshiro128\*\* for the Mersenne Twister), so a seeded
   galaxy, cloud field or crowd looks different with the same document.
-- **A feature's fetched URLs must be https too** (or relative, or
-  `http://localhost`). `starfieldData`, `starfieldCube`, `nebulaTexture`,
+- **A feature's fetched URLs must be https too** (or relative). `starfieldData`, `starfieldCube`, `nebulaTexture`,
   `ground.texture`, `water.normalMap` and `clouds.model` are fetched by a
   reader's browser the moment a shared document opens, which is the threat the
   library rule exists for. New error codes `insecure-feature-url` and
@@ -61,29 +60,36 @@ All notable changes to this project are documented here, in
   leaves the old sky up rather than clearing it. Reported by `validate`, but
   the scene does not visibly change.
 
-  What the rule is NOT: a host allow-list — any https host is accepted, and
-  `http://localhost` (and the other loopback spellings) is accepted on any
-  page. It stops plaintext to remote hosts, script and data urls; it does not
-  stop a document choosing an https server.
+  **No localhost exemption.** `http://localhost` was allowed during 0.4.0's
+  development, "because local development is not the threat". The review
+  confirmed it applied on EVERY page, so a document opened on a public site
+  could send plaintext GETs to the reader's own machine; every loopback
+  spelling (`127.1`, `0x7f000001`, `[::1]`) normalises to it. Dropped: local
+  development uses a relative url or `https://localhost`, which both pass.
 
-  **Migrating:** a document with an `http://` (non-localhost), protocol-relative
+  What the rule is NOT: a host allow-list. Any https host is accepted. It
+  stops plaintext, script and data urls, not a document choosing an https
+  server.
+
+  **Migrating:** a document with an `http://`, protocol-relative
   or non-string library or feature url now loses that library or field at
   load, and `validate` says which. Serve it over https or make it relative.
 
-- **A library url must be https** (or relative, or `http://localhost`).
+- **A library url must be https** (or relative).
   `validate` reported nothing but "is it non-empty" before, so a shared
   ensemble could point a reader's browser at any host the moment they opened
   it, and `javascript:` or `data:` reached an element attribute unexamined.
   An ensemble is a document people share; that is the whole pitch, and it is
   also the threat.
 
-  | url                      | verdict                                    |
-  | ------------------------ | ------------------------------------------ |
-  | `https://…`              | fine                                       |
-  | `/kits/x.glb`, `./x.glb` | fine — relative, so it inherits the page   |
-  | `http://localhost/…`     | fine — local development is not the threat |
-  | `http://cdn.example/…`   | `insecure-library-url` (error)             |
-  | anything else            | `unsupported-library-url` (error)          |
+  | url                      | verdict                                   |
+  | ------------------------ | ----------------------------------------- |
+  | `https://…`              | fine                                      |
+  | `/kits/x.glb`, `./x.glb` | fine — relative, so it inherits the page  |
+  | `https://localhost/…`    | fine — use it, or a relative url, locally |
+  | `http://localhost/…`     | `insecure-library-url` — see above        |
+  | `http://cdn.example/…`   | `insecure-library-url` (error)            |
+  | anything else            | `unsupported-library-url` (error)         |
 
   **ERROR, not warning**, because the severity IS the contract: an editor
   shows everything and keeps working, a generator decides whether to emit. A

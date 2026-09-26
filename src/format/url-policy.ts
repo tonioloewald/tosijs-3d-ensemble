@@ -16,7 +16,8 @@
   | ---------------------------- | ----------------------------------------- |
   | `https://…`                  | fine                                      |
   | `/kits/x.glb`, `./x.glb`     | fine — relative, it inherits the page     |
-  | `http://localhost/…`         | fine — local development is not the threat |
+  | `https://localhost/…`        | fine — https, like any other host         |
+  | `http://localhost/…`         | insecure — see below                      |
   | `http://cdn.example/…`       | insecure                                  |
   | `//cdn.example/…`            | unsupported — another host, scheme unsaid |
   | anything else                | unsupported scheme                        |
@@ -34,7 +35,6 @@
   `blob:` is deliberately not allowed: no library url is ever a blob today, and
   admitting a scheme "just in case" is how an allow-list stops being one.
 */
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 const SENTINEL = "relative.invalid";
 
 export interface UrlProblem {
@@ -78,11 +78,19 @@ export function urlProblem(
 
   const parsed = viaHttps;
   if (parsed.protocol === "https:") return null;
+  /*
+    NO LOCALHOST EXEMPTION. There was one — "local development is not the
+    threat" — and the 0.4.0 review confirmed what it actually did: it applied
+    on EVERY page, so a document opened on a public site could send plaintext
+    GETs to the reader's own machine (`http://localhost:9200/_shutdown`,
+    `http://127.1/`, `http://0x7f000001/` all normalise to loopback, and mixed
+    content blocking does not cover loopback). Local development never needed
+    it: relative urls and `https://localhost` both pass. Owner's call, 0.4.0.
+  */
   if (parsed.protocol === "http:") {
-    if (LOCAL_HOSTS.has(parsed.hostname)) return null;
     return {
       code: `insecure-${what}-url`,
-      message: `${what} url "${url}" is http — an ensemble is a document people share, so what it fetches must be served over https (http is allowed only from localhost)`,
+      message: `${what} url "${url}" is http — an ensemble is a document people share, so what it fetches must be served over https — use a relative url or https://localhost for local development`,
     };
   }
   return {

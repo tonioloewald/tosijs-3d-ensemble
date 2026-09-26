@@ -187,7 +187,8 @@ to a well-formed file, but each can change what renders.
   `starfieldTilt` no longer moves it (0.8.3), and every `PRNG`-seeded output
   re-rolls (0.8.4). A seeded cloud field or galaxy looks different with the
   same document. Scenes tuned by eye should be looked at again.
-- **Fetched urls must be https** (or relative, or `http://localhost`), for
+- **Fetched urls must be https** (or relative — and that now includes
+  localhost: `http://localhost` is refused, use `https://localhost`), for
   libraries AND for fetched feature fields (`starfieldData`, `starfieldCube`,
   `nebulaTexture`, `ground.texture`, `water.normalMap`, `clouds.model`,
   `sound.url`). A refused url is reported by `validate` AND not fetched: the

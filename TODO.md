@@ -94,7 +94,7 @@ release, or verified and too large for one. Both reviews are filed under
       was written. Corrected on #78.
 
 - [x] ~~**Library URLs get no scheme check.**~~ Done, at the owner's call:
-      https required, relative allowed, `http://localhost` allowed, everything
+      https required, relative allowed, `http://localhost` REFUSED since 0.4.0's review (it applied on every page), everything
       else an ERROR (`insecure-library-url` / `unsupported-library-url`). In
       `[Unreleased]` as breaking, since a document that validated clean under
       0.3.0 can fail now.

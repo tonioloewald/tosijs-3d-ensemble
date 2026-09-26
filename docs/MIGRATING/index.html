@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=f6d9edfc76b0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=8157e3dfefbe" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=c42b5815d5a9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=1b367ffbe0ff" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -221,7 +221,8 @@ to a well-formed file, but each can change what renders.</p>
 <code>starfieldTilt</code> no longer moves it (0.8.3), and every <code>PRNG</code>-seeded output
 re-rolls (0.8.4). A seeded cloud field or galaxy looks different with the
 same document. Scenes tuned by eye should be looked at again.</li>
-<li><strong>Fetched urls must be https</strong> (or relative, or <code>http://localhost</code>), for
+<li><strong>Fetched urls must be https</strong> (or relative — and that now includes
+localhost: <code>http://localhost</code> is refused, use <code>https://localhost</code>), for
 libraries AND for fetched feature fields (<code>starfieldData</code>, <code>starfieldCube</code>,
 <code>nebulaTexture</code>, <code>ground.texture</code>, <code>water.normalMap</code>, <code>clouds.model</code>,
 <code>sound.url</code>). A refused url is reported by <code>validate</code> AND not fetched: the
@@ -316,6 +317,6 @@ moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.</p
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=f6d9edfc76b0"></script>
+  <script type="module" src="../hydrate.js?v=8157e3dfefbe"></script>
 </body>
 </html>

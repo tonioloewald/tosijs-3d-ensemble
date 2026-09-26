@@ -29,3 +29,7 @@ reviews/
 # green. Ignoring it means the repo's one hand-written doc PAGE is the only
 # file the formatter does not check; remove this line the moment #165 lands.
 editor.md
+
+# Copied UNCHANGED from tosijs-coding-practices/templates — the rollout's adoption
+# check is byte-identity with the template, so the formatter must not touch it.
+.github/workflows/publish.yml

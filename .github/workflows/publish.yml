@@ -26,16 +26,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to publish, e.g. v1.15.3 or v1.16.0-beta.1 (a branch, with dry_run)"
+        description: 'Tag to publish, e.g. v1.15.3 or v1.16.0-beta.1 (a branch, with dry_run)'
         required: true
         type: string
       dry_run:
-        description: "Run every check up to staging and stop. `tag` may be a branch (e.g. main) — use it BEFORE tagging"
+        description: 'Run every check up to staging and stop. `tag` may be a branch (e.g. main) — use it BEFORE tagging'
         required: false
         type: boolean
         default: false
       verify_only:
-        description: "Only verify an already-approved publish (use when approval came after the 60-minute wait)"
+        description: 'Only verify an already-approved publish (use when approval came after the 60-minute wait)'
         required: false
         type: boolean
         default: false
@@ -80,8 +80,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22.x" # trusted publishing needs 22.14+
-          registry-url: "https://registry.npmjs.org"
+          node-version: '22.x' # trusted publishing needs 22.14+
+          registry-url: 'https://registry.npmjs.org'
 
       # `npm stage` needs npm 11.15.0+, newer than the runner's bundled npm.
       - name: Upgrade npm

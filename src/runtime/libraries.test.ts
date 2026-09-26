@@ -223,3 +223,63 @@ describe("mountLibraries honours the url policy", () => {
     ).toEqual(["https://cdn.tosijs.net/kit.glb", "/kits/local.glb"]);
   });
 });
+
+/*
+  THE REFUSAL PATH ITSELF — flagged by the third 0.4.0 review as untested: the
+  fake above always answers `getLibrary → null`, so the stale-mount removal
+  never ran, and deleting it would have kept the suite green while an old kit
+  went on rendering under a refused url.
+*/
+describe("a refused url removes what it would have replaced, and says so", () => {
+  it("remounting a kit at a refused url removes the old one and warns", async () => {
+    let removed = 0;
+    const created: string[] = [];
+    const warnings: string[] = [];
+    const warn = console.warn;
+    console.warn = (m: string) => warnings.push(m);
+    const original = globalThis.customElements;
+    (globalThis as { customElements?: unknown }).customElements = {
+      whenDefined: () => Promise.resolve(),
+    };
+    const host = {
+      getLibrary: (name: string) =>
+        name === "kit"
+          ? {
+              getAttribute: () => "https://cdn.example/kit-a.glb",
+              remove: () => {
+                removed++;
+              },
+            }
+          : null,
+      ownerDocument: {
+        createElement: () => ({
+          setAttribute: (k: string, v: string) => {
+            if (k === "url") created.push(v);
+          },
+          getAttribute: () => null,
+        }),
+      },
+      appendChild: () => {},
+    } as unknown as SceneElement;
+    for (const url of [
+      "http://evil.example/kit-b.glb",
+      ["https://cdn.example/x.glb"],
+      { toString: () => "http://evil.example/y.glb" },
+    ]) {
+      await mountLibraries(
+        {
+          name: "e",
+          libraries: [{ name: "kit", url: url as string }],
+          pieces: [],
+        },
+        host
+      );
+    }
+    console.warn = warn;
+    (globalThis as { customElements?: unknown }).customElements = original;
+    expect(created).toEqual([]);
+    expect(removed).toBe(3);
+    expect(warnings.length).toBe(3);
+    expect(warnings[0]).toContain('"kit"');
+  });
+});

@@ -170,6 +170,19 @@ release, or verified and too large for one. Both reviews are filed under
 - [ ] **The combat, world and 0.8.4 sky/cloud/climate features have no
       `.pw.ts`** watching them work, except `land-and-sky`.
 
+- [ ] **Link payloads are outside `validate`'s url check** (0.4.0 third
+      review, m4). A consumer link kind with a fetched field is refused at
+      bind by `declaredConfig` but not REPORTED; a scalar payload skips the
+      policy. No built-in link fetches. Wants a links pass in `validate`.
+
+- [ ] **No size delta for a game's bundle** (m5). `tree-shaking.test.ts` prints
+      the absolute gzip size; compare it to a committed baseline so a leak
+      shows as a jump rather than a number nobody remembers.
+
+- [ ] **Removing a live kit mid-session** — what happens to pieces already
+      built from it (placeholder boxes, disposal order, build → dispose →
+      build idempotence) is untested.
+
 ## Format and runtime work the design is waiting on
 
 - [ ] **`Piece.ensemble` flattening.** Reserved, documented, unimplemented —

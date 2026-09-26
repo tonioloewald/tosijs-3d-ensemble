@@ -27,6 +27,24 @@ registerFeature({
 })
 ```
 
+## A field your feature FETCHES must say so
+
+Mark it `format: 'uri-reference'` — standard JSON Schema — and list any
+non-url values it also accepts in `x-keywords`:
+
+```typescript
+properties: {
+  image: { type: 'string', format: 'uri-reference', 'x-keywords': ['none'] },
+}
+```
+
+Then `validate` holds it to the https rule (`insecure-feature-url` /
+`unsupported-feature-url`) and `declaredConfig` refuses it before `bind`, so
+your element never receives a url the rule refused — or anything that is not a
+string. An UNMARKED field is not checked: the rule cannot know a string is
+fetched unless the schema says it is. That is how `sound.url`, a built-in,
+went unchecked until 0.4.0's review.
+
 ## `bind` and `link` are two phases, and that is not a style preference
 
 A `protector` that resolves its power source during `bind` works only if the

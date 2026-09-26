@@ -41,14 +41,30 @@ All notable changes to this project are documented here, in
   array, an object, a number — is refused, not stringified: the second review
   found `["http://…"]` passing every check while the element `String()`ed it
   back into a url and fetched it. `sound.url` is now marked as fetched too; it
-  was the one built-in url the rule could not see, and a test now fails for
-  any url-shaped built-in property that is neither marked nor explained.
+  was the one built-in url the rule could not see. A default-deny test now
+  requires every free-text string field of every built-in feature, nested ones
+  included, to be marked fetched or listed with the reason it is not.
 
-  What the rule is NOT: a host allow-list — any https host is accepted; it
-  stops plaintext, script and data urls, not a document choosing an https
-  server. And it covers what a DOCUMENT makes a reader fetch: the
-  `<tosi-ensemble src>` a page author writes is the page's choice, not the
-  document's, and is not checked.
+  **For your own features:** mark a fetched field `format: 'uri-reference'`
+  (with `x-keywords` for any non-url values it takes). An unmarked field is
+  not checked — the rule cannot know a string is fetched unless you say so.
+
+  **What it covers, exactly:** the urls a DOCUMENT carries — its libraries and
+  its pieces' feature fields. Not covered, deliberately: the address you load a
+  document FROM (`loadEnsemble(url)`, `<tosi-ensemble src>` and `.load()`, the
+  editor's `load()`), which is the embedding page's choice, not the
+  document's; and link payloads, which no built-in fetches from (a consumer
+  link kind that does is refused at bind but not reported by `validate`).
+
+  **Known gap, in the editor:** refusing a url drops the field, and the element
+  keeps whatever it last had — so typing an `http://` url over a working one
+  leaves the old sky up rather than clearing it. Reported by `validate`, but
+  the scene does not visibly change.
+
+  What the rule is NOT: a host allow-list — any https host is accepted, and
+  `http://localhost` (and the other loopback spellings) is accepted on any
+  page. It stops plaintext to remote hosts, script and data urls; it does not
+  stop a document choosing an https server.
 
   **Migrating:** a document with an `http://` (non-localhost), protocol-relative
   or non-string library or feature url now loses that library or field at

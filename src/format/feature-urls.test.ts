@@ -228,52 +228,65 @@ describe("declaredConfig drops a refused fetched url", () => {
 });
 
 /*
-  EVERY BUILT-IN URL FIELD IS MARKED, OR SAYS WHY IT IS NOT.
+  EVERY BUILT-IN STRING FIELD IS FETCHED, CONSTRAINED, OR SAYS WHY IT IS NEITHER.
 
-  The https rule finds fetched fields by their marker — `format:
-  'uri-reference'`, from upstream's schema or our own — so an UNMARKED fetched
-  field is not checked at all. `sound.url` was exactly that until the 0.4.0
-  re-review: a built-in feature we ship, fetching whatever a document said.
-  So every url-shaped property of every built-in feature must be either marked
-  or named below with the reason it is not fetched. A new url field fails this
-  test until somebody decides which it is.
+  The https rule finds fetched fields by their marker, so an UNMARKED fetched
+  field is not checked at all — `sound.url` was exactly that until the 0.4.0
+  re-review. The first completeness test here guessed by NAME (a regex of
+  url-ish words, top level only), and the next review pointed out what that
+  misses: `path`, `source`, `asset`, `hdr`, `icon` and anything nested. So it is
+  DEFAULT-DENY now: every `type: 'string'` property in every built-in feature's
+  schema, recursing into object properties and array items, must be marked
+  fetched, carry an `enum`, be a colour — or be named below with the reason it
+  is none of those. A new free-text field fails this test until somebody
+  decides what it is.
+
+  Fields that exist only upstream (in `x-accepts`, not in our `properties`) are
+  covered by tosijs-3d's own test, which rejects a plain string that is not a
+  colour, enum, url or deliberately listed (tosijs-3d#91).
 */
-const NOT_FETCHED: Record<string, string> = {
-  "sun.shadowTextureSize": "a resolution in texels",
-  "skybox.starfieldDataSize": "the data cube's texel count, a number",
-  "ground.textureTiles": "a repeat count",
-  "water.textureSize": "a render-target resolution",
-  "sound.spatialSound": "a boolean",
-  "terrain.profile": "a boolean that turns on profiling",
-  "blip.profile": "a number (the combat blip's profile)",
+const FREE_TEXT: Record<string, string> = {
+  "skybox.starfieldTilt": "three degrees, 'rx,ry,rz' — a vector as text",
+  "blip.faction": "a faction name",
+  "protector.source": "a piece id in this document",
+  "launchpad.craft": "a craft kind the game resolves",
+  "interactive.part": "a mesh part name",
+  "interactive.prompt": "text shown to the player",
+  "lockable.key": "a key id the game resolves",
+  "animation.clip": "an animation clip name on the mesh",
 };
-const URLISH =
-  /url|src|href|texture|map|model|data|cube|image|file|sound|audio|library|glb/i;
+
+type Spec = {
+  type?: string;
+  enum?: unknown[];
+  format?: string;
+  "x-widget"?: string;
+  properties?: Record<string, Spec>;
+  items?: Spec;
+};
 
 describe("no built-in fetched field is unmarked", () => {
-  it("every url-shaped property is marked fetched or listed as not", async () => {
+  it("every string property is fetched, constrained, or explained", async () => {
     const { registerCombatPreset } = await import("../presets/combat.js");
     const { registerWorldPreset } = await import("../presets/world.js");
     const undoCombat = registerCombatPreset();
     registerWorldPreset();
-    const { registeredFeatures, fetchedKeys } = await import("./registry.js");
+    const { registeredFeatures } = await import("./registry.js");
     const unaccounted: string[] = [];
-    for (const f of registeredFeatures()) {
-      const schema = f.schema as {
-        "x-accepts"?: string[];
-        properties?: Record<string, unknown>;
-      };
-      const keys = new Set([
-        ...(schema?.["x-accepts"] ?? []),
-        ...Object.keys(schema?.properties ?? {}),
-      ]);
-      const fetched = fetchedKeys(f);
-      for (const k of keys) {
-        const id = `${f.name}.${k}`;
-        if (URLISH.test(k) && !fetched.has(k) && !(id in NOT_FETCHED))
-          unaccounted.push(id);
-      }
-    }
+    const walk = (spec: Spec | undefined, path: string) => {
+      if (!spec || typeof spec !== "object") return;
+      const free =
+        spec.type === "string" &&
+        !spec.enum &&
+        spec.format !== "uri-reference" &&
+        spec.format !== "color" &&
+        spec["x-widget"] !== "color";
+      if (free && !(path in FREE_TEXT)) unaccounted.push(path);
+      for (const [k, v] of Object.entries(spec.properties ?? {}))
+        walk(v, `${path}.${k}`);
+      if (spec.items) walk(spec.items, `${path}[]`);
+    };
+    for (const f of registeredFeatures()) walk(f.schema as Spec, f.name);
     undoCombat();
     expect(unaccounted).toEqual([]);
   });

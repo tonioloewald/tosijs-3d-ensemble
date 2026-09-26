@@ -186,6 +186,15 @@ jobs:
       # ~6 minutes locally, likely more on a CI runner — the test's timeout
       # scales with the trip count.
       - name: Re-parent lane
+        # SIX trips here, TWENTY at release. Twenty is the claim (fewer cannot
+        # tell "fixed" from "rarer"), and it runs locally before every release
+        # as an attested lane. On a 4-vCPU runner a trip takes ~50 s, so twenty
+        # on every push is ~40 minutes of CI for a result the release gate
+        # already owns. The trace prints each trip, so a dead one on CI says
+        # whether it was slow or broken.
+        env:
+          REPARENT_TRIPS: "6"
+          REPARENT_TRACE: "1"
         run: bunx playwright test --project=reparent
 
       - name: Upload report on failure

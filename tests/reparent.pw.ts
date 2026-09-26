@@ -85,7 +85,7 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
 
   /** Mesh, light and material counts, plus the GL error register. */
   const health = async () =>
-    page.evaluate(async () => {
+    page.evaluate(async (settleMs: number) => {
       /*
         WAIT FOR THE COUNT TO SETTLE, not for it to be non-zero.
 
@@ -100,14 +100,14 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
         still for three consecutive reads.
       */
       /*
-        40 s, not 15. At twenty trips under headless SwiftShader the page is
+        40 s (x3 on CI, via `budget`), not 15. At twenty trips under headless SwiftShader the page is
         so busy rendering that a 300 ms sleep takes ~3 s, and three of twenty
         trips ran out of a 15 s window — reported `null`, "dead". A trace of
         the same run found every trip settling at 74 meshes, one canvas
         throughout and a flat heap: slow, not broken. The window is a budget
         for the rig, not a claim about the scene.
       */
-      const deadline = Date.now() + 40_000;
+      const deadline = Date.now() + settleMs;
       let last = -1;
       let stable = 0;
       while (Date.now() < deadline) {
@@ -152,7 +152,7 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
         await new Promise((r) => setTimeout(r, 300));
       }
       return null;
-    });
+    }, budget(40_000));
 
   const first = await health();
   expect(first, "the editor never produced a scene at all").not.toBeNull();

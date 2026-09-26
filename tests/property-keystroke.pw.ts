@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -28,7 +29,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 test("typing into a SET string property edits it, and moves nothing", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   /*
     A TALLER VIEWPORT, because the click has to land on the field.
 

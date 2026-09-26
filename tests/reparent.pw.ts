@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -64,7 +65,7 @@ const TRIPS = Number(process.env.REPARENT_TRIPS || 20);
 test("the scene survives repeated SPA re-parenting", async ({ page }) => {
   // Scaled to the trip count: a trip is a navigation plus a health read that
   // may wait up to 15 s for the count to settle.
-  test.setTimeout(60_000 + TRIPS * 60_000);
+  test.setTimeout(budget(60_000 + TRIPS * 60_000));
   const errors = collectPageErrors(page);
   let loads = 0;
   page.on("load", () => loads++);

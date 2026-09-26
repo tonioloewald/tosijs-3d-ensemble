@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -23,7 +24,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 test("filtering hides rows without touching the selection", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   await page.setViewportSize({ width: 1400, height: 1100 });
   const errors = collectPageErrors(page);
 
@@ -146,7 +147,7 @@ test("filtering hides rows without touching the selection", async ({
   Assert the rename HAPPENED, not where the letter went.
 */
 test("the id field renames the piece in the document", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   await page.setViewportSize({ width: 1400, height: 1100 });
   const errors = collectPageErrors(page);
 

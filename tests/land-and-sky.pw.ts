@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -41,7 +42,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 test("the land-and-sky sample builds its world and its galaxy", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   await page.setViewportSize({ width: 1400, height: 1000 });
   const errors = collectPageErrors(page);
   const sky: string[] = [];

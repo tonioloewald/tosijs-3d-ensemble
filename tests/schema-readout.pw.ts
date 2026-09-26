@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -40,7 +41,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 test("a frequency slider shows its unit and its wavelength", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   await page.setViewportSize({ width: 1400, height: 1100 });
   const errors = collectPageErrors(page);
 

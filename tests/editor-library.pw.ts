@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -18,7 +19,7 @@ const KIT = "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb";
 
 test("an editor given libraryUrl can name meshes from it", async ({ page }) => {
   // A cold CDN fetch of a real kit, plus a scene mount, does not fit in 30s.
-  test.setTimeout(120_000);
+  test.setTimeout(budget(120_000));
   const errors = collectPageErrors(page);
 
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });

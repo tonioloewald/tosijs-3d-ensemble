@@ -68,5 +68,11 @@
     "tosijs-3d": "0.8.4",
     "tosijs-ui": "^1.15.4",
     "typescript": "^5.9.3"
+  },
+  "releaseDoctor": {
+    "attestedLanes": [
+      "test:scene",
+      "test:reparent"
+    ]
   }
 }

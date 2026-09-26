@@ -34,9 +34,15 @@ jobs:
       # in the same change. That is the point rather than a nuisance: the
       # published site should be built by the toolchain the project claims to
       # use, and a red gate is how you find out it is not.
+      #
+      # It then happened the OTHER way: this said `1.4.0` inline while the
+      # developer's machine had moved to 1.4.2, and three pushes went red
+      # before anyone read the result. So the version lives in `.bun-version`
+      # — read here, by `publish.yml`, and by `src/bun-version.test.ts`, which
+      # fails the local `bun test` on a mismatch, where it is cheap.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
 
       - name: Unit suite (happy-dom)
@@ -107,7 +113,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
 
       - name: Install the newest tosijs-3d our range admits
@@ -148,7 +154,7 @@ jobs:
       # use, and a red gate is how you find out it is not.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
 
       # The dev server serves HTTPS and refuses to start without a cert.

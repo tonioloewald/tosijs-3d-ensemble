@@ -22,6 +22,7 @@
     "dist",
     "!dist/iife.js",
     "!dist/iife.js.map",
+    "!dist/__fixtures__",
     "CHANGELOG.md",
     "MIGRATING.md"
   ],

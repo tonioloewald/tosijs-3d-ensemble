@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Ensemble Editor — specification — tosijs-3d-ensemble</title>
   <meta name="description" content="Status: proposal. Written after building a working prototype inside manta-recon (src/prefab.ts, src/bench-.ts, static/prefab.html) and discovering it does not…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Ensemble Editor — specification</h1>
 <!--{"pin":"bottom","parent":"Project","order":1}--><p><strong>Status:</strong> proposal. Written after building a working prototype inside
@@ -659,7 +659,7 @@ property of the FILE, not of the insertion, so the same ensemble cannot be
 placed at two sizes either. Turning one today means editing its pieces.</p>
 <p>The more interesting half of the gap is that the placer contract has no slot
 for an orientation to arrive in:</p>
-<pre><code class="language-typescript">placePiece?: (piece, at, scale, ctx) =&gt; Placement | null
+<pre><code class="language-typescript" data-highlighted>placePiece<span class="token operator">?</span><span class="token operator">:</span> <span class="token punctuation">(</span>piece<span class="token punctuation">,</span> at<span class="token punctuation">,</span> scale<span class="token punctuation">,</span> ctx<span class="token punctuation">)</span> <span class="token operator">=></span> Placement <span class="token operator">|</span> <span class="token keyword">null</span>
 </code></pre>
 <p>Position, scale, no rotation — <code>placeMesh</code> reads <code>piece.rot</code> off the piece
 itself. So adding a field to <code>BuildOptions</code> is necessary and not sufficient;
@@ -741,17 +741,17 @@ entirely normal until a player spends five minutes failing to kill something</li
 <hr>
 <h2>Part 2 — the editor component</h2>
 <p>Ships as a configurable component, not an application:</p>
-<pre><code class="language-javascript">ensembleEditor({
-  libraries: [{ url: &quot;/enemies.glb&quot;, type: &quot;enemies&quot; }],
-  schema: MANTA_SCHEMA, // see Part 3
-  scenarios: MANTA_SCENARIOS, // see Part 4
-  onSave: async (ensemble) =&gt; {
-    /* consumer owns persistence */
-  },
-  load: async (name) =&gt; {
-    /* consumer owns loading */
-  },
-});
+<pre><code class="language-javascript" data-highlighted><span class="token function">ensembleEditor</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token literal-property property">libraries</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span> <span class="token literal-property property">url</span><span class="token operator">:</span> <span class="token string">"/enemies.glb"</span><span class="token punctuation">,</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"enemies"</span> <span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token literal-property property">schema</span><span class="token operator">:</span> <span class="token constant">MANTA_SCHEMA</span><span class="token punctuation">,</span> <span class="token comment">// see Part 3</span>
+  <span class="token literal-property property">scenarios</span><span class="token operator">:</span> <span class="token constant">MANTA_SCENARIOS</span><span class="token punctuation">,</span> <span class="token comment">// see Part 4</span>
+  <span class="token function-variable function">onSave</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">ensemble</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">/* consumer owns persistence */</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token function-variable function">load</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">name</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">/* consumer owns loading */</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h3>Required affordances</h3>
 <table>
@@ -872,64 +872,64 @@ roles a reference may target.</p>
 <p><code>x-</code> prefixed keys are JSON Schema&#39;s own extension convention, so a plain
 validator ignores them and the editor reads them. The field-type table below is
 therefore a table of <strong>widgets</strong>, not of types.</p>
-<pre><code class="language-javascript">const MANTA_SCHEMA = {
-  features: {
-    destroyable: {
-      label: &quot;Destroyable&quot;,
-      fields: {
-        hp: { type: &quot;number&quot;, min: 1, max: 9999, default: 12 },
-        armor: { type: &quot;number&quot;, min: 0, max: 100000, default: 0 },
-        explode: { type: &quot;boolean&quot;, default: true },
-      },
-    },
-    turret: {
-      label: &quot;Turret&quot;,
-      fields: {
-        range: { type: &quot;number&quot;, min: 20, max: 2000, default: 260, unit: &quot;m&quot; },
-        fireRate: {
-          type: &quot;number&quot;,
-          min: 0.1,
-          max: 20,
-          default: 1.1,
-          unit: &quot;/s&quot;,
-        },
-        damage: { type: &quot;number&quot;, min: 1, max: 200, default: 4 },
-        smart: {
-          type: &quot;boolean&quot;,
-          default: false,
-          help: &quot;leads its target instead of firing where you are&quot;,
-        },
-      },
-    },
-    launchpad: {
-      label: &quot;Launch pad&quot;,
-      fields: {
-        craft: { type: &quot;mesh&quot;, library: &quot;enemies&quot; }, // pick list from library
-        interval: { type: &quot;number&quot;, min: 1, max: 300, unit: &quot;s&quot; },
-      },
-    },
-    protector: {
-      label: &quot;Shield field&quot;,
-      fields: {
-        protection: { type: &quot;number&quot;, min: 0, max: 200, default: 12 },
-        source: { type: &quot;ref&quot;, roles: [&quot;power&quot;, &quot;generator&quot;] }, // ref to a PIECE
-      },
-    },
-  },
+<pre><code class="language-javascript" data-highlighted><span class="token keyword">const</span> <span class="token constant">MANTA_SCHEMA</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token literal-property property">features</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token literal-property property">destroyable</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Destroyable"</span><span class="token punctuation">,</span>
+      <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token literal-property property">hp</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">9999</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">12</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">armor</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">100000</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">0</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">explode</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"boolean"</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">turret</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Turret"</span><span class="token punctuation">,</span>
+      <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token literal-property property">range</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">20</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">2000</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">260</span><span class="token punctuation">,</span> <span class="token literal-property property">unit</span><span class="token operator">:</span> <span class="token string">"m"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">fireRate</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">0.1</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">20</span><span class="token punctuation">,</span>
+          <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">1.1</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">unit</span><span class="token operator">:</span> <span class="token string">"/s"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">damage</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">200</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">4</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">smart</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"boolean"</span><span class="token punctuation">,</span>
+          <span class="token keyword">default</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">help</span><span class="token operator">:</span> <span class="token string">"leads its target instead of firing where you are"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">launchpad</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Launch pad"</span><span class="token punctuation">,</span>
+      <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token literal-property property">craft</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"mesh"</span><span class="token punctuation">,</span> <span class="token literal-property property">library</span><span class="token operator">:</span> <span class="token string">"enemies"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token comment">// pick list from library</span>
+        <span class="token literal-property property">interval</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">300</span><span class="token punctuation">,</span> <span class="token literal-property property">unit</span><span class="token operator">:</span> <span class="token string">"s"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">protector</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Shield field"</span><span class="token punctuation">,</span>
+      <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token literal-property property">protection</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span><span class="token punctuation">,</span> <span class="token literal-property property">min</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token literal-property property">max</span><span class="token operator">:</span> <span class="token number">200</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">12</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token literal-property property">source</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"ref"</span><span class="token punctuation">,</span> <span class="token literal-property property">roles</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"power"</span><span class="token punctuation">,</span> <span class="token string">"generator"</span><span class="token punctuation">]</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token comment">// ref to a PIECE</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
 
-  roles: {
-    power: {
-      label: &quot;Power source&quot;,
-      features: { destroyable: { hp: 16 }, blip: {} },
-    },
-    // …consumer-defined
-  },
+  <span class="token literal-property property">roles</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token literal-property property">power</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Power source"</span><span class="token punctuation">,</span>
+      <span class="token literal-property property">features</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">destroyable</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">hp</span><span class="token operator">:</span> <span class="token number">16</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token literal-property property">blip</span><span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// …consumer-defined</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
 
-  zones: {
-    escort: { label: &quot;Escort zone&quot;, fields: { capacity: { type: &quot;number&quot; } } },
-  },
-  points: { spawn: { label: &quot;Spawn&quot;, fields: { craft: { type: &quot;mesh&quot; } } } },
-};
+  <span class="token literal-property property">zones</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token literal-property property">escort</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Escort zone"</span><span class="token punctuation">,</span> <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">capacity</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"number"</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token literal-property property">points</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">spawn</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Spawn"</span><span class="token punctuation">,</span> <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">craft</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"mesh"</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
 </code></pre>
 <h3>Field types the editor must support</h3>
 <table>
@@ -1000,24 +1000,24 @@ about: escort <strong>zones</strong> that AI reads, spline <strong>energy condui
 A closed feature set would mean those either get pushed upstream where they do
 not belong, or the editor cannot author them.</p>
 <p>So a feature is a <strong>registration</strong>, not a case in a switch:</p>
-<pre><code class="language-javascript">registerFeature({
-  name: &quot;turret&quot;,
-  schema: turretSchema, // JSON Schema (+ x- UI annotations)
-  bind(piece, cfg, ctx) {
-    // JSON -&gt; live behaviour
-    const t = b3dTurret({
-      ...cfg,
-      x: piece.at.x,
-      y: piece.at.y,
-      z: piece.at.z,
-    });
-    ctx.scene.appendChild(t);
-    ctx.onDispose(() =&gt; t.remove());
-    return {
-      /* optional handle for other features / scenarios */
-    };
-  },
-});
+<pre><code class="language-javascript" data-highlighted><span class="token function">registerFeature</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">"turret"</span><span class="token punctuation">,</span>
+  <span class="token literal-property property">schema</span><span class="token operator">:</span> turretSchema<span class="token punctuation">,</span> <span class="token comment">// JSON Schema (+ x- UI annotations)</span>
+  <span class="token function">bind</span><span class="token punctuation">(</span><span class="token parameter">piece<span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> ctx</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// JSON -> live behaviour</span>
+    <span class="token keyword">const</span> t <span class="token operator">=</span> <span class="token function">b3dTurret</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      <span class="token operator">...</span>cfg<span class="token punctuation">,</span>
+      <span class="token literal-property property">x</span><span class="token operator">:</span> piece<span class="token punctuation">.</span>at<span class="token punctuation">.</span>x<span class="token punctuation">,</span>
+      <span class="token literal-property property">y</span><span class="token operator">:</span> piece<span class="token punctuation">.</span>at<span class="token punctuation">.</span>y<span class="token punctuation">,</span>
+      <span class="token literal-property property">z</span><span class="token operator">:</span> piece<span class="token punctuation">.</span>at<span class="token punctuation">.</span>z<span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    ctx<span class="token punctuation">.</span>scene<span class="token punctuation">.</span><span class="token function">appendChild</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    ctx<span class="token punctuation">.</span><span class="token function">onDispose</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> t<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span>
+      <span class="token comment">/* optional handle for other features / scenarios */</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p><strong>tosijs-3d ships registrations</strong> for the components it already has —
 <code>destroyable</code>, <code>turret</code>, <code>launcher</code>, <code>radar</code>, <code>launchpad</code>, <code>blip</code>, <code>protector</code> —
@@ -1107,12 +1107,12 @@ should be marked so, or an author can build something the game cannot load.</li>
 ensemble is a puzzle; a static render tells you nothing about whether it is
 solvable or fair.</p>
 <p>Consumer-supplied:</p>
-<pre><code class="language-javascript">const MANTA_SCENARIOS = {
-  &quot;escort — 3 idle fighters&quot;: (ctx) =&gt;
-    ctx.spawn(&quot;Light Fighter&quot;, 3, { radius: 320 }),
-  &quot;kill the reactor&quot;: (ctx) =&gt; ctx.damageRole(&quot;power&quot;, 9999),
-  &quot;player pass at 200m&quot;: (ctx) =&gt; ctx.flyby({ speed: 25, offset: 200 }),
-};
+<pre><code class="language-javascript" data-highlighted><span class="token keyword">const</span> <span class="token constant">MANTA_SCENARIOS</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token string-property property">"escort — 3 idle fighters"</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">ctx</span><span class="token punctuation">)</span> <span class="token operator">=></span>
+    ctx<span class="token punctuation">.</span><span class="token function">spawn</span><span class="token punctuation">(</span><span class="token string">"Light Fighter"</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> <span class="token literal-property property">radius</span><span class="token operator">:</span> <span class="token number">320</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token string-property property">"kill the reactor"</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">ctx</span><span class="token punctuation">)</span> <span class="token operator">=></span> ctx<span class="token punctuation">.</span><span class="token function">damageRole</span><span class="token punctuation">(</span><span class="token string">"power"</span><span class="token punctuation">,</span> <span class="token number">9999</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token string-property property">"player pass at 200m"</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">ctx</span><span class="token punctuation">)</span> <span class="token operator">=></span> ctx<span class="token punctuation">.</span><span class="token function">flyby</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token literal-property property">speed</span><span class="token operator">:</span> <span class="token number">25</span><span class="token punctuation">,</span> <span class="token literal-property property">offset</span><span class="token operator">:</span> <span class="token number">200</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
 </code></pre>
 <p>The context object needs, at minimum: <code>spawn</code>, <code>damage</code>/<code>damageRole</code>,
 <code>pieces()</code>, <code>zones()</code>, <code>log()</code>, and a time control.</p>
@@ -1245,12 +1245,12 @@ combat air patrols should hang out relative to the formation.&quot;</em></p>
 </blockquote>
 <p><strong>The format is already right for this</strong>, which is worth saying because it was
 not obvious when <code>kind</code> was made a free string rather than a union:</p>
-<pre><code class="language-json">{
-  &quot;id&quot;: &quot;picket-north&quot;,
-  &quot;at&quot;: [0, 0, 900],
-  &quot;kind&quot;: &quot;station&quot;,
-  &quot;meta&quot;: { &quot;label&quot;: &quot;Picket N&quot;, &quot;role&quot;: &quot;picket&quot; }
-}
+<pre><code class="language-json" data-highlighted><span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"picket-north"</span><span class="token punctuation">,</span>
+  <span class="token property">"at"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">900</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"kind"</span><span class="token operator">:</span> <span class="token string">"station"</span><span class="token punctuation">,</span>
+  <span class="token property">"meta"</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token property">"label"</span><span class="token operator">:</span> <span class="token string">"Picket N"</span><span class="token punctuation">,</span> <span class="token property">"role"</span><span class="token operator">:</span> <span class="token string">"picket"</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p><code>Point.kind</code>, <code>Zone.kind</code>, <code>meta</code> and <code>Zone.values</code> are all open. A carrier
 group is an ensemble whose pieces are ships and whose POINTS are stations —
@@ -1929,6 +1929,6 @@ bite.</li>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

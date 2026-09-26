@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Mounting libraries — tosijs-3d-ensemble</title>
   <meta name="description" content="An ensemble declares the libraries its meshes come from, so loading one anywhere is enough — the consumer does not have to be told out of band what content to…" />
   <meta property="og:type" content="article" />
@@ -39,13 +39,13 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Mounting libraries</h1>
 <p>An ensemble declares the libraries its meshes come from, so loading one anywhere
 is enough — the consumer does not have to be told out of band what content to
 mount first.</p>
-<pre><code class="language-typescript">await mountLibraries(ensemble, scene)   // idempotent; awaits each `ready`
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">await</span> <span class="token function">mountLibraries</span><span class="token punctuation">(</span>ensemble<span class="token punctuation">,</span> scene<span class="token punctuation">)</span>   <span class="token comment">// idempotent; awaits each `ready`</span>
 </code></pre>
 <h2>Resolution order, and why a piece may name its library</h2>
 <p>A piece&#39;s <code>mesh</code> is looked up in its own <code>library</code> when it names one, otherwise
@@ -134,6 +134,6 @@ loading first — a bug that reproduces on one machine and not another.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

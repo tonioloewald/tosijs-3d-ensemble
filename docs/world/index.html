@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>The world preset — tosijs-3d-ensemble</title>
   <meta name="description" content="Doors, locks, spinners and triggers — the vocabulary a place needs, as opposed to a battle. Opt in the way you opt into combat" />
   <meta property="og:type" content="article" />
@@ -39,14 +39,14 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>The world preset</h1>
 <p>Doors, locks, spinners and triggers — the vocabulary a <strong>place</strong> needs,
 as opposed to a battle. Opt in the way you opt into combat:</p>
-<pre><code class="language-typescript">import { registerWorldPreset } from &#39;tosijs-3d-ensemble/presets/world&#39;
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> registerWorldPreset <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble/presets/world'</span>
 
-registerWorldPreset()
+<span class="token function">registerWorldPreset</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 </code></pre>
 <h2>Why these are here and not upstream, yet</h2>
 <p>tosijs-3d has <code>b3d-trigger</code> (a proximity sphere) and <code>b3d-sound</code>, and nothing
@@ -154,6 +154,6 @@ a <code>RegExp</code> does not survive <code>JSON.stringify</code>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

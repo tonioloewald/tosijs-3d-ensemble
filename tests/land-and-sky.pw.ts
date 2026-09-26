@@ -9,14 +9,16 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   ENCODED galaxy hosted at `https://3d.tosijs.net/sky/…`. Three claims, each
   of which failed silently at least once while writing it:
 
-  1. **The galaxy is actually fetched.** `b3d-skybox` builds its starfield once,
-     in `sceneReady`, and the editor's backdrop has already created the sky
-     before the document arrives — so the first version assigned
-     `starfieldData` to an element that would never read it. Zero requests to
-     `/sky/`, a daytime sky, no error. The skybox feature now re-mounts the
-     element when a built-once key changes (tosijs-3d#88).
+  1. **The galaxy is actually fetched — from the PINNED version.**
+     `b3d-skybox` used to build its starfield once, in `sceneReady`, and the
+     editor's backdrop has already created the sky before the document
+     arrives — so the first version assigned `starfieldData` to an element
+     that would never read it. Zero requests to `/sky/`, a daytime sky, no
+     error. We re-mounted the sky to force it (0.8.3); tosijs-3d 0.8.4 made
+     those attributes live (#88) and the re-mount is gone. This is the claim
+     that says the upstream fix holds for us.
 
-  2. **Re-mounting the sky does not black it out.** This project's worst bug
+  2. **The sky is not black.** This project's worst bug
      was a sky rendered black by SkyMaterial churn, intermittently. So the
      sky's brightness at 14:00 is measured from a SCREENSHOT — the ground
      truth for anything visual here, since `readPixels` has lied before — and
@@ -24,7 +26,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 
   3. **One sky, one deck.** Singletons, discovered rather than tracked.
 
-  Falsified: with the re-mount line removed, (1) fails with "no /sky/
+  Falsified on 0.8.3: with the re-mount removed, (1) failed with "no /sky/
   requests at all" — the exact silent failure it was written for.
 
   What it does NOT claim: that the stars look right. Headless SwiftShader
@@ -80,13 +82,23 @@ test("the land-and-sky sample builds its world and its galaxy", async ({
       decks: root.querySelectorAll("tosi-b3d-cloud-deck").length,
       terrains: root.querySelectorAll("tosi-b3d-terrain").length,
       waters: root.querySelectorAll("tosi-b3d-water").length,
+      // INSIDE the sky, which is the only place a moon is drawn from.
+      // `big-moon` precedes `sky` in the file, so this is also the two-phase
+      // contract: attached in `link`, after every piece has bound.
+      moons: skybox?.querySelectorAll("tosi-b3d-moon").length ?? 0,
     };
   });
-  expect(counts).toEqual({ skies: 1, decks: 1, terrains: 1, waters: 1 });
+  expect(counts).toEqual({
+    skies: 1,
+    decks: 1,
+    terrains: 1,
+    waters: 1,
+    moons: 2,
+  });
 
   // 1. All six faces of the data cube, fetched and served.
   const faces = sky.filter(
-    (s) => s.startsWith("200") && s.includes("/sky/stars_")
+    (s) => s.startsWith("200") && s.includes("/sky/0.8.4/stars_")
   );
   expect(faces.length, sky.join("\n") || "no /sky/ requests at all").toBe(6);
 

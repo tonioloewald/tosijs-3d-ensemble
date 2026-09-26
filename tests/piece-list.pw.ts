@@ -184,7 +184,14 @@ test("the id field renames the piece in the document", async ({ page }) => {
   expect(box, "no id field on screen").toBeTruthy();
 
   await page.mouse.click(box!.x, box!.y);
-  await page.keyboard.type("X");
+  /*
+    TWO characters, typed at Playwright's speed — faster than a person. On
+    tosijs-3d 0.8.4 one `X` became `XX` (the key delivered twice across a
+    mid-event re-render). `XY` would show a dropped key as well as a doubled
+    one. Falsified: with the rename synchronous again this reads
+    `flagXXYship`.
+  */
+  await page.keyboard.type("XY");
   await page.waitForTimeout(800);
 
   const ids = await page.evaluate(() => {
@@ -198,7 +205,7 @@ test("the id field renames the piece in the document", async ({ page }) => {
   // `flagship` is gone and something that was clearly it is in its place.
   expect(ids).not.toContain("flagship");
   expect(ids.filter((id) => id.includes("flag") && id.includes("X"))).toEqual([
-    "flagXship",
+    "flagXYship",
   ]);
   expect(realErrors(errors)).toEqual([]);
 });

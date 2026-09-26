@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Editor pointers — tosijs-3d-ensemble</title>
   <meta name="description" content="A tool is written once and driven by a mouse or by a hand. That is the whole point of this file: nothing downstream of it may name a mouse, a click, a screen" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Editor pointers</h1>
 <p>A tool is written <strong>once</strong> and driven by a mouse or by a hand. That is the whole
@@ -50,12 +50,12 @@ contract bakes mouse assumptions into every tool, and each one has to be found
 and removed later. So the contract is XR-shaped from the start and the flat
 pointer is simply its first implementation.</p>
 <h2>What a pointer is</h2>
-<pre><code class="language-typescript">interface EditorPointer {
-  ray(): EditorRay | null   // far interaction: point at a thing
-  grip(): Vec3 | null       // near interaction: reach out and hold it
-  active: boolean           // trigger / primary button
-  secondary: boolean        // squeeze / secondary button
-}
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">interface</span> <span class="token class-name">EditorPointer</span> <span class="token punctuation">{</span>
+  <span class="token function">ray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> EditorRay <span class="token operator">|</span> <span class="token keyword">null</span>   <span class="token comment">// far interaction: point at a thing</span>
+  <span class="token function">grip</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> Vec3 <span class="token operator">|</span> <span class="token keyword">null</span>       <span class="token comment">// near interaction: reach out and hold it</span>
+  active<span class="token operator">:</span> <span class="token builtin">boolean</span>           <span class="token comment">// trigger / primary button</span>
+  secondary<span class="token operator">:</span> <span class="token builtin">boolean</span>        <span class="token comment">// squeeze / secondary button</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>Two ways to grab, because both are real: a hand inside a handle grabs it
 directly, and anything out of reach is grabbed by pointing. An ensemble is
@@ -146,6 +146,6 @@ left/right special case in every tool.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

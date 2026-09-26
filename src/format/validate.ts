@@ -31,7 +31,7 @@ message **on the field** rather than in a list at the bottom of the screen.
 */
 /*{"parent":"Format","order":2}*/
 import { featuresOf, roleFeatures } from "./roles.js";
-import { acceptedKeys, featureRegistration } from "./registry.js";
+import { acceptedKeys, featureRegistration, fetchedKeys } from "./registry.js";
 import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
 export type Severity = "error" | "warning";
@@ -133,7 +133,10 @@ const isVec3 = (v: unknown): v is Vec3 =>
  */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
-function urlProblem(url: string): { code: string; message: string } | null {
+function urlProblem(
+  url: string,
+  what: "library" | "feature" = "library"
+): { code: string; message: string } | null {
   // No scheme at all: a relative url, which resolves against the page and is
   // therefore exactly as secure as whatever served it.
   if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) return null;
@@ -143,8 +146,8 @@ function urlProblem(url: string): { code: string; message: string } | null {
     parsed = new URL(url);
   } catch {
     return {
-      code: "unsupported-library-url",
-      message: `library url "${url}" is not a valid url`,
+      code: `unsupported-${what}-url`,
+      message: `${what} url "${url}" is not a valid url`,
     };
   }
 
@@ -152,13 +155,13 @@ function urlProblem(url: string): { code: string; message: string } | null {
   if (parsed.protocol === "http:") {
     if (LOCAL_HOSTS.has(parsed.hostname)) return null;
     return {
-      code: "insecure-library-url",
-      message: `library url "${url}" is http — an ensemble is a document people share, so a library must be served over https (http is allowed only from localhost)`,
+      code: `insecure-${what}-url`,
+      message: `${what} url "${url}" is http — an ensemble is a document people share, so what it fetches must be served over https (http is allowed only from localhost)`,
     };
   }
   return {
-    code: "unsupported-library-url",
-    message: `library url "${url}" uses "${parsed.protocol}" — only https (and relative urls) are supported, so that a shared ensemble cannot choose what a reader's browser executes or fetches`,
+    code: `unsupported-${what}-url`,
+    message: `${what} url "${url}" uses "${parsed.protocol}" — only https (and relative urls) are supported, so that a shared ensemble cannot choose what a reader's browser executes or fetches`,
   };
 }
 
@@ -429,6 +432,32 @@ export function validate(
           field that may just be a typo or a newer upstream than the peer
           floor.
         */
+        /*
+          A FEATURE'S URLS ARE HELD TO THE LIBRARY RULE. A skybox's
+          `starfieldData` or a ground's `texture` is fetched by the reader's
+          browser the moment a shared document opens, which is the same
+          threat the library rule exists for — it just had no way to find
+          them until upstream marked fetched fields (tosijs-3d#91). Empty
+          means none; a listed keyword (`checker`) is not a URL.
+        */
+        if (cfg && typeof cfg === "object") {
+          const fetched = fetchedKeys(registration);
+          for (const [key, value] of Object.entries(
+            cfg as Record<string, unknown>
+          )) {
+            const keywords = fetched.get(key);
+            if (!keywords || typeof value !== "string" || !value) continue;
+            if (keywords.has(value)) continue;
+            const problem = urlProblem(value, "feature");
+            if (problem)
+              add(
+                "error",
+                problem.code,
+                problem.message,
+                `${at}/features/${name}/${key}`
+              );
+          }
+        }
         const allowed = acceptedKeys(registration);
         if (!allowed || !cfg || typeof cfg !== "object") continue;
         for (const key of Object.keys(cfg)) {

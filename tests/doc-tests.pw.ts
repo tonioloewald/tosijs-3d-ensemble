@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
   THE WHOLE CORPUS, IN ONE NAVIGATION.
@@ -65,8 +66,14 @@ test.describe("the doc corpus", () => {
     the element is defined.
   */
   test("every in-page test passes", async ({ page }) => {
-    const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(String(e)));
+    /*
+      The SHARED collector, not a private `pageerror` list. This file kept its
+      own, so it was the one test the named, filed exceptions in
+      `page-errors.ts` did not reach — and it went red on tosijs-ui 1.15.4
+      only because the doubled-entry error (tosijs-ui#191) started landing
+      before the corpus finished rather than after. One filter, every test.
+    */
+    const errors = collectPageErrors(page);
 
     await page.goto("/", { waitUntil: "load" });
     await page.waitForFunction(() => !!window.__docTestResults, null, {
@@ -99,6 +106,6 @@ test.describe("the doc corpus", () => {
     expect(results.failed).toBe(0);
 
     // A page error nobody asserted on is still a broken page.
-    expect(errors).toEqual([]);
+    expect(realErrors(errors)).toEqual([]);
   });
 });

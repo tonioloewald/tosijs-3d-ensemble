@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>The feature registry — tosijs-3d-ensemble</title>
   <meta name="description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
   <meta property="og:type" content="article" />
@@ -39,31 +39,31 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>The feature registry</h1>
 <p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
 format open: a consumer&#39;s feature is indistinguishable from a shipped one in the
 file, in the editor&#39;s palette, in <code>ref</code> pick lists, and in save/load.</p>
-<pre><code class="language-typescript">import { registerFeature } from &#39;tosijs-3d-ensemble&#39;
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> registerFeature <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble'</span>
 
-registerFeature({
-  name: &#39;turret&#39;,
-  schema: {
-    type: &#39;object&#39;,
-    title: &#39;Turret&#39;,
-    properties: {
-      range: { type: &#39;number&#39;, minimum: 20, maximum: 2000, default: 260, &#39;x-unit&#39;: &#39;m&#39; },
-      smart: { type: &#39;boolean&#39;, default: false, description: &#39;leads its target&#39; },
-    },
-  },
-  bind(piece, cfg, ctx) {
-    const el = b3dTurret({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })
-    ctx.scene.appendChild(el)
-    ctx.onDispose(() =&gt; el.remove())
-    return el
-  },
-})
+<span class="token function">registerFeature</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  name<span class="token operator">:</span> <span class="token string">'turret'</span><span class="token punctuation">,</span>
+  schema<span class="token operator">:</span> <span class="token punctuation">{</span>
+    type<span class="token operator">:</span> <span class="token string">'object'</span><span class="token punctuation">,</span>
+    title<span class="token operator">:</span> <span class="token string">'Turret'</span><span class="token punctuation">,</span>
+    properties<span class="token operator">:</span> <span class="token punctuation">{</span>
+      range<span class="token operator">:</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'number'</span><span class="token punctuation">,</span> minimum<span class="token operator">:</span> <span class="token number">20</span><span class="token punctuation">,</span> maximum<span class="token operator">:</span> <span class="token number">2000</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">260</span><span class="token punctuation">,</span> <span class="token string-property property">'x-unit'</span><span class="token operator">:</span> <span class="token string">'m'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      smart<span class="token operator">:</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'boolean'</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> description<span class="token operator">:</span> <span class="token string">'leads its target'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token function">bind</span><span class="token punctuation">(</span>piece<span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> ctx<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> el <span class="token operator">=</span> <span class="token function">b3dTurret</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token operator">...</span>cfg<span class="token punctuation">,</span> x<span class="token operator">:</span> ctx<span class="token punctuation">.</span>at<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> y<span class="token operator">:</span> ctx<span class="token punctuation">.</span>at<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> z<span class="token operator">:</span> ctx<span class="token punctuation">.</span>at<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    ctx<span class="token punctuation">.</span>scene<span class="token punctuation">.</span><span class="token function">appendChild</span><span class="token punctuation">(</span>el<span class="token punctuation">)</span>
+    ctx<span class="token punctuation">.</span><span class="token function">onDispose</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> el<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> el
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
 </code></pre>
 <h2><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
 <p>A <code>protector</code> that resolves its power source during <code>bind</code> works only if the
@@ -188,6 +188,6 @@ it. A link handler owns the link, gets both ends, and disposes once.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

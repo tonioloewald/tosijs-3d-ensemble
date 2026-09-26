@@ -166,20 +166,11 @@ export interface PropertySpec {
   /**
    * The sub-range of `[minimum, maximum]` where the values anybody wants live.
    *
-   * ⚠️ **DECLARED AND NOT RENDERED**, on purpose, and this comment is the only
-   * place that says so. `slider3d` has no soft-bound affordance: it takes a
-   * `min` and a `max` and that is the whole track. The two honest things we
-   * could do with this locally are both wrong —
-   *
-   * - narrowing `min`/`max` to the useful range makes the rest of a documented
-   *   range unreachable, which is a worse failure than a cramped track;
-   * - a glyph in the readout invents a vocabulary the panel has nowhere else.
-   *
-   * And the measurement says the urgency is low: both fields that carry it
-   * (`grossScale`, `detailScale`) also carry `x-scale: 'log'`, and on a log
-   * track their useful bands already occupy 32% and 25% of the travel. The
-   * pathology the owner reported is fixed; what is left is *showing* where the
-   * band is, which wants a shaded region on the track. Filed as tosijs-3d#83.
+   * Drawn as a shaded band on the slider's track (`slider3d`'s `useful`,
+   * tosijs-3d 0.8.4, our #83); the handle still reaches both ends. For 0.3.x
+   * this was declared and deliberately NOT rendered, because narrowing the
+   * track would have made a documented range unreachable and there was
+   * nowhere else to put it.
    */
   "x-useful"?: [number, number];
 }
@@ -248,7 +239,7 @@ export interface SchemaPanelOptions {
    * back to a plain value plus `handleChange`, which is what tool options do — they
    * are not part of the document, so they have no path to bind to.
    */
-  box?: (key: string) => unknown;
+  box?: (key: string) => BoxLike | undefined;
   /**
    * OUT: the keys whose widget actually ended up bound to a box.
    *
@@ -309,11 +300,28 @@ export interface SchemaPanelOptions {
  * the whole defect is one `??` reaching an object instead of a default, and
  * that is not something a screenshot makes obvious.
  */
+/**
+ * What `box(key)` hands back: a tosijs box, as far as a widget can tell.
+ *
+ * `value: any` is deliberate — a document's values are untyped at this layer,
+ * and `any` here is what lets a box satisfy `Bindable<number>` for the slider
+ * and `Bindable<boolean>` for the toggle WITHOUT a cast at each call site.
+ * That matters more than it sounds: the casts that used to sit there
+ * (tosijs-3d#76) made every branch look identical at the type level, which is
+ * how a fourth branch handed a box to `inputField` — whose `value` is a plain
+ * string and cannot bind — and wrote nothing, as 0.3.0's release blocker.
+ * Without the casts, doing that again is a type error.
+ */
+export type BoxLike = {
+  value: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  observe(cb: (...args: any[]) => void): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
+};
+
 export const boundIfSet = (
   values: Record<string, unknown>,
   key: string,
-  box: ((key: string) => unknown) | undefined
-): unknown => (values[key] === undefined ? undefined : box?.(key));
+  box: ((key: string) => BoxLike | undefined) | undefined
+): BoxLike | undefined => (values[key] === undefined ? undefined : box?.(key));
 
 /** Widgets for one schema's properties, in declaration order. */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
@@ -460,7 +468,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
             is held locally. So one call site serves a bound document field and
             an unbound tool option without either knowing about the other.
           */
-          value: (bound() as boolean | undefined) ?? value === true,
+          value: bound() ?? value === true,
           handleChange: (v: boolean) => handleChange(key, v),
         })
       );
@@ -471,10 +479,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         select3d({
           label,
-          value:
-            (bound() as string | number | undefined) ??
-            (value as string | number) ??
-            spec.enum[0]!,
+          value: bound() ?? (value as string | number) ?? spec.enum[0]!,
           options: spec.enum.map((option) => {
             const named = spec["x-labels"]?.[String(option)];
             // A named value is a word, not a quantity — "Off" takes no unit.
@@ -498,7 +503,7 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         slider3d({
           label,
-          value: (bound() as number | undefined) ?? (Number(value) || 0),
+          value: bound() ?? (Number(value) || 0),
           min,
           max,
           step: spec.type === "integer" ? 1 : undefined,
@@ -509,6 +514,9 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           ...(spec["x-unit"] || spec["x-wavelength"]
             ? { format: (v: number) => numberReadout(spec, v) }
             : {}),
+          // A shaded band where the useful values live; the handle still
+          // reaches min and max (tosijs-3d#83, ours).
+          ...(spec["x-useful"] ? { useful: spec["x-useful"] } : {}),
           handleChange: (v: number) => handleChange(key, v),
         })
       );

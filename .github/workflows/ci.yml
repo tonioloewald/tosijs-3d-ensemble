@@ -175,9 +175,10 @@ jobs:
         run: bunx playwright test --project=chromium
 
       # Its own project and its own step, because it builds and tears down an
-      # engine per trip and is ruinously slow downstream of the others. Also
-      # currently `fixme` — see the file — so this step reports a skip rather
-      # than a pass, which is the distinction that matters.
+      # engine per trip and is ruinously slow downstream of the others.
+      # Twenty trips since tosijs-3d 0.8.4 fixed the context churn (#79):
+      # ~6 minutes locally, likely more on a CI runner — the test's timeout
+      # scales with the trip count.
       - name: Re-parent lane
         run: bunx playwright test --project=reparent
 

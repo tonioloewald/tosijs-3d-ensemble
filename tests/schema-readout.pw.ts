@@ -91,6 +91,7 @@ test("a frequency slider shows its unit and its wavelength", async ({
         x: track.x + track.width / 2,
         y: track.y + track.height / 2,
       },
+      trackWidth: track?.width,
     };
   });
 
@@ -133,6 +134,27 @@ test("a frequency slider shows its unit and its wavelength", async ({
     screen, in the document's own units.
   */
   expect(visible.join(" | ")).toContain("0.015 1/m ≈66.7 m");
+
+  /*
+    AND THE USEFUL BAND IS ON THE TRACK — `x-useful: [0.002, 0.05]`, drawn by
+    `slider3d`'s `useful` since tosijs-3d 0.8.4 (our #83). Measured as a
+    visible band inside the track, narrower than it: a band as wide as the
+    track would mean the range was read as the whole thing.
+  */
+  const band = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      shadowRoot: ShadowRoot | null;
+    };
+    const group = ed.shadowRoot?.querySelector('[data-probe="gross-scale"]');
+    const el = group?.querySelector('[data-part="useful"]') as
+      | SVGGraphicsElement
+      | null
+      | undefined;
+    if (!el || getComputedStyle(el).display === "none") return null;
+    return el.getBoundingClientRect().width;
+  });
+  expect(band, "no useful band on the Gross scale track").toBeGreaterThan(5);
+  expect(band!).toBeLessThan(found.trackWidth! * 0.9);
 
   expect(realErrors(errors)).toEqual([]);
 });

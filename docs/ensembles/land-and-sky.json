@@ -24,14 +24,39 @@
       }
     },
     {
+      "id": "big-moon",
+      "at": [0, 0, 0],
+      "features": {
+        "moon": {
+          "azimuth": 150,
+          "elevation": 30,
+          "size": 3,
+          "color": "#e0b090"
+        }
+      }
+    },
+    {
       "id": "sky",
       "at": [0, 0, 0],
       "features": {
         "skybox": {
           "timeOfDay": 18.5,
-          "starfieldData": "https://3d.tosijs.net/sky/stars",
-          "starfieldCube": "https://3d.tosijs.net/sky/nebula",
-          "starfieldTilt": "12,25,58"
+          "starfieldData": "https://3d.tosijs.net/sky/0.8.4/stars",
+          "starfieldCube": "https://3d.tosijs.net/sky/0.8.4/nebula",
+          "starfieldTilt": "12,25,58",
+          "starfieldDataSize": 1024
+        }
+      }
+    },
+    {
+      "id": "small-moon",
+      "at": [0, 0, 0],
+      "features": {
+        "moon": {
+          "azimuth": 200,
+          "elevation": 18,
+          "size": 1.2,
+          "color": "#c8d8ff"
         }
       }
     },

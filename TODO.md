@@ -44,17 +44,15 @@ release, or verified and too large for one. Both reviews are filed under
       filtered table, row menu and shelf spinner, the `ComponentAttrs`
       retyping, and the curve panels have no browser assertion. Both of the
       0.3.0 review's editor findings were in this unwatched surface.
-- [ ] **The re-parent regression test is written but cannot be trusted yet.**
-      `tests/reparent.pw.ts` exists and reproduces the subject — SPA-navigate
-      away and back, assert the scene comes back healthy, count outcomes. It
-      is `test.fixme`: four trips passed on one run and failed on the next,
-      alone and in a fresh browser, because several engines are constructed
-      per re-parent and Chrome caps live WebGL contexts (tosijs-3d#79). The
-      prescribed twenty trips stalls the page outright.
-
-      So tosijs-3d#58 keeps its 🟡, and for a better reason than before: not
-      "nobody looked" but "looking is currently unreliable, and here is why".
-      Raise `REPARENT_TRIPS` toward 20 and drop the `fixme` when #79 lands.
+- [x] ~~**The re-parent regression test cannot be trusted yet.**~~ It can:
+      tosijs-3d 0.8.4 fixed the context churn (#79) and the test runs TWENTY
+      trips, un-`fixme`'d — one canvas throughout, 74 meshes every time, no GL
+      error, no lost context. Two rig fixes on the way, both measured: the
+      duplicate history entry (tosijs-ui#174) made Playwright's `goBack` time
+      out on 1.15.4, so it steps with in-page `history.back()`; and three
+      trips of twenty ran out of a 15 s settle window under SwiftShader (each
+      300 ms sleep took ~3 s) — traced as slow, not broken, and widened to
+      40 s. tosijs-3d#58 can lose its 🟡.
 
 - [x] ~~**No bundle-size signal.**~~ `tree-shaking.test.ts` now asserts the
       GZIPPED size of a game's entry, between 4 kB and 14 kB (8.5 kB today).
@@ -86,9 +84,14 @@ release, or verified and too large for one. Both reviews are filed under
       is not covered until the test that covers it has run green once.**
 
 - [ ] **Remove the `onBeforeViewRenderObservable` filter** from
-      `tests/page-errors.ts` when tosijs-3d#78 lands. A one-time prototype
-      augmentation double-fires on Linux/SwiftShader; non-fatal, but a filtered
-      error is only honest while an issue is behind it.
+      `tests/page-errors.ts` when **tosijs-ui#191** lands. ⚠️ It was filed as
+      tosijs-3d#78, "Linux only, non-fatal", and was neither: it fires on every
+      load on every machine, and Babylon fails to compile the `layer` and
+      `line` shaders beside it. Cause: the doc site evaluates its ESM entry
+      twice (`hydrate.js?v=<hash>` from the page, bare `../hydrate.js` from
+      the chunks). Found only because an upgrade broke the re-parent test and
+      the page got looked at again — the filter had hidden it since the day it
+      was written. Corrected on #78.
 
 - [x] ~~**Library URLs get no scheme check.**~~ Done, at the owner's call:
       https required, relative allowed, `http://localhost` allowed, everything
@@ -107,21 +110,39 @@ release, or verified and too large for one. Both reviews are filed under
       re-checks the floor and says so in its log rather than implying it
       tested a ceiling that does not exist yet.
 
-- [ ] **A feature's URLs get no scheme check.** 0.3.x's https rule covers
-      library urls only, and a skybox now carries two more (`starfieldData`,
-      `starfieldCube`) beside the existing `ground.texture`,
-      `water.normalMap` and `nebulaTexture`. Same threat — a shared document
-      choosing its reader's network — and the same answer, but it needs a way
-      to know which string fields are URLs — asked upstream as tosijs-3d#91.
+- [x] ~~**A feature's URLs get no scheme check.**~~ Done: tosijs-3d 0.8.4
+      marks fetched fields `format: 'uri-reference'` (our #91), scene features
+      stamp them as `x-fetched` from the FULL upstream schema, and `validate`
+      holds each to the library rule — `insecure-feature-url` /
+      `unsupported-feature-url`, errors. Keywords such as `checker` pass. A consumer's own feature opts in with plain `format: 'uri-reference'`.
 
 - [ ] **Removing a key from a singleton's config does not reset it.**
       `addSingleton` assigns what the config HAS, so deleting `starfieldData`
       from a document leaves the galaxy up until reload. Pre-existing for every
       scene-wide feature; more visible now the sky has twenty fields.
 
-- [ ] **The sky panel is long** — twenty-two fields in one column. Wants
-      grouping (atmosphere / night / space), which `schema-panel` has no
-      vocabulary for.
+- [ ] **The sky panel is long** — thirty fields in one column since 0.8.4's
+      air, tint and star-look fields. Wants grouping (air / night / space),
+      which `schema-panel` has no vocabulary for.
+
+- [ ] **A moon with no sky only warns.** Moons are drawn by the skybox, so a
+      `moon` piece in a document with no sky renders nothing; `link` says so
+      in the console, but `validate` cannot, because `FeatureContext` has no
+      problem channel and a registered check would be a scene rule in the
+      global check set. Worth a `requires: ['skybox']` on registrations.
+
+- [ ] **`moon` has a hand-written schema** until tosijs-3d#93
+      (`moonSchema()`), the way `cloudDeck` did until #87.
+
+- [ ] **`<tosi-b3d-decorator>`** (0.8.4) scatters rocks and trees by budget and
+      climate over a terrain — an obvious `decorator` feature beside
+      `terrain`. Not adopted: no schema upstream yet, and it deserves its own
+      look at cost (`measureCost()` exists for exactly that).
+
+- [ ] **tosijs-ui 1.16 turns `<tosi-md sanitize>` on by default.** We render
+      no `<tosi-md>` ourselves, but our pages carry raw HTML (the editor
+      element in `editor.md`). Check the doc site on the 1.16 upgrade before
+      trusting it.
 
 ## Format and runtime work the design is waiting on
 
@@ -140,30 +161,21 @@ release, or verified and too large for one. Both reviews are filed under
 
 ## Design threads with a stake elsewhere
 
-- [ ] **Panel placement has no device-neutral vocabulary** — tosijs-3d#81. Our
-      chrome is a DOM overlay (`style.top` + a CSS side + `useDomLayer`), which
-      is a fourth model the issue's matrix does not list and the one with no VR
-      story at all. `xr-shape.test.ts` enforces device-neutral INPUT and
-      exempts `ensemble-editor.ts` because "it owns the DOM: it mounts the
-      scene and the panels" — so placement is the one thing we deliberately
-      did not make portable, and it is the thing that would have to be rewritten
-      for a headset.
-
-      What would let us delete `_stackTop` and the `style.top` arithmetic: the
-      `eye`/`face`/`body` frames available flat, plus a vocabulary that also
-      covers the stacked-column case. Plus a per-panel opt-out to DOM for the
-      piece LIST, which is the one panel of five where crispness and native
-      text input actually bite.
+- [ ] **Panel placement has no device-neutral vocabulary** — tosijs-3d#81
+      is answered upstream in 0.8.4: `<tosi-b3d-panel presence="both">` and
+      `XrFrames.flat(scene, camera)` give the eye/body/neck/face frames on a
+      monitor. So `_stackTop` and the `style.top` arithmetic now have a
+      replacement to be ported onto; not started. The piece LIST is still the
+      one panel of five that may want to stay DOM (crispness, native text
+      input).
 
 ## Housekeeping
 
-- [ ] **Delete the three `bound() as …` casts in `schema-panel.ts`** when
-      tosijs-3d#76 lands. `slider3d`/`toggle3d`/`select3d` declare plain
-      `value: number | boolean | string`, so passing the box they are designed
-      to bind fails the typecheck — and the cast erases which widgets can bind
-      and which cannot. That erasure is why the 0.3.0 blocker survived: a
-      fourth branch uses `ui.inputField`, whose `value?: string` cannot bind at
-      all, and all four branches looked identical at the type level.
+- [x] ~~**Delete the three `bound() as …` casts**~~ Done (tosijs-3d#76,
+      `Bindable<T>` in 0.8.4). `BoxLike` types the box, the one remaining cast
+      sits at the store boundary where it is true, and a `@ts-expect-error`
+      pins that `inputField` still cannot take a box — falsified by removing
+      the directive.
 
 - [ ] **Un-ignore `editor.md`** when tosijs-ui#165 lands. The build rewrites
       its `<!-- toc -->` block in a shape Prettier undoes, so format and build
@@ -190,18 +202,10 @@ release, or verified and too large for one. Both reviews are filed under
       (it cannot cover the arithmetic). Both confirmed to fail with the one
       `format:` line removed.
 
-- [ ] **`x-useful` is declared and deliberately NOT rendered** — tosijs-3d#83.
-      `slider3d` takes a `min` and a `max` and has nowhere to put a soft band;
-      narrowing the track to it makes a documented range unreachable and a
-      glyph in the readout invents a vocabulary. The `FieldSpec` comment is the
-      record. Urgency is low and measured: both annotated fields are also
-      `x-scale: log`, where their useful bands already occupy 32% and 25% of
-      the travel, so the pathology is fixed and only the _showing_ is missing.
+- [x] ~~**`x-useful` is not rendered**~~ Done (tosijs-3d#83, `useful` in
+      0.8.4): a shaded band on the track, asserted on screen and narrower than
+      the track, failing without the one line.
 
-- [ ] **Hover the slider TRACK, not its caption** — tosijs-3d#84. The caption
-      `<text>` paints over the full-row hit rect and becomes the event target,
-      so the left half of every slider is dead to pointer input and says
-      otherwise. `tests/schema-readout.pw.ts` finds the track by geometry to
-      work around it; that goes when #84 lands. ⚠️ On 0.8.3 hovering the
-      caption DOES peek (measured), so this is probably fixed upstream;
-      drag not re-checked.
+- [x] ~~**Hover the slider TRACK, not its caption**~~ Fixed upstream in
+      0.8.3/0.8.4 (#84, now documented). The test still hovers the track,
+      which is harmless; `peek` now shows the value beside the caption.

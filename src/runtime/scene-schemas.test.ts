@@ -53,6 +53,7 @@ const ADOPTED = [
   ["ambient", "ambient"],
   ["fog", "fog"],
   ["reflections", "reflections"],
+  ["cloudDeck", "cloudDeck"],
 ] as const;
 
 const propertiesOf = (
@@ -132,22 +133,24 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         kills the tab, and a schema cannot say "…unless reach is large".
       - `terrain.biome` stays a BOOLEAN because a JSON document has real
         booleans; `'on'|'off'` is an HTML-attribute concern and the bind maps it.
-      - `skybox.spaceStart`/`spaceFull` carry an `x-unit` upstream does not —
-        except upstream DOES say metres, as `unit: 'm'`, the only fields in
-        `scene-schemas` spelled that way. `pick` translates it, like
-        `format: 'color'`. Not ours; a misspelling of theirs, tosijs-3d#85.
-        When it is fixed these two lines go, and this test says so.
+      - `cloudDeck.follow`/`shadows` are BOOLEANS and `cloudDeck.seed` an
+        integer with a ceiling, for exactly the reasons `terrain.biome` and
+        `terrain.seed` are.
       (`terrain.radius` used to be a fourth: we gave it a log scale over its
       six decades, and tosijs-3d@0.8.1 added the same upstream — so the
-      override went, and this test is what noticed by failing on the upgrade.)
+      override went, and this test is what noticed by failing on the upgrade.
+      The same happened in 0.8.4: `spaceStart`/`spaceFull` briefly carried a
+      translated `x-unit` because upstream spelled it `unit` (tosijs-3d#85),
+      and this test failed the moment the spelling was fixed.)
     */
     expect(restated.sort()).toEqual(
       [
         'terrain.biome.enum: undefined (ours) vs ["off","on"] (upstream)',
         "terrain.seed.maximum: 9999 (ours) vs undefined (upstream)",
         "terrain.tileSize.minimum: 32 (ours) vs 1 (upstream)",
-        'skybox.spaceFull.x-unit: "m" (ours) vs undefined (upstream)',
-        'skybox.spaceStart.x-unit: "m" (ours) vs undefined (upstream)',
+        'cloudDeck.follow.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'cloudDeck.shadows.enum: undefined (ours) vs ["on","off"] (upstream)',
+        "cloudDeck.seed.maximum: 9999 (ours) vs undefined (upstream)",
       ].sort()
     );
   });

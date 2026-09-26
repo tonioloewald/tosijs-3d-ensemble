@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { slider3d, ui } from "tosijs-3d";
+import type { BoxLike } from "./schema-panel.js";
 import { boundIfSet, numberReadout, schemaWidgets } from "./schema-panel.js";
 
 /*
@@ -17,12 +19,17 @@ import { boundIfSet, numberReadout, schemaWidgets } from "./schema-panel.js";
   eleven, of which an untouched file sets two, and nine wrong numbers appeared
   at once — which is the only reason anybody looked.
 */
-const box = (key: string) => ({ path: key, observe: () => {} });
+const box = (key: string) => ({
+  path: key,
+  value: undefined,
+  observe: () => {},
+});
 
 describe("only a value the document HAS gets bound", () => {
   it("binds a key the document sets", () => {
-    expect(boundIfSet({ latitude: 40 }, "latitude", box)).toEqual({
+    expect(boundIfSet({ latitude: 40 }, "latitude", box) as unknown).toEqual({
       path: "latitude",
+      value: undefined,
       observe: expect.any(Function),
     });
   });
@@ -282,5 +289,32 @@ describe("numberReadout", () => {
     expect(numberReadout({ "x-unit": "deg", "x-wavelength": true }, 0.5)).toBe(
       "0.5 deg ≈2"
     );
+  });
+});
+
+/*
+  THE TYPE CHECKER KNOWS WHICH WIDGETS CAN BIND — tosijs-3d#76, adopted.
+
+  Until 0.8.4, `slider3d`/`toggle3d`/`select3d` typed `value` as a plain
+  number/boolean/string, so every bound call site wore a cast — and the casts
+  made all four branches look identical, which is how the string branch handed
+  a box to `inputField` (which cannot bind one) and wrote nothing. That was
+  0.3.0's release blocker.
+
+  With `Bindable<T>` upstream and `BoxLike` here, the casts are gone and the
+  distinction is back in the types. These lines are checked by `tsc`, not run:
+  if `inputField` ever accepted a box, the `@ts-expect-error` would itself
+  become an error, and if a slider stopped accepting one, the first line would.
+  Falsified: without the directive, `tsc` reports the inputField line.
+*/
+describe("binding is a type-level fact again", () => {
+  it("a slider takes a box; an inputField does not", () => {
+    const fake: BoxLike = { value: 1, observe: () => undefined };
+    const typeOnly = () => {
+      slider3d({ value: fake });
+      // @ts-expect-error — inputField's `value` is a string and cannot bind.
+      ui.inputField({ value: fake });
+    };
+    expect(typeof typeOnly).toBe("function");
   });
 });

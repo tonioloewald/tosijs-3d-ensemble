@@ -319,6 +319,36 @@ export function acceptedKeys(
   return keys.length ? new Set(keys) : null;
 }
 
+/**
+ * The keys of a feature whose string values are FETCHED, each with the
+ * keywords it also accepts (`ground.texture: 'checker'` is not a URL).
+ *
+ * Two sources, unioned: `x-fetched`, which a scene feature stamps from
+ * upstream's FULL schema (so a field the panel does not offer is still
+ * checked), and any declared property marked `format: 'uri-reference'`, which
+ * is how a consumer's own feature says the same thing in plain JSON Schema.
+ * tosijs-3d#91 is what made this possible without a hand-kept list.
+ */
+export function fetchedKeys(
+  registration: { schema?: FeatureSchema } | undefined
+): Map<string, Set<string>> {
+  const schema = registration?.schema as
+    | (FeatureSchema & { "x-fetched"?: Record<string, string[]> })
+    | undefined;
+  const out = new Map<string, Set<string>>();
+  for (const [key, keywords] of Object.entries(schema?.["x-fetched"] ?? {}))
+    out.set(key, new Set(keywords));
+  const declared = (schema?.properties ?? {}) as Record<
+    string,
+    { format?: string; "x-keywords"?: string[] }
+  >;
+  for (const [key, spec] of Object.entries(declared)) {
+    if (spec?.format === "uri-reference" && !out.has(key))
+      out.set(key, new Set(spec["x-keywords"] ?? []));
+  }
+  return out;
+}
+
 export function declaredConfig(
   registration: { schema?: FeatureSchema } | undefined,
   cfg: Record<string, unknown>

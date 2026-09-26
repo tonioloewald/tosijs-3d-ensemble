@@ -47,33 +47,24 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   accumulating. This file keeps its own Playwright project so at least it is
   not downstream of the other scene tests as well.
 
-  ⚠️ FOUR TRIPS DOES NOT MEET THIS PROJECT'S OWN STANDARD and must not be
-  read as verifying tosijs-3d#58: the rule is that fewer than ~20 cannot tell
-  fixed from rarer. What it does do is beat the "one confirming observation"
-  failure this file exists to prevent. Raise it with REPARENT_TRIPS once the
-  engine churn is fixed; the number is the only thing that needs to change.
+  TWENTY TRIPS, the project's own standard: fewer cannot tell "fixed" from
+  "rarer". It ran at four, as `test.fixme`, while tosijs-3d#79 made the page
+  itself unstable — several engines per re-parent against Chrome's WebGL
+  context cap, so four trips passed on one run and failed on the next.
+  tosijs-3d 0.8.4 releases the context on teardown and gives a re-added
+  element a fresh canvas; measured here, twenty trips, one canvas
+  throughout, 74 meshes every time, no GL error, no lost context.
+
+  It costs ~6 minutes under headless SwiftShader, which is why it keeps its
+  own Playwright project and CI job. `REPARENT_TRIPS` lowers it for a quick
+  local look — but a lower number is a smoke test, not the claim.
 */
-const TRIPS = Number(process.env.REPARENT_TRIPS || 4);
+const TRIPS = Number(process.env.REPARENT_TRIPS || 20);
 
-/*
-  ⚠️ `fixme`, NOT `skip`, AND NOT DELETED — tosijs-3d#79.
-
-  The test is right and the subject is real; what is not stable is the page it
-  runs on. Four trips passed on one run and failed on the next, alone, in a
-  fresh browser, with nothing changed — because several engines are
-  constructed per re-parent and Chrome caps live WebGL contexts, so the cost
-  per trip is neither linear nor repeatable.
-
-  Shipping it green would be worse than not shipping it: a flaky gate teaches
-  people to ignore red, which is the failure this repo spent a day undoing in
-  its Pages workflow. `fixme` reports distinctly from a pass, so "we did not
-  look" and "we looked and it is fine" stay different sentences.
-
-  Run it by hand with `bun run test:reparent`; raise REPARENT_TRIPS toward 20
-  and remove this line when #79 lands.
-*/
-test.fixme("the scene survives repeated SPA re-parenting", async ({ page }) => {
-  test.setTimeout(300_000);
+test("the scene survives repeated SPA re-parenting", async ({ page }) => {
+  // Scaled to the trip count: a trip is a navigation plus a health read that
+  // may wait up to 15 s for the count to settle.
+  test.setTimeout(60_000 + TRIPS * 60_000);
   const errors = collectPageErrors(page);
   let loads = 0;
   page.on("load", () => loads++);
@@ -107,7 +98,15 @@ test.fixme("the scene survives repeated SPA re-parenting", async ({ page }) => {
         So: sample THROUGH the interval and accept only a count that has held
         still for three consecutive reads.
       */
-      const deadline = Date.now() + 15_000;
+      /*
+        40 s, not 15. At twenty trips under headless SwiftShader the page is
+        so busy rendering that a 300 ms sleep takes ~3 s, and three of twenty
+        trips ran out of a 15 s window — reported `null`, "dead". A trace of
+        the same run found every trip settling at 74 meshes, one canvas
+        throughout and a flat heap: slow, not broken. The window is a budget
+        for the rig, not a claim about the scene.
+      */
+      const deadline = Date.now() + 40_000;
       let last = -1;
       let stable = 0;
       while (Date.now() < deadline) {
@@ -191,7 +190,20 @@ test.fixme("the scene survives repeated SPA re-parenting", async ({ page }) => {
       throw new Error(`never reached ${path}`);
     };
 
-    await backTo("/", () => page.goBack());
+    /*
+      `history.back()` IN THE PAGE, not `page.goBack()`. The duplicate entry
+      tosijs-ui#174 pushes has the SAME URL, and Playwright's `goBack` never
+      sees a same-URL, same-document step as a committed navigation — so on
+      tosijs-ui 1.15.4 the first call timed out instead of landing on the
+      duplicate, and the loop below never got to take its second step.
+      Measured: `history.back()` ×2 reaches `/` every time. It is still a real
+      `popstate`, which is the thing this test drives.
+    */
+    await backTo("/", () =>
+      page.evaluate(() => {
+        history.back();
+      })
+    );
     /*
       CLICK back in rather than `goForward()`. Forward history does not
       survive here — the router appears to push on `popstate`, so going back

@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -52,17 +52,17 @@ such page and has no privileged access to anything.</p>
   backdrop=&quot;aquatic&quot;
 &gt;&lt;/tosi-ensemble-editor&gt;
 </code></pre>
-<pre><code class="language-typescript">import { ensembleEditor, registerSceneFeatures } from &#39;tosijs-3d-ensemble&#39;
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> ensembleEditor<span class="token punctuation">,</span> registerSceneFeatures <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble'</span>
 
-registerSceneFeatures()
-document.body.append(
-  ensembleEditor({
-    library: &#39;enemies&#39;,
-    libraryUrl: &#39;/enemies.glb&#39;,
-    backdrop: &#39;aquatic&#39;,
-    handleSave: async (data) =&gt; localStorage.setItem(&#39;draft&#39;, JSON.stringify(data)),
-  })
-)
+<span class="token function">registerSceneFeatures</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+document<span class="token punctuation">.</span>body<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>
+  <span class="token function">ensembleEditor</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    library<span class="token operator">:</span> <span class="token string">'enemies'</span><span class="token punctuation">,</span>
+    libraryUrl<span class="token operator">:</span> <span class="token string">'/enemies.glb'</span><span class="token punctuation">,</span>
+    backdrop<span class="token operator">:</span> <span class="token string">'aquatic'</span><span class="token punctuation">,</span>
+    <span class="token function-variable function">handleSave</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token operator">=></span> localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token string">'draft'</span><span class="token punctuation">,</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
 </code></pre>
 <h2>The chrome is tosijs-3d&#39;s SVG UI, not DOM widgets</h2>
 <p>One implementation renders as a DOM overlay <strong>and</strong> as an in-scene texture, so
@@ -162,6 +162,6 @@ is an upstream build; see UPSTREAM.md.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

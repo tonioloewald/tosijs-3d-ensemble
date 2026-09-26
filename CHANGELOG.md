@@ -7,12 +7,22 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **`tosijs-3d` is now `^0.8.3`** (was `^0.8.1`). The cloud deck, the encoded
-  galaxy, the space band and live terrain climate are all 0.8.2–0.8.3, and we
-  develop against the floor. 0.8.3 also moves the sun onto a northern-hemisphere
-  arc and stops `starfieldTilt` moving it — upstream calls that "visible, not
-  breaking", and a scene tuned by eye will look different.
-
+- **`tosijs-3d` is now `^0.8.4`** (was `^0.8.1`). The cloud deck, the
+  encoded galaxy, a world's own air, moons and live terrain climate are all
+  0.8.2–0.8.4, and we develop against the floor. Two visible changes come with
+  it, which upstream calls "visible, not breaking" and an author who tuned by
+  eye will see anyway: the sun now runs a northern-hemisphere arc and
+  `starfieldTilt` no longer moves it (0.8.3), and every `PRNG`-seeded output
+  re-rolls (0.8.4, xoshiro128\*\* for the Mersenne Twister), so a seeded
+  galaxy, cloud field or crowd looks different with the same document.
+- **A feature's fetched URLs must be https too** (or relative, or
+  `http://localhost`). `starfieldData`, `starfieldCube`, `nebulaTexture`,
+  `ground.texture`, `water.normalMap` and `clouds.model` are fetched by a
+  reader's browser the moment a shared document opens, which is the threat the
+  library rule exists for. New error codes `insecure-feature-url` and
+  `unsupported-feature-url`. Possible now because upstream marks fetched
+  fields `format: 'uri-reference'` (tosijs-3d#91, ours); keywords like
+  `texture: 'checker'` pass.
 - **A library url must be https** (or relative, or `http://localhost`).
   `validate` reported nothing but "is it non-empty" before, so a shared
   ensemble could point a reader's browser at any host the moment they opened
@@ -43,6 +53,29 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **Our doc site ran its own code twice on every page**, and it was blamed on
+  Linux for three weeks. The page loads `hydrate.js?v=<hash>`; the code-split
+  chunks import `../hydrate.js`. Two URLs, two module instances, so Babylon's
+  once-only prototype patch threw
+  `Cannot redefine property: onBeforeViewRenderObservable` and the `layer` and
+  `line` shaders failed to compile. We had filed it upstream as tosijs-3d#78,
+  "Linux/SwiftShader only, non-fatal", and filtered it in our tests — which is
+  why nobody saw it happen on every machine. Measured by rewriting the page to
+  the bare URL: 10 errors and 2 shader failures become 0 and 0. It is the build
+  tool's to fix (tosijs-ui#191); corrected on #78, and the filter now names the
+  real cause. **Not yet fixed** — this entry records that it is understood.
+- **Renaming a piece typed every character twice** on tosijs-3d 0.8.4: `X`
+  into `flagship` gave `flagXXship`. Renaming re-renders the property panel,
+  and it did so inside the keystroke; 0.8.4's key routing then delivered the
+  same key again to the field whose group had just been replaced. The rename
+  now runs after the event (filed as tosijs-3d#94, since a key should never be
+  delivered twice). The rename test types two characters and fails with
+  `flagXXYship` when the rename is synchronous again; the property test now
+  counts keys rather than checking one arrived.
+- **The re-parent test runs twenty trips and is no longer `fixme`.**
+  tosijs-3d 0.8.4 stopped leaking WebGL contexts (#79): one canvas, 74 meshes,
+  no GL error, twenty times.
+
 - **A document's galaxy never reached the sky.** `b3d-skybox` reads every
   starfield attribute once, in `sceneReady`, and the editor's backdrop has
   already made the sky by the time a document loads — so `starfieldData` was
@@ -50,7 +83,9 @@ All notable changes to this project are documented here, in
   cube, a sky with no stars, no error. The skybox feature now re-mounts the
   element when one of those keys changes (tosijs-3d#88), and
   `tests/land-and-sky.pw.ts` asserts all six faces arrive; with the re-mount
-  removed it fails with "no /sky/ requests at all".
+  removed it failed with "no /sky/ requests at all". tosijs-3d 0.8.4 made
+  those attributes live (#88) and the re-mount is gone again; the test is what
+  says the upstream fix holds.
 
 - **The sky panel's `azimuth` slider did nothing, and has gone.** The skybox
   writes it to a material property it defines with a no-op setter; upstream's
@@ -71,28 +106,41 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **Moons.** A `moon` feature, one piece per moon, up to four: azimuth and
+  elevation on the star sphere, size, colour, brightness. Its phase follows the
+  real sun, so a moon near it is a crescent. Drawn by the sky, so it attaches in
+  `link` — a moon listed before the sky in the file still lands inside it, and
+  `land-and-sky.json` does exactly that to keep it tested. Its schema is ours
+  until `moonSchema()` exists (tosijs-3d#93).
+- **A world's own air.** The sky panel gains `atmosphere` (1 Earth … 0 the
+  Moon: black noon, stars out, a hard sun), `dust`, `zenithTint`,
+  `horizonTint` and `tintStrength` — a butterscotch Mars, a green alien sky —
+  and the star look: `starfieldGain`, `starfieldFloor`, `starfieldTwinkle`.
+  All from tosijs-3d 0.8.4, answering our #89.
+- **The useful band on a slider.** A schema's `x-useful` is drawn as a shaded
+  band on the track (tosijs-3d#83); the handle still reaches both ends.
+
 - **The sky, the weather and the climate from tosijs-3d 0.8.3.** An ensemble
   can now describe a world like upstream's Land and Sky demo, and
   `static/ensembles/land-and-sky.json` does exactly that:
 
   - **Sky:** the atmosphere (`rayleigh`, `mieCoefficient`, `mieDirectionalG`
     beside `turbidity` and `luminance`), the night sky (`starfieldData` and
-    `starfieldCube` — the encoded galaxy, hosted at
-    `https://3d.tosijs.net/sky/stars` and `…/nebula` — plus `starfieldTilt`, the
+    `starfieldCube` — the encoded galaxy, hosted at pinned, versioned URLs,
+    `https://3d.tosijs.net/sky/0.8.4/stars` and `…/nebula` (tosijs-3d#90) —
+    plus `starfieldTilt`, the
     procedural `starfield`/`nebulae` counts and `starfieldSeed`), and the edge
     of space (`spaceStart`, `spaceFull`, `spaceColor`). The three decode
     parameters of the data cube are accepted but not offered: they describe how
     an asset was encoded, not a choice about a sky.
   - **`cloudDeck`**, a new feature: the layer of cloud you look up at, where
     `clouds` is the blobs you fly between. Coverage, altitude, thickening,
-    cirrus, wind, evolve, orographic, colours, shadows.
+    cirrus, wind, evolve, orographic, colours, shadows. Its schema is
+    upstream's `cloudDeckSchema()` (tosijs-3d#87, ours); retiring our
+    hand-written copy found it had capped `altitude` at 5 km where upstream
+    allows 12.
   - **Terrain climate:** `biomeTemperature`, `biomeMoisture`,
     `biomeVolcanicScale`, shown when `biome` is on.
-
-  ⚠️ The deck is the one scene feature whose ranges are partly ours, because
-  `sceneSchemas` has no `cloudDeckSchema()` (tosijs-3d#87). Defaults are read
-  live from the element; ranges come from its doc comments where it states one
-  and are marked as ours where it does not.
 
 - **Every shipped sample is validated, warnings included.** A new sweep fails
   on `unknown-feature` or `unknown-feature-key` in `static/ensembles/`, since

@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Tools and commands — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor&#39;s palette is whatever is registered, not a hardcoded list — deliberately the same shape as [[The feature registry]], so a consumer can add a tool to…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Tools and commands</h1>
 <p>The editor&#39;s palette is <strong>whatever is registered</strong>, not a hardcoded list —
@@ -52,18 +52,18 @@ options panel while it is current.</li>
 <li>a <strong>command</strong> runs once and returns you to what you were doing. Duplicate and
 delete are commands; making them modes would be a lie about how they behave.</li>
 </ul>
-<pre><code class="language-typescript">registerTool({
-  name: &#39;paint&#39;,
-  label: &#39;Paint&#39;,
-  optionsSchema: {
-    type: &#39;object&#39;,
-    properties: {
-      colour: { type: &#39;string&#39;, default: &#39;#8a6a52&#39; },
-      radius: { type: &#39;number&#39;, default: 1, &#39;x-unit&#39;: &#39;m&#39; },
-    },
-  },
-  onGesture(gesture, ctx) { ... },
-})
+<pre><code class="language-typescript" data-highlighted><span class="token function">registerTool</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  name<span class="token operator">:</span> <span class="token string">'paint'</span><span class="token punctuation">,</span>
+  label<span class="token operator">:</span> <span class="token string">'Paint'</span><span class="token punctuation">,</span>
+  optionsSchema<span class="token operator">:</span> <span class="token punctuation">{</span>
+    type<span class="token operator">:</span> <span class="token string">'object'</span><span class="token punctuation">,</span>
+    properties<span class="token operator">:</span> <span class="token punctuation">{</span>
+      colour<span class="token operator">:</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'string'</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token string">'#8a6a52'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      radius<span class="token operator">:</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'number'</span><span class="token punctuation">,</span> <span class="token keyword">default</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string-property property">'x-unit'</span><span class="token operator">:</span> <span class="token string">'m'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token function">onGesture</span><span class="token punctuation">(</span>gesture<span class="token punctuation">,</span> ctx<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token operator">...</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
 </code></pre>
 <p>The options are <strong>JSON Schema</strong>, so the panel that edits them is generated, not
 written — the same renderer the piece property panel uses. A tool with a
@@ -147,6 +147,6 @@ bespoke panel would drift from the rest of the editor within a week.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

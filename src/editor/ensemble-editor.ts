@@ -106,7 +106,7 @@ import type { SelectionView } from "./selection-view.js";
 import type { HandlesView } from "./handles-view.js";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles.js";
 import type { Grip } from "./handles.js";
-import { boundIfSet, schemaWidgets } from "./schema-panel.js";
+import { boundIfSet, schemaWidgets, type BoxLike } from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
 import {
   createBeaconView,
@@ -478,11 +478,17 @@ export class EnsembleEditor extends Component {
    * keeps pointing at its piece when something is inserted above it. Measured
    * in `tosi-store.test.ts`, not assumed.
    */
-  private _box(id: string, feature: string, key: string): unknown {
+  private _box(id: string, feature: string, key: string): BoxLike | undefined {
     if (!this._ensemble.pieces.some((piece) => piece.id === id)) {
       return undefined;
     }
-    return (this._store as unknown as Record<string, unknown>)[
+    /*
+      THE ONE CAST, at the boundary where it is true. A tosijs store indexed by
+      a path STRING is untyped by construction; what comes back is a box. The
+      three casts this replaces sat at the widgets instead, where they erased
+      which widget could bind one (tosijs-3d#76).
+    */
+    return (this._store as unknown as Record<string, BoxLike | undefined>)[
       `pieces[id=${id}].features.${feature}.${key}`
     ];
   }
@@ -3898,7 +3904,7 @@ export class EnsembleEditor extends Component {
         Caught in a browser, by dragging a field the document did not set. No
         test here would have: both halves are individually right.
       */
-      const boxFor = (key: string): unknown =>
+      const boxFor = (key: string): BoxLike | undefined =>
         /*
           A field OTHER FIELDS ARE GATED ON stays unbound on purpose.
 
@@ -4032,6 +4038,32 @@ export class EnsembleEditor extends Component {
 
       Anything that collects a field must therefore run BEFORE this line.
     */
+    /*
+      RENAME AFTER THE KEYSTROKE, NOT DURING IT.
+
+      A rename changes the selected piece's id, which re-renders this panel —
+      detaching this group and attaching a new one — and it used to do that
+      synchronously, inside the keydown that typed the character. On
+      tosijs-3d 0.8.3 that was harmless. 0.8.4's #82 fix stands the window
+      listener down only for fields an attached group OWNS, and mid-event the
+      still-focused field belongs to a group that was just detached — so the
+      same key reached it twice: `X` into `flagship` gave `flagXXship`, every
+      time, in this field only. (The filter and property fields never
+      re-render the panel mid-key, which is why they were fine.) Measured:
+      deferring past the event takes it from doubled to single, 3/3.
+
+      `current` rather than `selected.id` is DEFENSIVE, not measured: if two
+      keys ever queue before the first rename runs, the second must rename
+      the id the first produced. At Playwright's typing speed the captured-id
+      version also passed (`XY` → `flagXYship`), so this guards a case no test
+      has reproduced. Filed as tosijs-3d#94 — a key event should be
+      delivered at most once, whatever a handler does to the groups.
+    */
+    let current = selected.id;
+    const renameLater = (value: string) =>
+      setTimeout(() => {
+        if (this.renamePiece(current, value)) current = value;
+      }, 0);
     this._addPanel(
       "right",
       panel3d(
@@ -4069,9 +4101,7 @@ export class EnsembleEditor extends Component {
             ui.inputField({
               value: selected.id,
               placeholder: "id",
-              handleChange: (value: string) => {
-                this.renamePiece(selected.id, value);
-              },
+              handleChange: (value: string) => renameLater(value),
             })
           ) as never
         ),

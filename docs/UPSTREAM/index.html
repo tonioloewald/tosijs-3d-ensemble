@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -225,38 +225,58 @@ when it lands, and close the issue.</p>
 </tr>
 <tr>
 <td>32</td>
-<td><strong><code>x-useful</code> has no landing spot.</strong> <code>scene-schemas</code> annotates <code>terrain.grossScale</code> <code>[0.002, 0.05]</code> and <code>detailScale</code> <code>[0.03, 0.3]</code>, and <code>slider3d</code> takes a <code>min</code> and a <code>max</code> and nothing else. Narrowing the track to the band makes a documented range unreachable; a glyph in the readout invents a vocabulary; so we declare it in <code>FieldSpec</code> and say in the comment that we do not render it. Asked for a <code>useful?: [lo, hi]</code> that SHADES the track. Low urgency, measured: both fields are also <code>x-scale: log</code>, where their bands already occupy 32% and 25% of the travel</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — <code>slider3d({ useful })</code> shades a band on the track and the handle still reaches both ends. <code>schema-panel</code> passes <code>x-useful</code> through; <code>schema-readout.pw.ts</code> asserts the band is on screen and narrower than the track, and fails without the one line</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/83">#83</a></td>
 </tr>
 <tr>
 <td>33</td>
-<td><strong><code>slider3d</code>&#39;s caption swallows pointer events.</strong> The first child is a transparent rect the size of the whole 290x42 row — the advertised hit area — and the caption <code>&lt;text&gt;</code> paints on top of it and becomes the event target, so the left half of every slider is dead. Measured: <code>elementFromPoint</code> inside the rect returns the <code>&lt;text&gt;</code>; hover, press and a 60px drag there all produce nothing, no error; the same gestures 120px right over the track work. Worse in a headset, where the caption is the big target and the 6px track is not. Adjacent, same screenshot: the caption clips to <code>Gross scale (fre</code>, mid-word, no ellipsis</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>, documented) — hover, press and drag over the caption all work, and <code>peek</code> now shows the value BESIDE the caption, deliberately. Our readout test had pinned the old behaviour and was rewritten to read the hovered slider&#39;s own visible text</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/84">#84</a></td>
 </tr>
 <tr>
 <td>34</td>
-<td><strong>New skybox fields say <code>unit</code> where the rest say <code>x-unit</code></strong> (<code>spaceStart</code>, <code>spaceFull</code>, <code>starDistance</code>). <code>pick()</code> translates it; the drift test lists the two we show as exceptions that go when this lands</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — upstream says <code>x-unit</code> everywhere, with a test rejecting a bare <code>unit</code>. Our translation in <code>pick()</code> is gone; the drift test failed the moment it became unnecessary, which is how we knew</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/85">#85</a></td>
 </tr>
 <tr>
 <td>35</td>
-<td><strong><code>azimuth</code> is dead.</strong> The skybox writes it to a material property it defines with a no-op setter, and the schema calls it degrees 0–360 while the element&#39;s table calls it a 0–1 fraction. We shipped the slider for two releases; it is off the panel now, still accepted in a file</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — <code>azimuth</code> is out of <code>skyboxSchema()</code> and documented as ignored. It was already off our panel; a file that sets it now gets <code>unknown-feature-key</code>, a warning, which is true</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/86">#86</a></td>
 </tr>
 <tr>
 <td>36</td>
-<td><strong>No <code>cloudDeckSchema()</code>.</strong> The deck is the one scene primitive we describe by hand: defaults read live from <code>initAttributes</code>, ranges from its doc comments where they exist, four of ours where they do not</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — <code>cloudDeckSchema()</code> is in <code>sceneSchemas</code> and our hand-written block is a <code>pick()</code>. Retiring it found drift: our <code>altitude</code> stopped at 5 km, upstream&#39;s runs to 12</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/87">#87</a></td>
 </tr>
 <tr>
 <td>37</td>
-<td><strong>Starfield attributes are construction-time only.</strong> All of them are read in <code>sceneReady</code> and never again, so the document&#39;s galaxy never reached a sky the backdrop had already made — zero requests, no stars, no error. We re-mount the sky when one changes</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — starfield attributes rebuild the starfield when they change. Our re-mount is deleted, and <code>land-and-sky.pw.ts</code> still sees all six pinned faces arrive, 4/4 runs</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/88">#88</a></td>
 </tr>
 <tr>
 <td>38</td>
-<td><strong>The sky assumes Earth</strong> — feature requests: an airless world (atmosphere as a property, not an altitude), a sky tint, several moons, several suns; and the demos do not expose the atmosphere dials or the sun&#39;s colour</td>
+<td>🟡 <strong>MOSTLY RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — <code>atmosphere</code>, <code>dust</code>, <code>zenithTint</code>/<code>horizonTint</code>/<code>tintStrength</code>, and <code>&lt;tosi-b3d-moon&gt;</code> (up to four, phase from the real sun), plus an Atmosphere group in the demo. Not yet: several suns. Not yet adopted here: see TODO</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/89">#89</a></td>
+</tr>
+<tr>
+<td>39</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — <code>/sky/0.8.3/…</code> and <code>/sky/0.8.4/…</code>, each with a <code>manifest.json</code>. <code>land-and-sky.json</code> pins 0.8.4 and states <code>starfieldDataSize</code>. (The versioned files are still served <code>max-age=600</code>; harmless for correctness, only a missed caching win)</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/90">#90</a></td>
+</tr>
+<tr>
+<td>40</td>
+<td>✅ <strong>RESOLVED and ADOPTED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — fetched fields carry <code>format: &#39;uri-reference&#39;</code> (+ <code>x-keywords</code>). Scene features stamp <code>x-fetched</code> from the FULL upstream schema, and <code>validate</code> holds every one to the library https rule</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/91">#91</a></td>
+</tr>
+<tr>
+<td>41</td>
+<td><strong>No <code>moonSchema()</code></strong> — <code>&lt;tosi-b3d-moon&gt;</code> (0.8.4) is the one primitive we describe by hand again; two of its five ranges are ours</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/93">#93</a></td>
+</tr>
+<tr>
+<td>42</td>
+<td><strong>A key is delivered twice when a handler re-renders its <code>fieldGroup</code> mid-keystroke</strong> — since the #82 fix. Our rename field doubled every character; deferred past the event, 3/3 single</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/94">#94</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
@@ -315,12 +335,12 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td>tosijs-3d #47, #48</td>
 </tr>
 <tr>
-<td><strong>A field outside the attached <code>fieldGroup</code> swallows keystrokes silently.</strong> <code>attach()</code> makes the window listener return early for EVERY field and routes to the group&#39;s own <code>active</code>, and <code>fieldGroup</code> captures <code>config.fields</code> once at construction — so a field created afterwards can never become active. Both reasonable; neither observable when you get it wrong. Four bugs here, one at a time, three shipped, one of them 0.3.0&#39;s release blocker. All ours; filed for the next adopter, with two cheap warnings that would have caught every one</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-3d@0.8.4">tosijs-3d@0.8.4</a>) — a field outside an attached group no longer loses its keys, and <code>fieldGroup.add(field)</code> lets a late field join. Our construction-order fix stays: it is correct, and <code>add</code> makes it a choice rather than a trap</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/82">tosijs-3d #82</a></td>
 </tr>
 <tr>
-<td><strong><code>Cannot redefine property: onBeforeViewRenderObservable</code></strong> on Linux/SwiftShader, every run — a one-time prototype augmentation guarded by a module-scope flag, double-firing. Non-fatal (the scene builds, the library mounts, the meshes resolve) but it is an uncaught page error, and our scene lane asserts a page throws nothing. Filtered BY NAME in <code>tests/page-errors.ts</code> with a pointer, so every other page error still fails the build; the filter comes out when this lands. Only found because we added CI — it reproduces on no machine here</td>
-<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/78">tosijs-3d #78</a></td>
+<td><strong><code>Cannot redefine property: onBeforeViewRenderObservable</code> — MIS-FILED, and it was ours to find.</strong> Filed as tosijs-3d#78 (&quot;Linux only, non-fatal&quot;); it is neither. The doc site loads its ESM entry twice (<code>hydrate.js?v=&lt;hash&gt;</code> from the page, bare <code>../hydrate.js</code> from 268 chunks), so Babylon&#39;s once-only prototype patch runs twice and shaders fail to compile. Stripping the stamp: 10 errors → 0, alternating runs. Corrected on #78; filtered by name in <code>tests/page-errors.ts</code> until #191 lands</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/191">tosijs-ui #191</a></td>
 </tr>
 <tr>
 <td><code>place-mesh.ts</code>&#39;s <code>reapOrphan</code> — watching for an instance that arrives after its element was removed, and disposing it</td>
@@ -347,13 +367,15 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td>Babylon (third-party; no upstream row)</td>
 </tr>
 <tr>
-<td><code>tests/schema-readout.pw.ts</code> finding the slider TRACK by geometry to hover it, because the caption half of the row does not respond (tosijs-3d#84)</td>
+<td><code>tests/schema-readout.pw.ts</code> finding the slider TRACK by geometry to hover it (tosijs-3d#84). <strong>Hover over the caption works on 0.8.3</strong> (measured); kept until #84 closes, since drag was not re-checked</td>
 <td></td>
 </tr>
 </tbody></table>
-<p>| <code>pick()</code> translating <code>unit</code> → <code>x-unit</code> (tosijs-3d#85)
-| The cloud deck&#39;s hand-written ranges in <code>features-scene.ts</code> (tosijs-3d#87)
-| Re-mounting the skybox when a starfield key changes — <code>SKY_BUILT_AT_READY</code> and <code>remount</code> (tosijs-3d#88)</p>
+<p>| <del><code>pick()</code> translating <code>unit</code> → <code>x-unit</code></del> — <strong>gone in 0.8.4</strong> (tosijs-3d#85)
+| <del>The cloud deck&#39;s hand-written ranges</del> — <strong>gone in 0.8.4</strong>; a <code>pick()</code> now (tosijs-3d#87)
+| <del>Re-mounting the skybox when a starfield key changes</del> — <strong>gone in 0.8.4</strong> (tosijs-3d#88)
+| The <code>moon</code> feature&#39;s hand-written ranges (tosijs-3d#93)
+| Deferring the piece rename past the keystroke — <code>renameLater</code> (tosijs-3d#94)</p>
 <h2>tosijs</h2>
 <table>
 <thead>
@@ -520,6 +542,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

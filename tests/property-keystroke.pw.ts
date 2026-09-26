@@ -110,7 +110,11 @@ test("typing into a SET string property edits it, and moves nothing", async ({
 
   // THE WRITE REACHED THE DOCUMENT. Not "the field shows it" — the document.
   expect(after.texture).not.toBe(before.texture);
-  expect(after.texture).toContain("9");
+  // EXACTLY two more 9s. `toContain("9")` passed whether each key landed
+  // once or twice — and on tosijs-3d 0.8.4 the rename field next door did
+  // double every key (tosijs-3d#94), which only a count can see.
+  const nines = (t?: string) => (t?.match(/9/g) ?? []).length;
+  expect(nines(after.texture)).toBe(nines(before.texture) + 2);
 
   // AND IT WENT WHERE IT WAS TYPED. This is the assertion that fails if the
   // field ever leaves the keyboard group again: the digits land on `at[0]`.

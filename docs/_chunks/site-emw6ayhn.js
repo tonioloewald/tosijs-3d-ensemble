@@ -1,0 +1,5 @@
+import{Fe}from"./site-e2p70xxb.js";import{A,lt}from"./site-pb29jqm8.js";import{o,e,a}from"./site-jv0cbgr5.js";class Jp extends Fe{constructor(t){super(t);this.sourceSystem=this.registerDataInput("sourceSystem",A),this.destinationSystem=this.registerDataInput("destinationSystem",A),this.inputCoordinates=this.registerDataInput("inputCoordinates",lt),this.outputCoordinates=this.registerDataOutput("outputCoordinates",lt)}_updateOutputs(t){let n=this.sourceSystem.getValue(t),u=this.destinationSystem.getValue(t),p=this.inputCoordinates.getValue(t),m=n.getWorldMatrix(),l=u.getWorldMatrix(),s=a.Matrix[0].copyFrom(l);s.invert();let r=a.Matrix[1];s.multiplyToRef(m,r);let d=this.outputCoordinates.getValue(t);e.TransformCoordinatesToRef(p,r,d)}getClassName(){return"FlowGraphTransformCoordinatesSystemBlock"}}var i=!1;function em(){if(i)return;i=!0,o("FlowGraphTransformCoordinatesSystemBlock",Jp)}em();
+export{Jp,em};
+
+//# debugId=5A11A0E45DF6A61864756E2164756E21
+//# sourceMappingURL=site-emw6ayhn.js.map

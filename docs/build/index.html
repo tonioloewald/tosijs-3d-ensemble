@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Building an ensemble — tosijs-3d-ensemble</title>
   <meta name="description" content="BuildEnsemble turns authored JSON into live scene objects. The editor and the game call this same function — which is what makes &quot;what you author is what you…" />
   <meta property="og:type" content="article" />
@@ -39,23 +39,23 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Building an ensemble</h1>
 <p><code>buildEnsemble</code> turns authored JSON into live scene objects. <strong>The editor and
 the game call this same function</strong> — which is what makes &quot;what you author is
 what you get&quot; true by construction rather than by discipline.</p>
-<pre><code class="language-typescript">import { buildEnsemble, loadEnsemble } from &#39;tosijs-3d-ensemble&#39;
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> buildEnsemble<span class="token punctuation">,</span> loadEnsemble <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble'</span>
 
-const built = buildEnsemble(ensemble, {
-  scene: document.querySelector(&#39;tosi-b3d&#39;),
-  origin: [0, 0, 1200],
-  library: &#39;enemies&#39;,
-})
+<span class="token keyword">const</span> built <span class="token operator">=</span> <span class="token function">buildEnsemble</span><span class="token punctuation">(</span>ensemble<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  scene<span class="token operator">:</span> document<span class="token punctuation">.</span><span class="token function">querySelector</span><span class="token punctuation">(</span><span class="token string">'tosi-b3d'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  origin<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1200</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  library<span class="token operator">:</span> <span class="token string">'enemies'</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
 
-built.problems       // validation, non-fatal
-built.pieces.get(&#39;reactor&#39;)?.element
-built.dispose()      // and the scene is as it was
+built<span class="token punctuation">.</span>problems       <span class="token comment">// validation, non-fatal</span>
+built<span class="token punctuation">.</span>pieces<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">'reactor'</span><span class="token punctuation">)</span><span class="token operator">?.</span>element
+built<span class="token punctuation">.</span><span class="token function">dispose</span><span class="token punctuation">(</span><span class="token punctuation">)</span>      <span class="token comment">// and the scene is as it was</span>
 </code></pre>
 <h2>Two phases, then teardown</h2>
 <ol>
@@ -152,6 +152,6 @@ console. Every element this module creates is appended explicitly.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

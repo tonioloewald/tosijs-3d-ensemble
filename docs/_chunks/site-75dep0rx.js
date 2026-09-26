@@ -1,5 +1,0 @@
-import{Es as o,Fs as i}from"./site-efy4jtqr.js";import{Ku as l}from"./site-18c2qzzn.js";import{Pu as a}from"./site-y0mephjk.js";import{lF as u}from"./site-54y5gp1n.js";class h extends l{constructor(e){super(e);this.config=e,this._inputCases=new Map,this.case=this.registerDataInput("case",a,NaN),this.default=this.registerDataInput("default",a),this.value=this.registerDataOutput("value",a);let s=this.config.cases||[];for(let t of s){if(t=i(t),this.config.treatCasesAsIntegers){if(t=t|0,this._inputCases.has(t))return}this._inputCases.set(t,this.registerDataInput(`in_${t}`,a))}}_updateOutputs(e){let s=this.case.getValue(e),t;if(o(s))t=this._getOutputValueForCase(i(s),e);if(!t)t=this.default.getValue(e);this.value.setValue(t,e)}_getOutputValueForCase(e,s){return this._inputCases.get(e)?.getValue(s)}getClassName(){return"FlowGraphDataSwitchBlock"}}var r=!1;function p(){if(r)return;r=!0,u("FlowGraphDataSwitchBlock",h)}p();
-export{h as On,p as Pn};
-
-//# debugId=56B10DB97E087B2B64756E2164756E21
-//# sourceMappingURL=site-75dep0rx.js.map

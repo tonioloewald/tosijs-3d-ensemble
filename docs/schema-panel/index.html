@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=0.3.0" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=0eab46c3f5a0" data-tosi-doc-system />
   <title>Schema-driven panels — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor must not know what destroyable means — only how to render an editor for it from a description. Same for a tool&#39;s options." />
   <meta property="og:type" content="article" />
@@ -39,17 +39,17 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=13e118db7e8d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Schema-driven panels</h1>
 <p>The editor must not know what <code>destroyable</code> <em>means</em> — only how to render an
 editor for it from a description. Same for a tool&#39;s options. So there is <strong>one</strong>
 renderer, JSON Schema in, SVG UI widgets out, and it serves both.</p>
-<pre><code class="language-typescript">const panel = schemaPanel({
-  schema: turretSchema,
-  values: piece.features.turret,
-  handleChange: (key, value) =&gt; edit(`turret ${key}`, () =&gt; { ... }),
-})
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">const</span> panel <span class="token operator">=</span> <span class="token function">schemaPanel</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  schema<span class="token operator">:</span> turretSchema<span class="token punctuation">,</span>
+  values<span class="token operator">:</span> piece<span class="token punctuation">.</span>features<span class="token punctuation">.</span>turret<span class="token punctuation">,</span>
+  <span class="token function-variable function">handleChange</span><span class="token operator">:</span> <span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token function">edit</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">turret </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>key<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span> <span class="token operator">...</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
 </code></pre>
 <p>Two hand-rolled panels would drift apart inside a week — the tool panel would
 grow a nicer number field, the property panel would grow a better label, and
@@ -173,6 +173,6 @@ nothing: a field an author cannot see is a field they will assume is unset.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=0.3.0"></script>
+  <script type="module" src="../hydrate.js?v=0eab46c3f5a0"></script>
 </body>
 </html>

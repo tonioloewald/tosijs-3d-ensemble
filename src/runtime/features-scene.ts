@@ -1082,7 +1082,15 @@ export function registerSceneFeatures(): void {
       type: "object",
       title: "Sound",
       properties: {
-        url: { type: "string", title: "Audio file" },
+        /*
+          FETCHED, so marked — and it was not. Every other fetched field came
+          marked from upstream's schema (tosijs-3d#91); `sound` has no upstream
+          schema, so its one url was invisible to the https rule, and
+          `http://`, `//host`, `data:` and `javascript:` all reached
+          `BABYLON.Sound`. Found by the 0.4.0 re-review; the completeness test
+          in feature-urls.test.ts is what stops the next one.
+        */
+        url: { type: "string", title: "Audio file", format: "uri-reference" },
         loop: { type: "boolean", default: true },
         autoplay: { type: "boolean", default: true },
         volume: num(0, 1, 1),

@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=80fecf4ff6f5" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=f6d9edfc76b0" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=f46f5668d085" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=21ed1024b592" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -213,6 +213,30 @@ drop-in replacement for the bench, so keep them until it is.</p>
 validating clean and building every piece. That is milestone 1, and it is the
 proof the API is right — which is why it comes before building anything else on
 top of it.</p>
+<h2>Upgrading from 0.3 to 0.4</h2>
+<p>Three things change underneath an existing document. None of them needs an edit
+to a well-formed file, but each can change what renders.</p>
+<ul>
+<li><strong><code>tosijs-3d</code> is now <code>^0.8.4</code>.</strong> The sun runs a northern-hemisphere arc and
+<code>starfieldTilt</code> no longer moves it (0.8.3), and every <code>PRNG</code>-seeded output
+re-rolls (0.8.4). A seeded cloud field or galaxy looks different with the
+same document. Scenes tuned by eye should be looked at again.</li>
+<li><strong>Fetched urls must be https</strong> (or relative, or <code>http://localhost</code>), for
+libraries AND for fetched feature fields (<code>starfieldData</code>, <code>starfieldCube</code>,
+<code>nebulaTexture</code>, <code>ground.texture</code>, <code>water.normalMap</code>, <code>clouds.model</code>,
+<code>sound.url</code>). A refused url is reported by <code>validate</code> AND not fetched: the
+library is not mounted, the field never reaches its element. So a document
+that pointed at an <code>http://</code> host renders WITHOUT that library or field,
+where it used to render with it. Run <code>validate</code> over your files before
+upgrading; <code>insecure-library-url</code> / <code>insecure-feature-url</code> name each one.</li>
+<li><strong>A fetched field must hold a string.</strong> Anything else is refused rather than
+stringified.</li>
+</ul>
+<p>For manta-recon specifically, measured on 2026-09-26: its eight assemblies
+(<code>static/assemblies/*.json</code>) declare no libraries and no fetched feature
+fields, and 0.4&#39;s <code>validate</code> reports no url problem in any of them, so the url
+rule does not touch them. What was NOT measured is the peer-floor change: the
+moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.</p>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -292,6 +316,6 @@ top of it.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=80fecf4ff6f5"></script>
+  <script type="module" src="../hydrate.js?v=f6d9edfc76b0"></script>
 </body>
 </html>

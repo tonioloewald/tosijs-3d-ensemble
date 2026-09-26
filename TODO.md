@@ -147,16 +147,28 @@ release, or verified and too large for one. Both reviews are filed under
       element in `editor.md`). Check the doc site on the 1.16 upgrade before
       trusting it.
 
-- [ ] **From the 0.4.0 review and issue #11, deferred:** - `spaceFull <= spaceStart` inverts the space transition, silently. A
-      cross-field warning wants a per-feature check hook; `registerCheck`
-      is global and domain-flavoured, so it isn't the right home. - `biomeMoisture`'s plugin default (0.45) is STEPPE; a green world wants
-      ~0.7. Say so in the panel, or override the default for authoring the way
-      `realtimeScale` is. - Load manta-recon's ensembles through HEAD's `validate`/`build`: the new
-      url errors, and the ^0.8.1 → ^0.8.4 floor (the sun arc moves, PRNG
-      output re-rolls). Update MIGRATING.md with what it finds. - Ask tosijs-3d whether its fetching elements (`<tosi-b3d-library>`, the
-      sky, the ground) should hold an https policy themselves, if the rule
-      should cover pages that do not go through ensemble. - The combat, world and 0.8.4 sky/cloud/climate features still have no
-      `.pw.ts` watching them work, except `land-and-sky`.
+- [ ] **`spaceFull <= spaceStart` inverts the space transition, silently**
+      (issue #11). A cross-field warning wants a per-feature check hook;
+      `registerCheck` is global and domain-flavoured, the wrong home.
+
+- [ ] **`biomeMoisture`'s plugin default (0.45) is STEPPE**; a green world wants
+      ~0.7 (issue #11). Say so in the panel, or override the authoring default
+      the way `realtimeScale` is.
+
+- [ ] **The 0.8.4 peer floor's VISUAL effect on a Manta scene** is unchecked —
+      the sun arc moves and seeded output re-rolls. Manta's eight assemblies do
+      pass 0.4's url rules (measured; see MIGRATING.md).
+
+- [ ] **Fetch policy at the element level** — tosijs-3d#95 asks whether its
+      fetching elements should hold an https policy themselves (and for a
+      `soundSchema()`). Our rule covers only what goes through ensemble.
+
+- [ ] **A refused feature url leaves the previous value live** in the editor:
+      the key is dropped and `update` succeeds, so the old sky stays up. Same
+      root as "Removing a key from a singleton's config does not reset it".
+
+- [ ] **The combat, world and 0.8.4 sky/cloud/climate features have no
+      `.pw.ts`** watching them work, except `land-and-sky`.
 
 ## Format and runtime work the design is waiting on
 

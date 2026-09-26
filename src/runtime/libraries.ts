@@ -79,7 +79,21 @@ export async function mountLibraries(
       refusal is reported by that same `validate` run (`insecure-library-url`
       / `unsupported-library-url`), so it is refused and said, not dropped.
     */
-    if (urlProblem(url)) continue;
+    if (urlProblem(url)) {
+      // Refusing the new url must not leave the OLD library rendering under
+      // this name — that is the stale mount the name-and-url rule below
+      // exists to prevent, arriving through the refusal instead.
+      host.getLibrary?.(name)?.remove();
+      // A document's refusal is also reported by `validate`; the editor's kit
+      // SHELF is page configuration and never is, so without this a refused
+      // shelf kit simply never appears and nothing says why.
+      console.warn(
+        `tosijs-3d-ensemble: library "${name}" not mounted — ${
+          urlProblem(url)?.message
+        }`
+      );
+      continue;
+    }
     let element = host.getLibrary?.(name) ?? null;
     /*
       IDEMPOTENT BY NAME **AND URL**.

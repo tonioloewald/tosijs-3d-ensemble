@@ -177,3 +177,29 @@ drop-in replacement for the bench, so keep them until it is.
 validating clean and building every piece. That is milestone 1, and it is the
 proof the API is right — which is why it comes before building anything else on
 top of it.
+
+## Upgrading from 0.3 to 0.4
+
+Three things change underneath an existing document. None of them needs an edit
+to a well-formed file, but each can change what renders.
+
+- **`tosijs-3d` is now `^0.8.4`.** The sun runs a northern-hemisphere arc and
+  `starfieldTilt` no longer moves it (0.8.3), and every `PRNG`-seeded output
+  re-rolls (0.8.4). A seeded cloud field or galaxy looks different with the
+  same document. Scenes tuned by eye should be looked at again.
+- **Fetched urls must be https** (or relative, or `http://localhost`), for
+  libraries AND for fetched feature fields (`starfieldData`, `starfieldCube`,
+  `nebulaTexture`, `ground.texture`, `water.normalMap`, `clouds.model`,
+  `sound.url`). A refused url is reported by `validate` AND not fetched: the
+  library is not mounted, the field never reaches its element. So a document
+  that pointed at an `http://` host renders WITHOUT that library or field,
+  where it used to render with it. Run `validate` over your files before
+  upgrading; `insecure-library-url` / `insecure-feature-url` name each one.
+- **A fetched field must hold a string.** Anything else is refused rather than
+  stringified.
+
+For manta-recon specifically, measured on 2026-09-26: its eight assemblies
+(`static/assemblies/*.json`) declare no libraries and no fetched feature
+fields, and 0.4's `validate` reports no url problem in any of them, so the url
+rule does not touch them. What was NOT measured is the peer-floor change: the
+moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.

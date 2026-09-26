@@ -1,6 +1,10 @@
 /*
   WHAT A SHARED DOCUMENT MAY MAKE A READER'S BROWSER FETCH.
 
+  The document's urls — its libraries and its features' fetched fields. Not
+  the `<tosi-ensemble src>` a page author writes: that is the page's choice
+  about which document to load, not the document's choice about the reader.
+
   One rule, used in two places that must never disagree: `validate`, which
   REPORTS a bad url, and the loaders (`mountLibraries`, the scene features'
   binds), which REFUSE to fetch one. The 0.4.0 review found the rule existed
@@ -42,6 +46,15 @@ export function urlProblem(
   url: string,
   what: "library" | "feature" = "library"
 ): UrlProblem | null {
+  // Fail closed: a url field that holds something else is refused, not
+  // stringified and hoped about (`new URL(["http://x"])` fetches http://x).
+  if (typeof url !== "string")
+    return {
+      code: `unsupported-${what}-url`,
+      message: `${what} url is ${
+        Array.isArray(url) ? "an array" : `a ${typeof url}`
+      }, not a url string`,
+    };
   let viaHttps: URL;
   let viaHttp: URL;
   try {
@@ -75,5 +88,38 @@ export function urlProblem(
   return {
     code: `unsupported-${what}-url`,
     message: `${what} url "${url}" uses "${parsed.protocol}" — only https (and relative urls) are supported, so that a shared ensemble cannot choose what a reader's browser executes or fetches`,
+  };
+}
+
+/**
+ * Why a FETCHED field's value is not acceptable, or `null`.
+ *
+ * ⚠️ FAILS CLOSED, and that is the whole point of it being one function. The
+ * rule needed three review passes because each check was keyed on "is it a
+ * string": a value that was not one was treated as "not a url" and skipped —
+ * and `["http://evil…"]` is valid JSON that the element `String()`s straight
+ * back into a url and fetches. So for a field known to be FETCHED:
+ *
+ * - absent, `null` or `""` means none, and is fine;
+ * - a string is a keyword (`checker`) or goes through `urlProblem`;
+ * - ANYTHING ELSE is refused. A fetched field has no business holding an
+ *   array, an object or a number, and guessing what the consumer will make of
+ *   one is how the bypass happened.
+ *
+ * `validate` (to report) and `declaredConfig` (to refuse) both call this, so
+ * the two can no longer drift apart — they had, into two copies of the bug.
+ */
+export function fetchedValueProblem(
+  value: unknown,
+  keywords: ReadonlySet<string> = new Set()
+): UrlProblem | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "string")
+    return keywords.has(value) ? null : urlProblem(value, "feature");
+  return {
+    code: "unsupported-feature-url",
+    message: `a fetched field holds ${
+      Array.isArray(value) ? "an array" : `a ${typeof value}`
+    }, not a url string — refused rather than guessed at, because the element would stringify it and fetch the result`,
   };
 }

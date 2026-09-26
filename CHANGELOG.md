@@ -37,9 +37,22 @@ All notable changes to this project are documented here, in
   and script urls. A protocol-relative `//other.host/…` is refused too: it
   names another host and leaves the scheme to the page.
 
-  What the rule is NOT: a host allow-list. Any https host is accepted. It
+  **Fails closed.** A fetched field holding anything but a url string — an
+  array, an object, a number — is refused, not stringified: the second review
+  found `["http://…"]` passing every check while the element `String()`ed it
+  back into a url and fetched it. `sound.url` is now marked as fetched too; it
+  was the one built-in url the rule could not see, and a test now fails for
+  any url-shaped built-in property that is neither marked nor explained.
+
+  What the rule is NOT: a host allow-list — any https host is accepted; it
   stops plaintext, script and data urls, not a document choosing an https
-  server.
+  server. And it covers what a DOCUMENT makes a reader fetch: the
+  `<tosi-ensemble src>` a page author writes is the page's choice, not the
+  document's, and is not checked.
+
+  **Migrating:** a document with an `http://` (non-localhost), protocol-relative
+  or non-string library or feature url now loses that library or field at
+  load, and `validate` says which. Serve it over https or make it relative.
 
 - **A library url must be https** (or relative, or `http://localhost`).
   `validate` reported nothing but "is it non-empty" before, so a shared

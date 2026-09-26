@@ -118,6 +118,54 @@ const BYPASSES: Array<[string, string]> = [
   ["\\\\evil.example/x.glb", "unsupported"],
 ];
 
+/*
+  NOT A STRING AT ALL — the 0.4.0 re-review's blocker.
+
+  Every check was keyed on "is it a string", so `["http://evil…"]` skipped
+  validate and declaredConfig alike — and the skybox does
+  `String(attrs.starfieldData)`, which turns the array straight back into the
+  url and fetches it. A fetched field now FAILS CLOSED on anything that is not
+  a string: refused, never guessed at.
+*/
+const NOT_STRINGS: unknown[] = [
+  ["http://evil.example/x"],
+  { toString: () => "http://evil.example/x" },
+  {},
+  42,
+  true,
+];
+
+describe("a fetched field that is not a string is refused", () => {
+  for (const value of NOT_STRINGS) {
+    const label = JSON.stringify(value) ?? String(value);
+    it(`validate reports ${label}`, () => {
+      expect(codes(withFeature("skybox", { starfieldData: value }))).toEqual([
+        "unsupported-feature-url /pieces/0/features/skybox/starfieldData",
+      ]);
+    });
+    it(`declaredConfig drops ${label}`, () => {
+      expect(
+        declaredConfig(featureRegistration("skybox"), {
+          starfieldData: value,
+          timeOfDay: 9,
+        })
+      ).toEqual({ timeOfDay: 9 });
+    });
+  }
+  it("a library url that is not a string is refused", () => {
+    const doc = {
+      name: "urls",
+      libraries: [{ name: "kit", url: ["http://evil.example/x.glb"] }],
+      pieces: [{ id: "p", at: [0, 0, 0] }],
+    } as unknown as Ensemble;
+    expect(
+      validate(doc)
+        .filter((p) => p.code.endsWith("-library-url"))
+        .map((p) => p.code)
+    ).toEqual(["unsupported-library-url"]);
+  });
+});
+
 describe("the rule cannot be dodged by how the url is spelled", () => {
   for (const [url, kind] of BYPASSES) {
     it(`feature url ${JSON.stringify(url)} is ${kind}`, () => {
@@ -176,5 +224,63 @@ describe("declaredConfig drops a refused fetched url", () => {
     expect(
       declaredConfig(featureRegistration("ground"), { texture: "checker" })
     ).toEqual({ texture: "checker" });
+  });
+});
+
+/*
+  EVERY BUILT-IN URL FIELD IS MARKED, OR SAYS WHY IT IS NOT.
+
+  The https rule finds fetched fields by their marker — `format:
+  'uri-reference'`, from upstream's schema or our own — so an UNMARKED fetched
+  field is not checked at all. `sound.url` was exactly that until the 0.4.0
+  re-review: a built-in feature we ship, fetching whatever a document said.
+  So every url-shaped property of every built-in feature must be either marked
+  or named below with the reason it is not fetched. A new url field fails this
+  test until somebody decides which it is.
+*/
+const NOT_FETCHED: Record<string, string> = {
+  "sun.shadowTextureSize": "a resolution in texels",
+  "skybox.starfieldDataSize": "the data cube's texel count, a number",
+  "ground.textureTiles": "a repeat count",
+  "water.textureSize": "a render-target resolution",
+  "sound.spatialSound": "a boolean",
+  "terrain.profile": "a boolean that turns on profiling",
+  "blip.profile": "a number (the combat blip's profile)",
+};
+const URLISH =
+  /url|src|href|texture|map|model|data|cube|image|file|sound|audio|library|glb/i;
+
+describe("no built-in fetched field is unmarked", () => {
+  it("every url-shaped property is marked fetched or listed as not", async () => {
+    const { registerCombatPreset } = await import("../presets/combat.js");
+    const { registerWorldPreset } = await import("../presets/world.js");
+    const undoCombat = registerCombatPreset();
+    registerWorldPreset();
+    const { registeredFeatures, fetchedKeys } = await import("./registry.js");
+    const unaccounted: string[] = [];
+    for (const f of registeredFeatures()) {
+      const schema = f.schema as {
+        "x-accepts"?: string[];
+        properties?: Record<string, unknown>;
+      };
+      const keys = new Set([
+        ...(schema?.["x-accepts"] ?? []),
+        ...Object.keys(schema?.properties ?? {}),
+      ]);
+      const fetched = fetchedKeys(f);
+      for (const k of keys) {
+        const id = `${f.name}.${k}`;
+        if (URLISH.test(k) && !fetched.has(k) && !(id in NOT_FETCHED))
+          unaccounted.push(id);
+      }
+    }
+    undoCombat();
+    expect(unaccounted).toEqual([]);
+  });
+
+  it("sound.url is checked like any other fetched field", () => {
+    expect(
+      codes(withFeature("sound", { url: "http://evil.example/a.mp3" }))
+    ).toEqual(["insecure-feature-url /pieces/0/features/sound/url"]);
   });
 });

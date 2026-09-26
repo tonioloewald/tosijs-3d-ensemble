@@ -32,7 +32,7 @@ message **on the field** rather than in a list at the bottom of the screen.
 /*{"parent":"Format","order":2}*/
 import { featuresOf, roleFeatures } from "./roles.js";
 import { acceptedKeys, featureRegistration, fetchedKeys } from "./registry.js";
-import { urlProblem } from "./url-policy.js";
+import { fetchedValueProblem, urlProblem } from "./url-policy.js";
 import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
 export type Severity = "error" | "warning";
@@ -386,9 +386,8 @@ export function validate(
             cfg as Record<string, unknown>
           )) {
             const keywords = fetched.get(key);
-            if (!keywords || typeof value !== "string" || !value) continue;
-            if (keywords.has(value)) continue;
-            const problem = urlProblem(value, "feature");
+            if (!keywords) continue;
+            const problem = fetchedValueProblem(value, keywords);
             if (problem)
               add(
                 "error",

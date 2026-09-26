@@ -235,3 +235,25 @@ describe("the drift that started this, pinned as regressions", () => {
     expect(scale?.["x-zero-stop"]).toBe(true);
   });
 });
+
+/*
+  THE CLOUD DECK'S BOOLEANS REACH THE ELEMENT AS 'on' / 'off'.
+
+  The format keeps real booleans (a JSON document has them); `b3d-cloud-deck`
+  spells `follow` and `shadows` as `'on' | 'off'`, because an absent HTML
+  boolean attribute reads false. Without the mapping an editor checkbox would
+  write `false` to an attribute that only knows two strings, and do nothing.
+  Flagged by the 0.4.0 review as new behaviour no test would miss.
+*/
+describe("cloudDeck maps booleans to the element's on/off", () => {
+  it("on update, both directions", () => {
+    const reg = featureRegistration("cloudDeck")!;
+    const el: Record<string, unknown> = {};
+    reg.update!(el as never, { follow: false, shadows: true }, {} as never);
+    expect([el.follow, el.shadows]).toEqual(["off", "on"]);
+    reg.update!(el as never, { follow: true }, {} as never);
+    expect(el.follow).toBe("on");
+    // A key the config does not mention is left alone, not reset.
+    expect(el.shadows).toBe("on");
+  });
+});

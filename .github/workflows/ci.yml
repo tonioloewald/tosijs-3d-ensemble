@@ -145,4 +145,7 @@ jobs:
       # `peer-range.test.ts` asserts the devDependency is pinned to the floor,
       # and we have just deliberately unpinned it.
       - name: Schema drift guards
-        run: bun test src/runtime/scene-schemas.test.ts src/runtime/migrate-vocabulary.test.ts
+        # feature-urls too: the https rule finds fetched fields by upstream's
+        # `format: 'uri-reference'` marker (tosijs-3d#91), so a field that
+        # loses or gains it upstream would silently escape the check.
+        run: bun test src/runtime/scene-schemas.test.ts src/runtime/migrate-vocabulary.test.ts src/format/feature-urls.test.ts

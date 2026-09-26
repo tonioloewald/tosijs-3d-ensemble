@@ -1267,6 +1267,15 @@ export function registerSceneFeatures(): void {
 
   registerFeature({
     name: "water",
+    /*
+      ⚠️ FOR CONSUMERS: NO WATER PIECE MEANS AIR EVERYWHERE — NEVER A SEA AT
+      y = 0. A document either has a `water` piece or it does not, so the
+      format cannot be ambiguous; code READING the scene can be. Manta's
+      flying-sub fell back to a surface at y = 0 when the scene registered no
+      medium, and on the first genuinely dry world it reported the craft
+      submerged in mid-air — envelope down to 55%, fog closed in. Treat an
+      empty `b3d.media` as "no medium", not "sea level" (issue #11).
+    */
     icon: "🌊",
     primitive: true,
     insertAt: "height",

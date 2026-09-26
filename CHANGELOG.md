@@ -23,6 +23,24 @@ All notable changes to this project are documented here, in
   `unsupported-feature-url`. Possible now because upstream marks fetched
   fields `format: 'uri-reference'` (tosijs-3d#91, ours); keywords like
   `texture: 'checker'` pass.
+
+  **Enforced, not only reported.** `validate` reports a refused url as an
+  error, and the loaders refuse to fetch it: a refused library is never
+  mounted, and a refused feature url never reaches its element. Before the
+  0.4.0 review the rule existed only in `validate`, which runs after the
+  libraries have already been mounted, so a document could still reach any
+  host while this entry said it could not.
+
+  **Classified the way the browser parses it.** `" http://evil…"` and
+  `"java\nscript:…"` used to read as relative and pass. The browser's URL
+  parser strips spaces and deletes tabs and newlines, so they resolve to http
+  and script urls. A protocol-relative `//other.host/…` is refused too: it
+  names another host and leaves the scheme to the page.
+
+  What the rule is NOT: a host allow-list. Any https host is accepted. It
+  stops plaintext, script and data urls, not a document choosing an https
+  server.
+
 - **A library url must be https** (or relative, or `http://localhost`).
   `validate` reported nothing but "is it non-empty" before, so a shared
   ensemble could point a reader's browser at any host the moment they opened
@@ -178,6 +196,15 @@ All notable changes to this project are documented here, in
   wired to anything, and `tests/schema-readout.pw.ts` hovering a real slider
   for what an author sees, which cannot cover the arithmetic. Both fail with
   the single `format:` line removed.
+
+### Changed
+
+- **A game's bundle grew 8.2 → 9.3 kB gzipped (+13%)**, and the format kernel
+  alone 2.2 → 2.8 kB. That pays for the url policy, fetched-field
+  detection, the cloud deck, moons and the wider sky and terrain panels. The
+  size test now prints the number it checks. It used to be silent until its
+  14 kB ceiling, which is how this growth went unreported until the 0.4.0
+  review measured it.
 
 ### Documentation
 

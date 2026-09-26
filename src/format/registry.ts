@@ -58,6 +58,7 @@ per-frame work must guard itself.
 */
 /*{"parent":"Format","order":3}*/
 import type { Ensemble, Link, Piece, Vec3 } from "./types.js";
+import { urlProblem } from "./url-policy.js";
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer
  *  does not import the framework. */
@@ -354,11 +355,29 @@ export function declaredConfig(
   cfg: Record<string, unknown>
 ): Record<string, unknown> {
   const allowed = acceptedKeys(registration);
-  if (!allowed) return cfg;
+  /*
+    A FETCHED KEY WITH A URL THE POLICY REFUSES IS DROPPED HERE TOO, not only
+    reported by `validate`. Every bind and update goes through this function,
+    which makes it the one place a skybox's `starfieldData` or a ground's
+    `texture` can be stopped before an element fetches it. The 0.4.0 review
+    found the rule enforced nowhere at runtime: `validate` reported the
+    error and the element fetched the url anyway. The problem is still
+    REPORTED — `buildEnsemble` runs `validate` and returns its problems — so
+    nothing vanishes silently.
+  */
+  const fetched = fetchedKeys(registration);
+  const refused = (key: string): boolean => {
+    const keywords = fetched.get(key);
+    const value = cfg[key];
+    if (!keywords || typeof value !== "string" || !value) return false;
+    if (keywords.has(value)) return false;
+    return urlProblem(value, "feature") !== null;
+  };
+  if (!allowed && fetched.size === 0) return cfg;
   let dropped = false;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(cfg)) {
-    if (allowed.has(key)) out[key] = cfg[key];
+    if ((!allowed || allowed.has(key)) && !refused(key)) out[key] = cfg[key];
     else dropped = true;
   }
   // Returning the SAME object when nothing was dropped keeps the identity

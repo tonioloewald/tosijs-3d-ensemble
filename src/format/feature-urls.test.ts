@@ -1,6 +1,11 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import { validate } from "./validate.js";
-import { registerFeature, unregisterFeature } from "./registry.js";
+import {
+  declaredConfig,
+  featureRegistration,
+  registerFeature,
+  unregisterFeature,
+} from "./registry.js";
 import { registerSceneFeatures } from "../runtime/features-scene.js";
 import type { Ensemble } from "./types.js";
 
@@ -91,3 +96,85 @@ describe("fetched feature urls", () => {
 });
 
 afterAll(() => unregisterFeature("billboard-test"));
+
+/*
+  THE BYPASSES THE 0.4.0 REVIEW FOUND — every one of these validated CLEAN.
+
+  The first `urlProblem` tested the raw string for a scheme; the parser the
+  browser uses strips leading spaces/control characters and deletes tabs and
+  newlines anywhere, so each of these LOOKED relative and resolves to an
+  http or script url. Now classified the way the browser parses them.
+*/
+const BYPASSES: Array<[string, string]> = [
+  [" http://evil.example/x.glb", "insecure"],
+  ["\thttp://evil.example/x.glb", "insecure"],
+  ["\nhttp://evil.example/x.glb", "insecure"],
+  ["ht\ttp://evil.example/x.glb", "insecure"],
+  ["java\nscript:alert(1)", "unsupported"],
+  ["java\tscript:alert(1)", "unsupported"],
+  [" data:model/gltf-binary;base64,AA", "unsupported"],
+  // Another host with the scheme left to the page: plain http on an http page.
+  ["//evil.example/x.glb", "unsupported"],
+  ["\\\\evil.example/x.glb", "unsupported"],
+];
+
+describe("the rule cannot be dodged by how the url is spelled", () => {
+  for (const [url, kind] of BYPASSES) {
+    it(`feature url ${JSON.stringify(url)} is ${kind}`, () => {
+      expect(codes(withFeature("skybox", { starfieldData: url }))).toEqual([
+        `${kind}-feature-url /pieces/0/features/skybox/starfieldData`,
+      ]);
+    });
+    it(`library url ${JSON.stringify(url)} is ${kind}`, () => {
+      const doc: Ensemble = {
+        name: "urls",
+        libraries: [{ name: "kit", url }],
+        // Not empty: `validate` stops at `no-pieces` before reading libraries.
+        pieces: [{ id: "p", at: [0, 0, 0] }],
+      };
+      expect(
+        validate(doc)
+          .filter((p) => p.code.endsWith("-library-url"))
+          .map((p) => p.code)
+      ).toEqual([`${kind}-library-url`]);
+    });
+  }
+
+  it("a genuinely relative url is still relative", () => {
+    for (const url of ["/kits/x.glb", "./x.glb", "x.glb", "../sky/stars"])
+      expect([
+        url,
+        codes(withFeature("skybox", { starfieldData: url })),
+      ]).toEqual([url, []]);
+  });
+});
+
+/*
+  AND A FEATURE NEVER RECEIVES ONE — the 0.4.0 review's M2, for fetched keys.
+
+  `declaredConfig` is what every bind and update is handed, so dropping a
+  refused url there is what stops the element from fetching it. `validate`
+  still reports it; this is the half that used to be missing.
+*/
+describe("declaredConfig drops a refused fetched url", () => {
+  const sky = () => featureRegistration("skybox");
+
+  it("an http galaxy never reaches the element", () => {
+    const out = declaredConfig(sky(), {
+      starfieldData: "http://evil.example/sky",
+      timeOfDay: 12,
+    });
+    expect(out).toEqual({ timeOfDay: 12 });
+  });
+
+  it("an https galaxy and a keyword pass untouched", () => {
+    expect(
+      declaredConfig(sky(), {
+        starfieldData: "https://3d.tosijs.net/sky/0.8.4/stars",
+      })
+    ).toEqual({ starfieldData: "https://3d.tosijs.net/sky/0.8.4/stars" });
+    expect(
+      declaredConfig(featureRegistration("ground"), { texture: "checker" })
+    ).toEqual({ texture: "checker" });
+  });
+});

@@ -110,11 +110,14 @@ release, or verified and too large for one. Both reviews are filed under
       re-checks the floor and says so in its log rather than implying it
       tested a ceiling that does not exist yet.
 
-- [x] ~~**A feature's URLs get no scheme check.**~~ Done: tosijs-3d 0.8.4
-      marks fetched fields `format: 'uri-reference'` (our #91), scene features
-      stamp them as `x-fetched` from the FULL upstream schema, and `validate`
-      holds each to the library rule — `insecure-feature-url` /
-      `unsupported-feature-url`, errors. Keywords such as `checker` pass. A consumer's own feature opts in with plain `format: 'uri-reference'`.
+- [x] ~~**A feature's URLs get no scheme check.**~~ Done, and ENFORCED since
+      the 0.4.0 review: `validate` reports (`insecure-feature-url` /
+      `unsupported-feature-url`), and the loaders refuse (`mountLibraries`
+      skips a refused library; `declaredConfig` drops a refused fetched key
+      before any bind or update). One module, `format/url-policy.ts`, used by
+      both. It classifies urls as the browser parses them, so whitespace, tab
+      and newline tricks and `//other.host` are refused. Keywords such as
+      `checker` pass. It is not a host allow-list: any https host is fine.
 
 - [ ] **Removing a key from a singleton's config does not reset it.**
       `addSingleton` assigns what the config HAS, so deleting `starfieldData`
@@ -143,6 +146,17 @@ release, or verified and too large for one. Both reviews are filed under
       no `<tosi-md>` ourselves, but our pages carry raw HTML (the editor
       element in `editor.md`). Check the doc site on the 1.16 upgrade before
       trusting it.
+
+- [ ] **From the 0.4.0 review and issue #11, deferred:** - `spaceFull <= spaceStart` inverts the space transition, silently. A
+      cross-field warning wants a per-feature check hook; `registerCheck`
+      is global and domain-flavoured, so it isn't the right home. - `biomeMoisture`'s plugin default (0.45) is STEPPE; a green world wants
+      ~0.7. Say so in the panel, or override the default for authoring the way
+      `realtimeScale` is. - Load manta-recon's ensembles through HEAD's `validate`/`build`: the new
+      url errors, and the ^0.8.1 → ^0.8.4 floor (the sun arc moves, PRNG
+      output re-rolls). Update MIGRATING.md with what it finds. - Ask tosijs-3d whether its fetching elements (`<tosi-b3d-library>`, the
+      sky, the ground) should hold an https policy themselves, if the rule
+      should cover pages that do not go through ensemble. - The combat, world and 0.8.4 sky/cloud/climate features still have no
+      `.pw.ts` watching them work, except `land-and-sky`.
 
 ## Format and runtime work the design is waiting on
 

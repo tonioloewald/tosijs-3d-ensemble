@@ -163,3 +163,63 @@ describe("basenameOf", () => {
     expect(basenameOf("https://example.com/")).toBe("");
   });
 });
+
+/*
+  A LIBRARY THE URL POLICY REFUSES IS NEVER MOUNTED — the 0.4.0 review's M2.
+
+  Mounting is fetching, and `mountLibraries` runs BEFORE `buildEnsemble`,
+  which is the first place `validate` sees a document. So a rule that only
+  reported came too late: the reader's browser had already contacted the
+  host. Refused here; still reported by that `validate` run.
+*/
+describe("mountLibraries honours the url policy", () => {
+  const mountedUrls = async (urls: string[]) => {
+    const created: string[] = [];
+    const original = globalThis.customElements;
+    (globalThis as { customElements?: unknown }).customElements = {
+      whenDefined: () => Promise.resolve(),
+    };
+    const host = {
+      getLibrary: () => null,
+      ownerDocument: {
+        createElement: () => {
+          let url = "";
+          return {
+            setAttribute: (k: string, v: string) => {
+              if (k === "url") url = v;
+            },
+            getAttribute: () => null,
+            get ready() {
+              created.push(url);
+              return Promise.resolve();
+            },
+          };
+        },
+      },
+      appendChild: () => {},
+    } as unknown as SceneElement;
+    await mountLibraries(
+      {
+        name: "e",
+        libraries: urls.map((url, i) => ({ name: `k${i}`, url })),
+        pieces: [],
+      },
+      host
+    );
+    (globalThis as { customElements?: unknown }).customElements = original;
+    return created;
+  };
+
+  it("mounts https and relative, refuses http and script schemes", async () => {
+    expect(
+      await mountedUrls([
+        "https://cdn.tosijs.net/kit.glb",
+        "/kits/local.glb",
+        "http://evil.example/x.glb",
+        " http://evil.example/padded.glb",
+        "java\nscript:alert(1)",
+        "//evil.example/x.glb",
+      ])
+    ).toEqual(["https://cdn.tosijs.net/kit.glb", "/kits/local.glb"]);
+  });
+});

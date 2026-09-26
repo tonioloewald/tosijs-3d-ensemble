@@ -21,6 +21,7 @@ Without it that piece renders differently depending on which library finished
 loading first — a bug that reproduces on one machine and not another.
 */
 /*{"parent":"Internals","order":10}*/
+import { urlProblem } from "../format/url-policy.js";
 import type { Ensemble, Piece } from "../format/types.js";
 import type { SceneElement } from "../format/registry.js";
 
@@ -70,6 +71,15 @@ export async function mountLibraries(
   const mounted: LibraryElement[] = [];
   for (const { name, url } of declared) {
     if (!name || !url) continue;
+    /*
+      A library whose url the policy refuses is NEVER MOUNTED. Mounting is
+      fetching, and this runs BEFORE `buildEnsemble` — the first place
+      `validate` sees the document — so a check that only reported would
+      report after the reader's browser had already contacted the host. The
+      refusal is reported by that same `validate` run (`insecure-library-url`
+      / `unsupported-library-url`), so it is refused and said, not dropped.
+    */
+    if (urlProblem(url)) continue;
     let element = host.getLibrary?.(name) ?? null;
     /*
       IDEMPOTENT BY NAME **AND URL**.

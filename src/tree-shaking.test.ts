@@ -117,7 +117,14 @@ describe("tree-shaking", () => {
 
     The ceiling is deliberately loose. This is a smoke alarm, not a budget: a
     test that fails on a 2% drift gets its number bumped without being read,
-    and then it is furniture. Measured at 8.5 kB when written.
+    and then it is furniture.
+
+    It PRINTS the number, because a smoke alarm that is silent until it goes
+    off let 0.4.0 grow the game entry 8.2 → 9.3 kB gz (+13%) and the format
+    kernel 2.2 → 2.8 kB with nothing reporting it; the 0.4.0 review found it by
+    hand. The growth is justified (the url policy, `fetchedKeys`, the cloud
+    deck, moons, the wider sky and terrain picks) and recorded in the
+    changelog. Measured history: 8.5 kB when written (0.3.0 era), 9.28 kB at 0.4.0.
   */
   it("a game's bundle stays about the size a game's bundle should be", async () => {
     const code = await bundle("./src/__fixtures__/game-import.ts");
@@ -128,6 +135,7 @@ describe("tree-shaking", () => {
       101-byte stub — so a ceiling here would have been asserting against 101
       bytes while the real entry grew without limit.
     */
+    console.log(`game entry: ${(gzipped / 1024).toFixed(2)} kB gz`);
     expect(gzipped).toBeGreaterThan(4_000);
     expect(gzipped).toBeLessThan(14_000);
   });

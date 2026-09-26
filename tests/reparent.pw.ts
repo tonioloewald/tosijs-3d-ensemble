@@ -98,6 +98,15 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
 
         So: sample THROUGH the interval and accept only a count that has held
         still for three consecutive reads.
+
+        ⚠️ AND ONLY ONCE THE EDITOR HAS BUILT THE DOCUMENT. "Held still" was not
+        enough on its own: on a loaded machine the backdrop's 3 meshes sat
+        still for three reads before the ensemble arrived, and the FIRST
+        reading — the baseline every trip is compared to — recorded 3. Then
+        twenty perfectly healthy 74-mesh trips failed as "not the scene we
+        started with". Twice, during the 0.4.0 attestation, while other work
+        loaded the machine; never when it was quiet. So stability counts only
+        after `_built` holds a built piece for every piece in the document.
       */
       /*
         40 s, not 15. At twenty trips under headless SwiftShader the page is
@@ -126,7 +135,15 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
           | null;
         const scene = b3d?.scene;
         const count = scene?.meshes?.length ?? 0;
-        stable = count > 0 && count === last ? stable + 1 : 0;
+        // Private in TypeScript, reachable here: the editor's build result.
+        const view = ed as unknown as {
+          _built?: { pieces?: Map<string, unknown> } | null;
+          ensemble?: { pieces?: unknown[] };
+        } | null;
+        const wanted = view?.ensemble?.pieces?.length ?? 0;
+        const built = view?._built?.pieces?.size ?? 0;
+        const ready = wanted > 0 && built >= wanted;
+        stable = ready && count > 0 && count === last ? stable + 1 : 0;
         last = count;
         if (stable >= 3) {
           const canvas = b3d?.shadowRoot?.querySelector(

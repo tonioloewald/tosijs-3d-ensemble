@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -57,7 +56,8 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   throughout, 74 meshes every time, no GL error, no lost context.
 
   It costs ~6 minutes under headless SwiftShader, which is why it keeps its
-  own Playwright project and CI job. `REPARENT_TRIPS` lowers it for a quick
+  own Playwright project. It does not run in CI (see ci.yml): it is an
+  attested lane, run locally at release by `bun run release:attest`. `REPARENT_TRIPS` lowers it for a quick
   local look — but a lower number is a smoke test, not the claim.
 */
 const TRIPS = Number(process.env.REPARENT_TRIPS || 20);
@@ -65,7 +65,7 @@ const TRIPS = Number(process.env.REPARENT_TRIPS || 20);
 test("the scene survives repeated SPA re-parenting", async ({ page }) => {
   // Scaled to the trip count: a trip is a navigation plus a health read that
   // may wait up to 15 s for the count to settle.
-  test.setTimeout(budget(60_000 + TRIPS * 60_000));
+  test.setTimeout(60_000 + TRIPS * 60_000);
   const errors = collectPageErrors(page);
   let loads = 0;
   page.on("load", () => loads++);
@@ -100,7 +100,7 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
         still for three consecutive reads.
       */
       /*
-        40 s (x3 on CI, via `budget`), not 15. At twenty trips under headless SwiftShader the page is
+        40 s, not 15. At twenty trips under headless SwiftShader the page is
         so busy rendering that a 300 ms sleep takes ~3 s, and three of twenty
         trips ran out of a 15 s window — reported `null`, "dead". A trace of
         the same run found every trip settling at 74 meshes, one canvas
@@ -152,7 +152,7 @@ test("the scene survives repeated SPA re-parenting", async ({ page }) => {
         await new Promise((r) => setTimeout(r, 300));
       }
       return null;
-    }, budget(40_000));
+    }, 40_000);
 
   const first = await health();
   expect(first, "the editor never produced a scene at all").not.toBeNull();

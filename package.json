@@ -43,7 +43,8 @@
     "format:check": "bun prettier --check .",
     "tls": "tosijs-dev-certs",
     "tunnel": "tosijs-tunnel",
-    "deploy": "tosijs-deploy"
+    "deploy": "tosijs-deploy",
+    "release:attest": "bun ../tosijs-coding-practices/tools/attest.ts"
   },
   "dependencies": {
     "tosijs-schema": "^1.9.0"

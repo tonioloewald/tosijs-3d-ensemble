@@ -1,15 +1,30 @@
 name: CI
 
-# ⚠️ THIS REPO HAD NO CI UNTIL 0.3.0 SHIPPED, AND THAT IS HOW THE GATE ROTTED.
+# WHAT CI RUNS, AND WHAT IT DELIBERATELY DOES NOT.
 #
-# Four lanes — `bun test`, `typecheck`, `build` (which runs a SECOND typecheck
-# plus the live-example checker) and the Playwright scene lane — were all
-# hand-run. The measured cost: the doc-test corpus went from passing to
-# silently skipped across an upstream upgrade and nobody noticed, which is
-# exactly the failure mode tosijs-ui's own ci.yml records from the other side
-# ("the Playwright lane sat red across 23 tags in ~4 weeks").
+# CI runs everything that does not need a browser: `bun test`, `typecheck`,
+# `build` (a second typecheck plus the live-example checker), the format and
+# tree-clean gates, and the upstream drift guards. Those are fast,
+# deterministic, and mean the same thing on a runner as on a laptop.
 #
-# A lane that is not in CI will rot. Name every lane and run every lane.
+# The BROWSER lanes (`test:scene`, `test:reparent`) are not here, and that is
+# a decision rather than an omission. Owner: "running tests of user facing
+# code in CI is a black hole." Measured on the way to that decision (Sept
+# 2026): WebGL on a runner is SwiftShader on 4 vCPUs, so the land-and-sky
+# sample could not render one frame for a screenshot in six minutes, a test
+# that takes 17 s locally took 90, and the re-parent lane reported trips dead
+# that a laptop measured as merely slow. A day went to CI budgets,
+# CI-only skips and a four-branch bisect, and none of it made the product
+# better.
+#
+# They are still GATES — at release, not per push. `package.json` declares
+# them `releaseDoctor.attestedLanes`; `tools/attest.ts` runs them locally on
+# the release commit and writes `release-attestation.json` with the sha256 of
+# every file the package ships, and `publish.yml` stages only a tarball whose
+# files match it. Run them locally while working: `bun run tests`.
+#
+# The older lesson still holds for what IS here: a lane nobody runs will rot.
+# This one has an owner and a gate; it just does not have a runner.
 
 on:
   push:
@@ -131,76 +146,3 @@ jobs:
       # and we have just deliberately unpinned it.
       - name: Schema drift guards
         run: bun test src/runtime/scene-schemas.test.ts src/runtime/migrate-vocabulary.test.ts
-
-  # The scene lane: real Chromium, real WebGL2 (SwiftShader), asserting the
-  # RENDERER rather than the element. Everything in `unit` runs under happy-dom,
-  # which has no WebGL, no layout and no render loop — so what the features
-  # actually DO is invisible to it. Six defects reached 0.3.0's changelog that
-  # only a real scene could have caught.
-  scene:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # PINNED, and it has to be. `docs/` is the published site and is
-      # COMMITTED, and the tree-clean gate below asserts a rebuild reproduces
-      # it — so CI must bundle with the same toolchain a developer did. It
-      # did not: CI pulled bun 1.4.2 against a `docs/` built with 1.4.0, the
-      # chunk contents differed, and the gate went red on output nobody had
-      # changed.
-      #
-      # ⚠️ A bun upgrade therefore means rebuilding `docs/` and committing it
-      # in the same change. That is the point rather than a nuisance: the
-      # published site should be built by the toolchain the project claims to
-      # use, and a red gate is how you find out it is not.
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: .bun-version
-      - run: bun install --frozen-lockfile
-
-      # The dev server serves HTTPS and refuses to start without a cert.
-      # Locally that is an mkcert-trusted one; here a throwaway self-signed
-      # cert is enough, because the tests run with `ignoreHTTPSErrors` (and
-      # mkcert would want sudo).
-      - name: Throwaway dev TLS cert
-        run: |
-          mkdir -p tls
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-            -keyout tls/key.pem -out tls/certificate.pem \
-            -subj "/CN=localhost" \
-            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-
-      - name: Install Playwright Chromium (+ system deps)
-        run: bunx playwright install --with-deps chromium
-
-      # `workers: 1` is set in playwright.config.ts, and not out of timidity:
-      # every test here drives a WebGL context and Chrome hard-caps live
-      # contexts per process, force-losing the oldest past the limit. Parallel
-      # scene tests evict each other's contexts and fail in whichever order
-      # they happened to run.
-      - name: Scene lane
-        run: bunx playwright test --project=chromium
-
-      # Its own project and its own step, because it builds and tears down an
-      # engine per trip and is ruinously slow downstream of the others.
-      # Twenty trips since tosijs-3d 0.8.4 fixed the context churn (#79):
-      # ~6 minutes locally, likely more on a CI runner — the test's timeout
-      # scales with the trip count.
-      - name: Re-parent lane
-        # SIX trips here, TWENTY at release. Twenty is the claim (fewer cannot
-        # tell "fixed" from "rarer"), and it runs locally before every release
-        # as an attested lane. On a 4-vCPU runner a trip takes ~50 s, so twenty
-        # on every push is ~40 minutes of CI for a result the release gate
-        # already owns. The trace prints each trip, so a dead one on CI says
-        # whether it was slow or broken.
-        env:
-          REPARENT_TRIPS: "6"
-          REPARENT_TRACE: "1"
-        run: bunx playwright test --project=reparent
-
-      - name: Upload report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7

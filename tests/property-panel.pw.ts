@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { budget } from "./budget.js";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
@@ -41,7 +40,7 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   author typed lands where they typed it, and the piece has not moved.
 */
 test("editing a SET string property reaches the document", async ({ page }) => {
-  test.setTimeout(budget(120_000));
+  test.setTimeout(120_000);
   const errors = collectPageErrors(page);
 
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });

@@ -442,7 +442,16 @@ bun run test:scene  # the SCENE lane — real Chromium, real WebGL, real rendere
 bun run tests       # both
 bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
+bun run release:attest  # at release: run the browser lanes, write release-attestation.json
 ```
+
+⚠️ **The browser lanes (`test:scene`, `test:reparent`) do not run in CI, on
+purpose.** Owner: _"running tests of user facing code in CI is a black hole."_
+They are attested at release instead: `release:attest` runs them on the release
+commit and records the sha256 of every file the package ships, and
+`publish.yml` refuses a tarball that does not match. So run them yourself
+before claiming anything about a scene — CI going green says nothing about
+one. Why, measured: see the header of `.github/workflows/ci.yml`.
 
 ⚠️ **`.prettierrc` used to force SINGLE quotes in markdown, and it was
 load-bearing.** tosijs-ui's live-example parser accepted only single-quoted

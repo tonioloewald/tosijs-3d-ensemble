@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=cd1842dbb5e9" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=f46f5668d085" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Ensemble Editor — specification</h1>
 <!--{"pin":"bottom","parent":"Project","order":1}--><p><strong>Status:</strong> proposal. Written after building a working prototype inside
@@ -1480,6 +1480,22 @@ phase after bind and link, and it is the reason to decide this early: the
 two-phase build is load-bearing and a third phase changes its contract.</p>
 </li>
 </ol>
+<h3>Moons are cosmetic, and that is a deliberate hack</h3>
+<p>A <code>moon</code> piece is tosijs-3d&#39;s <code>&lt;tosi-b3d-moon&gt;</code>: a disc at a fixed place on the
+star sphere, with its phase taken from the real sun. No orbit, no period, no
+eclipses, no light, and no second sun.</p>
+<p>A proper model probably changes the SHAPE, not only the detail. Once moons have
+orbits, where a moon is and what phase it shows at a given hour are derived
+from the system and the clock, not placed by hand, and binaries are the same.
+Then an ensemble should not list moons at all. It should say which system it
+stands in (likely a star address in the voxel galaxy plus a planet, on the
+sky) and let the sky work the rest out. One authored piece per moon would be
+the wrong unit.</p>
+<p><strong>Kept anyway, on purpose.</strong> Owner: <em>&quot;keep the moon stuff in on the assumption
+it will likely be useful for Manta and if it&#39;s a hack it&#39;s a hack. We can
+always turn it into a deprecated interface.&quot;</em> So when the system model lands:
+deprecate <code>moon</code>, keep reading it, and have it win over nothing rather than
+over the model. Do not reopen whether to ship it.</p>
 <h2>Open questions — with recommendations</h2>
 <p>Answered rather than left hanging, since each affects the format and the format
 is what goes upstream first.</p>

@@ -1331,6 +1331,26 @@ Three decisions to make before any of it is built:
    phase after bind and link, and it is the reason to decide this early: the
    two-phase build is load-bearing and a third phase changes its contract.
 
+### Moons are cosmetic, and that is a deliberate hack
+
+A `moon` piece is tosijs-3d's `<tosi-b3d-moon>`: a disc at a fixed place on the
+star sphere, with its phase taken from the real sun. No orbit, no period, no
+eclipses, no light, and no second sun.
+
+A proper model probably changes the SHAPE, not only the detail. Once moons have
+orbits, where a moon is and what phase it shows at a given hour are derived
+from the system and the clock, not placed by hand, and binaries are the same.
+Then an ensemble should not list moons at all. It should say which system it
+stands in (likely a star address in the voxel galaxy plus a planet, on the
+sky) and let the sky work the rest out. One authored piece per moon would be
+the wrong unit.
+
+**Kept anyway, on purpose.** Owner: _"keep the moon stuff in on the assumption
+it will likely be useful for Manta and if it's a hack it's a hack. We can
+always turn it into a deprecated interface."_ So when the system model lands:
+deprecate `moon`, keep reading it, and have it win over nothing rather than
+over the model. Do not reopen whether to ship it.
+
 ## Open questions — with recommendations
 
 Answered rather than left hanging, since each affects the format and the format

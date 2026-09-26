@@ -3,7 +3,11 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [0.4.0] — 2026-09-26
+
+A **minor**: the peer floor moved to tosijs-3d `^0.8.4`, and every url a
+document carries is held to https — enforced, not only reported. Three review
+passes shaped that rule; `reviews/0.4.0-*.md` record each.
 
 ### ⚠️ Breaking
 

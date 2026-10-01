@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=93314a7bc4fc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=2e717480355d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -49,6 +49,10 @@ the issue gets refined in discussion while the local copy quietly ages into a
 description of a problem that has moved (<code>practices/cross-project.md</code>).</p>
 <p>So each row is a link and one line. Mark <code>✅ RESOLVED (fixed in pkg@version)</code>
 when it lands, and close the issue.</p>
+<p><strong>Status lives on the virta board</strong> (since 2026-10-01): each row was imported
+as a card, tagged <code>waiting-upstream</code> while the issue is open and
+<code>fixed-upstream</code> while a workaround here still has to go. A row below can be
+older than its card; when they disagree, the card wins.</p>
 <h2>tosijs-3d</h2>
 <table>
 <thead>
@@ -277,6 +281,11 @@ when it lands, and close the issue.</p>
 <td>42</td>
 <td><strong>A key is delivered twice when a handler re-renders its <code>fieldGroup</code> mid-keystroke</strong> — since the #82 fix. Our rename field doubled every character; deferred past the event, 3/3 single</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/94">#94</a></td>
+</tr>
+<tr>
+<td>43</td>
+<td><strong><code>inputField</code> leaks itself and its host.</strong> Each field adds its keyboard-glyph repaint closure to a module-level <code>Set</code> (<code>autoKeyboardListeners</code>, keyboard.js) that is never pruned, so every editor visit retains ~3,970 nodes and its disposed scene and engine. Found by the re-parent lane slowing 5 s → 40 s per trip; located with a heap-snapshot retainer path. Present since at least 0.8.4. <strong>Our re-parent lane is red until it lands</strong></td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/96">#96</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>

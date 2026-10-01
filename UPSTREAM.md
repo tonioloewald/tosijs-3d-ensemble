@@ -11,6 +11,11 @@ description of a problem that has moved (`practices/cross-project.md`).
 So each row is a link and one line. Mark `✅ RESOLVED (fixed in pkg@version)`
 when it lands, and close the issue.
 
+**Status lives on the virta board** (since 2026-10-01): each row was imported
+as a card, tagged `waiting-upstream` while the issue is open and
+`fixed-upstream` while a workaround here still has to go. A row below can be
+older than its card; when they disagree, the card wins.
+
 ## tosijs-3d
 
 |     | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Issue                                                      |

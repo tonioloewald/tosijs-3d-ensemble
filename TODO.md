@@ -83,15 +83,10 @@ release, or verified and too large for one. Both reviews are filed under
       have gone red on the day the fix landed, for the opposite reason. **A fix
       is not covered until the test that covers it has run green once.**
 
-- [ ] **Remove the `onBeforeViewRenderObservable` filter** from
-      `tests/page-errors.ts` when **tosijs-ui#191** lands. ⚠️ It was filed as
-      tosijs-3d#78, "Linux only, non-fatal", and was neither: it fires on every
-      load on every machine, and Babylon fails to compile the `layer` and
-      `line` shaders beside it. Cause: the doc site evaluates its ESM entry
-      twice (`hydrate.js?v=<hash>` from the page, bare `../hydrate.js` from
-      the chunks). Found only because an upgrade broke the re-parent test and
-      the page got looked at again — the filter had hidden it since the day it
-      was written. Corrected on #78.
+- [x] ~~**Remove the `onBeforeViewRenderObservable` filter**~~ Done with
+      tosijs-ui 1.16.0 (#191): the entry is `hydrate-<hash>.js`, one URL.
+      Measured on removal: 10 errors and 2 shader-compile failures per load
+      before, 0 and 0 after; the scene lane is green with the filter gone.
 
 - [x] ~~**Library URLs get no scheme check.**~~ Done, at the owner's call:
       https required, relative allowed, `http://localhost` REFUSED since 0.4.0's review (it applied on every page), everything
@@ -183,6 +178,15 @@ release, or verified and too large for one. Both reviews are filed under
       built from it (placeholder boxes, disposal order, build → dispose →
       build idempotence) is untested.
 
+- [ ] **The re-parent lane is RED until tosijs-3d#96 lands** — a real leak,
+      not flakiness: every editor visit retains its ~3,970 nodes through a
+      never-pruned module `Set` in tosijs-3d's keyboard.js, so trips slow from
+      5 s to 40 s+ until some miss the settle window. It is an attested lane, so
+      it blocks the next release until fixed. When it lands: per-trip `Nodes`
+      should be flat (the probe is in practices/testing.md "Finding a leak"),
+      and consider asserting that in `reparent.pw.ts` so the next leak names
+      itself instead of arriving as slowness.
+
 ## Format and runtime work the design is waiting on
 
 - [ ] **`Piece.ensemble` flattening.** Reserved, documented, unimplemented —
@@ -216,10 +220,11 @@ release, or verified and too large for one. Both reviews are filed under
       pins that `inputField` still cannot take a box — falsified by removing
       the directive.
 
-- [ ] **Un-ignore `editor.md`** when tosijs-ui#165 lands. The build rewrites
-      its `<!-- toc -->` block in a shape Prettier undoes, so format and build
-      cannot both be green — and ignoring it makes the repo's one hand-written
-      doc page the only file the formatter does not check.
+- [x] ~~**Un-ignore `editor.md`**~~ Done, by a different route than #165:
+      tosijs-ui 1.16 says Prettier should not touch markdown at all
+      (`requirePragma` for `*.md`, adopted in `.prettierrc`), so the build's
+      toc rewrite has nothing to fight. `format:check` stays green across a
+      build with `editor.md` back in scope.
 
 - [x] ~~**Remove the `.prettierrc` markdown override**~~ Done. tosijs-ui#141
       landed in 1.14.0 and we are on 1.14.1, so `.prettierrc` is now `{}` and

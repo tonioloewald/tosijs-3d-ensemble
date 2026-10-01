@@ -3,6 +3,42 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### ⚠️ Breaking
+
+- **Peer floors: `tosijs-3d` `^0.8.7` (was `^0.8.4`) and `tosijs` `^1.10.3`
+  (was `^1.10.1`).** tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
+  shafts, storms that darken the day), world presets, crater fields and
+  self-fitting scene panels; and fixes the cloud deck's local weather, which
+  was mirrored north-south (an orographic cloud sat at the mirror image of its
+  mountain). The tosijs step is for our doc tooling — tosijs-ui 1.16 needs
+  1.10.3 — and we develop against the floor.
+
+### Fixed
+
+- **Every page of the doc site ran its code twice**, which we had filtered for
+  weeks as "Cannot redefine property: onBeforeViewRenderObservable, Linux
+  only". tosijs-ui 1.16.0 (#191, our report) names the entry
+  `hydrate-<hash>.js`, so the page and its chunks agree on one URL. Measured: 10
+  errors and 2 shader-compile failures per load before, 0 and 0 after. The
+  test filter that hid it is gone.
+
+### Known issue
+
+- **The editor leaks on SPA navigation** — each visit to a page with the editor
+  retains its whole UI (~4,000 nodes) for the life of the page, through a
+  module-level set in tosijs-3d's `inputField` (tosijs-3d#96). It was present
+  in 0.4.0 too. Harmless on a page that mounts the editor once; it grows on a
+  site that navigates to and from it repeatedly.
+
+### Changed
+
+- **Prettier no longer formats markdown** (tosijs-ui 1.16's rule,
+  `requirePragma` for `*.md`). Markdown is authored prose; all Prettier did to
+  it was rewrite it. This also ends the build-versus-format fight over
+  `editor.md`, which is back in the format check.
+
 ## [0.4.0] — 2026-09-26
 
 A **minor**: the peer floor moved to tosijs-3d `^0.8.4`, and every url a

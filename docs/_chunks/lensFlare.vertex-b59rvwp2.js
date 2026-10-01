@@ -1,4 +1,0 @@
-import{vR}from"../hydrate.js";export{vR as lensFlareVertexShaderWGSL};
-
-//# debugId=876E4F079268CCA564756E2164756E21
-//# sourceMappingURL=lensFlare.vertex-b59rvwp2.js.map

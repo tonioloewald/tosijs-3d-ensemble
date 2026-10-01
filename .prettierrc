@@ -1,1 +1,8 @@
-{}
+{
+  "overrides": [
+    {
+      "files": ["*.md", "*.markdown", "*.mdx"],
+      "options": { "requirePragma": true }
+    }
+  ]
+}

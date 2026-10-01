@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=8157e3dfefbe" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=375e670ceca6" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1b367ffbe0ff" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=93314a7bc4fc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -339,7 +339,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/82">tosijs-3d #82</a></td>
 </tr>
 <tr>
-<td><strong><code>Cannot redefine property: onBeforeViewRenderObservable</code> — MIS-FILED, and it was ours to find.</strong> Filed as tosijs-3d#78 (&quot;Linux only, non-fatal&quot;); it is neither. The doc site loads its ESM entry twice (<code>hydrate.js?v=&lt;hash&gt;</code> from the page, bare <code>../hydrate.js</code> from 268 chunks), so Babylon&#39;s once-only prototype patch runs twice and shaders fail to compile. Stripping the stamp: 10 errors → 0, alternating runs. Corrected on #78; filtered by name in <code>tests/page-errors.ts</code> until #191 lands</td>
+<td>✅ <strong>RESOLVED</strong> (<a href="mailto:tosijs-ui@1.16.0">tosijs-ui@1.16.0</a>) — the doc site loaded its ESM entry twice (<code>hydrate.js?v=&lt;hash&gt;</code> from the page, <code>../hydrate.js</code> from the chunks), which is what we had mis-filed as tosijs-3d#78. The entry is <code>hydrate-&lt;hash&gt;.js</code> now; our filter is gone, and a load measures 0 errors and 0 shader failures where it measured 10 and 2</td>
 <td><a href="https://github.com/tonioloewald/tosijs-ui/issues/191">tosijs-ui #191</a></td>
 </tr>
 <tr>
@@ -355,7 +355,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td><a href="https://github.com/tonioloewald/tosijs-ui/issues/159">tosijs-ui #159</a>, <a href="https://github.com/tonioloewald/tosijs-ui/issues/158">#158</a></td>
 </tr>
 <tr>
-<td><strong>The doc system rewrites <code>editor.md</code>&#39;s <code>&lt;!-- toc --&gt;</code> block on every build</strong>, without the blank line Prettier&#39;s markdown formatter always inserts — so <code>format</code> and <code>build</code> undo each other and a <code>--check</code> gate cannot stay green. Surfaced by adding CI. <code>editor.md</code> is in <code>.prettierignore</code> meanwhile, which makes the repo&#39;s one hand-written doc page the only file the formatter does not check</td>
+<td><del>The doc system rewrites <code>editor.md</code>&#39;s toc block in a shape Prettier undoes</del> — <strong>moot since tosijs-ui 1.16</strong>: Prettier no longer formats markdown (<code>requirePragma</code>), so <code>editor.md</code> is back in the format check</td>
 <td><a href="https://github.com/tonioloewald/tosijs-ui/issues/165">tosijs-ui #165</a></td>
 </tr>
 <tr>
@@ -542,6 +542,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate.js?v=8157e3dfefbe"></script>
+  <script type="module" src="../hydrate-h62gx9ve.js"></script>
 </body>
 </html>

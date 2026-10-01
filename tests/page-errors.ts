@@ -40,33 +40,27 @@ export const collectPageErrors = (page: {
 /*
   KNOWN, FILED, AND STILL GATED FOR EVERYTHING ELSE.
 
-  Two errors are filtered BY NAME rather than by dropping the check, because a
+  One error is filtered BY NAME rather than by dropping the check, because a
   page error nobody asserted on is still a broken page:
 
   - **`dev.js`** — the dev server's live-reload client, served on its own port
     and absent under `bun bin/site.ts`. An artifact of the harness.
-  - **`Cannot redefine property: onBeforeViewRenderObservable`** —
-    tosijs-ui#191. ⚠️ THIS ENTRY'S FIRST EXPLANATION WAS WRONG, TWICE. It was
-    filed as tosijs-3d#78, "Linux/SwiftShader only, non-fatal". It is neither:
-    it reproduces on every load on macOS too — we never looked again, because
-    this filter hid it from the day it was written — and Babylon logs
-    `Unable to compile effect` for the `layer` and `line` shaders beside it.
-    The cause is our doc site loading its ESM entry TWICE: the page as
-    `hydrate.js?v=<hash>`, the code-split chunks as bare `../hydrate.js`, so
-    Babylon's once-only prototype patch runs twice. Measured by rewriting the
-    page to the bare URL: 10 errors and 2 shader failures → 0 and 0,
-    alternating runs. A filter is a place a bug goes to be forgotten; this
-    one needed a failing upgrade to be looked at again.
+
+  Collected, 2026-10: **`Cannot redefine property:
+  onBeforeViewRenderObservable`**, filtered for weeks as tosijs-3d#78 ("Linux
+  only, non-fatal" — it was neither). It was our doc site loading its ESM entry
+  twice, `hydrate.js?v=<hash>` from the page and `../hydrate.js` from the
+  chunks, so Babylon's once-only prototype patch ran twice and broke shaders.
+  tosijs-ui 1.16.0 fixed it (#191) by naming the entry `hydrate-<hash>.js`.
+  Measured on removal: 10 errors and 2 shader-compile failures per load
+  before, 0 and 0 after, one entry URL. A filter is a place a bug goes to be
+  forgotten; this one came out the day its issue landed.
 
   Each entry comes out when its issue lands. A filter with no issue behind it
   is how a lane stops being evidence.
 */
 const KNOWN: ReadonlyArray<{ match: string; why: string }> = [
   { match: "/dev.js", why: "dev-server live-reload client, absent in a build" },
-  {
-    match: "Cannot redefine property: onBeforeViewRenderObservable",
-    why: "tosijs-ui#191 — the ESM entry is evaluated twice (stamped + bare URL)",
-  },
 ];
 
 export const realErrors = (errors: string[]): string[] =>

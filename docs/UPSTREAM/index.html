@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=9dcdbcbaef18" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=a129f92b5080" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -296,6 +296,11 @@ older than its card; when they disagree, the card wins.</p>
 <td>45</td>
 <td><strong>No schema-driven panel</strong>, and the sections live in the demo. Land and Sky hand-writes 43 rows (in step with the schemas today, by hand); our <code>schema-panel.ts</code> is 586 lines of form generator for tosijs-3d&#39;s schemas. Asks for <code>schemaPanel3d</code> and <code>x-section</code></td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/98">#98</a></td>
+</tr>
+<tr>
+<td>46</td>
+<td><strong>Collapsible sections fold only in <code>&lt;tosi-b3d&gt;</code>&#39;s scene panel.</strong> The fold is private (<code>_foldSections</code>); <code>panel3d</code> ignores a row&#39;s <code>section</code>, so in our docked panels a 0.8.7 section header is a chevron that does nothing</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/99">#99</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>

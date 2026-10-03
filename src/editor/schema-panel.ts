@@ -44,9 +44,18 @@ at rest. `tests/schema-readout.pw.ts` hovers a real one.
 
 Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
+
+## Sections
+
+A property may name a section (`x-section: "Stars"`, or `{ title, icon }`).
+Where the section changes, the panel gets a collapsible header, and the host
+folds the rows with tosijs-3d's `foldSections` (0.8.8, our tosijs-3d#99). The
+first section starts open and the rest folded; what you open is remembered.
+The sky is the reason: 30 fields in one column before it had sections.
 */
 /*{"parent":"Internals","order":7}*/
 import {
+  foldSections,
   iconGrid3d,
   label3d,
   panel3d,
@@ -173,6 +182,28 @@ export interface PropertySpec {
    * nowhere else to put it.
    */
   "x-useful"?: [number, number];
+  /**
+   * The SECTION this property belongs to: a caption, or a caption and an icon.
+   *
+   * A new value starts a section, so the properties of one section must be
+   * contiguous in declaration order. `schemaWidgets` emits a collapsible
+   * `label3d` where the section changes, and the panel that hosts the rows
+   * folds them with tosijs-3d's `foldSections`.
+   *
+   * It is the spelling tosijs-3d#98 asks upstream to put in the scene schemas
+   * themselves. Until then the sky's section table is ours (in
+   * `features-scene.ts`), and if upstream ships the same shape, the table goes
+   * and nothing here changes.
+   */
+  "x-section"?: string | { title: string; icon?: string };
+}
+
+/** A property's section, normalised; `undefined` when it declares none. */
+export function sectionOf(
+  spec: PropertySpec
+): { title: string; icon?: string } | undefined {
+  const s = spec["x-section"];
+  return typeof s === "string" ? { title: s } : s;
 }
 
 /**
@@ -286,6 +317,12 @@ export interface SchemaPanelOptions {
    * `handleChange` for widgets that have no gesture to end.
    */
   handleCommit?: (key: string, value: unknown, describe?: string) => void;
+  /**
+   * Prefixed to every section header's caption, so two features' sections
+   * of the same name are two sections. `foldSections` keys its open set by
+   * caption, and the editor's property panel hosts many features at once.
+   */
+  sectionPrefix?: string;
   /** Panel heading. Omitted for an embedded group. */
   title?: string;
   width?: number;
@@ -329,8 +366,31 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
     options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
+  let section: string | undefined;
+  let sections = 0;
 
   for (const [key, spec] of Object.entries(properties)) {
+    /*
+      A SECTION HEADER WHERE THE SECTION CHANGES — decided before `x-requires`,
+      so a section whose first field is hidden still gets its header. The
+      first section opens and the rest start folded: the point is a panel
+      that fits, and the open set is remembered once someone opens another.
+    */
+    const sec = sectionOf(spec);
+    if (sec && sec.title !== section) {
+      section = sec.title;
+      widgets.push(
+        label3d({
+          text: options.sectionPrefix
+            ? `${options.sectionPrefix} · ${sec.title}`
+            : sec.title,
+          ...(sec.icon ? { icon: sec.icon } : {}),
+          collapsible: true,
+          open: sections++ === 0,
+        })
+      );
+    }
+
     const requires = spec["x-requires"];
     const lit = Array.isArray(values.cells) ? (values.cells as number[]) : [];
     const satisfied = (k: string, v: unknown) => {
@@ -565,22 +625,35 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
   return widgets;
 }
 
-/** A standalone panel for one schema. */
+/**
+ * A standalone panel for one schema.
+ *
+ * Sections fold: a panel is laid out once, so a header's tap REBUILDS it from
+ * fresh rows and swaps the new element in where the old one was.
+ */
 export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
-  const widgets = schemaWidgets(options);
-  const heading = options.title
-    ? [label3d({ text: options.title, bold: true })]
-    : [];
-  return panel3d(
-    {
-      width: options.width ?? 260,
-      // Sized by content (tosijs-3d 0.7.5's default) with a bound to scroll
-      // past rather than a guess to clip against.
-      maxHeight: options.maxHeight ?? 420,
-      padding: 10,
-      gap: 6,
-    },
-    ...(heading as never[]),
-    ...(widgets as never[])
-  );
+  const heading = () =>
+    options.title ? [label3d({ text: options.title, bold: true })] : [];
+  let panel: SVGSVGElement;
+  const build = (): SVGSVGElement =>
+    panel3d(
+      {
+        width: options.width ?? 260,
+        // Sized by content (tosijs-3d 0.7.5's default) with a bound to scroll
+        // past rather than a guess to clip against.
+        maxHeight: options.maxHeight ?? 420,
+        padding: 10,
+        gap: 6,
+      },
+      ...(heading() as never[]),
+      ...(foldSections(schemaWidgets(options) as never[], {
+        repaint: () => {
+          const old = panel;
+          panel = build();
+          old.replaceWith(panel);
+        },
+      }) as never[])
+    );
+  panel = build();
+  return panel;
 }

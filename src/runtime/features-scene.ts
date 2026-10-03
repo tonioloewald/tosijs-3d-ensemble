@@ -317,6 +317,44 @@ const fetchedOf = (
   return out;
 };
 
+/**
+ * Mark properties with the section they belong to (`x-section`), given the
+ * field each section starts at. Everything from a start key up to the next
+ * one is in that section, in declaration order.
+ *
+ * A start key the properties lack is a hard error, not a warning: a section
+ * table that silently stops matching would quietly merge two sections.
+ */
+const sectioned = (
+  properties: Record<string, Spec>,
+  starts: Record<string, { title: string; icon?: string }>
+): Record<string, Spec> => {
+  for (const key of Object.keys(starts)) {
+    if (!(key in properties))
+      throw new Error(`tosijs-3d-ensemble: section starts at missing "${key}"`);
+  }
+  let current: { title: string; icon?: string } | undefined;
+  const out: Record<string, Spec> = {};
+  for (const [key, spec] of Object.entries(properties)) {
+    current = starts[key] ?? current;
+    out[key] = current ? { ...spec, "x-section": current } : spec;
+  }
+  return out;
+};
+
+/*
+  The sky's sections, keyed by the field each starts at. The icons are
+  tosijs-3d's own names, the ones Land and Sky uses for the same groups, so a
+  tab strip (`foldSections`' `mode: 'tabs'`) reads the same in both.
+*/
+const SKY_SECTIONS = {
+  timeOfDay: { title: "Time", icon: "sun" },
+  atmosphere: { title: "Air", icon: "sky" },
+  sunColor: { title: "Sun & moon", icon: "moon" },
+  starfieldData: { title: "Stars", icon: "star" },
+  spaceStart: { title: "Space", icon: "earth" },
+};
+
 const pick = (
   name: keyof typeof sceneSchemas,
   keys: readonly string[],
@@ -868,13 +906,14 @@ export function registerSceneFeatures(): void {
       */
       "x-accepts": acceptsOf("skybox"),
       "x-fetched": fetchedOf("skybox"),
-      properties: pick(
-        "skybox",
-        [
-          "timeOfDay",
-          "realtimeScale",
-          "latitude",
-          /*
+      properties: sectioned(
+        pick(
+          "skybox",
+          [
+            "timeOfDay",
+            "realtimeScale",
+            "latitude",
+            /*
             ⚠️ `azimuth` IS GONE FROM THE PANEL, because it does nothing.
             `b3d-skybox` writes it to `material.azimuth`, and its own
             SkyMaterial wrapper defines that property with a no-op setter
@@ -884,29 +923,29 @@ export function registerSceneFeatures(): void {
             even alive it would be the wrong slider. tosijs-3d#86. A file may
             still carry it — `x-accepts` keeps it — it just is not offered.
           */
-          // The atmosphere: how much air, how hazy, how it scatters.
-          /*
+            // The atmosphere: how much air, how hazy, how it scatters.
+            /*
             A WORLD'S OWN AIR (tosijs-3d 0.8.4, our #89). `atmosphere` 1 is
             Earth and 0 the Moon — black noon, stars out, a hard sun; `dust`
             is the other half of a sky, a bright haze the tint colours, which
             is how Mars is almost no air and a butterscotch sky. The tints
             colour only the scattered light, keeping its brightness.
           */
-          "atmosphere",
-          "dust",
-          "zenithTint",
-          "horizonTint",
-          "tintStrength",
-          "turbidity",
-          "luminance",
-          "rayleigh",
-          "mieCoefficient",
-          "mieDirectionalG",
-          "sunColor",
-          "duskColor",
-          "moonColor",
-          "moonIntensity",
-          /*
+            "atmosphere",
+            "dust",
+            "zenithTint",
+            "horizonTint",
+            "tintStrength",
+            "turbidity",
+            "luminance",
+            "rayleigh",
+            "mieCoefficient",
+            "mieDirectionalG",
+            "sunColor",
+            "duskColor",
+            "moonColor",
+            "moonIntensity",
+            /*
             THE NIGHT SKY. `starfieldData` + `starfieldCube` are URL ROOTS of
             the encoded galaxy (`<root>_px.png` …). tosijs-3d hosts versioned,
             pinned pairs at `https://3d.tosijs.net/sky/<version>/stars` and
@@ -920,30 +959,38 @@ export function registerSceneFeatures(): void {
             data cube was ENCODED and must match it, so they are facts about
             an asset rather than choices about a sky.
           */
-          "starfieldData",
-          "starfieldCube",
-          "starfieldTilt",
-          "starfield",
-          "starfieldSeed",
-          // The look of the stars, all live uniforms: brightness, the faint
-          // mass, and scintillation — which is the air, so an airless world
-          // does not twinkle.
-          "starfieldGain",
-          "starfieldFloor",
-          "starfieldTwinkle",
-          "nebulae",
-          "nebulaBrightness",
-          // Leaving the atmosphere: a height BAND over which the sky fades to
-          // `spaceColor`. Off while `spaceFull <= spaceStart`.
-          "spaceStart",
-          "spaceFull",
-          "spaceColor",
-          "applyFog",
-        ],
-        {
-          timeOfDay: { default: 11 },
-          realtimeScale: { default: 0, title: "Time speed" },
-        }
+            "starfieldData",
+            "starfieldCube",
+            "starfieldTilt",
+            "starfield",
+            "starfieldSeed",
+            // The look of the stars, all live uniforms: brightness, the faint
+            // mass, and scintillation — which is the air, so an airless world
+            // does not twinkle.
+            "starfieldGain",
+            "starfieldFloor",
+            "starfieldTwinkle",
+            "nebulae",
+            "nebulaBrightness",
+            // Leaving the atmosphere: a height BAND over which the sky fades to
+            // `spaceColor`. Off while `spaceFull <= spaceStart`.
+            "spaceStart",
+            "spaceFull",
+            "spaceColor",
+            "applyFog",
+          ],
+          {
+            timeOfDay: { default: 11 },
+            realtimeScale: { default: 0, title: "Time speed" },
+          }
+        ),
+        /*
+        SECTIONS, because thirty fields in one column is not a panel. Each
+        entry names the field a section STARTS at, so the pick list above stays
+        the one list of keys. Ours until tosijs-3d#98 puts sections in
+        `skyboxSchema()` itself; then this table goes.
+      */
+        SKY_SECTIONS
       ),
     },
     bind: (_piece, cfg, ctx) => {

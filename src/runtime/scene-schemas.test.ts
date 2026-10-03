@@ -257,3 +257,26 @@ describe("cloudDeck maps booleans to the element's on/off", () => {
     expect(el.shadows).toBe("on");
   });
 });
+
+/*
+  THE SKY'S SECTIONS cover every field, contiguously.
+
+  `x-section` is marked from a table of START keys, so a field added to the
+  pick list lands in whatever section precedes it — which is right — and a
+  start key that leaves the list throws at registration. This checks the
+  result: every sky field has a section, and each section is one run.
+*/
+describe("the sky panel is sectioned", () => {
+  it("every field has a section, and sections are contiguous", () => {
+    registerSceneFeatures();
+    const props = (
+      featureRegistration("skybox")!.schema as {
+        properties: Record<string, { "x-section"?: { title: string } }>;
+      }
+    ).properties;
+    const titles = Object.values(props).map((p) => p["x-section"]?.title);
+    expect(titles.every((t) => typeof t === "string")).toBe(true);
+    const runs = titles.filter((t, i) => t !== titles[i - 1]);
+    expect(runs).toEqual(["Time", "Air", "Sun & moon", "Stars", "Space"]);
+  });
+});

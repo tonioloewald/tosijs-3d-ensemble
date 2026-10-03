@@ -72,6 +72,7 @@ import {
   row3d,
   select3d,
   euler3d,
+  foldSections,
   iconGrid3d,
   slider3d,
   toggle3d,
@@ -3952,6 +3953,9 @@ export class EnsembleEditor extends Component {
       const widgets = schemaWidgets({
         schema: registration.schema,
         values,
+        // Section captions carry the feature's name, so two features'
+        // "Air" sections are folded and remembered separately.
+        sectionPrefix: name,
         boundKeys,
         fields: panelFields,
         /*
@@ -3997,8 +4001,20 @@ export class EnsembleEditor extends Component {
       // does not know about has its keystrokes routed to one it does.
       if (panelFields.length)
         inputs.push({ fields: panelFields } as { fields: unknown[] });
+      /*
+        EVERY FEATURE HEADING IS A SECTION HEADER, open by default.
+
+        Sections are flat: a header owns every row up to the NEXT header. So
+        once the sky has sections of its own, a plain heading for the feature
+        after it would be folded away inside the sky's last section. Making
+        each heading a header ends the previous feature's sections, and lets a
+        long feature be folded away whole.
+
+        A feature with sections folds per section; folding its own heading
+        hides only the rows before its first section.
+      */
       fields.push(
-        label3d({ text: name, muted: true, compact: true }),
+        label3d({ text: name, collapsible: true, open: true }),
         ...(widgets as never[])
       );
     }
@@ -4121,7 +4137,16 @@ export class EnsembleEditor extends Component {
               }),
             ]
           : []),
-        ...(fields as never[])
+        /*
+          FOLDED BY tosijs-3d's `foldSections` (0.8.8, our #99): the rows to
+          show, with folded sections left out. A panel is laid out once, so a
+          header's tap repaints the chrome, which builds this again. The open
+          set is remembered per page under one key for the whole panel.
+        */
+        ...(foldSections(fields as never[], {
+          key: "tosi-ensemble-editor:properties",
+          repaint: () => this._renderChrome(),
+        }) as never[])
       )
     );
 

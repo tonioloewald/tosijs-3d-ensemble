@@ -318,3 +318,69 @@ describe("binding is a type-level fact again", () => {
     expect(typeof typeOnly).toBe("function");
   });
 });
+
+/*
+  SECTIONS: a header where the section changes, and only there.
+
+  The sky is thirty fields; tosijs-3d 0.8.8's `foldSections` folds any panel
+  whose rows carry collapsible headers. What this file owns is emitting the
+  headers — one per section, captioned with the feature, first one open — so
+  the fold has something to fold.
+*/
+describe("x-section puts collapsible headers between sections", () => {
+  const sectionsOf = (
+    properties: Record<string, unknown>,
+    sectionPrefix?: string
+  ) =>
+    schemaWidgets({
+      schema: { properties },
+      values: {},
+      handleChange: () => {},
+      ...(sectionPrefix ? { sectionPrefix } : {}),
+    } as never)
+      .map(
+        (w) => (w as { section?: { title: string; open?: boolean } }).section
+      )
+      .filter((s) => s !== undefined);
+
+  it("emits one header per section, in order, first one open", () => {
+    const sections = sectionsOf({
+      a: { type: "number", minimum: 0, maximum: 1, "x-section": "Air" },
+      b: { type: "number", minimum: 0, maximum: 1, "x-section": "Air" },
+      c: {
+        type: "boolean",
+        "x-section": { title: "Stars", icon: "star" },
+      },
+    });
+    expect(sections.map((s) => [s!.title, s!.open])).toEqual([
+      ["Air", true],
+      ["Stars", false],
+    ]);
+  });
+
+  it("prefixes captions so two features' sections stay distinct", () => {
+    const [first] = sectionsOf(
+      { a: { type: "boolean", "x-section": "Air" } },
+      "skybox"
+    );
+    expect(first!.title).toBe("skybox · Air");
+  });
+
+  it("a schema without sections gets no headers", () => {
+    expect(
+      sectionsOf({ a: { type: "number", minimum: 0, maximum: 1 } })
+    ).toEqual([]);
+  });
+
+  it("a section whose first field is hidden still gets its header", () => {
+    const sections = sectionsOf({
+      a: {
+        type: "boolean",
+        "x-section": "Air",
+        "x-requires": { mode: "never" },
+      },
+      b: { type: "boolean", "x-section": "Air" },
+    });
+    expect(sections.map((s) => s!.title)).toEqual(["Air"]);
+  });
+});

@@ -7,13 +7,26 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer floors: `tosijs-3d` `^0.8.7` (was `^0.8.4`) and `tosijs` `^1.10.3`
-  (was `^1.10.1`).** tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
+- **Peer floors: `tosijs-3d` `^0.8.8` (was `^0.8.4`) and `tosijs` `^1.10.3`
+  (was `^1.10.1`).** The editor needs 0.8.8's `foldSections` (below).
+  tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
   shafts, storms that darken the day), world presets, crater fields and
   self-fitting scene panels; and fixes the cloud deck's local weather, which
   was mirrored north-south (an orographic cloud sat at the mirror image of its
   mountain). The tosijs step is for our doc tooling — tosijs-ui 1.16 needs
   1.10.3 — and we develop against the floor.
+
+### Added
+
+- **The property panel has sections, and they fold.** The sky was thirty
+  fields in one column; it is now Time, Air, Sun & moon, Stars and Space, the
+  first open and the rest folded, and what you open is remembered. A schema
+  declares sections with `x-section` (a caption, or `{ title, icon }`) on its
+  properties, so a consumer's feature gets them the same way. Every feature
+  heading is now a collapsible header too. Folding is tosijs-3d 0.8.8's
+  `foldSections`, which exists because we asked (tosijs-3d#99); sections in
+  tosijs-3d's own schemas are asked for in tosijs-3d#98, and the sky's table
+  goes when they land. `tests/property-sections.pw.ts` taps a header.
 
 ### Fixed
 

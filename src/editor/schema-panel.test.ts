@@ -320,67 +320,77 @@ describe("binding is a type-level fact again", () => {
 });
 
 /*
-  SECTIONS: a header where the section changes, and only there.
+  SECTIONS: a header before each of the schema's `x-sections`.
 
-  The sky is thirty fields; tosijs-3d 0.8.8's `foldSections` folds any panel
-  whose rows carry collapsible headers. What this file owns is emitting the
-  headers — one per section, captioned with the feature, first one open — so
-  the fold has something to fold.
+  tosijs-3d 0.8.9 groups its own schemas (`x-sections: [{ title, icon, keys }]`)
+  and 0.8.8's `foldSections` folds any panel whose rows carry collapsible
+  headers. What this file owns is the ORDER and the headers — keys in no
+  section first, then each section's header and keys, a feature's caption on
+  each, the first one open — so the fold has something to fold.
 */
-describe("x-section puts collapsible headers between sections", () => {
-  const sectionsOf = (
-    properties: Record<string, unknown>,
-    sectionPrefix?: string
-  ) =>
+describe("x-sections orders the panel and heads each section", () => {
+  const n = { type: "number", minimum: 0, maximum: 1 };
+  const rows = (schema: Record<string, unknown>, sectionPrefix?: string) =>
     schemaWidgets({
-      schema: { properties },
+      schema,
       values: {},
       handleChange: () => {},
       ...(sectionPrefix ? { sectionPrefix } : {}),
-    } as never)
-      .map(
-        (w) => (w as { section?: { title: string; open?: boolean } }).section
-      )
-      .filter((s) => s !== undefined);
+    } as never).map(
+      (w) =>
+        (w as { section?: { title: string; open?: boolean } }).section ?? "row"
+    );
 
-  it("emits one header per section, in order, first one open", () => {
-    const sections = sectionsOf({
-      a: { type: "number", minimum: 0, maximum: 1, "x-section": "Air" },
-      b: { type: "number", minimum: 0, maximum: 1, "x-section": "Air" },
-      c: {
-        type: "boolean",
-        "x-section": { title: "Stars", icon: "star" },
-      },
+  it("unsectioned keys first, then each section's header and keys", () => {
+    const out = rows({
+      properties: { a: n, b: n, c: n, loose: n },
+      "x-sections": [
+        { title: "Stars", icon: "star", keys: ["c"] },
+        { title: "Air", keys: ["b", "a"] },
+      ],
     });
-    expect(sections.map((s) => [s!.title, s!.open])).toEqual([
-      ["Air", true],
-      ["Stars", false],
+    expect(out.map((r) => (r === "row" ? r : [r.title, r.open]))).toEqual([
+      "row",
+      ["Stars", true],
+      "row",
+      ["Air", false],
+      "row",
+      "row",
     ]);
   });
 
+  it("skips keys the schema lacks, and sections left empty", () => {
+    // A picked feature carries upstream's sections whole.
+    const out = rows({
+      properties: { a: n },
+      "x-sections": [
+        { title: "Gone", keys: ["notPicked"] },
+        { title: "Air", keys: ["notPicked", "a"] },
+      ],
+    });
+    expect(out.map((r) => (r === "row" ? r : r.title))).toEqual(["Air", "row"]);
+  });
+
   it("prefixes captions so two features' sections stay distinct", () => {
-    const [first] = sectionsOf(
-      { a: { type: "boolean", "x-section": "Air" } },
+    const [first] = rows(
+      { properties: { a: n }, "x-sections": [{ title: "Air", keys: ["a"] }] },
       "skybox"
     );
-    expect(first!.title).toBe("skybox · Air");
+    expect((first as { title: string }).title).toBe("skybox · Air");
   });
 
   it("a schema without sections gets no headers", () => {
-    expect(
-      sectionsOf({ a: { type: "number", minimum: 0, maximum: 1 } })
-    ).toEqual([]);
+    expect(rows({ properties: { a: n } })).toEqual(["row"]);
   });
 
   it("a section whose first field is hidden still gets its header", () => {
-    const sections = sectionsOf({
-      a: {
-        type: "boolean",
-        "x-section": "Air",
-        "x-requires": { mode: "never" },
+    const out = rows({
+      properties: {
+        a: { type: "boolean", "x-requires": { mode: "never" } },
+        b: { type: "boolean" },
       },
-      b: { type: "boolean", "x-section": "Air" },
+      "x-sections": [{ title: "Air", keys: ["a", "b"] }],
     });
-    expect(sections.map((s) => s!.title)).toEqual(["Air"]);
+    expect(out.map((r) => (r === "row" ? r : r.title))).toEqual(["Air", "row"]);
   });
 });

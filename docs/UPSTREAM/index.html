@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=bb8446462a12" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=2b9c951418ec" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=bc9b8bd08ef2" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=72a2c93b03cb" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -274,7 +274,7 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>41</td>
-<td><strong>No <code>moonSchema()</code></strong> — <code>&lt;tosi-b3d-moon&gt;</code> (0.8.4) is the one primitive we describe by hand again; two of its five ranges are ours</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.9">tosijs-3d@0.8.9</a>), adopted</strong> — <strong>No <code>moonSchema()</code></strong> — <code>&lt;tosi-b3d-moon&gt;</code> (0.8.4) is the one primitive we describe by hand again; two of its five ranges are ours</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/93">#93</a></td>
 </tr>
 <tr>
@@ -284,23 +284,28 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>43</td>
-<td><strong><code>inputField</code> leaks itself and its host.</strong> Each field adds its keyboard-glyph repaint closure to a module-level <code>Set</code> (<code>autoKeyboardListeners</code>, keyboard.js) that is never pruned, so every editor visit retains ~3,970 nodes and its disposed scene and engine. Found by the re-parent lane slowing 5 s → 40 s per trip; located with a heap-snapshot retainer path. Present since at least 0.8.4. <strong>Our re-parent lane is red until it lands</strong></td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.9">tosijs-3d@0.8.9</a>)</strong> for <code>inputField</code>; the editor&#39;s other two routes were #100 and our own field group — <strong><code>inputField</code> leaks itself and its host.</strong> Each field adds its keyboard-glyph repaint closure to a module-level <code>Set</code> (<code>autoKeyboardListeners</code>, keyboard.js) that is never pruned, so every editor visit retains ~3,970 nodes and its disposed scene and engine. Found by the re-parent lane slowing 5 s → 40 s per trip; located with a heap-snapshot retainer path. Present since at least 0.8.4. <strong>Our re-parent lane is red until it lands</strong></td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/96">#96</a></td>
 </tr>
 <tr>
 <td>44</td>
-<td><strong>No schema for the weather and decoration elements</strong> — weather cell, lightning, light shafts, decorator, trail. We expose a primitive only through its schema, so none of 0.8.5/0.8.6&#39;s weather is offered to an ensemble author</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.9">tosijs-3d@0.8.9</a>)</strong>; features not yet written — <strong>No schema for the weather and decoration elements</strong> — weather cell, lightning, light shafts, decorator, trail. We expose a primitive only through its schema, so none of 0.8.5/0.8.6&#39;s weather is offered to an ensemble author</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/97">#97</a></td>
 </tr>
 <tr>
 <td>45</td>
-<td><strong>No schema-driven panel</strong>, and the sections live in the demo. Land and Sky hand-writes 43 rows (in step with the schemas today, by hand); our <code>schema-panel.ts</code> is 586 lines of form generator for tosijs-3d&#39;s schemas. Asks for <code>schemaPanel3d</code> and <code>x-section</code></td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.9">tosijs-3d@0.8.9</a>, <code>x-sections</code>), adopted</strong> — <strong>No schema-driven panel</strong>, and the sections live in the demo. Land and Sky hand-writes 43 rows (in step with the schemas today, by hand); our <code>schema-panel.ts</code> is 586 lines of form generator for tosijs-3d&#39;s schemas. Asks for <code>schemaPanel3d</code> and <code>x-section</code></td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/98">#98</a></td>
 </tr>
 <tr>
 <td>46</td>
 <td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.8">tosijs-3d@0.8.8</a>, <code>foldSections</code>), adopted</strong> — <strong>Collapsible sections fold only in <code>&lt;tosi-b3d&gt;</code>&#39;s scene panel.</strong> The fold is private (<code>_foldSections</code>); <code>panel3d</code> ignores a row&#39;s <code>section</code>, so in our docked panels a 0.8.7 section header is a chevron that does nothing</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/99">#99</a></td>
+</tr>
+<tr>
+<td>47</td>
+<td><strong><code>boundValue</code> never unsubscribes</strong>, so every widget bound to a tosijs box leaks its panel and its host through tosijs&#39;s listener list (+125 listeners per ten rebuilds, flat with binding off). Worked around by <code>_tracked</code> in the editor; suggested fix uses <code>OBSERVER_SHOULD_BE_REMOVED</code></td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/100">#100</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
@@ -566,6 +571,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-8znn2gd6.js"></script>
+  <script type="module" src="../hydrate-t5xkx6j8.js"></script>
 </body>
 </html>

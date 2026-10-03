@@ -139,8 +139,8 @@ export function placeMesh(
       element,
       dispose: () => {
         stopWaiting();
+        // No orphan reaper any more — see the note at the end of this file.
         element.remove();
-        reapOrphan(element);
       },
     };
   }
@@ -225,54 +225,24 @@ function whenMeshed(
   return stop;
 }
 
-/**
- * Dispose an instance that arrives AFTER its element was removed.
- *
- * `b3d-destroyable` instantiates inside `lib.ready.then(...)`, so there is a
- * window between "element appended" and "node exists". Remove the element
- * inside that window — which the editor does constantly, because it rebuilds on
- * every edit — and the disconnect finds nothing to dispose, then the pending
- * callback creates a node belonging to nobody. It is never disposed and never
- * moves again.
- *
- * Measured: four edits in quick succession left FOUR copies of the same tower
- * standing in the scene, 210 meshes where there had been 81, and it did not
- * settle. Reported as "movement seems to duplicate objects", which is exactly
- * what a ghost left at the old position looks like.
- *
- * Filed as tosijs-3d#49 — an element that has been disconnected should not
- * instantiate, or should dispose what it instantiated. Until then this watches
- * for the orphan and reaps it.
- */
-function reapOrphan(element: SceneElement, tickBudget = TICK_BUDGET): void {
-  const host = element as unknown as {
-    mesh?: { dispose?: () => void; isDisposed?: () => boolean } | null;
-  };
-  const reap = () => {
-    const node = host.mesh;
-    if (!node || node.isDisposed?.()) return false;
-    // Only ever an orphan: if the element came back, it owns this again.
-    if (element.isConnected) return true;
-    node.dispose?.();
-    return true;
-  };
-  if (reap()) return;
-  // Timer, not a render observer — see `whenMeshed`. An orphan that arrives
-  // while the tab is hidden must still be reaped when it does arrive.
-  let ticks = 0;
-  let timer: ReturnType<typeof setInterval> | null = null;
-  const stop = () => {
-    if (timer !== null) clearInterval(timer);
-    timer = null;
-  };
-  timer = setInterval(() => {
-    try {
-      if (reap() || ++ticks > tickBudget) stop();
-    } catch {
-      stop();
-    }
-  }, TICK_MS);
-}
+/*
+  THE ORPHAN REAPER IS GONE, and it went because it had become the leak.
+
+  `b3d-destroyable` used to instantiate inside `lib.ready.then(...)` even after
+  its element was removed, leaving a node nobody disposed: four quick edits
+  stood four copies of a tower in the scene (210 meshes where there had been
+  81). We filed tosijs-3d#49 and polled every removed element for 12 s to
+  dispose any late arrival.
+
+  tosijs-3d 0.8.1 fixed it upstream (`loadGeneration`: a stale callback
+  discards itself), so the late node can no longer arrive and the poll always
+  ran its full budget. Every rebuild armed one per piece: 38 timers at 20 Hz for
+  12 s on the pirate cove, on every edit and every visit. Measured on 0.8.9 in
+  the re-parent lane: ~2,700 interval ticks a second after two visits, trips
+  slowing from 5 s to 40 s until they missed the settle window. Removing it was
+  tested against the regression it guarded: rapid edits leave the mesh count
+  where it was.
+*/
 
 /** `b3dRadarBlip` as a child of the piece — it travels with what it marks. */
 export function attachBlip(

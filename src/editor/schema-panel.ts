@@ -47,11 +47,13 @@ nothing: a field an author cannot see is a field they will assume is unset.
 
 ## Sections
 
-A property may name a section (`x-section: "Stars"`, or `{ title, icon }`).
-Where the section changes, the panel gets a collapsible header, and the host
-folds the rows with tosijs-3d's `foldSections` (0.8.8, our tosijs-3d#99). The
-first section starts open and the rest folded; what you open is remembered.
-The sky is the reason: 30 fields in one column before it had sections.
+A schema may group its properties: `x-sections: [{ title, icon?, keys }]`,
+tosijs-3d's own spelling (0.8.9, tosijs-3d#98, ours) — so its sky, water and
+cloud deck arrive sectioned, and a consumer's feature uses the same shape.
+Each section gets a collapsible header and the host folds the rows with
+tosijs-3d's `foldSections` (0.8.8, our #99). Properties in no section come
+first and always show. The first section starts open, the rest folded; what
+you open is remembered. The sky is the reason: 30 fields in one column before.
 */
 /*{"parent":"Internals","order":7}*/
 import {
@@ -182,28 +184,41 @@ export interface PropertySpec {
    * nowhere else to put it.
    */
   "x-useful"?: [number, number];
-  /**
-   * The SECTION this property belongs to: a caption, or a caption and an icon.
-   *
-   * A new value starts a section, so the properties of one section must be
-   * contiguous in declaration order. `schemaWidgets` emits a collapsible
-   * `label3d` where the section changes, and the panel that hosts the rows
-   * folds them with tosijs-3d's `foldSections`.
-   *
-   * It is the spelling tosijs-3d#98 asks upstream to put in the scene schemas
-   * themselves. Until then the sky's section table is ours (in
-   * `features-scene.ts`), and if upstream ships the same shape, the table goes
-   * and nothing here changes.
-   */
-  "x-section"?: string | { title: string; icon?: string };
 }
 
-/** A property's section, normalised; `undefined` when it declares none. */
-export function sectionOf(
-  spec: PropertySpec
-): { title: string; icon?: string } | undefined {
-  const s = spec["x-section"];
-  return typeof s === "string" ? { title: s } : s;
+/** One of a schema's `x-sections`: a caption, an icon, and its keys in order. */
+export interface SchemaSection {
+  title: string;
+  icon?: string;
+  keys: string[];
+}
+
+/**
+ * A schema's keys in PANEL order, with each section's header before its keys.
+ *
+ * Keys in no section come first: they are rows before any header, which
+ * `foldSections` always shows. Then each section in the schema's order, its
+ * keys in the section's order, skipping keys the schema does not have — a
+ * feature `pick()`s a subset of an upstream schema whose sections name all of
+ * it — and skipping a section left with none.
+ */
+export function panelOrder(
+  schema: FeatureSchema | undefined
+): Array<{ key: string } | { section: SchemaSection }> {
+  const properties = (schema?.properties ?? {}) as Record<string, unknown>;
+  const sections = (schema?.["x-sections"] ?? []) as SchemaSection[];
+  const claimed = new Set(sections.flatMap((s) => s.keys));
+  const out: Array<{ key: string } | { section: SchemaSection }> = Object.keys(
+    properties
+  )
+    .filter((k) => !claimed.has(k))
+    .map((key) => ({ key }));
+  for (const section of sections) {
+    const keys = section.keys.filter((k) => k in properties);
+    if (!keys.length) continue;
+    out.push({ section }, ...keys.map((key) => ({ key })));
+  }
+  return out;
 }
 
 /**
@@ -360,36 +375,38 @@ export const boundIfSet = (
   box: ((key: string) => BoxLike | undefined) | undefined
 ): BoxLike | undefined => (values[key] === undefined ? undefined : box?.(key));
 
-/** Widgets for one schema's properties, in declaration order. */
+/** Widgets for one schema's properties, in panel order (see `panelOrder`). */
 export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
   const { schema, values, handleChange, handleCommit, box, boundKeys, fields } =
     options;
   const properties = (schema?.properties ?? {}) as Record<string, PropertySpec>;
   const widgets: unknown[] = [];
-  let section: string | undefined;
   let sections = 0;
 
-  for (const [key, spec] of Object.entries(properties)) {
+  for (const item of panelOrder(schema)) {
     /*
-      A SECTION HEADER WHERE THE SECTION CHANGES — decided before `x-requires`,
-      so a section whose first field is hidden still gets its header. The
-      first section opens and the rest start folded: the point is a panel
-      that fits, and the open set is remembered once someone opens another.
+      A SECTION HEADER before the section's rows — emitted before any of its
+      fields is tested against `x-requires`, so a section whose first field is
+      hidden still has its header. The first section opens and the rest start
+      folded: the point is a panel that fits, and the open set is remembered
+      once someone opens another.
     */
-    const sec = sectionOf(spec);
-    if (sec && sec.title !== section) {
-      section = sec.title;
+    if ("section" in item) {
+      const { title, icon } = item.section;
       widgets.push(
         label3d({
           text: options.sectionPrefix
-            ? `${options.sectionPrefix} · ${sec.title}`
-            : sec.title,
-          ...(sec.icon ? { icon: sec.icon } : {}),
+            ? `${options.sectionPrefix} · ${title}`
+            : title,
+          ...(icon ? { icon } : {}),
           collapsible: true,
           open: sections++ === 0,
         })
       );
+      continue;
     }
+    const key = item.key;
+    const spec = properties[key]!;
 
     const requires = spec["x-requires"];
     const lit = Array.isArray(values.cells) ? (values.cells as number[]) : [];

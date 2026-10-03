@@ -7,8 +7,10 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer floors: `tosijs-3d` `^0.8.8` (was `^0.8.4`) and `tosijs` `^1.10.3`
-  (was `^1.10.1`).** The editor needs 0.8.8's `foldSections` (below).
+- **Peer floors: `tosijs-3d` `^0.8.9` (was `^0.8.4`) and `tosijs` `^1.10.3`
+  (was `^1.10.1`).** 0.8.9 carries the schemas we now pick from (moon, sound,
+  sections) and the `inputField` leak fix; the editor also uses 0.8.8's
+  `foldSections` (below).
   tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
   shafts, storms that darken the day), world presets, crater fields and
   self-fitting scene panels; and fixes the cloud deck's local weather, which
@@ -19,16 +21,52 @@ All notable changes to this project are documented here, in
 ### Added
 
 - **The property panel has sections, and they fold.** The sky was thirty
-  fields in one column; it is now Time, Air, Sun & moon, Stars and Space, the
-  first open and the rest folded, and what you open is remembered. A schema
-  declares sections with `x-section` (a caption, or `{ title, icon }`) on its
-  properties, so a consumer's feature gets them the same way. Every feature
-  heading is now a collapsible header too. Folding is tosijs-3d 0.8.8's
-  `foldSections`, which exists because we asked (tosijs-3d#99); sections in
-  tosijs-3d's own schemas are asked for in tosijs-3d#98, and the sky's table
-  goes when they land. `tests/property-sections.pw.ts` taps a header.
+  fields in one column; it now folds by tosijs-3d's own sections (Sky, Tint,
+  Sun & moon, Stars, Space, Assets, Advanced), first open and the rest
+  folded, and what you open is remembered. Water and the cloud deck fold the
+  same way. A schema declares sections as tosijs-3d does,
+  `x-sections: [{ title, icon?, keys }]`, so a consumer's feature gets them
+  identically; every feature heading is a collapsible header too. Folding is
+  tosijs-3d 0.8.8's `foldSections` (tosijs-3d#99) and the sections are 0.8.9's
+  (tosijs-3d#98), both asked for from here.
+  `tests/property-sections.pw.ts` folds one section and opens another.
+
+### Changed
+
+- **`moon` and `sound` take their schemas from tosijs-3d** (`moonSchema`,
+  `soundSchema`, 0.8.9, tosijs-3d#93/#95), the last two we described by hand.
+  Both hand copies had drifted, so the ranges `validate` and the panel accept
+  WIDEN: a moon's `size` now goes down to 0.05° (was 0.1°); a sound's
+  `volume` to 2 (was 1), `refDistance` to 0–1000 m (was 0.1–100) and
+  `maxDistance` to 0–10000 m (was 1–2000). A placed sound keeps our authoring
+  defaults (looping, autoplaying, spatial, audible to 60 m).
+
+- **Prettier no longer formats markdown** (tosijs-ui 1.16's rule,
+  `requirePragma` for `*.md`). Markdown is authored prose; all Prettier did to
+  it was rewrite it. This also ends the build-versus-format fight over
+  `editor.md`, which is back in the format check.
 
 ### Fixed
+
+- **The editor leaked, and a session slowed down the longer it ran.** Three
+  causes, found in turn with heap snapshots and a per-trip probe:
+  - tosijs-3d's `inputField` kept every field alive (tosijs-3d#96, fixed in
+    0.8.9);
+  - every widget bound to the document kept its panel alive, because
+    tosijs-3d's `boundValue` never unsubscribes (tosijs-3d#100, still open).
+    The editor now releases those subscriptions itself on every rebuild and
+    on disconnect;
+  - our own field group stayed attached after the editor left the page.
+
+  Separately, a 12 s poll per removed piece, guarding against a tosijs-3d bug
+  fixed in 0.8.1, was still running on every edit: 38 timers at 20 Hz per
+  rebuild of the pirate cove, about 2,700 timer ticks a second after two
+  visits. It is removed, and `tests/rapid-edits.pw.ts` holds the regression it
+  guarded (a burst of edits settles at the same mesh count).
+
+  Measured: per-visit listeners are flat (were +45), per-rebuild listeners
+  flat (were +12), and the re-parent lane's 20 trips hold at 4–5 s (they
+  slowed from 5 s to 40 s and failed). 0.4.0 had all of this.
 
 - **Every page of the doc site ran its code twice**, which we had filtered for
   weeks as "Cannot redefine property: onBeforeViewRenderObservable, Linux
@@ -36,21 +74,6 @@ All notable changes to this project are documented here, in
   `hydrate-<hash>.js`, so the page and its chunks agree on one URL. Measured: 10
   errors and 2 shader-compile failures per load before, 0 and 0 after. The
   test filter that hid it is gone.
-
-### Known issue
-
-- **The editor leaks on SPA navigation** — each visit to a page with the editor
-  retains its whole UI (~4,000 nodes) for the life of the page, through a
-  module-level set in tosijs-3d's `inputField` (tosijs-3d#96). It was present
-  in 0.4.0 too. Harmless on a page that mounts the editor once; it grows on a
-  site that navigates to and from it repeatedly.
-
-### Changed
-
-- **Prettier no longer formats markdown** (tosijs-ui 1.16's rule,
-  `requirePragma` for `*.md`). Markdown is authored prose; all Prettier did to
-  it was rewrite it. This also ends the build-versus-format fight over
-  `editor.md`, which is back in the format check.
 
 ## [0.4.0] — 2026-09-26
 

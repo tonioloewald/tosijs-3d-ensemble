@@ -207,7 +207,6 @@ import {
   lightSettingsSchema,
   b3dClouds,
   b3dCloudDeck,
-  B3dMoon,
   b3dMoon,
   b3dFog,
   b3dGround,
@@ -318,42 +317,14 @@ const fetchedOf = (
 };
 
 /**
- * Mark properties with the section they belong to (`x-section`), given the
- * field each section starts at. Everything from a start key up to the next
- * one is in that section, in declaration order.
- *
- * A start key the properties lack is a hard error, not a warning: a section
- * table that silently stops matching would quietly merge two sections.
+ * tosijs-3d's own SECTIONS for a scene schema (`x-sections`, 0.8.9,
+ * tosijs-3d#98, ours), so a picked feature's panel folds the way upstream
+ * groups it. Passed through whole: `panelOrder` skips keys a feature did not
+ * pick, and sections left empty. Upstream owns the grouping, as it owns the
+ * ranges — the sky's own section table that stood here for a day is gone.
  */
-const sectioned = (
-  properties: Record<string, Spec>,
-  starts: Record<string, { title: string; icon?: string }>
-): Record<string, Spec> => {
-  for (const key of Object.keys(starts)) {
-    if (!(key in properties))
-      throw new Error(`tosijs-3d-ensemble: section starts at missing "${key}"`);
-  }
-  let current: { title: string; icon?: string } | undefined;
-  const out: Record<string, Spec> = {};
-  for (const [key, spec] of Object.entries(properties)) {
-    current = starts[key] ?? current;
-    out[key] = current ? { ...spec, "x-section": current } : spec;
-  }
-  return out;
-};
-
-/*
-  The sky's sections, keyed by the field each starts at. The icons are
-  tosijs-3d's own names, the ones Land and Sky uses for the same groups, so a
-  tab strip (`foldSections`' `mode: 'tabs'`) reads the same in both.
-*/
-const SKY_SECTIONS = {
-  timeOfDay: { title: "Time", icon: "sun" },
-  atmosphere: { title: "Air", icon: "sky" },
-  sunColor: { title: "Sun & moon", icon: "moon" },
-  starfieldData: { title: "Stars", icon: "star" },
-  spaceStart: { title: "Space", icon: "earth" },
-};
+const sectionsOf = (name: keyof typeof sceneSchemas): unknown =>
+  (sceneSchemas[name]() as { "x-sections"?: unknown })["x-sections"];
 
 const pick = (
   name: keyof typeof sceneSchemas,
@@ -906,14 +877,14 @@ export function registerSceneFeatures(): void {
       */
       "x-accepts": acceptsOf("skybox"),
       "x-fetched": fetchedOf("skybox"),
-      properties: sectioned(
-        pick(
-          "skybox",
-          [
-            "timeOfDay",
-            "realtimeScale",
-            "latitude",
-            /*
+      "x-sections": sectionsOf("skybox"),
+      properties: pick(
+        "skybox",
+        [
+          "timeOfDay",
+          "realtimeScale",
+          "latitude",
+          /*
             ⚠️ `azimuth` IS GONE FROM THE PANEL, because it does nothing.
             `b3d-skybox` writes it to `material.azimuth`, and its own
             SkyMaterial wrapper defines that property with a no-op setter
@@ -923,29 +894,29 @@ export function registerSceneFeatures(): void {
             even alive it would be the wrong slider. tosijs-3d#86. A file may
             still carry it — `x-accepts` keeps it — it just is not offered.
           */
-            // The atmosphere: how much air, how hazy, how it scatters.
-            /*
+          // The atmosphere: how much air, how hazy, how it scatters.
+          /*
             A WORLD'S OWN AIR (tosijs-3d 0.8.4, our #89). `atmosphere` 1 is
             Earth and 0 the Moon — black noon, stars out, a hard sun; `dust`
             is the other half of a sky, a bright haze the tint colours, which
             is how Mars is almost no air and a butterscotch sky. The tints
             colour only the scattered light, keeping its brightness.
           */
-            "atmosphere",
-            "dust",
-            "zenithTint",
-            "horizonTint",
-            "tintStrength",
-            "turbidity",
-            "luminance",
-            "rayleigh",
-            "mieCoefficient",
-            "mieDirectionalG",
-            "sunColor",
-            "duskColor",
-            "moonColor",
-            "moonIntensity",
-            /*
+          "atmosphere",
+          "dust",
+          "zenithTint",
+          "horizonTint",
+          "tintStrength",
+          "turbidity",
+          "luminance",
+          "rayleigh",
+          "mieCoefficient",
+          "mieDirectionalG",
+          "sunColor",
+          "duskColor",
+          "moonColor",
+          "moonIntensity",
+          /*
             THE NIGHT SKY. `starfieldData` + `starfieldCube` are URL ROOTS of
             the encoded galaxy (`<root>_px.png` …). tosijs-3d hosts versioned,
             pinned pairs at `https://3d.tosijs.net/sky/<version>/stars` and
@@ -959,38 +930,30 @@ export function registerSceneFeatures(): void {
             data cube was ENCODED and must match it, so they are facts about
             an asset rather than choices about a sky.
           */
-            "starfieldData",
-            "starfieldCube",
-            "starfieldTilt",
-            "starfield",
-            "starfieldSeed",
-            // The look of the stars, all live uniforms: brightness, the faint
-            // mass, and scintillation — which is the air, so an airless world
-            // does not twinkle.
-            "starfieldGain",
-            "starfieldFloor",
-            "starfieldTwinkle",
-            "nebulae",
-            "nebulaBrightness",
-            // Leaving the atmosphere: a height BAND over which the sky fades to
-            // `spaceColor`. Off while `spaceFull <= spaceStart`.
-            "spaceStart",
-            "spaceFull",
-            "spaceColor",
-            "applyFog",
-          ],
-          {
-            timeOfDay: { default: 11 },
-            realtimeScale: { default: 0, title: "Time speed" },
-          }
-        ),
-        /*
-        SECTIONS, because thirty fields in one column is not a panel. Each
-        entry names the field a section STARTS at, so the pick list above stays
-        the one list of keys. Ours until tosijs-3d#98 puts sections in
-        `skyboxSchema()` itself; then this table goes.
-      */
-        SKY_SECTIONS
+          "starfieldData",
+          "starfieldCube",
+          "starfieldTilt",
+          "starfield",
+          "starfieldSeed",
+          // The look of the stars, all live uniforms: brightness, the faint
+          // mass, and scintillation — which is the air, so an airless world
+          // does not twinkle.
+          "starfieldGain",
+          "starfieldFloor",
+          "starfieldTwinkle",
+          "nebulae",
+          "nebulaBrightness",
+          // Leaving the atmosphere: a height BAND over which the sky fades to
+          // `spaceColor`. Off while `spaceFull <= spaceStart`.
+          "spaceStart",
+          "spaceFull",
+          "spaceColor",
+          "applyFog",
+        ],
+        {
+          timeOfDay: { default: 11 },
+          realtimeScale: { default: 0, title: "Time speed" },
+        }
       ),
     },
     bind: (_piece, cfg, ctx) => {
@@ -1128,24 +1091,41 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Sound",
-      properties: {
-        /*
-          FETCHED, so marked — and it was not. Every other fetched field came
-          marked from upstream's schema (tosijs-3d#91); `sound` has no upstream
-          schema, so its one url was invisible to the https rule, and
-          `http://`, `//host`, `data:` and `javascript:` all reached
-          `BABYLON.Sound`. Found by the 0.4.0 re-review; the completeness test
-          in feature-urls.test.ts is what stops the next one.
-        */
-        url: { type: "string", title: "Audio file", format: "uri-reference" },
-        loop: { type: "boolean", default: true },
-        autoplay: { type: "boolean", default: true },
-        volume: num(0, 1, 1),
-        spatialSound: { type: "boolean", default: true },
-        refDistance: num(0.1, 100, 1, "m"),
-        maxDistance: num(1, 2000, 60, "m"),
-        rolloffFactor: num(0, 10, 1),
-      },
+      /*
+        tosijs-3d's `soundSchema()` (0.8.9, tosijs-3d#95, ours), so `url`
+        arrives marked as fetched like every other fetched field — it was the
+        one we had to mark by hand, and the 0.4.0 re-review found it unmarked,
+        with \`http://\`, \`//host\`, \`data:\` and \`javascript:\` all reaching
+        \`BABYLON.Sound\`. The hand copy had drifted too: volume capped at 1
+        (the element takes 2), and both distances narrowed tenfold.
+
+        The DEFAULTS stay ours, on purpose: the element's are for a sound a
+        page plays; a sound PLACED in an ensemble is a fountain that burbles
+        where it stands — looping, playing, spatial, and audible from a
+        plausible distance.
+      */
+      "x-accepts": acceptsOf("sound"),
+      "x-fetched": fetchedOf("sound"),
+      properties: pick(
+        "sound",
+        [
+          "url",
+          "loop",
+          "autoplay",
+          "volume",
+          "spatialSound",
+          "refDistance",
+          "maxDistance",
+          "rolloffFactor",
+        ],
+        {
+          url: { title: "Audio file" },
+          loop: { default: true },
+          autoplay: { default: true },
+          spatialSound: { default: true },
+          maxDistance: { default: 60 },
+        }
+      ),
     },
     /*
       A placed sound is a thing at a POSITION, which is why it belongs to a
@@ -1353,6 +1333,7 @@ export function registerSceneFeatures(): void {
       */
       "x-accepts": acceptsOf("water"),
       "x-fetched": fetchedOf("water"),
+      "x-sections": sectionsOf("water"),
       properties: pick(
         "water",
         [
@@ -1449,6 +1430,7 @@ export function registerSceneFeatures(): void {
       title: "Cloud deck",
       "x-accepts": acceptsOf("cloudDeck"),
       "x-fetched": fetchedOf("cloudDeck"),
+      "x-sections": sectionsOf("cloudDeck"),
       properties: pick(
         "cloudDeck",
         [
@@ -1501,11 +1483,7 @@ export function registerSceneFeatures(): void {
     for; attaching in `bind` would make a moon's existence depend on array
     order.
 
-    ⚠️ THE SCHEMA IS OURS until upstream ships `moonSchema()` (tosijs-3d#93).
-    Defaults are the element's; the ranges come from its attribute table
-    (azimuth "around the star sphere", elevation "from the celestial
-    equator") where it gives one, and ours where it does not — `size` to 20°
-    (the real moon is 0.5), `brightness` to 3.
+    The schema is tosijs-3d's `moonSchema()` since 0.8.9 (see below).
   */
   registerFeature({
     name: "moon",
@@ -1516,16 +1494,20 @@ export function registerSceneFeatures(): void {
     schema: {
       type: "object",
       title: "Moon",
-      // The element's own list, so a new moon attribute is accepted the day
-      // it ships rather than the day somebody notices.
-      "x-accepts": Object.keys(B3dMoon.initAttributes),
-      properties: {
-        azimuth: num(0, 360, 0, "°"),
-        elevation: num(-90, 90, 20, "°"),
-        size: num(0.1, 20, 0.5, "°"),
-        color: { type: "string", default: "#dddddd", "x-widget": "color" },
-        brightness: num(0, 3, 1),
-      },
+      /*
+        tosijs-3d's `moonSchema()` (0.8.9, tosijs-3d#93, ours). The hand copy
+        it replaces had already drifted: its `size` floor was 0.1° where the
+        element's is 0.05°, and it had no useful band.
+      */
+      "x-accepts": acceptsOf("moon"),
+      "x-fetched": fetchedOf("moon"),
+      properties: pick("moon", [
+        "azimuth",
+        "elevation",
+        "size",
+        "color",
+        "brightness",
+      ]),
     },
     bind: (_piece, cfg, ctx) => {
       const element = b3dMoon({ ...cfg }) as unknown as SceneElement;

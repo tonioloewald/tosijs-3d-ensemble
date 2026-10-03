@@ -54,6 +54,8 @@ const ADOPTED = [
   ["fog", "fog"],
   ["reflections", "reflections"],
   ["cloudDeck", "cloudDeck"],
+  ["moon", "moon"],
+  ["sound", "sound"],
 ] as const;
 
 const propertiesOf = (
@@ -259,24 +261,23 @@ describe("cloudDeck maps booleans to the element's on/off", () => {
 });
 
 /*
-  THE SKY'S SECTIONS cover every field, contiguously.
+  UPSTREAM'S SECTIONS cover every field we pick.
 
-  `x-section` is marked from a table of START keys, so a field added to the
-  pick list lands in whatever section precedes it — which is right — and a
-  start key that leaves the list throws at registration. This checks the
-  result: every sky field has a section, and each section is one run.
+  The sky, water and cloud deck carry tosijs-3d's own `x-sections` (0.8.9).
+  A picked field upstream does not section would render ABOVE the first
+  header, ungrouped and never folded — a quiet way for a long panel to come
+  back. So every picked field of a sectioned feature must be in a section.
 */
-describe("the sky panel is sectioned", () => {
-  it("every field has a section, and sections are contiguous", () => {
+describe("sectioned features group every field they pick", () => {
+  it.each(["skybox", "water", "cloudDeck"])("%s", (name) => {
     registerSceneFeatures();
-    const props = (
-      featureRegistration("skybox")!.schema as {
-        properties: Record<string, { "x-section"?: { title: string } }>;
-      }
-    ).properties;
-    const titles = Object.values(props).map((p) => p["x-section"]?.title);
-    expect(titles.every((t) => typeof t === "string")).toBe(true);
-    const runs = titles.filter((t, i) => t !== titles[i - 1]);
-    expect(runs).toEqual(["Time", "Air", "Sun & moon", "Stars", "Space"]);
+    const schema = featureRegistration(name)!.schema as {
+      properties: Record<string, unknown>;
+      "x-sections"?: Array<{ title: string; keys: string[] }>;
+    };
+    expect(schema["x-sections"]?.length).toBeGreaterThan(0);
+    const claimed = new Set(schema["x-sections"]!.flatMap((s) => s.keys));
+    const loose = Object.keys(schema.properties).filter((k) => !claimed.has(k));
+    expect(loose).toEqual([]);
   });
 });

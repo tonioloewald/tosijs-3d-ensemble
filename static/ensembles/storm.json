@@ -4,12 +4,12 @@
   "pieces": [
     {
       "id": "view",
-      "at": [0, 40, 0],
+      "at": [700, 150, 400],
       "features": {
         "camera": {
-          "distance": 120,
-          "heading": 60,
-          "elevation": 8,
+          "distance": 1100,
+          "heading": -150,
+          "elevation": 4,
           "maxDistance": 4000
         }
       }
@@ -26,7 +26,7 @@
       "at": [0, 0, 0],
       "features": {
         "skybox": {
-          "timeOfDay": 17.5
+          "timeOfDay": 19
         }
       }
     },
@@ -41,9 +41,14 @@
     },
     {
       "id": "ground",
-      "at": [0, 0, 0],
+      "at": [400, 0, 250],
       "features": {
-        "ground": {}
+        "ground": {
+          "width": 3000,
+          "height": 3000,
+          "color": "#4a5a3a",
+          "texture": "noise"
+        }
       }
     },
     {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { sceneSchemas } from "tosijs-3d";
-import { registerSceneFeatures, schemaDrift } from "./features-scene.js";
+import {
+  registerSceneFeatures,
+  schemaDrift,
+  weatherCellConfig,
+} from "./features-scene.js";
 import { featureRegistration } from "../format/registry.js";
 
 /*
@@ -56,6 +60,9 @@ const ADOPTED = [
   ["cloudDeck", "cloudDeck"],
   ["moon", "moon"],
   ["sound", "sound"],
+  ["weatherCell", "weatherCell"],
+  ["lightning", "lightning"],
+  ["lightShafts", "lightShafts"],
 ] as const;
 
 const propertiesOf = (
@@ -126,7 +133,7 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
       }
     }
     /*
-      Four deliberate exceptions, each carrying its reason in the source:
+      The deliberate exceptions, each carrying its reason in the source:
 
       - `terrain.seed` is an INTEGER with a small ceiling — it is typed or
         stepped, never dragged, because no seed is near another.
@@ -138,6 +145,8 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
       - `cloudDeck.follow`/`shadows` are BOOLEANS and `cloudDeck.seed` an
         integer with a ceiling, for exactly the reasons `terrain.biome` and
         `terrain.seed` are.
+      - `lightning.bolts`/`sprites`/`thunder`/`shadows` and
+        `lightShafts.underwater` are BOOLEANS, the same `'on'|'off'` reason.
       (`terrain.radius` used to be a fourth: we gave it a log scale over its
       six decades, and tosijs-3d@0.8.1 added the same upstream — so the
       override went, and this test is what noticed by failing on the upgrade.
@@ -153,6 +162,11 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         'cloudDeck.follow.enum: undefined (ours) vs ["on","off"] (upstream)',
         'cloudDeck.shadows.enum: undefined (ours) vs ["on","off"] (upstream)',
         "cloudDeck.seed.maximum: 9999 (ours) vs undefined (upstream)",
+        'lightning.bolts.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'lightning.sprites.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'lightning.thunder.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'lightning.shadows.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'lightShafts.underwater.enum: undefined (ours) vs ["on","off"] (upstream)',
       ].sort()
     );
   });
@@ -257,6 +271,57 @@ describe("cloudDeck maps booleans to the element's on/off", () => {
     expect(el.follow).toBe("on");
     // A key the config does not mention is left alone, not reset.
     expect(el.shadows).toBe("on");
+  });
+});
+
+/*
+  THE WEATHER: the same on/off mapping, a cell placed by its piece, and a
+  freshly inserted cell that is a storm rather than nothing.
+*/
+describe("weather features", () => {
+  it("lightning and shafts map booleans to the element's on/off", () => {
+    registerSceneFeatures();
+    const el: Record<string, unknown> = {};
+    featureRegistration("lightning")!.update!(
+      el as never,
+      { bolts: false, thunder: true, shadows: false, rate: 2 },
+      {} as never
+    );
+    expect([el.bolts, el.thunder, el.shadows, el.rate]).toEqual([
+      "off",
+      "on",
+      "off",
+      2,
+    ]);
+    expect("sprites" in el).toBe(false); // unmentioned: left alone
+    const shafts: Record<string, unknown> = {};
+    featureRegistration("lightShafts")!.update!(
+      shafts as never,
+      { underwater: false },
+      {} as never
+    );
+    expect(shafts.underwater).toBe("off");
+  });
+
+  it("a weather cell stands where its piece is", () => {
+    // The CONFIG, not the element: creator props are not readable
+    // synchronously (see `stillSky`), so the element would show its defaults.
+    expect(
+      weatherCellConfig({ radius: 500, x: 9, z: 9 }, [120, 5, -40])
+    ).toEqual({ radius: 500, x: 120, z: -40 });
+  });
+
+  it("a new cell defaults to a storm, not the element's all-zero calm", () => {
+    registerSceneFeatures();
+    const props = (
+      featureRegistration("weatherCell")!.schema as {
+        properties: Record<string, { default?: unknown }>;
+      }
+    ).properties;
+    expect(props.storminess!.default).toBe(1);
+    expect(props.coverage!.default).toBe(1.7);
+    // Position is the piece's, never a field.
+    expect("x" in props || "z" in props).toBe(false);
   });
 });
 

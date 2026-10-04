@@ -400,6 +400,40 @@ export function declaredConfig(
   return dropped ? out : cfg;
 }
 
+/**
+ * The config a feature's element actually gets: every default its schema
+ * declares, under whatever the document says, narrowed by `declaredConfig`.
+ *
+ * ⚠️ WITHOUT THIS THE PANEL LIED. The editor inserts a primitive with an EMPTY
+ * config ("every default in its schema applies") and the panel shows each
+ * unset field at its schema default — but nothing applied them, so the
+ * element ran on ITS OWN defaults. A freshly inserted ground showed 400 x 400 m
+ * checker and rendered a 4 x 4 m plain plane; a sun showed 400 m of shadow
+ * and cast 30; a storm cell showed storminess 1 and was calm. Measured on
+ * 0.8.9: 47 authoring defaults across 13 features differed from their
+ * element's, every one of them a control reading a value nothing produced.
+ *
+ * Applied on bind AND on update, so the two roads cannot disagree — and so a
+ * key REMOVED from a document goes back to its default instead of keeping the
+ * last value it had.
+ */
+export function effectiveConfig(
+  registration: { schema?: FeatureSchema } | undefined,
+  cfg: Record<string, unknown>
+): Record<string, unknown> {
+  const properties = (registration?.schema?.properties ?? {}) as Record<
+    string,
+    { default?: unknown }
+  >;
+  const defaults: Record<string, unknown> = {};
+  for (const [key, spec] of Object.entries(properties))
+    if (spec && spec.default !== undefined) defaults[key] = spec.default;
+  return declaredConfig(
+    registration,
+    Object.keys(defaults).length ? { ...defaults, ...cfg } : cfg
+  );
+}
+
 export function featureRegistration(
   name: string
 ): FeatureRegistration<never> | undefined {

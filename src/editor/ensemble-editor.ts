@@ -115,7 +115,7 @@ import {
   type BeaconView,
 } from "./beacon-view.js";
 import {
-  declaredConfig,
+  effectiveConfig,
   featureRegistration,
   registeredFeatures,
 } from "../format/registry.js";
@@ -681,7 +681,9 @@ export class EnsembleEditor extends Component {
             // Narrowed, exactly as `buildEnsemble` narrows a bind: the live
             // update path reaches the same elements from the same document,
             // and an allow-list applied on only one of two roads is not one.
-            declaredConfig(registration, now as Record<string, unknown>),
+            // With the schema's defaults under it, as `buildEnsemble` binds —
+            // so a key removed from the document resets to its default.
+            effectiveConfig(registration, now as Record<string, unknown>),
             piece
           )
         ) {

@@ -204,3 +204,32 @@ For manta-recon specifically, measured on 2026-09-26: its eight assemblies
 fields, and 0.4's `validate` reports no url problem in any of them, so the url
 rule does not touch them. What was NOT measured is the peer-floor change: the
 moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.
+
+## Upgrading from 0.4 to 0.5 (unreleased)
+
+Two things change underneath an existing document:
+
+- **An unset field now renders at its SCHEMA default**, the value the editor's
+  panel shows, where it used to render at the ELEMENT's default. For a field a
+  document sets, nothing changes. For one it leaves out, these move:
+
+  | feature | field: was (element) → now (schema) |
+  | --- | --- |
+  | `ground` | `width`/`height` 4 → 400 m, `texture` none → `checker`, `textureTiles` 8 → 20 |
+  | `sun` | `activeDistance` 30 → 400, `numCascades` 0 → 2, `shadowTextureSize` 0 → 1024, `shadowDarkness` 0.1 → 0.4 |
+  | `skybox` | `timeOfDay` 6.5 → 11 (`realtimeScale` was already 0) |
+  | `light` | `intensity` 1 → 0.9 |
+  | `fog` | `mode` linear → exp2, `density` 0.01 → 0.002, `start`/`end` 60/120 → 100/4000, `color` #bfd9f2 → #8fa6b2, `syncSkybox` off → on |
+  | `water` | `waterSize` 128 → 2000, `waveHeight` 0 → 0.3, `windForce` −5 → 6, `waterColor` #0066cc → #0a3d5c |
+  | `terrain` | `seed`, `surfaceType` (cylinder → plane), `radius`, `horizScale`, both amplitudes, `tileSize`, `lodLevels` |
+  | `clouds` | `count`, `altitude`, `thickness`, `spread`, `opacity` |
+  | `sound` | `loop`/`autoplay`/`spatialSound` off → on, `maxDistance` 100 → 60 |
+  | `reflections` | `probeSize` 0 (off) → 128, `maxDistance` 100 → 200 |
+
+  To keep a scene exactly as it rendered, write the old value into the
+  document. A key you REMOVE now resets to its default, rather than the
+  element keeping the last value it had.
+- **`tosijs-3d` is now `^0.8.9`**, and `moon` and `sound` take their schemas
+  from it. Their accepted ranges widen (a moon's `size` to 0.05°; a sound's
+  `volume` to 2 and its distances tenfold), so nothing that validated before
+  stops validating.

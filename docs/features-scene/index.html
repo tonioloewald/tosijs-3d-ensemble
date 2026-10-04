@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=2b9c951418ec" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=4c9295971577" data-tosi-doc-system />
   <title>Scene features — tosijs-3d-ensemble</title>
   <meta name="description" content="The primitives a tosijs-3d scene is made of, registered as ensemble features so that a whole scene — sun, sky, shadows, ground, weather — is data you load…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=72a2c93b03cb" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=962795e82c43" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Scene features</h1>
 <p>The primitives a tosijs-3d scene is made of, registered as ensemble features so
@@ -213,6 +213,22 @@ IS its feature needs no special case — it simply has no <code>mesh</code>:</p>
 { &quot;id&quot;: &quot;sky&quot;,    &quot;at&quot;: [0, 0, 0], &quot;features&quot;: { &quot;skybox&quot;: { &quot;timeOfDay&quot;: 11 } } },
 { &quot;id&quot;: &quot;ground&quot;, &quot;at&quot;: [0, 0, 0], &quot;features&quot;: { &quot;ground&quot;: { &quot;width&quot;: 400, &quot;texture&quot;: &quot;checker&quot; } } }
 </code></pre>
+<p>An unset field is its SCHEMA default, the value the editor&#39;s panel shows, not
+the element&#39;s own: <code>{ &quot;ground&quot;: {} }</code> is the 400 m checker plane the panel
+describes. See <code>effectiveConfig</code>.</p>
+<h2>Weather</h2>
+<p>A storm is two pieces: a <code>weatherCell</code> where the storm is (the piece&#39;s position
+is the cell&#39;s centre, and there can be many), and one <code>lightning</code> anywhere,
+which strikes under every stormy cell. <code>lightShafts</code> adds sunbeams through a
+broken <code>cloudDeck</code>. A freshly inserted cell is a storm (cover 1.7, storminess
+1, rain 0.9), because the element&#39;s own defaults are all calm.</p>
+<pre><code class="language-jsonc">{ &quot;id&quot;: &quot;deck&quot;,      &quot;at&quot;: [0, 0, 0],     &quot;features&quot;: { &quot;cloudDeck&quot;: { &quot;coverage&quot;: 0.85 } } },
+{ &quot;id&quot;: &quot;squall&quot;,    &quot;at&quot;: [700, 0, 400], &quot;features&quot;: { &quot;weatherCell&quot;: { &quot;radius&quot;: 600 } } },
+{ &quot;id&quot;: &quot;lightning&quot;, &quot;at&quot;: [0, 0, 0],     &quot;features&quot;: { &quot;lightning&quot;: { &quot;rate&quot;: 2 } } },
+{ &quot;id&quot;: &quot;shafts&quot;,    &quot;at&quot;: [0, 0, 0],     &quot;features&quot;: { &quot;lightShafts&quot;: {} } }
+</code></pre>
+<p>The whole scene is <code>/ensembles/storm.json</code>, and <code>tests/storm.pw.ts</code> watches it
+strike inside the cell.</p>
 <h2>Combat is somewhere else, on purpose</h2>
 <p><code>destroyable</code>, <code>turret</code>, <code>launcher</code>, <code>protector</code>, <code>blip</code> and <code>launchpad</code> are NOT
 here — they are a domain vocabulary in <a href="/presets-combat/" class="wikilink">presets/combat</a>, registered by a
@@ -298,6 +314,6 @@ format.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-t5xkx6j8.js"></script>
+  <script type="module" src="../hydrate-0k58n7gg.js"></script>
 </body>
 </html>

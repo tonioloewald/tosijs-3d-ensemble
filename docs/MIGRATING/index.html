@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=2b9c951418ec" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=4c9295971577" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=72a2c93b03cb" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=962795e82c43" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -238,6 +238,70 @@ stringified.</li>
 fields, and 0.4&#39;s <code>validate</code> reports no url problem in any of them, so the url
 rule does not touch them. What was NOT measured is the peer-floor change: the
 moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.</p>
+<h2>Upgrading from 0.4 to 0.5 (unreleased)</h2>
+<p>Two things change underneath an existing document:</p>
+<ul>
+<li><p><strong>An unset field now renders at its SCHEMA default</strong>, the value the editor&#39;s
+panel shows, where it used to render at the ELEMENT&#39;s default. For a field a
+document sets, nothing changes. For one it leaves out, these move:</p>
+<table>
+<thead>
+<tr>
+<th>feature</th>
+<th>field: was (element) → now (schema)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ground</code></td>
+<td><code>width</code>/<code>height</code> 4 → 400 m, <code>texture</code> none → <code>checker</code>, <code>textureTiles</code> 8 → 20</td>
+</tr>
+<tr>
+<td><code>sun</code></td>
+<td><code>activeDistance</code> 30 → 400, <code>numCascades</code> 0 → 2, <code>shadowTextureSize</code> 0 → 1024, <code>shadowDarkness</code> 0.1 → 0.4</td>
+</tr>
+<tr>
+<td><code>skybox</code></td>
+<td><code>timeOfDay</code> 6.5 → 11 (<code>realtimeScale</code> was already 0)</td>
+</tr>
+<tr>
+<td><code>light</code></td>
+<td><code>intensity</code> 1 → 0.9</td>
+</tr>
+<tr>
+<td><code>fog</code></td>
+<td><code>mode</code> linear → exp2, <code>density</code> 0.01 → 0.002, <code>start</code>/<code>end</code> 60/120 → 100/4000, <code>color</code> #bfd9f2 → #8fa6b2, <code>syncSkybox</code> off → on</td>
+</tr>
+<tr>
+<td><code>water</code></td>
+<td><code>waterSize</code> 128 → 2000, <code>waveHeight</code> 0 → 0.3, <code>windForce</code> −5 → 6, <code>waterColor</code> #0066cc → #0a3d5c</td>
+</tr>
+<tr>
+<td><code>terrain</code></td>
+<td><code>seed</code>, <code>surfaceType</code> (cylinder → plane), <code>radius</code>, <code>horizScale</code>, both amplitudes, <code>tileSize</code>, <code>lodLevels</code></td>
+</tr>
+<tr>
+<td><code>clouds</code></td>
+<td><code>count</code>, <code>altitude</code>, <code>thickness</code>, <code>spread</code>, <code>opacity</code></td>
+</tr>
+<tr>
+<td><code>sound</code></td>
+<td><code>loop</code>/<code>autoplay</code>/<code>spatialSound</code> off → on, <code>maxDistance</code> 100 → 60</td>
+</tr>
+<tr>
+<td><code>reflections</code></td>
+<td><code>probeSize</code> 0 (off) → 128, <code>maxDistance</code> 100 → 200</td>
+</tr>
+</tbody></table>
+<p>To keep a scene exactly as it rendered, write the old value into the
+document. A key you REMOVE now resets to its default, rather than the
+element keeping the last value it had.</p>
+</li>
+<li><p><strong><code>tosijs-3d</code> is now <code>^0.8.9</code></strong>, and <code>moon</code> and <code>sound</code> take their schemas
+from it. Their accepted ranges widen (a moon&#39;s <code>size</code> to 0.05°; a sound&#39;s
+<code>volume</code> to 2 and its distances tenfold), so nothing that validated before
+stops validating.</p>
+</li>
+</ul>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -317,6 +381,6 @@ moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.</p
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-t5xkx6j8.js"></script>
+  <script type="module" src="../hydrate-0k58n7gg.js"></script>
 </body>
 </html>

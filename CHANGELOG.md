@@ -18,8 +18,31 @@ All notable changes to this project are documented here, in
   mountain). The tosijs step is for our doc tooling — tosijs-ui 1.16 needs
   1.10.3 — and we develop against the floor.
 
+- **An unset field now gets its SCHEMA default, not the element's** — the
+  value the editor's panel always showed. Nothing applied schema defaults
+  before, so an author who inserted a primitive and left a field alone saw
+  one value and rendered another: a new `ground` showed 400 × 400 m checker
+  and drew a 4 × 4 m plain plane; a `sun` showed 400 m of shadow and cast 30;
+  a `skybox` showed 11:00 and rendered 6:30. 47 fields across 13 features
+  differ, so **a document that leaves fields unset renders differently**:
+  `light`, `sun`, `skybox`, `ground`, `sound`, `reflections`, `terrain`,
+  `water`, `clouds`, `fog`, `camera`, and the new `weatherCell`. To keep the
+  old look, write the old value into the document. Removing a key from a
+  document now resets that field to its default instead of leaving the last
+  value in place.
+
 ### Added
 
+- **Weather: `weatherCell`, `lightning` and `lightShafts`** (tosijs-3d
+  0.8.5/0.8.6, schemas in 0.8.9 from our tosijs-3d#97). A storm is a
+  `weatherCell` where the storm is (the piece's position; as many as you
+  like) plus one `lightning` anywhere, which strikes under every stormy cell;
+  `lightShafts` adds sunbeams through a broken cloud deck. A new cell is a
+  storm, not the element's all-zero calm. On/off attributes are booleans in
+  the format, as `cloudDeck.follow` is. New sample: `/ensembles/storm.json`;
+  `tests/storm.pw.ts` watches real strikes land inside the cell.
+- **`multipleOf` steps a slider**, so a count or a seed moves in whole
+  numbers.
 - **The property panel has sections, and they fold.** The sky was thirty
   fields in one column; it now folds by tosijs-3d's own sections (Sky, Tint,
   Sun & moon, Stars, Space, Assets, Advanced), first open and the rest

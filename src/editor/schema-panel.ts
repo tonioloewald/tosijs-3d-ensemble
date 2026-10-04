@@ -92,6 +92,8 @@ export interface PropertySpec {
   "x-labels"?: Record<string, string>;
   minimum?: number;
   maximum?: number;
+  /** JSON Schema's step: the slider moves in multiples of it. */
+  multipleOf?: number;
   default?: unknown;
   "x-unit"?: string;
   "x-widget"?: string;
@@ -583,7 +585,10 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           value: bound() ?? (Number(value) || 0),
           min,
           max,
-          step: spec.type === "integer" ? 1 : undefined,
+          // `multipleOf` is how tosijs-3d's schemas say "whole numbers" on a
+          // `number` (lightning's `seed`, the shafts' `count`); without it a
+          // count slides through 13.37.
+          step: spec.type === "integer" ? 1 : spec.multipleOf,
           ...(spec["x-scale"] && spec["x-scale"] !== "linear"
             ? { scale: spec["x-scale"] }
             : {}),

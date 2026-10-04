@@ -42,6 +42,7 @@ console. Every element this module creates is appended explicitly.
 import { featuresOf } from "../format/roles.js";
 import {
   declaredConfig,
+  effectiveConfig,
   featureRegistration,
   linkPayload,
   linkRegistration,
@@ -306,9 +307,10 @@ export function buildEnsemble(
           NARROWED TO WHAT THE SCHEMA DECLARES. A feature's config comes
           straight out of a JSON document that may have been shared, and ten of
           the scene features hand it to an element as `{...cfg}` — where an
-          undeclared key lands as a DOM property. See `declaredConfig`.
+          undeclared key lands as a DOM property. See `declaredConfig`. And
+          with the schema's DEFAULTS under it: see `effectiveConfig`.
         */
-        const handle = reg.bind(piece, declaredConfig(reg, cfg), ctx);
+        const handle = reg.bind(piece, effectiveConfig(reg, cfg), ctx);
         built.handles.set(name, handle);
         if (isBody(name) && isElement(handle)) built.element = handle;
         bound.push({ built, feature: name, ctx });

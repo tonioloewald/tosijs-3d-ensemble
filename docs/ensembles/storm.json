@@ -1,0 +1,85 @@
+{
+  "name": "storm",
+  "kind": "location",
+  "pieces": [
+    {
+      "id": "view",
+      "at": [0, 40, 0],
+      "features": {
+        "camera": {
+          "distance": 120,
+          "heading": 60,
+          "elevation": 8,
+          "maxDistance": 4000
+        }
+      }
+    },
+    {
+      "id": "sun",
+      "at": [-0.6, 0.5, -0.3],
+      "features": {
+        "sun": {}
+      }
+    },
+    {
+      "id": "sky",
+      "at": [0, 0, 0],
+      "features": {
+        "skybox": {
+          "timeOfDay": 17.5
+        }
+      }
+    },
+    {
+      "id": "fill",
+      "at": [0, 0, 0],
+      "features": {
+        "light": {
+          "intensity": 0.5
+        }
+      }
+    },
+    {
+      "id": "ground",
+      "at": [0, 0, 0],
+      "features": {
+        "ground": {}
+      }
+    },
+    {
+      "id": "deck",
+      "at": [0, 0, 0],
+      "features": {
+        "cloudDeck": {
+          "coverage": 0.85,
+          "altitude": 450
+        }
+      }
+    },
+    {
+      "id": "squall",
+      "at": [700, 0, 400],
+      "features": {
+        "weatherCell": {
+          "radius": 600
+        }
+      }
+    },
+    {
+      "id": "lightning",
+      "at": [0, 0, 0],
+      "features": {
+        "lightning": {
+          "rate": 2
+        }
+      }
+    },
+    {
+      "id": "shafts",
+      "at": [0, 0, 0],
+      "features": {
+        "lightShafts": {}
+      }
+    }
+  ]
+}

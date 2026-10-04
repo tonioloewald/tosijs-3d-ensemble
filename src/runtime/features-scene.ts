@@ -187,6 +187,28 @@ IS its feature needs no special case — it simply has no `mesh`:
 { "id": "ground", "at": [0, 0, 0], "features": { "ground": { "width": 400, "texture": "checker" } } }
 ```
 
+An unset field is its SCHEMA default, the value the editor's panel shows, not
+the element's own: `{ "ground": {} }` is the 400 m checker plane the panel
+describes. See `effectiveConfig`.
+
+## Weather
+
+A storm is two pieces: a `weatherCell` where the storm is (the piece's position
+is the cell's centre, and there can be many), and one `lightning` anywhere,
+which strikes under every stormy cell. `lightShafts` adds sunbeams through a
+broken `cloudDeck`. A freshly inserted cell is a storm (cover 1.7, storminess
+1, rain 0.9), because the element's own defaults are all calm.
+
+```jsonc
+{ "id": "deck",      "at": [0, 0, 0],     "features": { "cloudDeck": { "coverage": 0.85 } } },
+{ "id": "squall",    "at": [700, 0, 400], "features": { "weatherCell": { "radius": 600 } } },
+{ "id": "lightning", "at": [0, 0, 0],     "features": { "lightning": { "rate": 2 } } },
+{ "id": "shafts",    "at": [0, 0, 0],     "features": { "lightShafts": {} } }
+```
+
+The whole scene is `/ensembles/storm.json`, and `tests/storm.pw.ts` watches it
+strike inside the cell.
+
 ## Combat is somewhere else, on purpose
 
 `destroyable`, `turret`, `launcher`, `protector`, `blip` and `launchpad` are NOT
@@ -207,6 +229,9 @@ import {
   lightSettingsSchema,
   b3dClouds,
   b3dCloudDeck,
+  b3dLightning,
+  b3dLightShafts,
+  b3dWeatherCell,
   b3dMoon,
   b3dFog,
   b3dGround,
@@ -516,6 +541,21 @@ export function addSingleton(
  * claim is released and this would remove the sky the next line recreates,
  * which is the churn it exists to prevent.
  */
+/**
+ * A weather cell's config: the document's fields, standing at the PIECE's
+ * position — `x`/`z` from `at`, overriding anything the config says, because
+ * a cell is a place and moving the piece moves the storm.
+ *
+ * Pure and exported for the same reason as `stillSky`: the element does not
+ * expose creator props synchronously, so the config is what a test can see.
+ */
+export function weatherCellConfig(
+  cfg: Record<string, unknown>,
+  at: readonly number[]
+): Record<string, unknown> {
+  return { ...cfg, x: at[0] ?? 0, z: at[2] ?? 0 };
+}
+
 /**
  * Sky config with the clock stopped unless the ensemble asked otherwise.
  *
@@ -1462,6 +1502,178 @@ export function registerSceneFeatures(): void {
         ctx,
         "tosi-b3d-cloud-deck",
         () => b3dCloudDeck({ ...attrs }),
+        attrs
+      );
+    },
+  });
+
+  /*
+    THE WEATHER (tosijs-3d 0.8.5/0.8.6, schemas in 0.8.9 — tosijs-3d#97, ours).
+
+    Three features, because upstream composes the weather from three elements
+    with three different shapes:
+
+    - `weatherCell` is a PLACE: a circle on the map whose weather differs —
+      a storm, a squall, a lee. One per piece, at the piece's position, as
+      many as a document wants. Weather consumers (clouds, water, ambient)
+      ask the scene for the weather where they are, so a cell is local.
+    - `lightning` is SCENE-WIDE: one per scene, striking under any cell with
+      `storminess`. A singleton, like the sky.
+    - `lightShafts` is SCENE-WIDE too: sunbeams through a broken cloud deck,
+      and rays from the surface under water. It reads the deck and the water;
+      it needs no setup.
+
+    So "a storm over there" is a cell where the storm is plus one lightning
+    piece anywhere — the same composition Land and Sky's storm toggle uses.
+
+    `on`/`off` attributes are BOOLEANS in the format, as `cloudDeck.follow`
+    and `terrain.biome` are: a JSON document has real booleans, and the bind
+    maps them back.
+  */
+  const onOffToElement =
+    (keys: readonly string[]) => (cfg: Record<string, unknown>) => {
+      const out: Record<string, unknown> = { ...cfg };
+      for (const key of keys)
+        if (key in cfg) out[key] = cfg[key] ? "on" : "off";
+      return out;
+    };
+  const asBoolean = (on: boolean) =>
+    ({ type: "boolean", enum: undefined, default: on } as Spec);
+
+  registerFeature({
+    name: "weatherCell",
+    icon: "⛈️",
+    primitive: true,
+    marker: true,
+    update: updateAttrs,
+    schema: {
+      type: "object",
+      title: "Weather cell",
+      /*
+        `x`/`z` are the PIECE's position, not fields: a cell is a place, and
+        moving the piece moves the storm. The rest is upstream's, with
+        authoring defaults that make a freshly inserted cell a STORM — Land
+        and Sky's own (radius 900, cover 1.7, storminess 1, rain 0.9) —
+        because the element's defaults are all zero, and a cell that does
+        nothing when you add it reads as broken. `drift` stays off: a storm in
+        a document should be where the document put it.
+      */
+      "x-accepts": acceptsOf("weatherCell"),
+      "x-fetched": fetchedOf("weatherCell"),
+      properties: pick(
+        "weatherCell",
+        [
+          "radius",
+          "coverage",
+          "storminess",
+          "precipitation",
+          "windSpeed",
+          "windBearingDeg",
+          "temperature",
+          "drift",
+          "lifetime",
+          "grow",
+        ],
+        {
+          radius: { default: 900 },
+          coverage: { default: 1.7 },
+          storminess: { default: 1 },
+          precipitation: { default: 0.9 },
+        }
+      ),
+    },
+    bind: (_piece, cfg, ctx) =>
+      add(ctx, b3dWeatherCell(weatherCellConfig(cfg, ctx.at))),
+  });
+
+  const lightningToElement = onOffToElement([
+    "bolts",
+    "sprites",
+    "thunder",
+    "shadows",
+  ]);
+  registerFeature({
+    name: "lightning",
+    icon: "⚡",
+    primitive: true,
+    insertAt: [0, 0, 0],
+    update: (handle, cfg) => updateAttrs(handle, lightningToElement(cfg)),
+    schema: {
+      type: "object",
+      title: "Lightning",
+      "x-accepts": acceptsOf("lightning"),
+      "x-fetched": fetchedOf("lightning"),
+      properties: pick(
+        "lightning",
+        [
+          "rate",
+          "brightness",
+          "groundLight",
+          "darken",
+          "color",
+          "bolts",
+          "sprites",
+          "thunder",
+          "volume",
+          "shadows",
+          "shadowSize",
+          "shadowRange",
+          "flashLight",
+          "seed",
+        ],
+        {
+          bolts: asBoolean(true),
+          sprites: asBoolean(true),
+          thunder: asBoolean(true),
+          shadows: asBoolean(true),
+        }
+      ),
+    },
+    bind: (_piece, cfg, ctx) => {
+      const attrs = lightningToElement(cfg);
+      return addSingleton(
+        ctx,
+        "tosi-b3d-lightning",
+        () => b3dLightning({ ...attrs }),
+        attrs
+      );
+    },
+  });
+
+  const shaftsToElement = onOffToElement(["underwater"]);
+  registerFeature({
+    name: "lightShafts",
+    icon: "🌤️",
+    primitive: true,
+    insertAt: [0, 0, 0],
+    update: (handle, cfg) => updateAttrs(handle, shaftsToElement(cfg)),
+    schema: {
+      type: "object",
+      title: "Light shafts",
+      "x-accepts": acceptsOf("lightShafts"),
+      "x-fetched": fetchedOf("lightShafts"),
+      properties: pick(
+        "lightShafts",
+        [
+          "strength",
+          "count",
+          "width",
+          "spread",
+          "radius",
+          "rainBoost",
+          "color",
+          "underwater",
+          "underwaterCount",
+        ],
+        { underwater: asBoolean(true) }
+      ),
+    },
+    bind: (_piece, cfg, ctx) => {
+      const attrs = shaftsToElement(cfg);
+      return addSingleton(
+        ctx,
+        "tosi-b3d-light-shafts",
+        () => b3dLightShafts({ ...attrs }),
         attrs
       );
     },

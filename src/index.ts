@@ -108,6 +108,10 @@ export {
   meshesByLibrary,
 } from "./runtime/libraries.js";
 export { registerSceneFeatures } from "./runtime/features-scene.js";
+export {
+  applyRecommendations,
+  RECOMMENDED_KEYS,
+} from "./runtime/recommendations.js";
 export { sceneFloorplan, floorplanDiff } from "./runtime/scene-floorplan.js";
 export type {
   FloorplanRecord,

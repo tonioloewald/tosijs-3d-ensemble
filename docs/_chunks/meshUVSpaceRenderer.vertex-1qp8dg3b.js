@@ -1,4 +1,0 @@
-import{HA}from"../hydrate-fc8j53r9.js";import"./site-skedcb5f.js";import"./site-16vme694.js";export{HA as meshUVSpaceRendererVertexShaderWGSL};
-
-//# debugId=272D558B359142D364756E2164756E21
-//# sourceMappingURL=meshUVSpaceRenderer.vertex-1qp8dg3b.js.map

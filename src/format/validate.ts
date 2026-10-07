@@ -167,6 +167,51 @@ export function validate(
   });
 
   /*
+    RECOMMENDATIONS: known keys holding finite, non-negative numbers.
+
+    An unknown key is a WARNING, not silence: `ssaoStrenght` would otherwise
+    recommend nothing, forever, and look like it recommended something. The
+    ranges themselves are tosijs-3d's to state (tosijs-3d#101, asked); until
+    then this checks only what a number has to be to mean anything here.
+  */
+  const RECOMMENDS = new Set(["ssaoStrength", "ssaoRadius"]);
+  if (ensemble.recommends !== undefined) {
+    const rec = ensemble.recommends as unknown;
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) {
+      add(
+        "error",
+        "bad-recommends",
+        "`recommends` must be an object",
+        "/recommends"
+      );
+    } else {
+      for (const [key, value] of Object.entries(rec)) {
+        if (!RECOMMENDS.has(key)) {
+          add(
+            "warning",
+            "unknown-recommendation",
+            `unknown recommendation "${key}" (known: ${[...RECOMMENDS].join(
+              ", "
+            )})`,
+            `/recommends/${key}`
+          );
+        } else if (
+          typeof value !== "number" ||
+          !Number.isFinite(value) ||
+          value < 0
+        ) {
+          add(
+            "error",
+            "bad-recommendation",
+            `recommendation "${key}" must be a non-negative number`,
+            `/recommends/${key}`
+          );
+        }
+      }
+    }
+  }
+
+  /*
     WHICH DECLARED LIBRARIES DID NOT ANSWER.
 
     `meshesByLibrary` only adds an entry for a library that returned names, so

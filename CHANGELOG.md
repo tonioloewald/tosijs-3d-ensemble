@@ -35,6 +35,17 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **Ambient occlusion: a preview toggle in the editor, and recommendations
+  in the document.** Whether AO runs is the viewer's choice (owner: "AO is a
+  consumer choice"), so the editor's toggle is remembered per browser and
+  never written to the file. How AO should LOOK in a scene is the author's: a
+  document may carry `recommends: { ssaoStrength, ssaoRadius }`, the preview
+  uses it, and a viewer that turns AO on applies it with
+  `applyRecommendations(ensemble, scene)`. Nothing applies it for you, so a
+  viewer's own tuning is never overwritten. `validate` warns on an unknown
+  recommendation and errors on a bad value. Editing them in the panel waits on
+  ranges from tosijs-3d (tosijs-3d#101). `tests/ao-preview.pw.ts` checks the
+  SSAO pipeline actually attaches.
 - **Weather: `weatherCell`, `lightning` and `lightShafts`** (tosijs-3d
   0.8.5/0.8.6, schemas in 0.8.9 from our tosijs-3d#97). A storm is a
   `weatherCell` where the storm is (the piece's position; as many as you

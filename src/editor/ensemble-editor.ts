@@ -107,6 +107,10 @@ import type { SelectionView } from "./selection-view.js";
 import type { HandlesView } from "./handles-view.js";
 import { axisVector, noTransforms, normaliseDegrees } from "./handles.js";
 import type { Grip } from "./handles.js";
+import {
+  applyRecommendations,
+  RECOMMENDED_KEYS,
+} from "../runtime/recommendations.js";
 import { boundIfSet, schemaWidgets, type BoxLike } from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
 import {
@@ -266,6 +270,9 @@ const GRID_METRES = 10;
  * space of two. A property panel is where the numbers are READ, so it is the
  * last place to be economical about width.
  */
+/** localStorage key for the AO preview switch: per browser, never per document. */
+const AO_PREVIEW_KEY = "tosi-ensemble-editor:ao-preview";
+
 const PANEL_WIDTH = 320;
 
 /*
@@ -2997,6 +3004,7 @@ export class EnsembleEditor extends Component {
   */
   private _renderChrome(): void {
     this._releasePanelObservers();
+    this._applyAoPreview();
     for (const panel of this._panels) panel.remove();
     this._panels = [];
     this._stackTop = { left: 8, right: 8 };
@@ -3484,9 +3492,84 @@ export class EnsembleEditor extends Component {
         */
         button3d({ label: "New", handleClick: () => this.newEnsemble() }),
         button3d({ label: "Download", handleClick: () => this.saveFile() }),
-        button3d({ label: "Open file…", handleClick: () => this.openFile() })
+        button3d({ label: "Open file…", handleClick: () => this.openFile() }),
+        /*
+          AMBIENT OCCLUSION, PREVIEW ONLY.
+
+          Whether AO runs is the VIEWER's choice (owner: "AO is a consumer
+          choice"), so this is a view setting: remembered per browser, never
+          written to the document. What the document CAN say is how AO should
+          look here — `recommends.ssaoStrength` / `ssaoRadius` — and the
+          preview uses that, so an author sees what a viewer who opts in gets.
+        */
+        toggle3d({
+          label: "Ambient occlusion",
+          value: this._aoPreview,
+          handleChange: (on: boolean) => this.setAoPreview(on),
+        }),
+        ...(this._aoPreview
+          ? [
+              label3d({
+                text: this._aoRecommendationText(),
+                muted: true,
+                compact: true,
+              }),
+            ]
+          : [])
       )
     );
+  }
+
+  /** AO preview: the viewer's switch, remembered in this browser only. */
+  private _aoPreview = (() => {
+    try {
+      return localStorage.getItem(AO_PREVIEW_KEY) === "on";
+    } catch {
+      return false;
+    }
+  })();
+
+  /** The scene's own `ssaoStrength`/`ssaoRadius`, captured before any document's. */
+  private _aoDefaults: Record<string, unknown> | null = null;
+
+  /** Turn the AO preview on or off. Never touches the document. */
+  setAoPreview(on: boolean): void {
+    this._aoPreview = on;
+    try {
+      localStorage.setItem(AO_PREVIEW_KEY, on ? "on" : "off");
+    } catch {
+      /* no storage: it still applies for this visit */
+    }
+    this._renderChrome();
+  }
+
+  /*
+    Apply the preview to the scene: on with the DOCUMENT's recommendations, or
+    the scene's own defaults where it recommends nothing — never the previous
+    document's, which is what a plain `applyRecommendations` would leave behind.
+  */
+  private _applyAoPreview(): void {
+    const scene = this._scene as Record<string, unknown> | null;
+    if (!scene) return;
+    this._aoDefaults ??= Object.fromEntries(
+      RECOMMENDED_KEYS.map((k) => [k, scene[k]])
+    );
+    scene.ssao = this._aoPreview ? "on" : "off";
+    Object.assign(scene, this._aoDefaults);
+    applyRecommendations(this._ensemble, scene);
+  }
+
+  private _aoRecommendationText(): string {
+    const rec = this._ensemble.recommends;
+    const parts = [
+      typeof rec?.ssaoStrength === "number"
+        ? `strength ${rec.ssaoStrength}`
+        : "",
+      typeof rec?.ssaoRadius === "number" ? `radius ${rec.ssaoRadius} m` : "",
+    ].filter(Boolean);
+    return parts.length
+      ? `recommended: ${parts.join(", ")}`
+      : "no recommendation: element defaults";
   }
 
   private _renderPieceList(): void {

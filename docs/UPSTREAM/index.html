@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=598122dc64b2" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=d05399e6cafa" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=3a2915901cea" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=55803b5c8915" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -307,6 +307,11 @@ older than its card; when they disagree, the card wins.</p>
 <td><strong><code>boundValue</code> never unsubscribes</strong>, so every widget bound to a tosijs box leaks its panel and its host through tosijs&#39;s listener list (+125 listeners per ten rebuilds, flat with binding off). Worked around by <code>_tracked</code> in the editor; suggested fix uses <code>OBSERVER_SHOULD_BE_REMOVED</code></td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/100">#100</a></td>
 </tr>
+<tr>
+<td>48</td>
+<td><strong>No schema for <code>&lt;tosi-b3d&gt;</code>&#39;s own attributes</strong>: <code>ssaoStrength</code>/<code>ssaoRadius</code> (our AO recommendations need ranges to edit) and <code>windSpeed</code>/<code>windBearingDeg</code> (drifting weather cells, board #3110)</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/101">#101</a></td>
+</tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
 <p>Each of these is local complexity we carry <strong>because</strong> of a row above. When the
@@ -561,6 +566,7 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
       <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
       <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
       <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="../recommendations/">Scene recommendations</a></li>
     </ul>
     </details></li>
   </ul>
@@ -571,6 +577,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-fc8j53r9.js"></script>
+  <script type="module" src="../hydrate-y1y6rzz7.js"></script>
 </body>
 </html>

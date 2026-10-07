@@ -10,4 +10,5 @@ true by construction rather than by discipline.
 - [Scene features](/features-scene/)
 - [Scene floorplan — visual regression without pixels](/scene-floorplan/)
 - [Writing a transform to a node](/node-transform/)
+- [Scene recommendations](/recommendations/)
 <!-- /toc -->

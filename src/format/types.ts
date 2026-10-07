@@ -296,4 +296,17 @@ export interface Ensemble {
   points?: Point[];
   zones?: Zone[];
   values?: Values;
+  /**
+   * How this scene RECOMMENDS being drawn, for a viewer that chooses to.
+   *
+   * Render quality is the consumer's (owner, 2026-10-07: "AO is a consumer
+   * choice"), so a document never switches anything on. But how ambient
+   * occlusion should LOOK in this particular scene, its strength and the
+   * radius it searches, is a fact about the scene's scale and shapes, and the
+   * author is the one who has seen it. A viewer that turns AO on can take
+   * these with `applyRecommendations`; the editor previews with them.
+   *
+   * Values are `<tosi-b3d>`'s own `ssaoStrength` / `ssaoRadius` (metres).
+   */
+  recommends?: { ssaoStrength?: number; ssaoRadius?: number };
 }

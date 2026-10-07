@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=f045c49d86af" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=598122dc64b2" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=12dc799fcf50" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=3a2915901cea" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -296,7 +296,7 @@ document sets, nothing changes. For one it leaves out, these move:</p>
 document. A key you REMOVE now resets to its default, rather than the
 element keeping the last value it had.</p>
 </li>
-<li><p><strong><code>tosijs-3d</code> is now <code>^0.8.10</code></strong>, and <code>moon</code> and <code>sound</code> take their schemas
+<li><p><strong><code>tosijs-3d</code> is now <code>^0.8.11</code></strong>, and <code>moon</code> and <code>sound</code> take their schemas
 from it. Their accepted ranges widen (a moon&#39;s <code>size</code> to 0.05°; a sound&#39;s
 <code>volume</code> to 2 and its distances tenfold), so nothing that validated before
 stops validating.</p>
@@ -381,6 +381,6 @@ stops validating.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-7stjd3pp.js"></script>
+  <script type="module" src="../hydrate-fc8j53r9.js"></script>
 </body>
 </html>

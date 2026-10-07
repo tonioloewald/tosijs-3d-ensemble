@@ -158,6 +158,10 @@ The boundary, and the mistakes that produced it:
   2026-10-07: _"AO is a consumer choice."_ So no feature writes `ssao*`, and
   the same reasoning applies to the next device-budget setting that turns up.
   An ensemble describes what is THERE, not how expensively to draw it.
+  What a document MAY say is how AO should LOOK if a viewer turns it on:
+  `recommends: { ssaoStrength, ssaoRadius }` (owner, same day), applied only
+  by a viewer who calls `applyRecommendations`, and by the editor's preview
+  toggle, which is a per-browser view setting and never written to the file.
 
 ## Design invariants the format depends on
 

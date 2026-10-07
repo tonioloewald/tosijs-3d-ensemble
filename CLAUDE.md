@@ -152,6 +152,12 @@ The boundary, and the mistakes that produced it:
   companion assertion that the markers DO appear when the relevant entry is
   bundled, so neither can pass vacuously. If you add an import across a layer,
   that test is the only thing that will notice.
+- **Render quality is the CONSUMER's, not the document's.** Ambient occlusion
+  (tosijs-3d 0.8.11's `<tosi-b3d ssao>`) is set on the host by whoever displays
+  the scene, because what a device can afford is theirs to decide. Owner,
+  2026-10-07: _"AO is a consumer choice."_ So no feature writes `ssao*`, and
+  the same reasoning applies to the next device-budget setting that turns up.
+  An ensemble describes what is THERE, not how expensively to draw it.
 
 ## Design invariants the format depends on
 

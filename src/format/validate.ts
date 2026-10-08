@@ -171,8 +171,9 @@ export function validate(
 
     An unknown key is a WARNING, not silence: `ssaoStrenght` would otherwise
     recommend nothing, forever, and look like it recommended something. The
-    ranges themselves are tosijs-3d's to state (tosijs-3d#101, asked); until
-    then this checks only what a number has to be to mean anything here.
+    RANGES are tosijs-3d's (`b3dSchema()`, 0.8.13, our #101) and the editor's
+    sliders hold them; this file stays free of tosijs-3d so a generator can
+    validate under plain Node, so it checks only what a number must be.
   */
   const RECOMMENDS = new Set(["ssaoStrength", "ssaoRadius"]);
   if (ensemble.recommends !== undefined) {

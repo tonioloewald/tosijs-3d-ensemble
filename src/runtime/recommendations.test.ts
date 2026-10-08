@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { applyRecommendations } from "./recommendations.js";
+import { sceneSchemas } from "tosijs-3d";
+import { applyRecommendations, RECOMMENDED_KEYS } from "./recommendations.js";
 import { validate } from "../format/validate.js";
 
 /*
@@ -69,5 +70,22 @@ describe("validate reports recommendations it cannot use", () => {
 
   it("good recommendations are fine", () => {
     expect(codes({ ssaoStrength: 1.4, ssaoRadius: 3 })).toEqual([]);
+  });
+});
+
+/*
+  The keys we store must be <tosi-b3d>'s own: the editor's sliders take their
+  ranges from `b3dSchema()`, so a rename upstream would otherwise drop a slider
+  silently and leave the document recommending a property nothing reads.
+*/
+describe("recommendations are <tosi-b3d> properties", () => {
+  it("every key is in tosijs-3d's b3d schema, as a number", () => {
+    const props = (
+      sceneSchemas.b3d() as {
+        properties: Record<string, { type?: string }>;
+      }
+    ).properties;
+    for (const key of RECOMMENDED_KEYS)
+      expect([key, props[key]?.type]).toEqual([key, "number"]);
   });
 });

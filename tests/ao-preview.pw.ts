@@ -113,6 +113,42 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   expect(on.docKeys).not.toContain("ssao");
   expect(on.recommends).toEqual({ ssaoStrength: 1.7, ssaoRadius: 3.5 });
 
+  // The SLIDERS write the recommendation: click a quarter of the way along
+  // the strength track (tosijs-3d's range, 0-3) and the document, the
+  // preview and the panel must agree. Track, not caption: tosijs-3d#84.
+  const track = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    const caption = Array.from(ed.shadowRoot!.querySelectorAll("text")).find(
+      (t) => (t.textContent ?? "").startsWith("ssaoStrength")
+    );
+    let group: Element | null = caption ?? null;
+    while (group && group.getAttribute?.("data-w3d") !== "slider")
+      group = group.parentElement;
+    group?.setAttribute("data-probe", "ao-strength");
+    const bar = Array.from(group?.querySelectorAll("rect") ?? [])
+      .map((r) => r.getBoundingClientRect())
+      .filter((b) => b.height > 0 && b.height < 12 && b.width > 20)
+      .sort((x, y) => y.width - x.width)[0];
+    return bar && { x: bar.x + bar.width * 0.25, y: bar.y + bar.height / 2 };
+  });
+  expect(track, "no ssaoStrength slider under the AO toggle").toBeTruthy();
+  await page.mouse.click(track!.x, track!.y);
+  await page.waitForTimeout(800);
+  const slid = await state(page);
+  const written = (slid.recommends as { ssaoStrength: number }).ssaoStrength;
+  expect(written, "the slider did not write the document").not.toBe(1.7);
+  expect(Math.abs(written - 0.75)).toBeLessThan(0.2);
+  expect(slid.strength, "the preview did not follow").toBe(written);
+  expect(
+    await page.evaluate(
+      () =>
+        !!(
+          document.querySelector("tosi-ensemble-editor") as Ed
+        ).shadowRoot!.querySelector('[data-probe="ao-strength"]')
+    ),
+    "the panel was rebuilt under the slider"
+  ).toBe(true);
+
   // A document with no recommendation previews at the element's defaults,
   // not the previous document's values.
   await page.evaluate(() => {

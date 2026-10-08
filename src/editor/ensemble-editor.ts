@@ -78,6 +78,7 @@ import {
   toggle3d,
   ui,
   vector3d,
+  sceneSchemas,
 } from "tosijs-3d";
 import { Quaternion, Ray, Vector3 } from "@babylonjs/core";
 import { buildEnsemble } from "../runtime/build.js";
@@ -272,6 +273,18 @@ const GRID_METRES = 10;
  */
 /** localStorage key for the AO preview switch: per browser, never per document. */
 const AO_PREVIEW_KEY = "tosi-ensemble-editor:ao-preview";
+
+/** `<tosi-b3d>`'s own specs for the recommendations we store (tosijs-3d 0.8.13). */
+const AO_RECOMMENDATION_SPECS = () => {
+  const props = (
+    sceneSchemas.b3d() as {
+      properties: Record<string, Record<string, unknown>>;
+    }
+  ).properties;
+  return Object.fromEntries(
+    RECOMMENDED_KEYS.map((k) => [k, props[k]!])
+  ) as Record<string, Record<string, unknown>>;
+};
 
 const PANEL_WIDTH = 320;
 
@@ -3507,13 +3520,29 @@ export class EnsembleEditor extends Component {
           value: this._aoPreview,
           handleChange: (on: boolean) => this.setAoPreview(on),
         }),
+        /*
+          THE RECOMMENDED LOOK, edited where it is previewed. These write the
+          DOCUMENT (`recommends`), unlike the toggle above, so they are only
+          offered while you can see what they do. Ranges are tosijs-3d's own
+          `b3dSchema()` (0.8.13, our #101): never typed here.
+        */
         ...(this._aoPreview
           ? [
               label3d({
-                text: this._aoRecommendationText(),
+                text: "Recommended for this scene",
                 muted: true,
                 compact: true,
               }),
+              ...(schemaWidgets({
+                schema: { properties: AO_RECOMMENDATION_SPECS() },
+                values: (this._ensemble.recommends ?? {}) as Record<
+                  string,
+                  unknown
+                >,
+                fields: this._pendingFields,
+                handleChange: (key, value) =>
+                  this._setRecommendation(key, value as number),
+              }) as never[]),
             ]
           : [])
       )
@@ -3559,17 +3588,21 @@ export class EnsembleEditor extends Component {
     applyRecommendations(this._ensemble, scene);
   }
 
-  private _aoRecommendationText(): string {
-    const rec = this._ensemble.recommends;
-    const parts = [
-      typeof rec?.ssaoStrength === "number"
-        ? `strength ${rec.ssaoStrength}`
-        : "",
-      typeof rec?.ssaoRadius === "number" ? `radius ${rec.ssaoRadius} m` : "",
-    ].filter(Boolean);
-    return parts.length
-      ? `recommended: ${parts.join(", ")}`
-      : "no recommendation: element defaults";
+  /*
+    Write one recommendation: a document edit (undoable, and a drag coalesces
+    into one step), with NO rebuild and NO chrome render, because re-rendering
+    the panel would destroy the slider being dragged. The preview is updated
+    directly instead.
+  */
+  private _setRecommendation(key: string, value: number): void {
+    this.edit(
+      `recommend ${key}`,
+      (e) => {
+        e.recommends = { ...(e.recommends ?? {}), [key]: value };
+      },
+      { rebuild: false, chrome: false, coalesce: true }
+    );
+    this._applyAoPreview();
   }
 
   private _renderPieceList(): void {

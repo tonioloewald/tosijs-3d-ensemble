@@ -139,6 +139,7 @@ export function placeMesh(
       element,
       dispose: () => {
         stopWaiting();
+        detachLibraryMaterials(element);
         // No orphan reaper any more — see the note at the end of this file.
         element.remove();
       },
@@ -157,6 +158,35 @@ export function placeMesh(
   }) as unknown as SceneElement;
   ctx.scene.appendChild(box);
   return { element: box, dispose: () => box.remove() };
+}
+
+/**
+ * Let go of a library instance's materials BEFORE its element is removed.
+ *
+ * ⚠️ A WORKAROUND for tosijs-3d#102. The element's teardown disposes any
+ * material no mesh in `scene.meshes` still uses, and a library's SOURCE
+ * meshes are not in `scene.meshes` (they live in its AssetContainer). So
+ * removing the last instance of a model disposed that model's materials out
+ * from under the library, and every later instance rendered flat white. The
+ * editor rebuilds on every edit and load, so the first rebuild stripped the
+ * colour from a whole kit: the Quaternius nature library lost 17 of its 19
+ * materials, and every Kenney piece on the pirate cove was white.
+ *
+ * Those materials belong to the library, never to a piece, so the instance
+ * gives them back by reference before it goes: nothing is left for the
+ * teardown to collect. Delete this when #102 lands.
+ */
+function detachLibraryMaterials(element: SceneElement): void {
+  const root = (element as unknown as { mesh?: unknown }).mesh as
+    | {
+        material?: unknown;
+        getChildMeshes?: () => Array<{ material?: unknown }>;
+      }
+    | null
+    | undefined;
+  if (!root) return;
+  for (const mesh of [root, ...(root.getChildMeshes?.() ?? [])])
+    if ("material" in mesh) mesh.material = null;
 }
 
 /** Poll interval for the setup waits below. */

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 
 /*
-  RAPID EDITS LEAVE NO GHOSTS, AND NOTHING KEEPS TICKING.
+  RAPID EDITS LEAVE NO GHOSTS, KEEP THEIR COLOUR, AND NOTHING KEEPS TICKING.
 
   Two regressions in one place, because they were one piece of code:
 
@@ -98,6 +98,36 @@ test("a burst of edits settles at the same scene, and goes quiet", async ({
     expect(await settled(), `${burst} rapid edits changed the scene`).toBe(
       before
     );
+    /*
+      AND KEEPS ITS COLOUR. tosijs-3d#102: removing the last instance of a
+      library model disposed the model's shared materials, so every instance
+      built after a rebuild was material-less and rendered flat white — the
+      whole kit, from the first edit on. Count the placed library meshes that
+      have lost their material.
+    */
+    const bare = await page.evaluate(() => {
+      const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+        shadowRoot: ShadowRoot | null;
+      };
+      const b3d = ed.shadowRoot!.querySelector("tosi-b3d") as Element & {
+        scene: {
+          meshes: Array<{
+            name: string;
+            material: unknown;
+            getTotalVertices(): number;
+          }>;
+        };
+      };
+      const placed = b3d.scene.meshes.filter(
+        (m) => /_instance_/.test(m.name) && m.getTotalVertices() > 0
+      );
+      return {
+        placed: placed.length,
+        bare: placed.filter((m) => !m.material).length,
+      };
+    });
+    expect(bare.placed).toBeGreaterThan(0);
+    expect(bare.bare, `${burst} rapid edits left pieces white`).toBe(0);
   }
 
   // Quiet: measured 6.5 ticks/s here once the reaper went, ~2,700 with it.

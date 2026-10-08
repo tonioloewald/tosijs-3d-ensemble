@@ -55,6 +55,11 @@ All notable changes to this project are documented here, in
   storm, not the element's all-zero calm. On/off attributes are booleans in
   the format, as `cloudDeck.follow` is. New sample: `/ensembles/storm.json`;
   `tests/storm.pw.ts` watches real strikes land inside the cell.
+- **The Quaternius nature library on the editor's kit shelf**
+  (`https://cdn.tosijs.net/quaternius/libraries/nature.glb`): 64 curated
+  models (common, birch, pine, willow and palm trees, dead trees, bushes,
+  cacti, grass, flowers, plants, a stump and a log), with categories for the
+  palette. New sample: `/ensembles/glade.json`, a clearing built from it.
 - **Scene wind: `wind`.** Sets `<tosi-b3d>`'s own `windSpeed`,
   `windBearingDeg` and `windGust` (ranges from tosijs-3d 0.8.13's
   `b3dSchema()`), so a `weatherCell` with `drift: "wind"` travels across the
@@ -93,6 +98,17 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **Library pieces rendered flat white after the first rebuild**, for every
+  kit: the pirate cove's Kenney pieces and the new Quaternius nature library
+  alike. tosijs-3d's element teardown disposes any material no mesh in the
+  scene still uses, and a library's source meshes are not in the scene (they
+  live in its AssetContainer), so removing the last instance of a model
+  disposed that model's shared materials out from under the library
+  (tosijs-3d#102, filed with the trace). The editor rebuilds on every edit and
+  load, so a kit lost its colour on the first one. Placed library instances
+  now hand their materials back before their element is removed.
+  `tests/rapid-edits.pw.ts` counts placed meshes left without a material
+  (fails without the workaround). Present in 0.4.0.
 - **The editor leaked, and a session slowed down the longer it ran.** Three
   causes, found in turn with heap snapshots and a per-trip probe:
   - tosijs-3d's `inputField` kept every field alive (tosijs-3d#96, fixed in

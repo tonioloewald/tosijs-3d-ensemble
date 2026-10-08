@@ -209,6 +209,17 @@ broken `cloudDeck`. A freshly inserted cell is a storm (cover 1.7, storminess
 The whole scene is `/ensembles/storm.json`, and `tests/storm.pw.ts` watches it
 strike inside the cell.
 
+`wind` sets the SCENE's wind (`<tosi-b3d>`'s own `windSpeed`,
+`windBearingDeg`, `windGust`): a cell with `drift: "wind"` travels on it, and
+clouds, water and ambient particles feel it where their own wind is unset.
+It is the one thing a document may set on the host. Render quality, such as
+ambient occlusion, stays the viewer's (see `recommends`).
+
+```jsonc
+{ "id": "wind",   "at": [0, 0, 0],     "features": { "wind": { "windSpeed": 12, "windBearingDeg": 90 } } },
+{ "id": "squall", "at": [700, 0, 400], "features": { "weatherCell": { "drift": "wind" } } }
+```
+
 ## Combat is somewhere else, on purpose
 
 `destroyable`, `turret`, `launcher`, `protector`, `blip` and `launchpad` are NOT
@@ -1637,6 +1648,46 @@ export function registerSceneFeatures(): void {
         () => b3dLightning({ ...attrs }),
         attrs
       );
+    },
+  });
+
+  /*
+    SCENE WIND: `<tosi-b3d>`'s own windSpeed / windBearingDeg / windGust.
+
+    The wind a scene HAS is part of what the scene is (owner, 2026-10-08), so a
+    document may set it — unlike ambient occlusion, which is the viewer's. It
+    drives everything that reads the scene's weather: a `weatherCell` with
+    `drift: 'wind'` travels on it, and clouds, water and ambient particles
+    feel it where their own wind attributes are unset.
+
+    ⚠️ IT WRITES THE HOST, AND ONLY THESE THREE. The schema is
+    `b3dSchema()` (tosijs-3d 0.8.13, our #101), which also describes `ssao`,
+    `clearColor`, `timeScale`… `x-accepts` is the three wind keys, NOT
+    `acceptsOf("b3d")`, so a document cannot reach the rest of the host through
+    this feature: switching AO on here would overrule the viewer.
+
+    Removing the piece hands the host back the wind it had before, so wind is
+    as undoable as anything else in the document.
+  */
+  const WIND_KEYS = ["windSpeed", "windBearingDeg", "windGust"] as const;
+  registerFeature({
+    name: "wind",
+    icon: "💨",
+    primitive: true,
+    insertAt: [0, 0, 0],
+    update: updateAttrs,
+    schema: {
+      type: "object",
+      title: "Scene wind",
+      "x-accepts": [...WIND_KEYS],
+      properties: pick("b3d", WIND_KEYS),
+    },
+    bind: (_piece, cfg, ctx) => {
+      const host = ctx.scene as unknown as Record<string, unknown>;
+      const before = Object.fromEntries(WIND_KEYS.map((k) => [k, host[k]]));
+      updateAttrs(host, cfg);
+      ctx.onDispose(() => updateAttrs(host, before));
+      return host;
     },
   });
 

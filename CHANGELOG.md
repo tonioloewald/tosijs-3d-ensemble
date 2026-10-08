@@ -55,6 +55,14 @@ All notable changes to this project are documented here, in
   storm, not the element's all-zero calm. On/off attributes are booleans in
   the format, as `cloudDeck.follow` is. New sample: `/ensembles/storm.json`;
   `tests/storm.pw.ts` watches real strikes land inside the cell.
+- **Scene wind: `wind`.** Sets `<tosi-b3d>`'s own `windSpeed`,
+  `windBearingDeg` and `windGust` (ranges from tosijs-3d 0.8.13's
+  `b3dSchema()`), so a `weatherCell` with `drift: "wind"` travels across the
+  scene. Wind is part of what a scene IS, so a document may set it (owner);
+  the feature accepts those three keys and nothing else on the host, so it
+  cannot be used to switch on AO or change the background. Removing the piece
+  restores the host's previous wind. `tests/wind.pw.ts` watches a storm drift
+  east and stop.
 - **`multipleOf` steps a slider**, so a count or a seed moves in whole
   numbers.
 - **The property panel has sections, and they fold.** The sky was thirty

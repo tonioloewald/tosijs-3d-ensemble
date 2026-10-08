@@ -5,7 +5,7 @@ import {
   schemaDrift,
   weatherCellConfig,
 } from "./features-scene.js";
-import { featureRegistration } from "../format/registry.js";
+import { effectiveConfig, featureRegistration } from "../format/registry.js";
 
 /*
   THE SCENE SCHEMAS ARE UPSTREAM'S NOW, AND THIS IS WHAT KEEPS THEM THAT WAY.
@@ -63,6 +63,7 @@ const ADOPTED = [
   ["weatherCell", "weatherCell"],
   ["lightning", "lightning"],
   ["lightShafts", "lightShafts"],
+  ["wind", "b3d"],
 ] as const;
 
 const propertiesOf = (
@@ -322,6 +323,48 @@ describe("weather features", () => {
     expect(props.coverage!.default).toBe(1.7);
     // Position is the piece's, never a field.
     expect("x" in props || "z" in props).toBe(false);
+  });
+});
+
+/*
+  SCENE WIND writes the HOST, only its three wind keys, and gives them back.
+*/
+describe("wind", () => {
+  it("sets the scene's wind on bind and restores it on dispose", () => {
+    registerSceneFeatures();
+    const host: Record<string, unknown> = {
+      windSpeed: 3,
+      windBearingDeg: 10,
+      windGust: 0,
+      ssao: "off",
+    };
+    const disposers: Array<() => void> = [];
+    featureRegistration("wind")!.bind!(
+      { id: "w", at: [0, 0, 0] } as never,
+      effectiveConfig(featureRegistration("wind"), {
+        windSpeed: 20,
+        windBearingDeg: 90,
+        // A document must not reach the rest of the host through this
+        // feature: AO is the viewer's.
+        ssao: "on",
+        clearColor: "#ff0000",
+      }),
+      {
+        scene: host,
+        at: [0, 0, 0],
+        onDispose: (f: () => void) => disposers.push(f),
+      } as never
+    );
+    expect([host.windSpeed, host.windBearingDeg, host.ssao]).toEqual([
+      20,
+      90,
+      "off",
+    ]);
+    expect("clearColor" in host).toBe(false);
+    for (const f of disposers) f();
+    expect([host.windSpeed, host.windBearingDeg, host.windGust]).toEqual([
+      3, 10, 0,
+    ]);
   });
 });
 

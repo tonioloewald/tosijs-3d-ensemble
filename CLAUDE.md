@@ -162,6 +162,8 @@ The boundary, and the mistakes that produced it:
   `recommends: { ssaoStrength, ssaoRadius }` (owner, same day), applied only
   by a viewer who calls `applyRecommendations`, and by the editor's preview
   toggle, which is a per-browser view setting and never written to the file.
+  Scene WIND is the opposite call (owner, 2026-10-08): part of what the scene
+  is, so the `wind` feature writes it to the host, and ONLY it, by `x-accepts`.
 
 ## Design invariants the format depends on
 

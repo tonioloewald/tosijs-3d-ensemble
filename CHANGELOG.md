@@ -7,12 +7,12 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer floors: `tosijs-3d` `^0.8.11` (was `^0.8.4`) and `tosijs` `^1.10.3`
+- **Peer floors: `tosijs-3d` `^0.8.12` (was `^0.8.4`) and `tosijs` `^1.10.3`
   (was `^1.10.1`).** 0.8.9 carries the schemas we now pick from (moon, sound,
   weather, sections) and the `inputField` leak fix; the editor also uses
   0.8.8's `foldSections` (below). 0.8.10 stops the `skybox` overwriting the
   background colour for a camera that cannot see it, and stops glow whiting out
-  under a fading full-screen mesh (both from manta-recon). 0.8.11 adds ambient occlusion (`<tosi-b3d ssao>`), the host's to switch on.
+  under a fading full-screen mesh (both from manta-recon). 0.8.11 adds ambient occlusion (`<tosi-b3d ssao>`), the host's to switch on; 0.8.12 keeps it out of a headset, where 0.8.11's broke the stereo frame (the editor's AO preview relies on that).
   tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
   shafts, storms that darken the day), world presets, crater fields and
   self-fitting scene panels; and fixes the cloud deck's local weather, which

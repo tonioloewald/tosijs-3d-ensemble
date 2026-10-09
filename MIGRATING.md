@@ -229,7 +229,12 @@ Two things change underneath an existing document:
   To keep a scene exactly as it rendered, write the old value into the
   document. A key you REMOVE now resets to its default, rather than the
   element keeping the last value it had.
-- **`tosijs-3d` is now `^0.8.13`**, and `moon` and `sound` take their schemas
+- **`tosijs-3d` is now `^0.9.0`**, and `moon` and `sound` take their schemas
   from it. Their accepted ranges widen (a moon's `size` to 0.05°; a sound's
   `volume` to 2 and its distances tenfold), so nothing that validated before
   stops validating.
+- **`terrain.biomeTemperature` changed meaning in tosijs-3d 0.9.0.** It is a
+  real temperature now: `0` is 0 °C, `1` is 50 °C, `-1` is -50 °C (no longer
+  "default"). It used to be the biome chart's `0…1` axis. Convert a value a
+  document sets with `(old - 0.36) / 0.8`; drop a `-1`, since the default
+  (`0.45`) looks like the old one. A value left unset needs nothing.

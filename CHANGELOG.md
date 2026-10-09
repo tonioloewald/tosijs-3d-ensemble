@@ -7,12 +7,12 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer floors: `tosijs-3d` `^0.8.13` (was `^0.8.4`) and `tosijs` `^1.10.3`
+- **Peer floors: `tosijs-3d` `^0.9.0` (was `^0.8.4`) and `tosijs` `^1.10.3`
   (was `^1.10.1`).** 0.8.9 carries the schemas we now pick from (moon, sound,
   weather, sections) and the `inputField` leak fix; the editor also uses
   0.8.8's `foldSections` (below). 0.8.10 stops the `skybox` overwriting the
   background colour for a camera that cannot see it, and stops glow whiting out
-  under a fading full-screen mesh (both from manta-recon). 0.8.11 adds ambient occlusion (`<tosi-b3d ssao>`), the host's to switch on; 0.8.12 keeps it out of a headset, where 0.8.11's broke the stereo frame (the editor's AO preview relies on that). 0.8.13 describes `<tosi-b3d>`'s own attributes (`b3dSchema()`, our #101), which the AO recommendation sliders take their ranges from.
+  under a fading full-screen mesh (both from manta-recon). 0.8.11 adds ambient occlusion (`<tosi-b3d ssao>`), the host's to switch on; 0.8.12 kept the screen-space kind out of a headset, where 0.8.11's broke the stereo frame, and 0.8.14 made `projected` AO the default, which does run in a headset. 0.8.13 describes `<tosi-b3d>`'s own attributes (`b3dSchema()`, our #101), which the AO recommendation sliders take their ranges from. 0.9.0 changes `biomeTemperature` to a real temperature scale (see below and MIGRATING.md).
   tosijs-3d 0.8.5–0.8.7 brings weather (lightning, light
   shafts, storms that darken the day), world presets, crater fields and
   self-fitting scene panels; and fixes the cloud deck's local weather, which
@@ -20,6 +20,11 @@ All notable changes to this project are documented here, in
   mountain). The tosijs step is for our doc tooling — tosijs-ui 1.16 needs
   1.10.3 — and we develop against the floor.
 
+- **`terrain.biomeTemperature` is a temperature now** (tosijs-3d 0.9.0): `0`
+  is 0 °C and each unit is 50 °C, with no limit either way, and `-1` no longer
+  means "default". It was the biome chart's `0…1` axis. A document that sets
+  it renders a different climate: convert with `(old - 0.36) / 0.8`. The
+  default is `0.45` and looks the same. None of our shipped samples set it.
 - **An unset field now gets its SCHEMA default, not the element's** — the
   value the editor's panel always showed. Nothing applied schema defaults
   before, so an author who inserted a primitive and left a field alone saw
@@ -68,6 +73,12 @@ All notable changes to this project are documented here, in
   cannot be used to switch on AO or change the background. Removing the piece
   restores the host's previous wind. `tests/wind.pw.ts` watches a storm drift
   east and stop.
+- **Ready for tosijs-3d 0.10's removed callback names.** 0.10 ignores the
+  `onX` callback options (and the trigger's and manipulator's old names) with
+  a one-time warning, which reads as a control that stopped working. We use
+  none: checked in the source, and by sweeping every sample and panel on both
+  0.9.0 and tosijs-3d's unreleased main for deprecation warnings (none).
+  `src/no-removed-callbacks.test.ts` fails if one is ever added.
 - **`multipleOf` steps a slider**, so a count or a seed moves in whole
   numbers.
 - **The property panel has sections, and they fold.** The sky was thirty

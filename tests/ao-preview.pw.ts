@@ -9,8 +9,8 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   AO looks is the document's `recommends`, and the preview must use it, or an
   author tunes a recommendation they never actually see.
 
-  Checked on the renderer, not the attribute: the SSAO pipeline is attached to
-  the scene's cameras while the preview is on, and gone when it is off.
+  Checked on the renderer, not the attribute: AO is running (by whichever
+  method tosijs-3d uses) while the preview is on, and not when it is off.
 
   ⚠️ 1400x1100: at the default viewport the left panels can sit below the fold
   and a click lands on nothing (see property-keystroke.pw.ts).
@@ -38,9 +38,34 @@ const state = (page: import("@playwright/test").Page) =>
       ssao: b3d.ssao,
       strength: b3d.ssaoStrength,
       radius: b3d.ssaoRadius,
-      pipelines:
-        b3d.scene?.postProcessRenderPipelineManager?.supportedPipelines
-          ?.length ?? 0,
+      /*
+        AO IS RUNNING, by either method. tosijs-3d 0.8.14 made `projected` the
+        default: a material plugin ("ProjectedAo") on every lit material, not
+        Babylon's post-process pipeline. This test checked only the pipeline
+        and went red on that upgrade although AO was drawing, so it now asks
+        both: an attached pipeline, or an enabled plugin on a visible mesh.
+      */
+      running:
+        (b3d.scene?.postProcessRenderPipelineManager?.supportedPipelines
+          ?.length ?? 0) > 0 ||
+        (
+          (
+            b3d.scene as unknown as {
+              meshes: Array<{
+                isVisible: boolean;
+                material?: {
+                  pluginManager?: {
+                    getPlugin(n: string): { isEnabled: boolean } | null;
+                  };
+                } | null;
+              }>;
+            }
+          ).meshes ?? []
+        ).some(
+          (m) =>
+            m.isVisible &&
+            !!m.material?.pluginManager?.getPlugin("ProjectedAo")?.isEnabled
+        ),
       docKeys: Object.keys(ed.ensemble),
       recommends: ed.ensemble.recommends ?? null,
     };
@@ -108,7 +133,7 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   await tapToggle(page);
   const on = await state(page);
   expect([on.ssao, on.strength, on.radius]).toEqual(["on", 1.7, 3.5]);
-  expect(on.pipelines, "no SSAO pipeline while previewing").toBeGreaterThan(0);
+  expect(on.running, "AO is not running while previewing").toBe(true);
   // …and the document gained nothing but what the author wrote.
   expect(on.docKeys).not.toContain("ssao");
   expect(on.recommends).toEqual({ ssaoStrength: 1.7, ssaoRadius: 3.5 });
@@ -175,6 +200,9 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   await tapToggle(page);
   const offAgain = await state(page);
   expect(offAgain.ssao).toBe("off");
+  expect(offAgain.running, "AO still running after switching it off").toBe(
+    false
+  );
 
   expect(realErrors(errors)).toEqual([]);
 });

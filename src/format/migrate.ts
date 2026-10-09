@@ -184,6 +184,22 @@ export function migrate(input: Ensemble): Migration {
     const at = (feature: string, key: string) =>
       `/pieces/${index}/features/${feature}/${key}`;
 
+    /*
+      `terrain.biomeTemperature: -1` was "the plugin's default" until tosijs-3d
+      0.9.0, which made it a temperature (-1 = -50 °C). Remove it, so the
+      document says what it always meant. EXACTLY -1: any other number could
+      be in either scale, and converting it would double-convert a file that
+      was already updated, which is the one thing a migration must never do.
+    */
+    const terrain = features.terrain as Record<string, unknown> | undefined;
+    if (terrain && terrain.biomeTemperature === -1) {
+      delete terrain.biomeTemperature;
+      changes.push({
+        path: at("terrain", "biomeTemperature"),
+        note: `removed the pre-0.9 "default" biomeTemperature -1 from "${piece.id}" (since tosijs-3d 0.9 it would mean -50 °C)`,
+      });
+    }
+
     const ambient = features.ambient;
     if (ambient && typeof ambient.preset === "string") {
       if (!AMBIENT_PRESETS.includes(ambient.preset)) {

@@ -21,10 +21,14 @@ All notable changes to this project are documented here, in
   1.10.3 — and we develop against the floor.
 
 - **`terrain.biomeTemperature` is a temperature now** (tosijs-3d 0.9.0): `0`
-  is 0 °C and each unit is 50 °C, with no limit either way, and `-1` no longer
-  means "default". It was the biome chart's `0…1` axis. A document that sets
-  it renders a different climate: convert with `(old - 0.36) / 0.8`. The
-  default is `0.45` and looks the same. None of our shipped samples set it.
+  is 0 °C and each unit is 50 °C, with no limit either way. It was the biome
+  chart's `0…1` axis. A document that sets it renders a different climate:
+  convert with `(old - 0.36) / 0.8`. The default is `0.45` and looks the same.
+  None of our shipped samples set it. **The old "default", `-1`, is still read
+  as the default** (it would otherwise be a frozen -50 °C world that still
+  validates; #13): the terrain feature treats exactly `-1` as unset and warns
+  once, and `migrate()` removes it from the file. Any other value is left
+  alone, since it could be in either scale.
 - **An unset field now gets its SCHEMA default, not the element's** — the
   value the editor's panel always showed. Nothing applied schema defaults
   before, so an author who inserted a primitive and left a field alone saw

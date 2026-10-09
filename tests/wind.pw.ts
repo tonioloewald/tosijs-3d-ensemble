@@ -61,9 +61,18 @@ test("a wind piece blows a drifting storm across the scene", async ({
     });
     await new Promise((r) => setTimeout(r, 2000));
     const blowing = { speed: b3d.windSpeed, bearing: b3d.windBearingDeg };
+    /*
+      POLL for the drift, with a deadline, rather than sampling once after a
+      fixed wait: the cell moves per rendered frame, and a loaded machine
+      renders fewer of them. A fixed 4 s failed under release-doctor's load
+      (2026-10-09) while passing alone.
+    */
     const x0 = cellX();
-    await new Promise((r) => setTimeout(r, 4000));
-    const x1 = cellX();
+    let x1 = x0;
+    for (let waited = 0; waited < 15000 && x1 - x0 <= 20; waited += 250) {
+      await new Promise((r) => setTimeout(r, 250));
+      x1 = cellX();
+    }
 
     ed.edit("calm", (e) => {
       e.pieces.splice(
@@ -80,7 +89,7 @@ test("a wind piece blows a drifting storm across the scene", async ({
   });
 
   expect(result.blowing).toEqual({ speed: 25, bearing: 90 });
-  // Toward +X at 25 m/s for 4 s: it moved east, and by a wind-sized amount.
+  // Toward +X at 25 m/s: it moved east, by a wind-sized amount, in time.
   expect(result.x1 - result.x0, "the storm did not drift").toBeGreaterThan(20);
   // The wind piece removed: the host's wind is back, and the storm stops.
   expect(result.after).toBe(result.calm);

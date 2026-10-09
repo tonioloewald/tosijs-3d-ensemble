@@ -64,7 +64,8 @@ const shows = (list: string[], name: string) =>
 test("the sky's sections fold, open on a tap, and stay open", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  // ~55 s alone; it hit 120 s under release-doctor's load (2026-10-09).
+  test.setTimeout(240_000);
   await page.setViewportSize({ width: 1400, height: 1100 });
   const errors = collectPageErrors(page);
 

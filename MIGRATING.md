@@ -236,5 +236,6 @@ Two things change underneath an existing document:
 - **`terrain.biomeTemperature` changed meaning in tosijs-3d 0.9.0.** It is a
   real temperature now: `0` is 0 °C, `1` is 50 °C, `-1` is -50 °C (no longer
   "default"). It used to be the biome chart's `0…1` axis. Convert a value a
-  document sets with `(old - 0.36) / 0.8`; drop a `-1`, since the default
-  (`0.45`) looks like the old one. A value left unset needs nothing.
+  document sets with `(old - 0.36) / 0.8`. A `-1` (the old "default") is read
+  as the default and `migrate()` removes it, so it needs nothing. A value left
+  unset needs nothing either.

@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=08da2ad0e947" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=c4aa3192df61" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=855b3ae8ab2f" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=3790eb7c29d7" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -304,8 +304,9 @@ stops validating.</p>
 <li><p><strong><code>terrain.biomeTemperature</code> changed meaning in tosijs-3d 0.9.0.</strong> It is a
 real temperature now: <code>0</code> is 0 °C, <code>1</code> is 50 °C, <code>-1</code> is -50 °C (no longer
 &quot;default&quot;). It used to be the biome chart&#39;s <code>0…1</code> axis. Convert a value a
-document sets with <code>(old - 0.36) / 0.8</code>; drop a <code>-1</code>, since the default
-(<code>0.45</code>) looks like the old one. A value left unset needs nothing.</p>
+document sets with <code>(old - 0.36) / 0.8</code>. A <code>-1</code> (the old &quot;default&quot;) is read
+as the default and <code>migrate()</code> removes it, so it needs nothing. A value left
+unset needs nothing either.</p>
 </li>
 </ul>
 
@@ -388,6 +389,6 @@ document sets with <code>(old - 0.36) / 0.8</code>; drop a <code>-1</code>, sinc
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-23cktpat.js"></script>
+  <script type="module" src="../hydrate-zrxr78pz.js"></script>
 </body>
 </html>

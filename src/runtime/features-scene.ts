@@ -553,6 +553,46 @@ export function addSingleton(
  * which is the churn it exists to prevent.
  */
 /**
+ * A terrain's config as its element wants it.
+ *
+ * - `biome` is a BOOLEAN in the format and `'on'`/`'off'` on the element, like
+ *   the lamp's switches: an absent HTML boolean attribute reads false, so a raw
+ *   boolean would not survive the trip.
+ * - ⚠️ `biomeTemperature: -1` is read as THE DEFAULT, not as -50 °C. Until
+ *   tosijs-3d 0.9.0 `-1` meant "the plugin's default"; since then it is a
+ *   temperature, and a document saved with the old default would load as a
+ *   frozen world that still validates (our #13). A document records no scale
+ *   version, and every ensemble saved before 0.5.0 predates the new meaning, so
+ *   the old reading is the safe one. It warns once; `migrate()` removes it from
+ *   the file. Exactly `-1` only: any other number could be in either scale.
+ *
+ * Pure and exported so the mapping is testable without an element.
+ */
+let warnedLegacyBiomeTemperature = false;
+export function terrainConfig(
+  cfg: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    ...cfg,
+    biome: cfg.biome ? "on" : "off",
+  };
+  if (cfg.biomeTemperature === -1) {
+    out.biomeTemperature = (
+      sceneSchemas.terrain() as {
+        properties: Record<string, { default?: unknown }>;
+      }
+    ).properties.biomeTemperature?.default;
+    if (!warnedLegacyBiomeTemperature) {
+      warnedLegacyBiomeTemperature = true;
+      console.warn(
+        "tosijs-3d-ensemble: terrain.biomeTemperature -1 is the pre-0.9 'default' and is read as the default; since tosijs-3d 0.9 it would mean -50 °C. Run migrate() to remove it from the document."
+      );
+    }
+  }
+  return out;
+}
+
+/**
  * A weather cell's config: the document's fields, standing at the PIECE's
  * position — `x`/`z` from `at`, overriding anything the config says, because
  * a cell is a place and moving the piece moves the storm.
@@ -1223,10 +1263,7 @@ export function registerSceneFeatures(): void {
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {
-      const changed = updateAttrs(handle, {
-        ...cfg,
-        biome: cfg.biome ? "on" : "off",
-      });
+      const changed = updateAttrs(handle, terrainConfig(cfg));
       // Setting attributes is not rebuilding the ground. Without this a slider
       // moves a number and the terrain keeps its old shape — the same silent
       // nothing as never generating it in the first place.
@@ -1276,8 +1313,10 @@ export function registerSceneFeatures(): void {
           "biome",
           "biomeSeaLevel",
           "biomeLapseRate",
-          // 0.8.3's live climate: `-1` means the plugin's own default, and the
-          // moisture default (0.45) is steppe — a green world wants ~0.7.
+          // A real temperature since tosijs-3d 0.9.0: 0 is 0 °C, 1 is 50 °C,
+          // default 0.45. `-1` USED to mean "default" and is read that way
+          // here (see `terrainConfig`). The moisture default (0.45) is
+          // steppe: a green world wants ~0.7.
           "biomeTemperature",
           "biomeMoisture",
           "biomeVolcanicScale",
@@ -1337,14 +1376,7 @@ export function registerSceneFeatures(): void {
     bind: (_piece, cfg, ctx) => {
       const element = add(
         ctx,
-        b3dTerrain({
-          baseHeight: ctx.at[1],
-          ...cfg,
-          // `'on'`/`'off'` STRINGS, like the lamp's switches: an absent HTML
-          // boolean attribute reads false, so upstream spells these as an
-          // enum and a raw boolean would not survive the trip.
-          biome: cfg.biome ? "on" : "off",
-        })
+        b3dTerrain({ baseHeight: ctx.at[1], ...terrainConfig(cfg) })
       );
       regenerateWhenReady(element, ctx);
       return element;

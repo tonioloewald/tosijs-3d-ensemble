@@ -205,9 +205,9 @@ fields, and 0.4's `validate` reports no url problem in any of them, so the url
 rule does not touch them. What was NOT measured is the peer-floor change: the
 moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.
 
-## Upgrading from 0.4 to 0.5 (unreleased)
+## Upgrading from 0.4 to 0.5
 
-Two things change underneath an existing document:
+Three things change underneath an existing document:
 
 - **An unset field now renders at its SCHEMA default**, the value the editor's
   panel shows, where it used to render at the ELEMENT's default. For a field a
@@ -225,6 +225,16 @@ Two things change underneath an existing document:
   | `clouds` | `count`, `altitude`, `thickness`, `spread`, `opacity` |
   | `sound` | `loop`/`autoplay`/`spatialSound` off → on, `maxDistance` 100 → 60 |
   | `reflections` | `probeSize` 0 (off) → 128, `maxDistance` 100 → 200 |
+  | `camera` | `distance` 12, `heading` -60°, `elevation` 20° (ours; the bind already fell back to these) |
+  | `weatherCell` (new in 0.5) | a new cell is a storm: `radius` 900, `coverage` 1.7, `storminess` 1, `precipitation` 0.9 |
+
+  The rule is not limited to scene features: **every registered feature's
+  top-level schema defaults now reach its bind and update, a consumer's own
+  included** (manta-recon's `radar`, `spawner` and `patrol-zone` were checked:
+  their bind fallbacks already equal their schema defaults, so nothing moves).
+  Defaults NESTED inside an object property (`radar.boost.*`) are not applied.
+  A terrain's height is still its piece's `y` unless the document sets
+  `baseHeight`. The field counts were measured against tosijs-3d 0.8.9.
 
   To keep a scene exactly as it rendered, write the old value into the
   document. A key you REMOVE now resets to its default, rather than the

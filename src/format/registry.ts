@@ -416,6 +416,12 @@ export function declaredConfig(
  * Applied on bind AND on update, so the two roads cannot disagree — and so a
  * key REMOVED from a document goes back to its default instead of keeping the
  * last value it had.
+ *
+ * For EVERY registered feature, a consumer's own included, and for TOP-LEVEL
+ * properties only: a default nested inside an object property is the
+ * feature's own business. A field whose value should come from somewhere else
+ * when unset (terrain's `baseHeight`, which is the piece's y) must declare no
+ * default, or the default wins.
  */
 export function effectiveConfig(
   registration: { schema?: FeatureSchema } | undefined,

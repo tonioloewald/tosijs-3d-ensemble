@@ -3,7 +3,7 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [0.5.0] — 2026-10-09
 
 ### ⚠️ Breaking
 
@@ -37,8 +37,11 @@ All notable changes to this project are documented here, in
   a `skybox` showed 11:00 and rendered 6:30. 47 fields across 13 features
   differ, so **a document that leaves fields unset renders differently**:
   `light`, `sun`, `skybox`, `ground`, `sound`, `reflections`, `terrain`,
-  `water`, `clouds`, `fog`, `camera`, and the new `weatherCell`. To keep the
-  old look, write the old value into the document. Removing a key from a
+  `water`, `clouds`, `fog`, `camera`, and the new `weatherCell` (counts
+  measured on tosijs-3d 0.8.9). It applies to EVERY registered feature, a
+  consumer's own included, for top-level defaults only (a default nested in an
+  object property is not applied). To keep the old look, write the old value
+  into the document. Removing a key from a
   document now resets that field to its default instead of leaving the last
   value in place.
 

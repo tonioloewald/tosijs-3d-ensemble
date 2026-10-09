@@ -1326,6 +1326,15 @@ export function registerSceneFeatures(): void {
           "wireframe",
         ],
         {
+          /*
+            NO DEFAULT for `baseHeight`: the PIECE's y is the terrain's height
+            (the bind passes `ctx.at[1]`), and a schema default would override
+            it now that every default applies (`effectiveConfig`). Upstream's
+            `0` did exactly that: a terrain at y = -140 built at 0, and moving
+            one vertically in the editor snapped back (0.5.0 review, M1). A
+            document that SETS `baseHeight` still wins, as before.
+          */
+          baseHeight: { default: undefined },
           // A seed is typed or stepped, never dragged: no seed is near another.
           seed: { type: "integer", maximum: 9999, default: 111 },
           // An ensemble's terrain is a landscape. A cylinder is a planet.

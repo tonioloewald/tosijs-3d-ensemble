@@ -369,6 +369,27 @@ describe("wind", () => {
 });
 
 /*
+  A TERRAIN STANDS AT ITS PIECE'S HEIGHT unless the document says otherwise
+  (0.5.0 review, M1). With every schema default applied, upstream's
+  `baseHeight: 0` overrode the piece's y: a terrain at -140 built at 0.
+*/
+describe("terrain height", () => {
+  it("the piece's y wins over any schema default", () => {
+    registerSceneFeatures();
+    const cfg = effectiveConfig(featureRegistration("terrain"), {});
+    expect("baseHeight" in cfg).toBe(false);
+  });
+
+  it("an authored baseHeight still wins", () => {
+    registerSceneFeatures();
+    const cfg = effectiveConfig(featureRegistration("terrain"), {
+      baseHeight: 25,
+    });
+    expect(cfg.baseHeight).toBe(25);
+  });
+});
+
+/*
   UPSTREAM'S SECTIONS cover every field we pick.
 
   The sky, water and cloud deck carry tosijs-3d's own `x-sections` (0.8.9).

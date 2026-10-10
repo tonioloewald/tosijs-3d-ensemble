@@ -6,7 +6,7 @@ import { describe, expect, it } from "bun:test";
   see src/__fixtures__/ensemble-element-registers.ts.
 */
 describe("<tosi-ensemble> in a fresh process", () => {
-  it("registers the scene features on connect, and not the presets", () => {
+  it("registers the scene features on connect, keeps a consumer's own, and not the presets", () => {
     const run = Bun.spawnSync(
       ["bun", "test", "./src/__fixtures__/ensemble-element-registers.ts"],
       { cwd: new URL("../..", import.meta.url).pathname }

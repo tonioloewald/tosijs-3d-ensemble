@@ -161,8 +161,16 @@ export class TosiEnsemble extends Component {
     return this._data;
   }
   set ensemble(value: EnsembleData | null) {
+    // Assigning a document is a newer request than any fetch in flight, so
+    // that fetch must not overwrite it when it lands.
+    this._loads++;
+    this._setData(value);
+  }
+
+  /** Hold a document and build it (libraries first). Used by load too. */
+  private _setData(value: EnsembleData | null): void {
     this._data = value;
-    this._rebuild();
+    this._mountAndBuild();
   }
   private _data: EnsembleData | null = null;
 
@@ -180,7 +188,7 @@ export class TosiEnsemble extends Component {
   override connectedCallback(): void {
     // The scene vocabulary is what this element is FOR, so it brings it: a
     // page that is only HTML must work. Idempotent; presets stay opt-in.
-    registerSceneFeatures();
+    registerSceneFeatures({ keepExisting: true });
     super.connectedCallback();
     this._sync();
   }
@@ -202,12 +210,41 @@ export class TosiEnsemble extends Component {
       disposed the build) or built at a different `at` is rebuilt.
   */
   private _sync(): void {
-    if (this.src && this.src !== this._requestedSrc) {
-      void this.load(this.src);
-      return;
+    // Only an `src` CHANGE moves this, so a clear then the same src again
+    // refetches, and an explicit `load(url)` does not make the next
+    // attribute write fetch `src` back over it.
+    if (this.src !== this._requestedSrc) {
+      this._requestedSrc = this.src;
+      if (this.src) {
+        void this.load(this.src);
+        return;
+      }
     }
     if (this._data && (!this._built || this._builtAt !== this.at))
+      this._mountAndBuild();
+  }
+
+  /*
+    MOUNT, THEN BUILD, on every path, not only after a fetch. A reconnect
+    (possibly into a DIFFERENT <tosi-b3d>) and a document assigned to
+    \`.ensemble\` need the document's libraries in THIS scene too, or every
+    library piece builds as a placeholder (0.5.1 review). \`mountLibraries\` is
+    idempotent by name and url. A document with no libraries builds
+    synchronously, as before; one with libraries builds when they are ready,
+    unless something newer was asked for meanwhile.
+  */
+  private _builds = 0;
+  private _mountAndBuild(): void {
+    const ticket = ++this._builds;
+    const data = this._data;
+    const scene = this.closest("tosi-b3d") as SceneElement | null;
+    if (!data?.libraries?.length || !scene) {
       this._rebuild();
+      return;
+    }
+    void mountLibraries(data, scene).then(() => {
+      if (ticket === this._builds && this._data === data) this._rebuild();
+    });
   }
 
   override disconnectedCallback(): void {
@@ -223,7 +260,6 @@ export class TosiEnsemble extends Component {
    * discarded, so the element shows the last `src` it was given.
    */
   async load(url: string): Promise<void> {
-    this._requestedSrc = url;
     const ticket = ++this._loads;
     try {
       const response = await fetch(url);
@@ -231,12 +267,10 @@ export class TosiEnsemble extends Component {
         throw new Error(`ensemble "${url}": ${response.status}`);
       const data = (await response.json()) as EnsembleData;
       if (ticket !== this._loads) return;
-      // Mount what the FILE declares before building, so a page needs to
-      // know nothing about the content it is showing beyond its address.
-      const scene = this.closest("tosi-b3d") as SceneElement | null;
-      if (scene) await mountLibraries(data, scene);
-      if (ticket !== this._loads) return;
-      this.ensemble = data;
+      // Libraries are mounted by \`_mountAndBuild\`, on this path and every
+      // other: a page needs to know nothing about the content beyond its
+      // address.
+      this._setData(data);
     } catch (error) {
       if (ticket !== this._loads) return;
       this.dispatchEvent(

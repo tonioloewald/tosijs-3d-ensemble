@@ -10,20 +10,30 @@ All notable changes to this project are documented here, in
 - **`<tosi-ensemble>` is declarative all the way.** Four gaps, each now
   checked:
   - **No setup call.** It registers the scene features itself the first time
-    one connects, so a page that is only HTML works. Presets (combat, world)
-    stay opt-in. Checked in a fresh process, since in a shared one something
-    else registers them first.
+    one connects, so a page that is only HTML works. A feature a consumer
+    already registered under the same name (their own `fog`, say) is kept,
+    not replaced: `registerSceneFeatures({ keepExisting: true })`, which the
+    editor now uses on connect too. Presets (combat, world) stay opt-in.
+    Checked in a fresh process, since in a shared one something else
+    registers them first.
   - **Live attributes.** Changing `src` loads the new document, and a slower
-    earlier response cannot overwrite it; changing `at` rebuilds at the new
+    earlier response cannot overwrite it (nor can it overwrite a document
+    assigned to `.ensemble` meanwhile); changing `at` rebuilds at the new
     origin. Both were read once, on connect.
   - **Survives a move.** A document assigned to `.ensemble` was lost on a DOM
     move (dispose on disconnect, and reconnect only refetched `src`); it is
-    rebuilt from what the element holds.
+    rebuilt from what the element holds. Every build now mounts the
+    document's libraries first, not only a fetched one, so a document with a
+    library assigned to `.ensemble`, or moved into another scene, builds its
+    real meshes instead of placeholders.
   - **Events.** `built` (`{ built, problems }`) after every build, and `error`
     (`{ error, src }`) instead of an unhandled promise rejection.
 
-  `tests/ensemble-element.pw.ts` drives all of it on the element's doc page
-  (the move check fails without the fix).
+  `tests/ensemble-element.pw.ts` drives all of it on the element's doc page.
+  Each check was made to fail with its fix removed: the move, the race (the
+  first response is held back while the second `src` arrives), the library
+  mount, and the consumer-override check. Review:
+  `reviews/0.5.1-always-on-triage.md`.
 
 ## [0.5.0] — 2026-10-09
 

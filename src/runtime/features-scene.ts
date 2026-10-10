@@ -254,7 +254,7 @@ import {
   b3dTerrain,
   b3dWater,
 } from "tosijs-3d";
-import { registerFeature } from "../format/registry.js";
+import { registerFeature, registeredFeatures } from "../format/registry.js";
 import type { FeatureContext, SceneElement } from "../format/registry.js";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
@@ -748,8 +748,27 @@ let registered = false;
  * piece's `at`; global ones (`fog`, `clouds`, `ambient`, `reflections`) ignore
  * it, because "the fog is at (3, 0, 12)" means nothing.
  */
-export function registerSceneFeatures(): void {
+/**
+ * Register the scene features (sun, sky, ground, terrain, water, weather…).
+ * Idempotent: only the first call registers anything.
+ *
+ * `keepExisting` leaves alone any feature already registered under the same
+ * name. It is what an AUTOMATIC registration uses (`<tosi-ensemble>` and the
+ * editor on connect): a consumer who registered their own `sun` or `fog` and
+ * never called this must not have it silently replaced by the built-in the
+ * moment an element connects (0.5.1 review, verified). An explicit call
+ * without it keeps the old meaning: the built-ins, as written.
+ */
+export function registerSceneFeatures(
+  options: { keepExisting?: boolean } = {}
+): void {
   if (registered) return;
+  const kept = options.keepExisting ? registeredFeatures() : [];
+  registerSceneFeaturesNow();
+  for (const reg of kept) registerFeature(reg as never);
+}
+
+function registerSceneFeaturesNow(): void {
   registered = true;
 
   registerFeature({

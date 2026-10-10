@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { featureRegistration } from "../format/registry.js";
+import { featureRegistration, registerFeature } from "../format/registry.js";
 import { TosiEnsemble } from "../runtime/ensemble-element.js";
 
 /*
@@ -17,14 +17,30 @@ import { TosiEnsemble } from "../runtime/ensemble-element.js";
   it; under `__fixtures__`, so it never ships.
 */
 describe("<tosi-ensemble> brings the scene vocabulary", () => {
-  it("registers the scene features when it connects", () => {
+  /*
+    ONE SEQUENCE, because registration happens once per process: a consumer
+    registers their own \`fog\` and never calls registerSceneFeatures; then a
+    bare element connects. The scene features must appear (pure markup works)
+    and the consumer's \`fog\` must survive (0.5.1 review, verified: it was
+    silently replaced by the built-in).
+  */
+  it("registers the scene features on connect, and keeps a consumer's own", () => {
     expect(TosiEnsemble).toBeDefined();
+    const mine = {
+      name: "fog",
+      schema: { type: "object", properties: {} },
+      bind: () => null,
+    };
+    registerFeature(mine as never);
     const before = featureRegistration("sun");
     const el = document.createElement("tosi-ensemble");
     document.body.append(el);
-    const after = featureRegistration("sun");
     el.remove();
-    expect([before === undefined, after !== undefined]).toEqual([true, true]);
+    expect([
+      before === undefined,
+      featureRegistration("sun") !== undefined,
+      featureRegistration("fog") === (mine as never),
+    ]).toEqual([true, true, true]);
   });
 
   it("does not register the opt-in presets", () => {

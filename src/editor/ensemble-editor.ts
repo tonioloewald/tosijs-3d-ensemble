@@ -847,7 +847,7 @@ export class EnsembleEditor extends Component {
     super.connectedCallback();
     // Scene primitives only. The editor does not assume a domain — a host that
     // wants hit points registers the combat preset itself.
-    registerSceneFeatures();
+    registerSceneFeatures({ keepExisting: true });
     registerEditorTools();
     this._registerTransformTool();
     /*

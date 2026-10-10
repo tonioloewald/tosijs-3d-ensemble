@@ -97,17 +97,32 @@ test("tosi-ensemble follows its attributes, survives a move, reports errors", as
   });
   expect(loaded).toBe("storm");
 
-  // Two quick changes: the last one wins, whichever response lands first.
+  /*
+    Two quick changes: the last one wins. The FIRST response is held back
+    2.5 s, so it lands after the second: without the staleness guard it would
+    overwrite the document asked for last (0.5.1 review: a race test whose
+    first request resolves first anyway cannot fail).
+  */
+  await page.route("**/ensembles/land-and-sky.json", async (route) => {
+    await new Promise((r) => setTimeout(r, 2500));
+    await route.continue();
+  });
   const last = await page.evaluate(async () => {
     const el = document.querySelector("tosi-ensemble") as El;
+    /*
+      The first fetch must be IN FLIGHT when the second src arrives: two
+      writes in one tick are batched into one render by tosijs, so the first
+      would never even be requested (measured). Let it start, then change.
+    */
     el.src = "/ensembles/land-and-sky.json";
+    await new Promise((r) => setTimeout(r, 400));
     el.src = "/ensembles/standard-scene.json";
     for (let i = 0; i < 100; i++) {
       await new Promise((r) => setTimeout(r, 100));
       if (el.ensemble?.name === "standard-scene") break;
     }
-    // Give a slower land-and-sky response time to land, and be ignored.
-    await new Promise((r) => setTimeout(r, 3000));
+    // The held-back land-and-sky lands now, and must be ignored.
+    await new Promise((r) => setTimeout(r, 4000));
     return el.ensemble?.name;
   });
   expect(last).toBe("standard-scene");
@@ -156,6 +171,50 @@ test("tosi-ensemble follows its attributes, survives a move, reports errors", as
     };
   });
   expect(moved).toEqual({ gone: true, name: "in-memory", pieces: 1 });
+
+  /*
+    A document WITH A LIBRARY survives a move too: the rebuild mounts the
+    document's libraries in the scene it lands in, so a library piece is its
+    real mesh, not a placeholder box (0.5.1 review: only the fetch path
+    mounted libraries).
+  */
+  const withLibrary = await page.evaluate(async () => {
+    const el = document.querySelector("tosi-ensemble") as El;
+    const b3d = el.closest("tosi-b3d") as Element & {
+      scene: { meshes: Array<{ name: string }> };
+    };
+    el.ensemble = {
+      name: "with-library",
+      libraries: [
+        {
+          name: "pirate",
+          url: "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb",
+        },
+      ],
+      pieces: [{ id: "barrel", mesh: "barrel", at: [0, 0, 0] }],
+    } as never;
+    el.remove();
+    b3d.append(el);
+    for (let i = 0; i < 150; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      // A LIBRARY piece, not a placeholder, asked of the build: a library
+      // piece is placed by <tosi-b3d-destroyable>, a missing mesh becomes a
+      // <tosi-b3d-box>. (Checking for `.mesh` was vacuous: a placeholder box
+      // has one too, and the check passed with the mount removed.)
+      const piece = (
+        el as unknown as {
+          built: {
+            pieces: Map<string, { element?: Element | null }>;
+          } | null;
+        }
+      ).built?.pieces.get("barrel");
+      if (piece?.element?.tagName === "TOSI-B3D-DESTROYABLE") return true;
+    }
+    return false;
+  });
+  expect(withLibrary, "the library piece did not build after a move").toBe(
+    true
+  );
 
   expect(realErrors(errors)).toEqual([]);
 });

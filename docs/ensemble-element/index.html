@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=d457b1e5ac40" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=5fb4cd17ec5c" data-tosi-doc-system />
   <title>&lt;tosi-ensemble&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="Load an ensemble into a scene in one line, declaratively, as a child of &lt;tosi-b3d&gt;" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=c954784a0129" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=6274625d208f" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1><code>&lt;tosi-ensemble&gt;</code></h1>
 <p>Load an ensemble into a scene <strong>in one line</strong>, declaratively, as a child of
@@ -49,9 +49,8 @@
 &lt;/tosi-b3d&gt;
 </code></pre>
 <pre><code class="language-js">import { b3d, b3dBox } from &#39;tosijs-3d&#39;
-import { ensemble, registerSceneFeatures } from &#39;tosijs-3d-ensemble&#39;
-
-registerSceneFeatures()
+// No setup call: the element registers the scene features itself.
+import { ensemble } from &#39;tosijs-3d-ensemble&#39;
 
 preview.append(
   b3d(
@@ -143,6 +142,43 @@ and — more to the point — never sees <code>shield</code> in a property panel
 <td>where to put its local origin, <code>&quot;x y z&quot;</code>, default <code>&quot;0 0 0&quot;</code></td>
 </tr>
 </tbody></table>
+<h2>Declarative, all the way</h2>
+<ul>
+<li><strong>No setup call.</strong> The element registers the scene features (sun, sky,
+ground, terrain, water, weather…) itself the first time one connects, so a
+page that is only HTML works. The combat and world presets stay opt-in: a
+consumer that wants them still calls <code>registerCombatPreset()</code> /
+<code>registerWorldPreset()</code>.</li>
+<li><strong>Live attributes.</strong> Change <code>src</code> and the new document loads (a slow earlier
+response cannot overwrite it); change <code>at</code> and it rebuilds at the new origin.</li>
+<li><strong>Survives a move.</strong> Re-parenting disconnects and reconnects the element; it
+rebuilds from the document it already holds, whether that came from <code>src</code> or
+was assigned to <code>.ensemble</code>.</li>
+</ul>
+<h2>Events</h2>
+<table>
+<thead>
+<tr>
+<th>event</th>
+<th><code>detail</code></th>
+<th>when</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>built</code></td>
+<td><code>{ built, problems }</code></td>
+<td>after every build, with <code>validate</code>&#39;s problems</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>{ error, src }</code></td>
+<td>a fetch or parse failed (no unhandled rejection)</td>
+</tr>
+</tbody></table>
+<pre><code class="language-js">// Runs on this page: listens to the example&#39;s element above.
+const el = document.querySelector(&#39;tosi-ensemble&#39;)
+el?.addEventListener(&#39;built&#39;, (e) =&gt; console.log(e.detail.problems))
+</code></pre>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -223,6 +259,6 @@ and — more to the point — never sees <code>shield</code> in a property panel
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-ebez5aj3.js"></script>
+  <script type="module" src="../hydrate-xst8eknt.js"></script>
 </body>
 </html>

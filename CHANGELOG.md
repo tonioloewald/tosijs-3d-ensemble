@@ -3,6 +3,28 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Fixed
+
+- **`<tosi-ensemble>` is declarative all the way.** Four gaps, each now
+  checked:
+  - **No setup call.** It registers the scene features itself the first time
+    one connects, so a page that is only HTML works. Presets (combat, world)
+    stay opt-in. Checked in a fresh process, since in a shared one something
+    else registers them first.
+  - **Live attributes.** Changing `src` loads the new document, and a slower
+    earlier response cannot overwrite it; changing `at` rebuilds at the new
+    origin. Both were read once, on connect.
+  - **Survives a move.** A document assigned to `.ensemble` was lost on a DOM
+    move (dispose on disconnect, and reconnect only refetched `src`); it is
+    rebuilt from what the element holds.
+  - **Events.** `built` (`{ built, problems }`) after every build, and `error`
+    (`{ error, src }`) instead of an unhandled promise rejection.
+
+  `tests/ensemble-element.pw.ts` drives all of it on the element's doc page
+  (the move check fails without the fix).
+
 ## [0.5.0] — 2026-10-09
 
 ### ⚠️ Breaking

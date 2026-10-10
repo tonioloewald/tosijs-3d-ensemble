@@ -12,9 +12,8 @@ Load an ensemble into a scene **in one line**, declaratively, as a child of
 
 ```js
 import { b3d, b3dBox } from 'tosijs-3d'
-import { ensemble, registerSceneFeatures } from 'tosijs-3d-ensemble'
-
-registerSceneFeatures()
+// No setup call: the element registers the scene features itself.
+import { ensemble } from 'tosijs-3d-ensemble'
 
 preview.append(
   b3d(
@@ -101,6 +100,32 @@ and — more to the point — never sees `shield` in a property panel.
 | `src` | URL of the ensemble JSON |
 | `library` | library `type` to instantiate meshes from; omit for none |
 | `at` | where to put its local origin, `"x y z"`, default `"0 0 0"` |
+
+## Declarative, all the way
+
+- **No setup call.** The element registers the scene features (sun, sky,
+  ground, terrain, water, weather…) itself the first time one connects, so a
+  page that is only HTML works. The combat and world presets stay opt-in: a
+  consumer that wants them still calls `registerCombatPreset()` /
+  `registerWorldPreset()`.
+- **Live attributes.** Change `src` and the new document loads (a slow earlier
+  response cannot overwrite it); change `at` and it rebuilds at the new origin.
+- **Survives a move.** Re-parenting disconnects and reconnects the element; it
+  rebuilds from the document it already holds, whether that came from `src` or
+  was assigned to `.ensemble`.
+
+## Events
+
+| event | `detail` | when |
+|---|---|---|
+| `built` | `{ built, problems }` | after every build, with `validate`'s problems |
+| `error` | `{ error, src }` | a fetch or parse failed (no unhandled rejection) |
+
+```js
+// Runs on this page: listens to the example's element above.
+const el = document.querySelector('tosi-ensemble')
+el?.addEventListener('built', (e) => console.log(e.detail.problems))
+```
 */
 /*{"parent":"Runtime","order":2}*/
 import { Component } from "tosijs";
@@ -108,6 +133,7 @@ import type { ComponentAttrs } from "tosijs";
 import { buildEnsemble } from "./build.js";
 import { placeMesh } from "./place-mesh.js";
 import { mountLibraries } from "./libraries.js";
+import { registerSceneFeatures } from "./features-scene.js";
 import type { BuiltEnsemble } from "./build.js";
 import type { Ensemble as EnsembleData, Vec3 } from "../format/types.js";
 import type { SceneElement } from "../format/registry.js";
@@ -146,31 +172,83 @@ export class TosiEnsemble extends Component {
   }
   private _built: BuiltEnsemble | null = null;
 
+  /** The `src` last asked for, and the `at` the live build was made with. */
+  private _requestedSrc = "";
+  private _builtAt: string | null = null;
+  private _loads = 0;
+
   override connectedCallback(): void {
+    // The scene vocabulary is what this element is FOR, so it brings it: a
+    // page that is only HTML must work. Idempotent; presets stay opt-in.
+    registerSceneFeatures();
     super.connectedCallback();
-    if (this.src) void this.load(this.src);
+    this._sync();
+  }
+
+  /*
+    Attribute writes re-render a tosijs component, so this is where a changed
+    `src` or `at` is noticed. It only DECIDES; loading and building happen in
+    `load` and `_rebuild`.
+  */
+  override render(): void {
+    super.render?.();
+    if (this.isConnected) this._sync();
+  }
+
+  /*
+    One place that brings the build in line with the attributes:
+    - a NEW `src` loads (the same one again does not refetch);
+    - otherwise, a document held but not built (a reconnect after a MOVE, which
+      disposed the build) or built at a different `at` is rebuilt.
+  */
+  private _sync(): void {
+    if (this.src && this.src !== this._requestedSrc) {
+      void this.load(this.src);
+      return;
+    }
+    if (this._data && (!this._built || this._builtAt !== this.at))
+      this._rebuild();
   }
 
   override disconnectedCallback(): void {
     this._built?.dispose();
     this._built = null;
+    this._builtAt = null;
     super.disconnectedCallback?.();
   }
 
+  /**
+   * Fetch and build `url`. A failure is reported as an `error` event rather
+   * than thrown, and a slower EARLIER load that resolves after a later one is
+   * discarded, so the element shows the last `src` it was given.
+   */
   async load(url: string): Promise<void> {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`ensemble "${url}": ${response.status}`);
-    const data = (await response.json()) as EnsembleData;
-    // Mount what the FILE declares before building, so a page needs to know
-    // nothing about the content it is showing beyond its address.
-    const scene = this.closest("tosi-b3d") as SceneElement | null;
-    if (scene) await mountLibraries(data, scene);
-    this.ensemble = data;
+    this._requestedSrc = url;
+    const ticket = ++this._loads;
+    try {
+      const response = await fetch(url);
+      if (!response.ok)
+        throw new Error(`ensemble "${url}": ${response.status}`);
+      const data = (await response.json()) as EnsembleData;
+      if (ticket !== this._loads) return;
+      // Mount what the FILE declares before building, so a page needs to
+      // know nothing about the content it is showing beyond its address.
+      const scene = this.closest("tosi-b3d") as SceneElement | null;
+      if (scene) await mountLibraries(data, scene);
+      if (ticket !== this._loads) return;
+      this.ensemble = data;
+    } catch (error) {
+      if (ticket !== this._loads) return;
+      this.dispatchEvent(
+        new CustomEvent("error", { detail: { error, src: url } })
+      );
+    }
   }
 
   private _rebuild(): void {
     this._built?.dispose();
     this._built = null;
+    this._builtAt = null;
     if (!this._data) return;
 
     /*
@@ -188,6 +266,12 @@ export class TosiEnsemble extends Component {
       library: this.library,
       placePiece: placeMesh,
     });
+    this._builtAt = this.at;
+    this.dispatchEvent(
+      new CustomEvent("built", {
+        detail: { built: this._built, problems: this._built.problems },
+      })
+    );
   }
 }
 

@@ -1,24 +1,24 @@
 {
-  "version": "0.5.0",
-  "tree": "527e2580433e0b89ac7d33742e1fab4d2e6cfa4e",
-  "commit": "c80c19383e67e67c1eecfe3d72e70117a413486f",
+  "version": "0.5.1",
+  "tree": "708711af9c12e9f2d4b92e54f6c076e6e97fa018",
+  "commit": "aca08da680c0b83be48548dbfb15476af4c3d558",
   "bun": "1.4.2",
   "lanes": {
     "test:scene": {
       "command": "bunx playwright test",
       "exitCode": 0,
-      "durationMs": 437528,
-      "tail": "[WebServer] ⚠️  checkExamples SKIPPED 2 `ts` block(s) — no transpiler for `ts` could be resolved, so they are UNCHECKED rather than checked.\n[WebServer]    They are not broken; nothing looked at them. Install tjs-lang where the doc\n[WebServer]    build can resolve it — note a self-documenting library must be resolvable AS A\n[WebServer]    PACKAGE from inside node_modules, which a bundler alias does not cover.\n[WebServer] [70.69ms] prebuild\n[WebServer] [3.97s] build"
+      "durationMs": 493348,
+      "tail": "[WebServer] ⚠️  checkExamples SKIPPED 2 `ts` block(s) — no transpiler for `ts` could be resolved, so they are UNCHECKED rather than checked.\n[WebServer]    They are not broken; nothing looked at them. Install tjs-lang where the doc\n[WebServer]    build can resolve it — note a self-documenting library must be resolvable AS A\n[WebServer]    PACKAGE from inside node_modules, which a bundler alias does not cover.\n[WebServer] [78.50ms] prebuild\n[WebServer] [4.63s] build"
     },
     "test:reparent": {
       "command": "bunx playwright test --project=reparent",
       "exitCode": 0,
-      "durationMs": 204268,
-      "tail": "[WebServer] ⚠️  checkExamples SKIPPED 2 `ts` block(s) — no transpiler for `ts` could be resolved, so they are UNCHECKED rather than checked.\n[WebServer]    They are not broken; nothing looked at them. Install tjs-lang where the doc\n[WebServer]    build can resolve it — note a self-documenting library must be resolvable AS A\n[WebServer]    PACKAGE from inside node_modules, which a bundler alias does not cover.\n[WebServer] [70.00ms] prebuild\n[WebServer] [3.86s] build"
+      "durationMs": 201411,
+      "tail": "[WebServer] ⚠️  checkExamples SKIPPED 2 `ts` block(s) — no transpiler for `ts` could be resolved, so they are UNCHECKED rather than checked.\n[WebServer]    They are not broken; nothing looked at them. Install tjs-lang where the doc\n[WebServer]    build can resolve it — note a self-documenting library must be resolvable AS A\n[WebServer]    PACKAGE from inside node_modules, which a bundler alias does not cover.\n[WebServer] [69.26ms] prebuild\n[WebServer] [3.80s] build"
     }
   },
   "shipped": {
-    "CHANGELOG.md": "40c491cd867b96e3a9b96de6608fbab6a3f1418503c6db5f8b1df31d8992de55",
+    "CHANGELOG.md": "84455bd13c31c1385529c39f8eed8ec9afa3cde52487e898fd0b4e17b0fd5db6",
     "LICENSE": "0775c96210bab6eb8dfbe2586b7955c5e17a10f47d466a91b5e4d14901ba0466",
     "MIGRATING.md": "2702f41c35db53e6017d1b001a5ac4121ff5382abc9fa00cf71b76d5382651ac",
     "README.md": "c6428b99bcb7a867814a007daf74848a25479255b3d650be66ea49628a32a853",
@@ -28,8 +28,8 @@
     "dist/editor/beacon-view.js.map": "fc99aa60617f49f90f82d368343a448fa923f9c2178d4b085ce8be84170d6547",
     "dist/editor/ensemble-editor.d.ts": "44f45ef1f9eaa836c152bc4bfcf032771f6631b7a06043c01f54f51cc2983633",
     "dist/editor/ensemble-editor.d.ts.map": "f4ae1244f9708bc312b8e0d561af7936ac99f76050bb02c8d07f1f6edf5be16b",
-    "dist/editor/ensemble-editor.js": "6bda2ca15145130c6d02e47952299e9c22a9427286c4f9cc0ca4c76754ca7575",
-    "dist/editor/ensemble-editor.js.map": "d5fd4bace5a0398fe1a611166d7b2aed0362b7469fcb8d968fcc8216d7f768d9",
+    "dist/editor/ensemble-editor.js": "878473cb4cd653012d92e2f155fe36ac7ed26fc6048c9393a73f7971e02a3427",
+    "dist/editor/ensemble-editor.js.map": "c10e1cc8afcf680755a4817333a5392c43059f7041bc2be0a1bbd1577bd57bbb",
     "dist/editor/handles-view.d.ts": "99f8eb3226199a0b529b723c2507f4e99c25f590f84681f82e7625f2ab2cfbf7",
     "dist/editor/handles-view.d.ts.map": "b4a33f2c9df52b5a32a2fd77a823d0cf0026923288c5a87d4b694f4e7423b513",
     "dist/editor/handles-view.js": "a921658c73fde0286089f56c967c803d34ff23e42894effd3b157f10870c9211",
@@ -138,14 +138,14 @@
     "dist/runtime/build.d.ts.map": "2233a3d17720b5eb3f81a8939b12d5dd478f10559b80b13122032e28f190af07",
     "dist/runtime/build.js": "291f1a0022296f62838a95c453bfc626f38cbf0bcebf99bb2272328fd0badc7c",
     "dist/runtime/build.js.map": "1ea87753d263ea85d6fe739b7059c07f08224bc22c5623a4dbdfcf8ba15a69b4",
-    "dist/runtime/ensemble-element.d.ts": "50baa51ff8b4e6d93af67cf8888cba0ab87327531ccfa35d8178e93d4e226cf7",
-    "dist/runtime/ensemble-element.d.ts.map": "55fade66a03e68ad8e70919c2edec005efb777f52d415028aaa4ffe796ff8b68",
-    "dist/runtime/ensemble-element.js": "ff7b644db6cd8d36258fa08fc3abf04fd924be6bf5aed7f2f852cedf8eae3376",
-    "dist/runtime/ensemble-element.js.map": "f975574ebbc6b7c760ca2455101a0b3f4fd25fab6987b63b0fcb5d621f874522",
-    "dist/runtime/features-scene.d.ts": "ae22ca41dc4e7bc0a5847091a2275b2c4d6bffb050d1e0668be2a840d7cb79ee",
-    "dist/runtime/features-scene.d.ts.map": "e9898900bde2cc498ea6758796937ace40ada6b04c6713cdcef773d44fe6e76b",
-    "dist/runtime/features-scene.js": "03ad6f3ba9d9146ab51f5ab3244dcb0de09d7dc09e5afbcad09b5b69f638712f",
-    "dist/runtime/features-scene.js.map": "eb4ccfe51d40bac60fd5a2bf31446cf8dcde2a104e85f900a23db9d12d0dbc3e",
+    "dist/runtime/ensemble-element.d.ts": "08eef597098279838f847082a06d454c27c174dd1f4e253bda3fcc8d2155c172",
+    "dist/runtime/ensemble-element.d.ts.map": "ea8e90ff50ddbc810aec81af65b40ff58eb157828918dd04360bb80aebc783c0",
+    "dist/runtime/ensemble-element.js": "1069d78a9bb548c284d6b5275e1a4b1517625c7890802f8cdd03aca81dbb6f24",
+    "dist/runtime/ensemble-element.js.map": "4329f067cdcfa8e6be9201896a077bdaadfaf69c45e1898a2acf2aa1d6defa0e",
+    "dist/runtime/features-scene.d.ts": "8095dae87dfb5e3d08f8e2b37fe94637fcfdf64368de0e1ef8e61a648bb46deb",
+    "dist/runtime/features-scene.d.ts.map": "2817af55f2a076e948577a354dcced5db68d12e5538cfc539927b88ec26235b4",
+    "dist/runtime/features-scene.js": "083b2b441089408d4d1601a984df7b72daa284d88ce0a04acebfce0acae8a7be",
+    "dist/runtime/features-scene.js.map": "2df72ea20ac59bd2f2f88ae2c6fee7a8c89585b75696b8ef9acdabe9bd9c808d",
     "dist/runtime/libraries.d.ts": "aca83c260921759026851336384ec5862073aee5f45b05096a501f40d77cf620",
     "dist/runtime/libraries.d.ts.map": "b136a7a1e2a8563f5f250253ae17f2286b965c11e29d80987137e9b9efa1d8f5",
     "dist/runtime/libraries.js": "0ca44a7ee6aadcff941ca0de697d3870f130d85e1faed118e43ed72c1160306f",
@@ -166,6 +166,6 @@
     "dist/runtime/scene-floorplan.d.ts.map": "ea2410ad80717d598d21c58ad54dbaa4c3cf475d815ec0909f0cd3fbc6667e42",
     "dist/runtime/scene-floorplan.js": "9160d346272f71164faa5fbaa435a0405b64ee3417fd69bc99610ff2871fd200",
     "dist/runtime/scene-floorplan.js.map": "c959b9b2165148ce6e2fe5305478d5fe17a486ff0adf5a3d48375c9a1707e85a",
-    "package.json": "cee9073e1150fee6a28b426265132f6043fab474ec5626741d82313933b109f8"
+    "package.json": "06e919e3fe6a9f1c399641c23a68f21dde9afd77e5b2a09037672f816e8fe659"
   }
 }

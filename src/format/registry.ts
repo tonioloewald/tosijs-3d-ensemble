@@ -398,9 +398,9 @@ export function declaredConfig(
     }
     /*
       A REFUSED URL IS CLEARED, NOT DROPPED. Dropping the key left the
-      element holding whatever it had before: refusing a new \`http://\` sky in
+      element holding whatever it had before: refusing a new `http://` sky in
       the editor kept the OLD sky up, a refusal that looked like nothing
-      happened (#2625). \`""\` is "no url": the one value the policy always
+      happened (#2625). `""` is "no url": the one value the policy always
       accepts, it fetches nothing, and it clears the old one.
     */
     if (refused(key)) {

@@ -374,11 +374,11 @@ export type BoxLike = {
 /**
  * Hand widgets wrapped boxes, and release every subscription they made.
  *
- * ⚠️ A WORKAROUND for tosijs-3d#100: \`boundValue\` subscribes to a box and
+ * ⚠️ A WORKAROUND for tosijs-3d#100: `boundValue` subscribes to a box and
  * never unsubscribes, so every bound widget leaves a listener in tosijs's
  * global list that keeps its panel (and its host) alive. The wrapper records
- * each unsubscribe; \`release()\` calls them all. Used by the editor's chrome
- * and by the standalone \`schemaPanel\`, before every rebuild. Delete with
+ * each unsubscribe; `release()` calls them all. Used by the editor's chrome
+ * and by the standalone `schemaPanel`, before every rebuild. Delete with
  * #100.
  */
 export function boxTracker(): {

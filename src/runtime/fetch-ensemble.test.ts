@@ -37,4 +37,11 @@ describe("fetchEnsembleData", () => {
       "the response is not JSON"
     );
   });
+
+  it("rejects JSON that is not an ensemble", async () => {
+    serve(JSON.stringify({ error: "not found" }));
+    await expect(fetchEnsembleData("/err.json")).rejects.toThrow(
+      "the response is not an ensemble"
+    );
+  });
 });

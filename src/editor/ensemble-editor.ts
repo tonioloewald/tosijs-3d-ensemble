@@ -51,10 +51,10 @@ angles, so the world holds still and the camera moves.
 
 The **select** tool carries the editor's own transform grips: move, turn and
 scale, chosen as cells in its options panel, with grid and angle snapping
-(\`tools/transform.ts\`). A drag writes back to the document as one undo step.
+(`tools/transform.ts`). A drag writes back to the document as one undo step.
 The numbers in the property panel edit the same fields.
 
-tosijs-3d has since shipped \`<tosi-b3d-manipulator>\`; whether it should replace
+tosijs-3d has since shipped `<tosi-b3d-manipulator>`; whether it should replace
 these grips is an open comparison (board #2794).
 */
 /*{"parent":"Editing","order":1}*/
@@ -1532,9 +1532,13 @@ export class EnsembleEditor extends Component {
     super.disconnectedCallback?.();
   }
 
-  /** Fetch and edit an ensemble. */
   /**
-   * Load an ensemble by URL. The newest REQUEST wins, not the fastest response.
+   * Fetch and open `url`. Rejects on a failed fetch, or a body that is not an
+   * ensemble (non-JSON, or JSON with no `pieces` array), AND dispatches an
+   * `error` event (`{ error, src }`), so a page that never awaits it still
+   * hears. The open document is left alone.
+   *
+   * The newest REQUEST wins, not the fastest response.
    *
    * ⚠️ **A load in flight used to overwrite a document loaded after it.** The
    * mount defers, sets `_loadedSrc` and starts fetching `src` — and that guard
@@ -1558,11 +1562,6 @@ export class EnsembleEditor extends Component {
    * the identical hazard ("stale — discard"). Checked TWICE, because
    * `mountLibraries` awaits as well: a second load can be asked for while the
    * first is still mounting kits.
-   */
-  /**
-   * Fetch and open \`url\`. Rejects on a failed fetch or a body that is not
-   * an ensemble, AND dispatches an \`error\` event (\`{ error, src }\`), so a
-   * page that never awaits it still hears. The open document is left alone.
    */
   async load(url: string): Promise<void> {
     const generation = ++this._loadGeneration;

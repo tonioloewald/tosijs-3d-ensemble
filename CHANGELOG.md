@@ -23,12 +23,16 @@ All notable changes to this project are documented here, in
   fetches nothing and clears the old one.
 - **Loading a missing or non-JSON ensemble in the editor** was an unhandled
   JSON-parse rejection. One fetch now serves `loadEnsemble`, `<tosi-ensemble>`
-  and the editor (`fetchEnsembleData`): it rejects on a bad status AND on an
-  HTML page served at 200, naming the url. The editor's `load()` still rejects
-  and now also dispatches an `error` event.
+  and the editor (`fetchEnsembleData`): it rejects, naming the url, on a bad
+  status, on an HTML page served at 200, and on JSON that is not an ensemble
+  (no `pieces` array), which would otherwise have replaced the author's open
+  document in the editor. The editor's `load()` still rejects and now also
+  dispatches an `error` event.
 - **The standalone `schemaPanel` leaked box observers on every section fold**
-  (tosijs-3d#100's class). It now releases them before each rebuild, through
-  the same `boxTracker` the editor's chrome uses.
+  (tosijs-3d#100's class). It now releases them before each fold's rebuild,
+  through the same `boxTracker` the editor's chrome uses. A panel that is
+  thrown away still keeps its subscriptions until tosijs-3d#100 lands; the
+  editor's own panels are released on every rebuild and on disconnect.
 - **The editor's docs said it had no manipulator.** It has its own move /
   turn / scale grips; the docs say so.
 

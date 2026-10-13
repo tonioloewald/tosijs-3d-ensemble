@@ -1205,8 +1205,8 @@ function registerSceneFeaturesNow(): void {
         tosijs-3d's `soundSchema()` (0.8.9, tosijs-3d#95, ours), so `url`
         arrives marked as fetched like every other fetched field — it was the
         one we had to mark by hand, and the 0.4.0 re-review found it unmarked,
-        with \`http://\`, \`//host\`, \`data:\` and \`javascript:\` all reaching
-        \`BABYLON.Sound\`. The hand copy had drifted too: volume capped at 1
+        with `http://`, `//host`, `data:` and `javascript:` all reaching
+        `BABYLON.Sound`. The hand copy had drifted too: volume capped at 1
         (the element takes 2), and both distances narrowed tenfold.
 
         The DEFAULTS stay ours, on purpose: the element's are for a sound a

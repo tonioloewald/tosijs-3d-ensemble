@@ -19,9 +19,9 @@ import { TosiEnsemble } from "../runtime/ensemble-element.js";
 describe("<tosi-ensemble> brings the scene vocabulary", () => {
   /*
     ONE SEQUENCE, because registration happens once per process: a consumer
-    registers their own \`fog\` and never calls registerSceneFeatures; then a
+    registers their own `fog` and never calls registerSceneFeatures; then a
     bare element connects. The scene features must appear (pure markup works)
-    and the consumer's \`fog\` must survive (0.5.1 review, verified: it was
+    and the consumer's `fog` must survive (0.5.1 review, verified: it was
     silently replaced by the built-in).
   */
   it("registers the scene features on connect, and keeps a consumer's own", () => {

@@ -227,8 +227,8 @@ export class TosiEnsemble extends Component {
   /*
     MOUNT, THEN BUILD, on every path, not only after a fetch. A reconnect
     (possibly into a DIFFERENT <tosi-b3d>) and a document assigned to
-    \`.ensemble\` need the document's libraries in THIS scene too, or every
-    library piece builds as a placeholder (0.5.1 review). \`mountLibraries\` is
+    `.ensemble` need the document's libraries in THIS scene too, or every
+    library piece builds as a placeholder (0.5.1 review). `mountLibraries` is
     idempotent by name and url. A document with no libraries builds
     synchronously, as before; one with libraries builds when they are ready,
     unless something newer was asked for meanwhile.
@@ -264,7 +264,7 @@ export class TosiEnsemble extends Component {
     try {
       const data = await fetchEnsembleData(url);
       if (ticket !== this._loads) return;
-      // Libraries are mounted by \`_mountAndBuild\`, on this path and every
+      // Libraries are mounted by `_mountAndBuild`, on this path and every
       // other: a page needs to know nothing about the content beyond its
       // address.
       this._setData(data);

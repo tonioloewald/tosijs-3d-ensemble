@@ -3,6 +3,20 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.5.2 — 2026-10-13
+
+- Went well: tosijs-3d 0.10 admitted by WIDENING the peer range, so 0.9
+  consumers (Manta) are not forced; every suite was run against 0.10.0 first.
+  Four board bugs fixed with tests that fail under the old behaviour.
+- Didn't: my edit scripts had written literal \\` into ~20 doc comments since
+  0.5.0, the editor's published doc page included; the review caught it, and
+  the first fix reintroduced three more.
+- Surprised: a rapid-edits failure on 0.10 was a test baseline taken against
+  the editor's empty start state (3 meshes vs 74), the same class as the
+  re-parent baseline before 0.4.0.
+- Friction: none in publishing.
+- Cycle: GO with followups; no re-review.
+
 ## 0.5.1 — 2026-10-10
 
 - Went well: an additive patch through Tier 0 and the always-on fast review

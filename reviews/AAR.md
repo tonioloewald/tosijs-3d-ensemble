@@ -8,7 +8,7 @@ pattern review (practices/releasing.md step 10).
 - Went well: tosijs-3d 0.10 admitted by WIDENING the peer range, so 0.9
   consumers (Manta) are not forced; every suite was run against 0.10.0 first.
   Four board bugs fixed with tests that fail under the old behaviour.
-- Didn't: my edit scripts had written literal \\` into ~20 doc comments since
+- Didn't: my edit scripts had written literal backslash-backticks into ~20 doc comments since
   0.5.0, the editor's published doc page included; the review caught it, and
   the first fix reintroduced three more.
 - Surprised: a rapid-edits failure on 0.10 was a test baseline taken against

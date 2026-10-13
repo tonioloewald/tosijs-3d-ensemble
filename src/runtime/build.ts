@@ -557,17 +557,34 @@ function makeContext(a: {
 }
 
 /** Fetch and build. Ensembles are content, so they load like content. */
-export async function loadEnsemble(
-  url: string,
-  opts: BuildOptions
-): Promise<BuiltEnsemble> {
+/**
+ * Fetch an ensemble document: the ONE fetch every loader uses
+ * (\`loadEnsemble\`, \`<tosi-ensemble>\`, the editor), so a fix lands once.
+ *
+ * Throws, with the url in the message, on a non-OK status AND on a body that
+ * is not JSON: a dev server or SPA host answering a missing file with its HTML
+ * shell at 200 is a parse error, not a document. Staleness and library
+ * mounting stay with each caller, because they differ.
+ */
+export async function fetchEnsembleData(url: string): Promise<Ensemble> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(
       `ensemble "${url}": ${response.status} ${response.statusText}`
     );
   }
-  const ensemble = (await response.json()) as Ensemble;
+  try {
+    return (await response.json()) as Ensemble;
+  } catch {
+    throw new Error(`ensemble "${url}": the response is not JSON`);
+  }
+}
+
+export async function loadEnsemble(
+  url: string,
+  opts: BuildOptions
+): Promise<BuiltEnsemble> {
+  const ensemble = await fetchEnsembleData(url);
   /*
     MOUNT WHAT THE FILE ASKS FOR, then build. This is what makes an ensemble
     loadable anywhere: the consumer supplies a scene, and the content declares

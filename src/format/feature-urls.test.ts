@@ -143,13 +143,13 @@ describe("a fetched field that is not a string is refused", () => {
         "unsupported-feature-url /pieces/0/features/skybox/starfieldData",
       ]);
     });
-    it(`declaredConfig drops ${label}`, () => {
+    it(`declaredConfig clears ${label}`, () => {
       expect(
         declaredConfig(featureRegistration("skybox"), {
           starfieldData: value,
           timeOfDay: 9,
         })
-      ).toEqual({ timeOfDay: 9 });
+      ).toEqual({ starfieldData: "", timeOfDay: 9 });
     });
   }
   it("a library url that is not a string is refused", () => {
@@ -204,7 +204,7 @@ describe("the rule cannot be dodged by how the url is spelled", () => {
   refused url there is what stops the element from fetching it. `validate`
   still reports it; this is the half that used to be missing.
 */
-describe("declaredConfig drops a refused fetched url", () => {
+describe("declaredConfig clears a refused fetched url", () => {
   const sky = () => featureRegistration("skybox");
 
   it("an http galaxy never reaches the element", () => {
@@ -212,7 +212,21 @@ describe("declaredConfig drops a refused fetched url", () => {
       starfieldData: "http://evil.example/sky",
       timeOfDay: 12,
     });
-    expect(out).toEqual({ timeOfDay: 12 });
+    // Cleared, not dropped: dropping left the element's OLD value live (#2625).
+    expect(out).toEqual({ starfieldData: "", timeOfDay: 12 });
+  });
+
+  it("a refused url clears what the element had (#2625)", () => {
+    // An element that already has a galaxy, updated with a refused url: the
+    // update must take it away, not leave it up.
+    const element: Record<string, unknown> = {
+      starfieldData: "https://3d.tosijs.net/sky/0.8.4/stars",
+    };
+    for (const [k, v] of Object.entries(
+      declaredConfig(sky(), { starfieldData: "http://evil.example/sky" })
+    ))
+      element[k] = v;
+    expect(element.starfieldData).toBe("");
   });
 
   it("an https galaxy and a keyword pass untouched", () => {

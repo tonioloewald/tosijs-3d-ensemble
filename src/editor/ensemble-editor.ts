@@ -47,12 +47,15 @@ feature, which is a different thing and does get saved.
 Both planes are pinned to the origin. A bench looks at one thing from many
 angles, so the world holds still and the camera moves.
 
-## What is not here yet
+## Moving pieces
 
-No manipulator. tosijs-3d has no gizmo — `b3d-panel`'s coloured axes are a
-debug READOUT that looks exactly like one — so pieces are currently placed by
-editing numbers. That is the editor's single most important interaction and it
-is an upstream build; see UPSTREAM.md.
+The **select** tool carries the editor's own transform grips: move, turn and
+scale, chosen as cells in its options panel, with grid and angle snapping
+(\`tools/transform.ts\`). A drag writes back to the document as one undo step.
+The numbers in the property panel edit the same fields.
+
+tosijs-3d has since shipped \`<tosi-b3d-manipulator>\`; whether it should replace
+these grips is an open comparison (board #2794).
 */
 /*{"parent":"Editing","order":1}*/
 import { Component, tosi } from "tosijs";
@@ -81,7 +84,7 @@ import {
   sceneSchemas,
 } from "tosijs-3d";
 import { Quaternion, Ray, Vector3 } from "@babylonjs/core";
-import { buildEnsemble } from "../runtime/build.js";
+import { buildEnsemble, fetchEnsembleData } from "../runtime/build.js";
 import { reapUnclaimedSingletons } from "../runtime/features-scene.js";
 import {
   libraryCatalogue,
@@ -112,7 +115,12 @@ import {
   applyRecommendations,
   RECOMMENDED_KEYS,
 } from "../runtime/recommendations.js";
-import { boundIfSet, schemaWidgets, type BoxLike } from "./schema-panel.js";
+import {
+  boundIfSet,
+  boxTracker,
+  schemaWidgets,
+  type BoxLike,
+} from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
 import {
   createBeaconView,
@@ -516,29 +524,14 @@ export class EnsembleEditor extends Component {
     records each subscription; the chrome releases them all before it
     rebuilds, and on disconnect. Delete this when widgets release their own.
   */
-  private _panelObservers: VoidFunction[] = [];
+  private _boxes = boxTracker();
 
   private _tracked(box: BoxLike | undefined): BoxLike | undefined {
-    if (!box) return undefined;
-    const observers = this._panelObservers;
-    return {
-      get value() {
-        return box.value;
-      },
-      set value(v) {
-        box.value = v;
-      },
-      observe(cb: (...args: any[]) => void) {
-        // eslint-disable-line @typescript-eslint/no-explicit-any
-        const off = box.observe(cb) as unknown;
-        if (typeof off === "function") observers.push(off as VoidFunction);
-        return off;
-      },
-    };
+    return this._boxes.track(box);
   }
 
   private _releasePanelObservers(): void {
-    for (const off of this._panelObservers.splice(0)) off();
+    this._boxes.release();
   }
 
   private _box(id: string, feature: string, key: string): BoxLike | undefined {
@@ -900,7 +893,7 @@ export class EnsembleEditor extends Component {
       */
       if (this.src && this.src !== this._loadedSrc) {
         this._loadedSrc = this.src;
-        void this.load(this.src);
+        this.load(this.src).catch(() => {}); // reported by the `error` event
       }
     }, 0);
   }
@@ -1566,9 +1559,23 @@ export class EnsembleEditor extends Component {
    * `mountLibraries` awaits as well: a second load can be asked for while the
    * first is still mounting kits.
    */
+  /**
+   * Fetch and open \`url\`. Rejects on a failed fetch or a body that is not
+   * an ensemble, AND dispatches an \`error\` event (\`{ error, src }\`), so a
+   * page that never awaits it still hears. The open document is left alone.
+   */
   async load(url: string): Promise<void> {
     const generation = ++this._loadGeneration;
-    const data = (await (await fetch(url)).json()) as Ensemble;
+    let data: Ensemble;
+    try {
+      data = await fetchEnsembleData(url);
+    } catch (error) {
+      if (generation === this._loadGeneration)
+        this.dispatchEvent(
+          new CustomEvent("error", { detail: { error, src: url } })
+        );
+      throw error;
+    }
     if (generation !== this._loadGeneration) return; // superseded while fetching
     // The ensemble declares its own libraries; mount them before building so
     // pieces resolve to real meshes on the first pass rather than boxes.

@@ -119,11 +119,12 @@ Two consequences that change the schedule:
   scaffold hardens. Forms are the SVG UI's weakest area (no form layer; a
   schema-driven property panel _is_ a form generator) and that is cheap to
   discover now, expensive in milestone 3.
-- **No manipulator exists — flat or XR.** `b3d-panel`'s coloured axes are a
-  debug READOUT that looks exactly like Babylon's position gizmo, and has
-  already fooled a reader. Babylon's `GizmoManager` is mouse-shaped, so
-  Manta's `bench-gizmo.ts` lifts cleanly ONLY if the editor stays flat. This is
-  the single largest schedule risk and it is upstream; file the ask early.
+- **The manipulator is OURS now:** the select tool's move / turn / scale
+  grips (`src/editor/tools/transform.ts`), registered with hooks so its drag
+  maths is testable without a browser. tosijs-3d later shipped
+  `<tosi-b3d-manipulator>`; whether to adopt it is board #2794. ⚠️ `b3d-panel`'s
+  coloured axes are still a debug READOUT that looks exactly like a gizmo, and
+  has fooled a reader before.
 
 Do not hand-roll a bundler, a dev server, a docs page, or a widget. If a widget
 is missing, that is an issue for its owner.

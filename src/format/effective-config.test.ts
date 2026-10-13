@@ -43,12 +43,13 @@ describe("effectiveConfig", () => {
     expect([before.width, after.width]).toEqual([12, 400]);
   });
 
-  it("still narrows: undeclared keys and refused urls are dropped", () => {
+  it("still narrows: undeclared keys dropped, refused urls cleared", () => {
     const out = effectiveConfig(reg, {
       innerHTML: "<img onerror=x>",
       url: "javascript:alert(1)",
     });
-    expect(out).toEqual({ width: 400, texture: "checker" });
+    // Cleared, not dropped (#2625): a dropped key left the old value live.
+    expect(out).toEqual({ width: 400, texture: "checker", url: "" });
   });
 
   it("a schema without defaults passes the config through", () => {

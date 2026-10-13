@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { slider3d, ui } from "tosijs-3d";
 import type { BoxLike } from "./schema-panel.js";
-import { boundIfSet, numberReadout, schemaWidgets } from "./schema-panel.js";
+import {
+  boundIfSet,
+  boxTracker,
+  numberReadout,
+  schemaWidgets,
+} from "./schema-panel.js";
 
 /*
   A PANEL THAT LIES IS WORSE THAN ONE THAT DOES NOTHING.
@@ -392,5 +397,40 @@ describe("x-sections orders the panel and heads each section", () => {
       "x-sections": [{ title: "Air", keys: ["a", "b"] }],
     });
     expect(out.map((r) => (r === "row" ? r : r.title))).toEqual(["Air", "row"]);
+  });
+});
+
+/*
+  boxTracker: the tosijs-3d#100 workaround the editor's chrome and the
+  standalone schemaPanel share. A widget subscribes through the wrapper; the
+  tracker releases every subscription, so a rebuilt panel lets go of the last.
+*/
+describe("boxTracker releases what widgets subscribed", () => {
+  it("records each subscription and releases them all", () => {
+    let live = 0;
+    const box = {
+      value: 3,
+      observe: () => {
+        live++;
+        return () => {
+          live--;
+        };
+      },
+    };
+    const boxes = boxTracker();
+    const wrapped = boxes.track(box)!;
+    wrapped.observe(() => {});
+    wrapped.observe(() => {});
+    expect([live, boxes.size]).toEqual([2, 2]);
+    boxes.release();
+    expect([live, boxes.size]).toEqual([0, 0]);
+  });
+
+  it("reads and writes through to the box, and passes undefined through", () => {
+    const box = { value: 1, observe: () => () => {} };
+    const wrapped = boxTracker().track(box)!;
+    wrapped.value = 7;
+    expect([wrapped.value, box.value]).toEqual([7, 7]);
+    expect(boxTracker().track(undefined)).toBeUndefined();
   });
 });

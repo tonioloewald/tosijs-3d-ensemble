@@ -26,8 +26,19 @@ import { readFileSync } from "node:fs";
   the same commit — which is a decision about who you are breaking, and belongs
   in the changelog.
 */
-/** The lowest version a caret range admits — `^0.7.8` → `0.7.8`. */
-const floorOf = (range: string): string => range.replace(/^[\^~>=\s]+/, "");
+/**
+ * The lowest version a range admits — `^0.7.8` → `0.7.8`. A union
+ * (`^0.9.0 || ^0.10.0`, which a 0.x peer needs to span two minors) is read by
+ * its LOWEST part: that is the version every consumer may have, so it is the
+ * one we develop against. The upper parts are checked by running the suites
+ * against them before the range is widened (see the CHANGELOG entry that
+ * widens it).
+ */
+const floorOf = (range: string): string =>
+  range
+    .split("||")
+    .map((part) => part.trim().replace(/^[\^~>=\s]+/, ""))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0]!;
 
 /**
  * Peers we develop against the FLOOR of, with the reason for anything we do

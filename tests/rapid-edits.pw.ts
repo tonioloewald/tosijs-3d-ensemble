@@ -78,6 +78,29 @@ test("a burst of edits settles at the same scene, and goes quiet", async ({
       return last;
     });
 
+  /*
+    WAIT FOR THE DOCUMENT before taking the baseline. \`settled()\` alone was
+    satisfied by the editor's empty start-up state (0 pieces built of 0), so
+    under load it measured 3 meshes, then 74 once the cove had loaded, and
+    blamed the edits (2026-10-13, 1 run in 4 after the property tests). The
+    same class as the re-parent baseline fix before 0.4.0.
+  */
+  await page.waitForFunction(
+    () => {
+      const ed = document.querySelector("tosi-ensemble-editor") as
+        | (Element & {
+            ensemble?: { name?: string; pieces?: unknown[] };
+            _built?: { pieces?: Map<string, unknown> } | null;
+          })
+        | null;
+      return (
+        ed?.ensemble?.name === "pirate-cove" &&
+        (ed._built?.pieces?.size ?? 0) >= (ed.ensemble.pieces?.length ?? 1)
+      );
+    },
+    null,
+    { timeout: 60_000 }
+  );
   const before = await settled();
   expect(before).toBeGreaterThan(0);
   for (const burst of [4, 10]) {

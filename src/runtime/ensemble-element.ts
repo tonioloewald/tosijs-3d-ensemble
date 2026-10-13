@@ -130,7 +130,7 @@ el?.addEventListener('built', (e) => console.log(e.detail.problems))
 /*{"parent":"Runtime","order":2}*/
 import { Component } from "tosijs";
 import type { ComponentAttrs } from "tosijs";
-import { buildEnsemble } from "./build.js";
+import { buildEnsemble, fetchEnsembleData } from "./build.js";
 import { placeMesh } from "./place-mesh.js";
 import { mountLibraries } from "./libraries.js";
 import { registerSceneFeatures } from "./features-scene.js";
@@ -262,10 +262,7 @@ export class TosiEnsemble extends Component {
   async load(url: string): Promise<void> {
     const ticket = ++this._loads;
     try {
-      const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`ensemble "${url}": ${response.status}`);
-      const data = (await response.json()) as EnsembleData;
+      const data = await fetchEnsembleData(url);
       if (ticket !== this._loads) return;
       // Libraries are mounted by \`_mountAndBuild\`, on this path and every
       // other: a page needs to know nothing about the content beyond its

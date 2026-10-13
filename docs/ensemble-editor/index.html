@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=e587c5f21d6a" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=82f4f0e4f1f0" data-tosi-doc-system />
   <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=6274625d208f" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=598b1df587fb" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -78,11 +78,13 @@ An ensemble that carries its OWN landform does so as a piece with a <code>terrai
 feature, which is a different thing and does get saved.</p>
 <p>Both planes are pinned to the origin. A bench looks at one thing from many
 angles, so the world holds still and the camera moves.</p>
-<h2>What is not here yet</h2>
-<p>No manipulator. tosijs-3d has no gizmo — <code>b3d-panel</code>&#39;s coloured axes are a
-debug READOUT that looks exactly like one — so pieces are currently placed by
-editing numbers. That is the editor&#39;s single most important interaction and it
-is an upstream build; see UPSTREAM.md.</p>
+<h2>Moving pieces</h2>
+<p>The <strong>select</strong> tool carries the editor&#39;s own transform grips: move, turn and
+scale, chosen as cells in its options panel, with grid and angle snapping
+(`tools/transform.ts`). A drag writes back to the document as one undo step.
+The numbers in the property panel edit the same fields.</p>
+<p>tosijs-3d has since shipped `<tosi-b3d-manipulator>`; whether it should replace
+these grips is an open comparison (board #2794).</p>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -163,6 +165,6 @@ is an upstream build; see UPSTREAM.md.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-fkga2wtz.js"></script>
+  <script type="module" src="../hydrate-4nmkjksx.js"></script>
 </body>
 </html>

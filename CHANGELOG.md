@@ -3,6 +3,35 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Changed
+
+- **Peer `tosijs-3d` is `^0.9.0 || ^0.10.0`** (was `^0.9.0`, which under 0.x
+  semver excludes 0.10). Widened, not raised, so a consumer on 0.9 is not
+  forced to move. We develop against the 0.9.0 floor as before; 0.10.0 was
+  checked by running every suite against it (unit, the scene lane and the
+  re-parent lane), and 0.10's removed `onX` callback names were already
+  absent here (0.5.0).
+
+### Fixed
+
+- **A refused feature url clears the old value instead of leaving it live**
+  (#2625). The policy dropped the key, so an update with a refused url left the
+  element holding whatever it had: refusing a new `http://` sky in the editor
+  kept the old sky up. A refused url now becomes `""` ("no url"), which
+  fetches nothing and clears the old one.
+- **Loading a missing or non-JSON ensemble in the editor** was an unhandled
+  JSON-parse rejection. One fetch now serves `loadEnsemble`, `<tosi-ensemble>`
+  and the editor (`fetchEnsembleData`): it rejects on a bad status AND on an
+  HTML page served at 200, naming the url. The editor's `load()` still rejects
+  and now also dispatches an `error` event.
+- **The standalone `schemaPanel` leaked box observers on every section fold**
+  (tosijs-3d#100's class). It now releases them before each rebuild, through
+  the same `boxTracker` the editor's chrome uses.
+- **The editor's docs said it had no manipulator.** It has its own move /
+  turn / scale grips; the docs say so.
+
 ## [0.5.1] — 2026-10-10
 
 ### Fixed

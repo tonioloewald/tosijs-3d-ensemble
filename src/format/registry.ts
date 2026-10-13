@@ -374,7 +374,7 @@ export function declaredConfig(
 ): Record<string, unknown> {
   const allowed = acceptedKeys(registration);
   /*
-    A FETCHED KEY WITH A URL THE POLICY REFUSES IS DROPPED HERE TOO, not only
+    A FETCHED KEY WITH A URL THE POLICY REFUSES IS CLEARED HERE TOO, not only
     reported by `validate`. Every bind and update goes through this function,
     which makes it the one place a skybox's `starfieldData` or a ground's
     `texture` can be stopped before an element fetches it. The 0.4.0 review
@@ -389,15 +389,30 @@ export function declaredConfig(
     return !!keywords && fetchedValueProblem(cfg[key], keywords) !== null;
   };
   if (!allowed && fetched.size === 0) return cfg;
-  let dropped = false;
+  let changed = false;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(cfg)) {
-    if ((!allowed || allowed.has(key)) && !refused(key)) out[key] = cfg[key];
-    else dropped = true;
+    if (allowed && !allowed.has(key)) {
+      changed = true;
+      continue;
+    }
+    /*
+      A REFUSED URL IS CLEARED, NOT DROPPED. Dropping the key left the
+      element holding whatever it had before: refusing a new \`http://\` sky in
+      the editor kept the OLD sky up, a refusal that looked like nothing
+      happened (#2625). \`""\` is "no url": the one value the policy always
+      accepts, it fetches nothing, and it clears the old one.
+    */
+    if (refused(key)) {
+      out[key] = "";
+      changed = true;
+      continue;
+    }
+    out[key] = cfg[key];
   }
-  // Returning the SAME object when nothing was dropped keeps the identity
+  // Returning the SAME object when nothing changed keeps the identity
   // checks in `update` paths meaningful and costs nothing in the common case.
-  return dropped ? out : cfg;
+  return changed ? out : cfg;
 }
 
 /**

@@ -71,6 +71,7 @@ older than its card; when they disagree, the card wins.
 | 47 | **`boundValue` never unsubscribes**, so every widget bound to a tosijs box leaks its panel and its host through tosijs's listener list (+125 listeners per ten rebuilds, flat with binding off). Worked around by `_tracked` in the editor; suggested fix uses `OBSERVER_SHOULD_BE_REMOVED` | [#100](https://github.com/tonioloewald/tosijs-3d/issues/100) |
 | 48 | ✅ **RESOLVED (tosijs-3d@0.8.13, `b3dSchema()`), adopted for AO** — **No schema for `<tosi-b3d>`'s own attributes**: `ssaoStrength`/`ssaoRadius` (our AO recommendations need ranges to edit) and `windSpeed`/`windBearingDeg` (drifting weather cells, board #3110) | [#101](https://github.com/tonioloewald/tosijs-3d/issues/101) |
 | 49 | **`disposeMeshTree` disposes a library's materials when the last instance goes**: library source meshes are not in `scene.meshes`, so the guard misses them and every later instance renders white. Worked around in `place-mesh.ts` (`detachLibraryMaterials`) | [#102](https://github.com/tonioloewald/tosijs-3d/issues/102) |
+| 50 | **For building worlds from their planet** (board #3317): no `planetSchema()`; terrain's schema lacks `worldU`/`worldV` (asked for `lat`/`lon` attributes); the globe-from-ground link is code | [#103](https://github.com/tonioloewald/tosijs-3d/issues/103) |
 
 ### Stopgaps we own, and what retires them
 

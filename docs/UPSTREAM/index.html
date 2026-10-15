@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=fb15f0990194" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=c650a4769211" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -316,6 +316,11 @@ older than its card; when they disagree, the card wins.</p>
 <td>49</td>
 <td><strong><code>disposeMeshTree</code> disposes a library&#39;s materials when the last instance goes</strong>: library source meshes are not in <code>scene.meshes</code>, so the guard misses them and every later instance renders white. Worked around in <code>place-mesh.ts</code> (<code>detachLibraryMaterials</code>)</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/102">#102</a></td>
+</tr>
+<tr>
+<td>50</td>
+<td><strong>For building worlds from their planet</strong> (board #3317): no <code>planetSchema()</code>; terrain&#39;s schema lacks <code>worldU</code>/<code>worldV</code> (asked for <code>lat</code>/<code>lon</code> attributes); the globe-from-ground link is code</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/103">#103</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>

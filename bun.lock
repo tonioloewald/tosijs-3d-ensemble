@@ -26,7 +26,7 @@
       "peerDependencies": {
         "@babylonjs/core": "^9.0.0",
         "tosijs": "^1.10.3",
-        "tosijs-3d": "^0.9.0",
+        "tosijs-3d": "^0.9.0 || ^0.10.0",
       },
     },
   },

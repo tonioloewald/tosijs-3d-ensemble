@@ -198,6 +198,13 @@ bind})`; a consumer's feature must be indistinguishable from a built-in in the
   `src/runtime/scene-schemas.test.ts` fails on anything else, with four listed
   exceptions. **If you find yourself typing a `minimum` for a scene field,
   stop** — it belongs upstream.
+- **Two scene fields are still OURS, as stopgaps** (owner, 2026-10-15: "we
+  can request upstream changes and work around until they appear"): the
+  `planet` feature's schema, copied from `<tosi-b3d-planet>`'s attribute table
+  at 0.10.6, and the terrain pin `lat`/`lon` (converted to `worldU`/`worldV`
+  by `pinFrame`). Both go when tosijs-3d#103 lands, as the moon's hand schema
+  went when `moonSchema()` shipped. `scene-schemas.test.ts` names the pin as
+  its only orphaned keys, so a new one cannot slip in unnoticed.
 - **Regex lives as a source string**, compiled at load — a `RegExp` makes the
   format unserializable.
 - **`rot` is euler DEGREES**, matching tosijs-3d elements. Say so where a reader

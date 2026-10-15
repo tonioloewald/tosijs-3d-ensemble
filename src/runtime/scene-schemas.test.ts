@@ -182,7 +182,12 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         if (!(key in theirs)) orphaned.push(`${feature}.${key}`);
       }
     }
-    expect(orphaned).toEqual([]);
+    /*
+      Deliberately OURS, each a stopgap with an upstream ask:
+      - terrain.lat / terrain.lon: the pin, converted to worldU/worldV by
+        pinFrame, until tosijs-3d#103 gives the terrain lat/lon itself.
+    */
+    expect(orphaned).toEqual(["terrain.lat", "terrain.lon"]);
   });
 });
 

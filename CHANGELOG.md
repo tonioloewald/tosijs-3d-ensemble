@@ -3,6 +3,37 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### ⚠️ Breaking
+
+- **Peer `tosijs-3d` is `^0.10.6`** (was `^0.9.0 || ^0.10.0`). The planet
+  workflow below needs `sphere-map`, `planetSurface()` and `latLonAt` (0.10.3)
+  and the planet's `world` presets (0.10.5). A consumer on tosijs-3d 0.9 must
+  move to 0.10.6.
+
+### Added
+
+- **Planets** (board #3317, the owner's "show the planet, tweak it, pin the
+  terrain to a spot on it" for Manta). A `planet` feature puts a globe in the
+  scene: its own world, or drawn from a sphere `terrain` piece it names (in the
+  link phase, redrawn when the terrain's shape changes), so the globe's coasts
+  are the ground's. It takes the planet's `world` presets (moon, mars, venus…),
+  gas giants, sea, air, clouds, craters and rings, in sections.
+- **A sphere terrain can be pinned** to a place on its planet: `lat` / `lon`,
+  the latitude and longitude of its origin. Checked against tosijs-3d's own
+  `sphere-map`: the terrain's `latLonAt` at its origin reads the pin back.
+- **`terrain.center`** (tosijs-3d's): lowers the field by half its gross
+  amplitude so a sea at 0 floods the valleys. A world with a sea wants it.
+- **`x-apply-default: false`** on a schema property: its default is SHOWN in
+  the panel but never WRITTEN by a bind. For fields a preset fills in (a
+  planet's `world` writes its own sea, air and craters), where writing the
+  default on every edit would undo the preset.
+- New sample: `/ensembles/planet.json`; `tests/planet.pw.ts`.
+
+The planet's schema and the terrain pin are stopgaps until tosijs-3d#103
+(`planetSchema()`, and `lat`/`lon` on the terrain itself).
+
 ## [0.5.2] — 2026-10-13
 
 ### Changed

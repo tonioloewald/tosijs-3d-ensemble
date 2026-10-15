@@ -220,6 +220,22 @@ ambient occlusion, stays the viewer's (see `recommends`).
 { "id": "squall", "at": [700, 0, 400], "features": { "weatherCell": { "drift": "wind" } } }
 ```
 
+## Planets
+
+A `planet` piece is a globe in the scene: its own world from its own seed, or
+drawn from a sphere `terrain` piece it names, so its coasts are that ground's.
+A sphere terrain can be pinned to a place on its planet with `lat` / `lon`
+(the latitude and longitude of the terrain's origin).
+
+```jsonc
+{ "id": "land",  "at": [0, 0, 0],       "features": { "terrain": { "surfaceType": "sphere", "radius": 4000, "center": true, "biome": true, "lat": 30, "lon": 40 } } },
+{ "id": "globe", "at": [0, 440, 220],   "features": { "planet":  { "terrain": "land", "radius": 40, "relief": 2, "flatSea": true, "biome": true } } }
+```
+
+The whole scene is `/ensembles/planet.json`; `tests/planet.pw.ts` checks the
+pin and the link on the elements. The planet's schema and the pin are ours
+until tosijs-3d#103 describes them upstream.
+
 ## Combat is somewhere else, on purpose
 
 `destroyable`, `turret`, `launcher`, `protector`, `blip` and `launchpad` are NOT
@@ -241,6 +257,10 @@ import {
   b3dClouds,
   b3dCloudDeck,
   b3dLightning,
+  b3dPlanet,
+  B3dPlanet,
+  latLonToDirection,
+  directionToUv,
   b3dLightShafts,
   b3dWeatherCell,
   b3dMoon,
@@ -569,13 +589,133 @@ export function addSingleton(
  * Pure and exported so the mapping is testable without an element.
  */
 let warnedLegacyBiomeTemperature = false;
+/**
+ * Put a planet's globe where its piece is. `<tosi-b3d-planet>` has no
+ * `x`/`y`/`z`: it draws under a `rootNode` it builds when the scene is ready,
+ * so this waits for that node (on a timer, with a budget, as `whenMeshed`
+ * does) and moves it.
+ */
+function placePlanetRoot(element: SceneElement, ctx: FeatureContext): void {
+  const [x, y, z] = ctx.at;
+  let ticks = 0;
+  const timer = setInterval(() => {
+    const root = (
+      element as unknown as {
+        rootNode?: {
+          position?: { set(x: number, y: number, z: number): void };
+        } | null;
+      }
+    ).rootNode;
+    if (root?.position) {
+      root.position.set(x, y, z);
+      clearInterval(timer);
+    } else if (++ticks > 240) clearInterval(timer);
+  }, 50);
+  ctx.onDispose(() => clearInterval(timer));
+}
+
+/**
+ * Draw a planet from a sphere terrain: `planet.surface = terrain.planetSurface()`
+ * and a regenerate, again whenever the terrain's shape changes (its
+ * `generationKey`). On a timer rather than a render observer: a throw in an
+ * observer kills the render loop, and this has to converge in a hidden tab.
+ */
+export function linkPlanetToTerrain(
+  planet: SceneElement,
+  terrain: unknown,
+  id: string,
+  ctx: FeatureContext
+): void {
+  const ground = terrain as {
+    planetSurface?: () => unknown;
+    generationKey?: string;
+  } | null;
+  if (!ground || typeof ground.planetSurface !== "function") {
+    console.warn(
+      `tosijs-3d-ensemble: planet.terrain "${id}" is not a terrain piece in this ensemble; the planet is its own world.`
+    );
+    return;
+  }
+  const globe = planet as unknown as {
+    surface?: unknown;
+    regenerate?: () => void;
+  };
+  let built = "";
+  const timer = setInterval(() => {
+    try {
+      const key = ground.generationKey;
+      if (!key || key === built) return;
+      const surface = ground.planetSurface!();
+      // null until the terrain is a SPHERE with a shape.
+      if (surface == null) return;
+      built = key;
+      globe.surface = surface;
+      globe.regenerate?.();
+    } catch {
+      clearInterval(timer);
+    }
+  }, 250);
+  ctx.onDispose(() => clearInterval(timer));
+}
+
+/**
+ * WHERE ON ITS PLANET A TERRAIN IS: a latitude and longitude for its origin,
+ * as the terrain's own `worldU` / `worldV`.
+ *
+ * ⚠️ OURS UNTIL tosijs-3d#103 (which asks for `lat`/`lon` on the terrain
+ * itself). A person writes a place as "12° N, 40° E"; the terrain wants
+ * fractions of a turn of its sampler. The conversion is sphere-map's,
+ * including its mirror (the ground's +z is north, the sampler's v grows south),
+ * so this is `groundToLatLon` run backwards for the origin: pinning (lat, lon)
+ * and reading `latLonAt(0, 0)` back gives (lat, lon).
+ */
+export function pinFrame(
+  lat: number,
+  lon: number
+): { worldU: number; worldV: number } {
+  const d = latLonToDirection(lat, lon);
+  const { u, v } = directionToUv({ x: d.x, y: -d.y, z: d.z });
+  return { worldU: u, worldV: v };
+}
+
+/** The pin fields a sphere terrain gains here (until tosijs-3d#103). */
+const PIN_PROPERTIES: Record<string, Spec> = {
+  lat: {
+    type: "number",
+    title: "Latitude",
+    minimum: -90,
+    maximum: 90,
+    "x-unit": "deg",
+    "x-requires": { surfaceType: "sphere" },
+    description:
+      "Where on its planet this ground is: the latitude of its origin. A sphere terrain only.",
+  },
+  lon: {
+    type: "number",
+    title: "Longitude",
+    minimum: -180,
+    maximum: 180,
+    "x-unit": "deg",
+    "x-requires": { surfaceType: "sphere" },
+    description: "The longitude of its origin. A sphere terrain only.",
+  },
+};
+const withPin = (props: Record<string, Spec>): Record<string, Spec> => ({
+  ...props,
+  ...PIN_PROPERTIES,
+});
+
 export function terrainConfig(
   cfg: Record<string, unknown>
 ): Record<string, unknown> {
+  const { lat, lon, ...rest } = cfg;
   const out: Record<string, unknown> = {
-    ...cfg,
+    ...rest,
     biome: cfg.biome ? "on" : "off",
   };
+  // A pin (ours until tosijs-3d#103): a place, as the sampler's frame.
+  if (typeof lat === "number" && typeof lon === "number")
+    Object.assign(out, pinFrame(lat, lon));
   if (cfg.biomeTemperature === -1) {
     out.biomeTemperature = (
       sceneSchemas.terrain() as {
@@ -1314,38 +1454,44 @@ function registerSceneFeaturesNow(): void {
         are engine tuning, not authoring — plus the four overrides, each of
         which is a decision rather than a copy.
       */
-      "x-accepts": acceptsOf("terrain"),
+      // `lat`/`lon` are ours until tosijs-3d#103 gives the terrain a pin.
+      "x-accepts": [...acceptsOf("terrain"), "lat", "lon"],
       "x-fetched": fetchedOf("terrain"),
-      properties: pick(
-        "terrain",
-        [
-          "seed",
-          "surfaceType",
-          "radius",
-          "grossScale",
-          "detailScale",
-          "horizScale",
-          "grossAmplitude",
-          "detailAmplitude",
-          "baseHeight",
-          "normalSmoothing",
-          "biome",
-          "biomeSeaLevel",
-          "biomeLapseRate",
-          // A real temperature since tosijs-3d 0.9.0: 0 is 0 °C, 1 is 50 °C,
-          // default 0.45. `-1` USED to mean "default" and is read that way
-          // here (see `terrainConfig`). The moisture default (0.45) is
-          // steppe: a green world wants ~0.7.
-          "biomeTemperature",
-          "biomeMoisture",
-          "biomeVolcanicScale",
-          "tileSize",
-          "lodLevels",
-          "reach",
-          "wireframe",
-        ],
-        {
-          /*
+      properties: withPin(
+        pick(
+          "terrain",
+          [
+            "seed",
+            "surfaceType",
+            "radius",
+            "grossScale",
+            "detailScale",
+            "horizScale",
+            "grossAmplitude",
+            "detailAmplitude",
+            "baseHeight",
+            // Straddle 0: the field is lowered by half its gross amplitude, so
+            // a sea at 0 floods the valleys. A world with a sea wants it (the
+            // planet sample did not have it and rendered as one dry snowfield).
+            "center",
+            "normalSmoothing",
+            "biome",
+            "biomeSeaLevel",
+            "biomeLapseRate",
+            // A real temperature since tosijs-3d 0.9.0: 0 is 0 °C, 1 is 50 °C,
+            // default 0.45. `-1` USED to mean "default" and is read that way
+            // here (see `terrainConfig`). The moisture default (0.45) is
+            // steppe: a green world wants ~0.7.
+            "biomeTemperature",
+            "biomeMoisture",
+            "biomeVolcanicScale",
+            "tileSize",
+            "lodLevels",
+            "reach",
+            "wireframe",
+          ],
+          {
+            /*
             NO DEFAULT for `baseHeight`: the PIECE's y is the terrain's height
             (the bind passes `ctx.at[1]`), and a schema default would override
             it now that every default applies (`effectiveConfig`). Upstream's
@@ -1353,12 +1499,12 @@ function registerSceneFeaturesNow(): void {
             one vertically in the editor snapped back (0.5.0 review, M1). A
             document that SETS `baseHeight` still wins, as before.
           */
-          baseHeight: { default: undefined },
-          // A seed is typed or stepped, never dragged: no seed is near another.
-          seed: { type: "integer", maximum: 9999, default: 111 },
-          // An ensemble's terrain is a landscape. A cylinder is a planet.
-          surfaceType: { default: "plane" },
-          /*
+            baseHeight: { default: undefined },
+            // A seed is typed or stepped, never dragged: no seed is near another.
+            seed: { type: "integer", maximum: 9999, default: 111 },
+            // An ensemble's terrain is a landscape. A cylinder is a planet.
+            surfaceType: { default: "plane" },
+            /*
             ⚠️ NO `x-scale` HERE ANY MORE. We added one because six decades of
             travel make a linear track unusable; tosijs-3d@0.8.1 added the same
             to `terrainSchema()`, so restating it is exactly the drift this
@@ -1366,23 +1512,23 @@ function registerSceneFeaturesNow(): void {
             the upgrade because our exception list still claimed a deviation
             that had stopped being one.
           */
-          radius: { default: 1000 },
-          /*
+            radius: { default: 1000 },
+            /*
             THE FORMAT KEEPS A BOOLEAN. Upstream spells this `'on' | 'off'`
             because an absent HTML boolean attribute reads false, but that is
             an ELEMENT concern — a JSON document has real booleans, and files
             already say `"biome": true`. The bind maps it; see below.
           */
-          biome: { type: "boolean", enum: undefined, default: false },
-          biomeSeaLevel: { "x-requires": { biome: true } },
-          biomeLapseRate: { "x-requires": { biome: true } },
-          biomeTemperature: { "x-requires": { biome: true } },
-          biomeMoisture: { "x-requires": { biome: true } },
-          biomeVolcanicScale: { "x-requires": { biome: true } },
-          grossAmplitude: { default: 250 },
-          detailAmplitude: { default: 45 },
-          horizScale: { default: 8 },
-          /*
+            biome: { type: "boolean", enum: undefined, default: false },
+            biomeSeaLevel: { "x-requires": { biome: true } },
+            biomeLapseRate: { "x-requires": { biome: true } },
+            biomeTemperature: { "x-requires": { biome: true } },
+            biomeMoisture: { "x-requires": { biome: true } },
+            biomeVolcanicScale: { "x-requires": { biome: true } },
+            grossAmplitude: { default: 250 },
+            detailAmplitude: { default: 45 },
+            horizScale: { default: 8 },
+            /*
             ⚠️ A FLOOR THE ELEMENT DOES NOT HAVE. Finest-level tiles go as
             `(2·reach / tileSize)²`, and these are two separate sliders — so it
             is the PRODUCT that kills the tab. Upstream allows `tileSize: 1`,
@@ -1390,9 +1536,10 @@ function registerSceneFeaturesNow(): void {
             say "…unless reach is large", so the floor stands in for a
             constraint the element should hold itself.
           */
-          tileSize: { minimum: 32, default: 128 },
-          lodLevels: { default: 3 },
-        }
+            tileSize: { minimum: 32, default: 128 },
+            lodLevels: { default: 3 },
+          }
+        )
       ),
     },
     /*
@@ -1748,6 +1895,184 @@ function registerSceneFeaturesNow(): void {
       updateAttrs(host, cfg);
       ctx.onDispose(() => updateAttrs(host, before));
       return host;
+    },
+  });
+
+  /*
+    A PLANET: a globe in the scene, standing alone or drawn from a sphere
+    terrain (board #3317, the owner's "show the planet, tweak it, pin the
+    terrain to it" for Manta's orbit view).
+
+    ⚠️ THE SCHEMA IS OURS UNTIL tosijs-3d#103 ships planetSchema(). Every range
+    and default here is copied from <tosi-b3d-planet>'s own attribute table and
+    initAttributes at 0.10.6, and replaced the day upstream describes it, as
+    the moon's was.
+
+    PRESETS: `world` writes its sea, air, relief and craters into the planet's
+    other attributes once, and they are the author's to tune after. Those
+    fields are `x-apply-default: false`: the panel shows the plain default, but
+    the bind never writes it, or every live edit would undo the preset.
+
+    `terrain` names a sphere terrain PIECE. In the link phase (every piece bound
+    first) the globe is drawn from that terrain's own height function
+    (`terrain.planetSurface()`), so its coasts are the ground's, and redrawn
+    whenever the terrain's shape changes. Without it the planet is its own
+    world, from its own seed and noise.
+  */
+  const PRESET = { "x-apply-default": false } as const;
+  const pnum = (
+    minimum: number,
+    maximum: number,
+    def: number,
+    more: Record<string, unknown> = {}
+  ): Spec => ({ type: "number", minimum, maximum, default: def, ...more });
+  const planetToElement = onOffToElement(["flatSea", "biome", "inlandWater"]);
+  const PLANET_PROPERTIES: Record<string, Spec> = {
+    world: {
+      type: "string",
+      title: "World preset",
+      enum: ["", "moon", "mercury", "mars", "venus", "io", "titan", "earth"],
+      "x-labels": { "": "none" },
+      default: "",
+    },
+    gas: {
+      type: "string",
+      title: "Gas giant",
+      enum: ["", "jupiter", "saturn", "uranus", "neptune"],
+      "x-labels": { "": "no (rocky)" },
+      default: "",
+    },
+    terrain: {
+      type: "string",
+      title: "Drawn from terrain",
+      description:
+        "The id of a sphere terrain piece: the globe takes that ground's shape and climate. Empty: the planet is its own world.",
+      default: "",
+    },
+    seed: { type: "integer", minimum: 0, maximum: 99999, default: 12345 },
+    radius: pnum(1, 10000, 50, { "x-scale": "log", "x-unit": "m" }),
+    subdivisions: { type: "integer", minimum: 8, maximum: 256, default: 64 },
+    rotationSpeed: pnum(-1, 1, 0, { "x-unit": "rad/s" }),
+    relief: pnum(0, 60, 1, { "x-useful": [1, 40] }),
+    grossScale: pnum(0.0005, 0.1, 0.005, { "x-scale": "log" }),
+    detailScale: pnum(0.001, 0.5, 0.02, { "x-scale": "log" }),
+    grossAmplitude: pnum(0, 50, 5, PRESET),
+    detailAmplitude: pnum(0, 20, 1, PRESET),
+    biome: { type: "boolean", default: false },
+    flatSea: { type: "boolean", default: false },
+    ocean: pnum(0, 1, 0.6, PRESET),
+    seaShallow: { type: "string", format: "color", default: "", ...PRESET },
+    seaDeep: { type: "string", format: "color", default: "", ...PRESET },
+    seaIce: pnum(0, 1, 0),
+    seaGlint: pnum(0, 1, 1),
+    atmosphere: pnum(0, 0.3, 0.08, PRESET),
+    atmosphereColor: {
+      type: "string",
+      default: "rgba(77,128,230,0.15)",
+      ...PRESET,
+    },
+    clouds: pnum(0, 1, 0, PRESET),
+    cloudColor: {
+      type: "string",
+      format: "color",
+      default: "#ffffff",
+      ...PRESET,
+    },
+    cloudSpeed: pnum(0, 10, 1),
+    craters: pnum(0, 1, 0, PRESET),
+    craterSize: pnum(0, 0.5, 0.15, PRESET),
+    craterWear: pnum(0, 1, 0.6, PRESET),
+    craterAsymmetry: pnum(-1, 1, 0, PRESET),
+    rings: pnum(0, 1, 0),
+    ringColor: { type: "string", format: "color", default: "" },
+    heightMap: { type: "string", format: "uri-reference", default: "" },
+    colorMap: { type: "string", format: "uri-reference", default: "" },
+  };
+  const PLANET_SECTIONS = [
+    {
+      title: "World",
+      icon: "earth",
+      keys: [
+        "world",
+        "gas",
+        "terrain",
+        "seed",
+        "radius",
+        "subdivisions",
+        "rotationSpeed",
+      ],
+    },
+    {
+      title: "Surface",
+      icon: "terrain",
+      keys: [
+        "relief",
+        "grossScale",
+        "detailScale",
+        "grossAmplitude",
+        "detailAmplitude",
+        "biome",
+      ],
+    },
+    {
+      title: "Sea",
+      icon: "water",
+      keys: ["flatSea", "ocean", "seaShallow", "seaDeep", "seaIce", "seaGlint"],
+    },
+    {
+      title: "Air",
+      icon: "sky",
+      keys: [
+        "atmosphere",
+        "atmosphereColor",
+        "clouds",
+        "cloudColor",
+        "cloudSpeed",
+      ],
+    },
+    {
+      title: "Craters",
+      icon: "moon",
+      keys: ["craters", "craterSize", "craterWear", "craterAsymmetry"],
+    },
+    { title: "Rings", icon: "circle", keys: ["rings", "ringColor"] },
+    { title: "Maps", icon: "map", keys: ["heightMap", "colorMap"] },
+  ];
+  // The element's attributes without our own `terrain` link field.
+  const planetAttrs = (cfg: Record<string, unknown>) => {
+    const { terrain: _link, ...rest } = planetToElement(cfg);
+    return rest;
+  };
+  registerFeature({
+    name: "planet",
+    icon: "🪐",
+    primitive: true,
+    update: (handle, cfg) => updateAttrs(handle, planetAttrs(cfg)),
+    schema: {
+      type: "object",
+      title: "Planet",
+      "x-accepts": [...Object.keys(B3dPlanet.initAttributes), "terrain"],
+      "x-sections": PLANET_SECTIONS,
+      properties: PLANET_PROPERTIES,
+    },
+    bind: (_piece, cfg, ctx) => {
+      const element = add(ctx, b3dPlanet(planetAttrs(cfg)));
+      placePlanetRoot(element, ctx);
+      return element;
+    },
+    link: (handle, ctx) => {
+      const id = (ctx.piece.features?.planet as { terrain?: unknown })?.terrain;
+      if (typeof id !== "string" || !id) return;
+      /*
+        `ctx.handle(id)` is a piece's BODY, and a terrain piece has none: it
+        hands back the built piece, whose `handles` hold each feature's.
+        (Measured: passing the built piece through read as "not a terrain".)
+      */
+      const target = ctx.handle(id) as {
+        handles?: Map<string, unknown>;
+      } | null;
+      const terrain = target?.handles?.get?.("terrain") ?? target;
+      linkPlanetToTerrain(handle as SceneElement, terrain, id, ctx);
     },
   });
 

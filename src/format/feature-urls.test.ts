@@ -268,6 +268,9 @@ const FREE_TEXT: Record<string, string> = {
   "interactive.prompt": "text shown to the player",
   "lockable.key": "a key id the game resolves",
   "animation.clip": "an animation clip name on the mesh",
+  "planet.terrain":
+    "a piece id in this document (the terrain it is drawn from)",
+  "planet.atmosphereColor": "a CSS colour that may carry alpha, 'rgba(…)'",
 };
 
 type Spec = {

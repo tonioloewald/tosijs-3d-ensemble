@@ -444,11 +444,19 @@ export function effectiveConfig(
 ): Record<string, unknown> {
   const properties = (registration?.schema?.properties ?? {}) as Record<
     string,
-    { default?: unknown }
+    { default?: unknown; "x-apply-default"?: boolean }
   >;
   const defaults: Record<string, unknown> = {};
   for (const [key, spec] of Object.entries(properties))
-    if (spec && spec.default !== undefined) defaults[key] = spec.default;
+    if (
+      spec &&
+      spec.default !== undefined &&
+      // A default the panel SHOWS but the bind must not WRITE: a field a
+      // preset fills in (a planet's `world` writes its own sea, air and
+      // craters), where writing the default would undo the preset.
+      spec["x-apply-default"] !== false
+    )
+      defaults[key] = spec.default;
   return declaredConfig(
     registration,
     Object.keys(defaults).length ? { ...defaults, ...cfg } : cfg

@@ -57,4 +57,21 @@ describe("effectiveConfig", () => {
     const cfg = { a: 1 };
     expect(effectiveConfig(bare, cfg)).toBe(cfg);
   });
+
+  it("a default marked x-apply-default: false is shown, never written", () => {
+    // A preset fills these in (a planet's world): writing the default on
+    // every update would undo the preset.
+    const preset = {
+      schema: {
+        properties: {
+          world: { type: "string", default: "" },
+          ocean: { type: "number", default: 0.6, "x-apply-default": false },
+        },
+      },
+    };
+    expect(effectiveConfig(preset, { world: "moon" })).toEqual({
+      world: "moon",
+    });
+    expect(effectiveConfig(preset, { ocean: 0.2 }).ocean).toBe(0.2);
+  });
 });

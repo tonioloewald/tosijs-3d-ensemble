@@ -249,3 +249,24 @@ Three things change underneath an existing document:
   document sets with `(old - 0.36) / 0.8`. A `-1` (the old "default") is read
   as the default and `migrate()` removes it, so it needs nothing. A value left
   unset needs nothing either.
+
+## Upgrading from 0.5 to 0.6
+
+A document needs no change. Code may, in three places:
+
+- **Peer `tosijs-3d` is `^0.10.8`.** The planet feature and the terrain pin take
+  their schemas from it, and it fixes two leaks we had been working around. A
+  game on tosijs-3d 0.9 or early 0.10 moves to 0.10.8 with it.
+- **Deep imports that are gone**, neither ever on the package entry:
+  - `boxTracker` (`editor/schema-panel`): a panel's own `dispose()` releases
+    its bound rows now. `schemaPanel(…)` returns a `DisposablePanel`; call
+    `dispose()` when you drop it, as the editor does.
+  - `applyEuler` (`runtime/node-transform`): a `b3d-destroyable` turns its
+    instance from `rx`/`ry`/`rz` itself. Scale an element with the new
+    `scaleElement(element, scale)`, which takes the format's `number | Vec3`
+    and keeps a per-axis scale through the element's re-renders. For a plain
+    node, `applyScale` is unchanged.
+- **A stretched piece now STAYS stretched** after it is moved or turned. It
+  used to snap back to its uniform scale on the first edit, so an editor
+  session that "fixed" that by hand may have saved a different `scale` than
+  was authored; worth a look in any document edited that way.

@@ -114,3 +114,24 @@ describe("the peer range is a promise we keep", () => {
     }
   });
 });
+
+describe("the newest migration guide names the peer range we publish", () => {
+  /*
+    0.6.0 review M3: MIGRATING's "Upgrading from 0.5 to 0.6" said `^0.10.8`
+    while package.json required `^0.10.9`, so a consumer following the guide
+    would install a tosijs-3d that cannot resolve our peer.
+  */
+  it("matches peerDependencies.tosijs-3d", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+      peerDependencies: Record<string, string>;
+    };
+    const range = pkg.peerDependencies["tosijs-3d"]!;
+    const guide = readFileSync("MIGRATING.md", "utf8");
+    const sections = guide.split(/^## Upgrading from /m);
+    const newest = sections[sections.length - 1]!;
+    const named = newest.match(/Peer `tosijs-3d` is `([^`]+)`/)?.[1];
+    expect(named, "the newest upgrade section names no tosijs-3d peer").toBe(
+      range
+    );
+  });
+});

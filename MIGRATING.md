@@ -221,7 +221,7 @@ Three things change underneath an existing document:
   | `light` | `intensity` 1 → 0.9 |
   | `fog` | `mode` linear → exp2, `density` 0.01 → 0.002, `start`/`end` 60/120 → 100/4000, `color` #bfd9f2 → #8fa6b2, `syncSkybox` off → on |
   | `water` | `waterSize` 128 → 2000, `waveHeight` 0 → 0.3, `windForce` −5 → 6, `waterColor` #0066cc → #0a3d5c |
-  | `terrain` | `seed`, `surfaceType` (cylinder → plane), `radius`, `horizScale`, both amplitudes, `tileSize`, `lodLevels` |
+  | `terrain` | `seed`, `surfaceType` (cylinder → "plane", which tosijs-3d does not have: 0.6 reverts it, see below), `radius`, `horizScale`, both amplitudes, `tileSize`, `lodLevels` |
   | `clouds` | `count`, `altitude`, `thickness`, `spread`, `opacity` |
   | `sound` | `loop`/`autoplay`/`spatialSound` off → on, `maxDistance` 100 → 60 |
   | `reflections` | `probeSize` 0 (off) → 128, `maxDistance` 100 → 200 |
@@ -252,11 +252,16 @@ Three things change underneath an existing document:
 
 ## Upgrading from 0.5 to 0.6
 
-A document needs no change. Code may, in three places:
+A document needs no change to load, but one written by 0.5's editor may say
+`terrain.surfaceType: "plane"`, which tosijs-3d does not have (it samples as
+a cylinder, so that is what it has always rendered). `migrate()` rewrites it
+to `"cylinder"`; nothing changes on screen. Code may need changing in three
+places:
 
-- **Peer `tosijs-3d` is `^0.10.8`.** The planet feature and the terrain pin take
-  their schemas from it, and it fixes two leaks we had been working around. A
-  game on tosijs-3d 0.9 or early 0.10 moves to 0.10.8 with it.
+- **Peer `tosijs-3d` is `^0.10.9`.** The planet feature and the terrain pin take
+  their schemas from 0.10.8, the planet ↔ terrain links need 0.10.9, and
+  0.10.8 fixes two leaks we had been working around. A game on tosijs-3d 0.9
+  or early 0.10 moves to 0.10.9 with it.
 - **Deep imports that are gone**, neither ever on the package entry:
   - `boxTracker` (`editor/schema-panel`): a panel's own `dispose()` releases
     its bound rows now. `schemaPanel(…)` returns a `DisposablePanel`; call

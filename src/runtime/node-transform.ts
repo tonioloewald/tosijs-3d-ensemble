@@ -78,8 +78,15 @@ export function scaleElement(
   if (scale === undefined) return;
   const v = scaleVector(scale);
   if (v[0] === v[1] && v[1] === v[2]) {
-    stretches.delete(element);
+    const wasStretched = stretches.delete(element);
     element.scale = v[0];
+    /*
+      From a stretch, write the node too: the element's `scale` was held at 1
+      under the stretch, so going back to uniform 1 is an UNCHANGED write,
+      tosijs's setter skips it, nothing renders, and the node keeps the
+      stretch (0.6.0 review M1).
+    */
+    if (wasStretched) applyScale(element.mesh, v);
     return;
   }
   stretches.set(element, v);

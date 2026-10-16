@@ -208,3 +208,59 @@ test("the panel's rotation field turns the piece in place", async ({
   expect(r.turned).toBeCloseTo(60, 0);
   expect(realErrors(errors)).toEqual([]);
 });
+
+/*
+  A MOVE CARRIES THE PIECE'S FEATURES WITH IT (0.6.0 review M2). The in-place
+  transform path writes the BODY; a feature that placed itself from the
+  piece's `at` when it bound (here a sound, elsewhere a turret mount or a
+  trigger volume) was left behind, and a reload disagreed with the editor.
+  A piece with features rebuilds on a move instead. Asked of the feature's
+  own element.
+*/
+test("moving a piece moves the features placed from it", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = collectPageErrors(page);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d-destroyable"),
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(3000);
+  const r = await page.evaluate(async () => {
+    type Doc = { pieces: Array<Record<string, unknown>> };
+    const ed = document.querySelector("tosi-ensemble-editor") as unknown as {
+      ensemble: Doc;
+      update(id: string, patch: Record<string, unknown>): void;
+      shadowRoot: ShadowRoot;
+    };
+    const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    const mesh = (ed.ensemble.pieces.find((p) => p.mesh) as { mesh: string })
+      .mesh;
+    ed.ensemble = {
+      ...ed.ensemble,
+      pieces: [
+        { id: "noisy", mesh, at: [0, 0, 0], features: { sound: {} } },
+      ],
+    };
+    await sleep(1500);
+    const soundX = () =>
+      Number(
+        (
+          ed.shadowRoot.querySelector("tosi-b3d-sound") as unknown as {
+            x: number;
+          } | null
+        )?.x
+      );
+    const before = soundX();
+    ed.update("noisy", { at: [5, 0, 0] });
+    await sleep(1500);
+    return { before, after: soundX() };
+  });
+  console.log(JSON.stringify(r));
+  expect(r.before).toBe(0);
+  expect(r.after, "the sound stayed where the piece used to be").toBe(5);
+  expect(realErrors(errors)).toEqual([]);
+});

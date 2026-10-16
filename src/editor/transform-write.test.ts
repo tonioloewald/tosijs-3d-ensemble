@@ -133,6 +133,31 @@ describe("writeTransform", () => {
     expect(element.element.mesh.scaling).toEqual({ x: 2, y: 2, z: 2 });
   });
 
+  it("goes back to uniform 1 from a stretch", () => {
+    /*
+      0.6.0 review M1. The stub's `scale` RENDERS ONLY ON CHANGE, as tosijs's
+      setter does: a stub that renders on every write hid this. From
+      [2, 1, 4], uniform 1 wrote `element.scale = 1`, which it already was,
+      so nothing re-applied it and the node kept the stretch.
+    */
+    const body = elementBody();
+    const el = body.element as typeof body.element & { scale: number };
+    let scale = el.scale;
+    Object.defineProperty(el, "scale", {
+      get: () => scale,
+      set: (v: number) => {
+        if (v === scale) return;
+        scale = v;
+        el.render();
+      },
+    });
+    writeTransform(body, { scale: [2, 1, 4] });
+    el.render();
+    expect(el.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
+    writeTransform(body, { scale: 1 });
+    expect(el.mesh.scaling).toEqual({ x: 1, y: 1, z: 1 });
+  });
+
   it("does not touch scale when a drag only moved the piece", () => {
     // A translate release writes `at` and nothing else; stamping a scale here
     // would reset a stretched piece the first time anyone nudged it.

@@ -378,6 +378,28 @@ function pickFile(onText: (text: string) => void): void {
  * fallback box — which is how `cornerUpLeft` shipped as an empty square where
  * Undo should be, reported twice before anyone traced it.
  */
+/** Does this piece carry any feature? (Its features may read its transform.) */
+const hasFeatures = (piece: Piece): boolean =>
+  Object.keys(piece.features ?? {}).length > 0;
+
+/**
+ * Did an edit change the transform of a piece that carries features? The
+ * drag-release path writes the body and skips the rebuild, which leaves a
+ * feature that placed itself from `at`/`rot`/`scale` behind (0.6.0 review M2).
+ */
+const movedWithFeatures = (before: Ensemble, after: Ensemble): boolean => {
+  const was = new Map(before.pieces.map((p) => [p.id, p] as const));
+  return after.pieces.some((piece) => {
+    const prev = was.get(piece.id);
+    return (
+      !!prev &&
+      hasFeatures(piece) &&
+      JSON.stringify([piece.at, piece.rot, piece.scale]) !==
+        JSON.stringify([prev.at, prev.rot, prev.scale])
+    );
+  });
+};
+
 export const PIECE_ROW_ICONS = {
   /** The row's own ⋯ button. */
   menu: "moreVertical",
@@ -697,6 +719,10 @@ export class EnsembleEditor extends withAttributes({
         JSON.stringify([piece.at, piece.rot, piece.scale]) !==
         JSON.stringify([was.at, was.rot, was.scale])
       ) {
+        // A FEATURE placed itself from the piece's transform when it bound (a
+        // turret's mount, a trigger's volume, a door's rest pose), and a body
+        // write cannot move it: rebuild (0.6.0 review M2).
+        if (hasFeatures(piece)) return false;
         const body = built.pieces.get(piece.id);
         if (!body || (!body.element && !body.node)) return false;
         const transform: Transform = {};
@@ -1363,7 +1389,10 @@ export class EnsembleEditor extends withAttributes({
       Structural edits — insert, delete, a feature change — still rebuild, and
       say so by omitting the option.
     */
-    if (options?.rebuild === false) {
+    if (
+      options?.rebuild === false &&
+      !movedWithFeatures(before, this._ensemble)
+    ) {
       this._syncSelection();
       this._syncHandles();
       if (options.chrome !== false) this._renderChrome();

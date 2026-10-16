@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=a8eeb3d0926b" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=599bddbb03f4" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=0c6c02a5fc39" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=297c84e97741" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -277,7 +277,7 @@ document sets, nothing changes. For one it leaves out, these move:</p>
 </tr>
 <tr>
 <td><code>terrain</code></td>
-<td><code>seed</code>, <code>surfaceType</code> (cylinder → plane), <code>radius</code>, <code>horizScale</code>, both amplitudes, <code>tileSize</code>, <code>lodLevels</code></td>
+<td><code>seed</code>, <code>surfaceType</code> (cylinder → &quot;plane&quot;, which tosijs-3d does not have: 0.6 reverts it, see below), <code>radius</code>, <code>horizScale</code>, both amplitudes, <code>tileSize</code>, <code>lodLevels</code></td>
 </tr>
 <tr>
 <td><code>clouds</code></td>
@@ -325,11 +325,16 @@ unset needs nothing either.</p>
 </li>
 </ul>
 <h2>Upgrading from 0.5 to 0.6</h2>
-<p>A document needs no change. Code may, in three places:</p>
+<p>A document needs no change to load, but one written by 0.5&#39;s editor may say
+<code>terrain.surfaceType: &quot;plane&quot;</code>, which tosijs-3d does not have (it samples as
+a cylinder, so that is what it has always rendered). <code>migrate()</code> rewrites it
+to <code>&quot;cylinder&quot;</code>; nothing changes on screen. Code may need changing in three
+places:</p>
 <ul>
-<li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.8</code>.</strong> The planet feature and the terrain pin take
-their schemas from it, and it fixes two leaks we had been working around. A
-game on tosijs-3d 0.9 or early 0.10 moves to 0.10.8 with it.</li>
+<li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.9</code>.</strong> The planet feature and the terrain pin take
+their schemas from 0.10.8, the planet ↔ terrain links need 0.10.9, and
+0.10.8 fixes two leaks we had been working around. A game on tosijs-3d 0.9
+or early 0.10 moves to 0.10.9 with it.</li>
 <li><strong>Deep imports that are gone</strong>, neither ever on the package entry:<ul>
 <li><code>boxTracker</code> (<code>editor/schema-panel</code>): a panel&#39;s own <code>dispose()</code> releases
 its bound rows now. <code>schemaPanel(…)</code> returns a <code>DisposablePanel</code>; call
@@ -426,6 +431,6 @@ was authored; worth a look in any document edited that way.</li>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-6ah2xjz2.js"></script>
+  <script type="module" src="../hydrate-rynrvwcf.js"></script>
 </body>
 </html>

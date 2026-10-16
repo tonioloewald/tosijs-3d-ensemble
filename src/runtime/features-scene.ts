@@ -860,6 +860,7 @@ function registerSceneFeaturesNow(): void {
     name: "light",
     icon: "🔦",
     primitive: true,
+    group: "lights",
     update: updateAttrs,
     schema: {
       type: "object",
@@ -896,6 +897,7 @@ function registerSceneFeaturesNow(): void {
     name: "lamp",
     icon: "💡",
     primitive: true,
+    group: "lights",
     /*
       NOT `updateAttrs`. A lamp's config is ONE field, `settings`, and the bind
       spreads it across the light element's own attributes — so the blanket
@@ -998,6 +1000,7 @@ function registerSceneFeaturesNow(): void {
     name: "sun",
     icon: "☀️",
     primitive: true,
+    single: true,
     insertAt: [-0.5, 1, 0.4],
     update: updateAttrs,
     schema: {
@@ -1039,6 +1042,7 @@ function registerSceneFeaturesNow(): void {
     name: "skybox",
     icon: "🌌",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
@@ -1174,6 +1178,7 @@ function registerSceneFeaturesNow(): void {
     name: "ground",
     icon: "🟫",
     primitive: true,
+    single: true,
     insertAt: "height",
     update: updateAttrs,
     schema: {
@@ -1203,6 +1208,7 @@ function registerSceneFeaturesNow(): void {
     name: "camera",
     icon: "🎥",
     primitive: true,
+    single: true,
     /*
       NO `update`: this feature's handle is a stop FUNCTION, not an element —
       it drives the scene camera through `whenCamera`. `updateAttrs` would have
@@ -1341,6 +1347,7 @@ function registerSceneFeaturesNow(): void {
     name: "reflections",
     icon: "🪞",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
@@ -1541,6 +1548,7 @@ function registerSceneFeaturesNow(): void {
     */
     icon: "🌊",
     primitive: true,
+    single: true,
     insertAt: "height",
     update: updateAttrs,
     schema: {
@@ -1597,6 +1605,7 @@ function registerSceneFeaturesNow(): void {
       Insert shelf, so turning it back on is this one line.
     */
     primitive: false,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
@@ -1658,6 +1667,7 @@ function registerSceneFeaturesNow(): void {
     name: "cloudDeck",
     icon: "🌥️",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: (handle, cfg) => updateAttrs(handle, deckToElement(cfg)),
     schema: {
@@ -1791,6 +1801,7 @@ function registerSceneFeaturesNow(): void {
     name: "lightning",
     icon: "⚡",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: (handle, cfg) => updateAttrs(handle, lightningToElement(cfg)),
     schema: {
@@ -1858,6 +1869,7 @@ function registerSceneFeaturesNow(): void {
     name: "wind",
     icon: "💨",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
@@ -1966,6 +1978,7 @@ function registerSceneFeaturesNow(): void {
     name: "lightShafts",
     icon: "🌤️",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: (handle, cfg) => updateAttrs(handle, shaftsToElement(cfg)),
     schema: {
@@ -2068,6 +2081,7 @@ function registerSceneFeaturesNow(): void {
     name: "ambient",
     icon: "🌗",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {
@@ -2104,6 +2118,7 @@ function registerSceneFeaturesNow(): void {
     name: "fog",
     icon: "🌫️",
     primitive: true,
+    single: true,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {

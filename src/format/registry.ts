@@ -266,6 +266,22 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   insertAt?: "point" | "height" | Vec3;
   /**
+   * ONE PER SCENE: a sky, a sun, fog, a wind. A primitive that says so is a
+   * FIXED ROW in the editor's environment list, there whether or not the
+   * document has it, with a state (not included, disabled, enabled) picked
+   * from its circle. One that does not (a terrain, a weather cell, a sound)
+   * is a SUBGROUP of the pieces that have it, ending in an inline "add".
+   * Owner: "every environment component could just be in the list by default
+   * rather than needing to be inserted".
+   */
+  single?: boolean;
+  /**
+   * Which category of the editor's piece list a primitive sits in.
+   * `"environment"` (the default) or `"lights"`; pieces with a mesh are
+   * always "objects".
+   */
+  group?: "environment" | "lights";
+  /**
    * A visualiser the editor shows but the runtime has no binding for.
    *
    * Legitimate, but mark it — otherwise an author can build something the game

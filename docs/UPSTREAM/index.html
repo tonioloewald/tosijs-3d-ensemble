@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=3d7f47c5ef65" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=eb64a50b19c3" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=04b99147293b" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=594c0f934f36" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -446,7 +446,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 </tr>
 <tr>
 <td>G</td>
-<td><strong><code>withAttributes()</code> breaks our <code>.d.ts</code> emit</strong> — its return type is not nameable from <code>&#39;tosijs&#39;</code>, so <code>tsc -p tsconfig.build.json</code> fails TS2742 and <code>bun run build</code> refuses. It is the shape tosijs&#39;s own migration note recommends, and we cannot take it. Using the documented <code>ComponentAttrs</code> alternative meanwhile; <strong>fixed upstream and unpublished</strong>, so switch when it lands</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs@1.10.x">tosijs@1.10.x</a>)</strong>; both components use <code>withAttributes()</code> again and <code>bun run build</code> emits — <strong><code>withAttributes()</code> breaks our <code>.d.ts</code> emit</strong> — its return type is not nameable from <code>&#39;tosijs&#39;</code>, so <code>tsc -p tsconfig.build.json</code> fails TS2742 and <code>bun run build</code> refuses. It is the shape tosijs&#39;s own migration note recommends, and we cannot take it. Using the documented <code>ComponentAttrs</code> alternative meanwhile; <strong>fixed upstream and unpublished</strong>, so switch when it lands</td>
 <td><a href="https://github.com/tonioloewald/tosijs/issues/38">#38</a></td>
 </tr>
 </tbody></table>
@@ -587,6 +587,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-2vs5jhc4.js"></script>
+  <script type="module" src="../hydrate-q3t4vhpn.js"></script>
 </body>
 </html>

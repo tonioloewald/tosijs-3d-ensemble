@@ -23,32 +23,18 @@ over. Every mesh piece is placed the same way and `destroyable` is a genuine
 decorator: it contributes hit points to a body that already exists rather than
 being the reason the body exists.
 
-## Rotation and scale go on the NODE; only position survives the element
+## Rotation and scale: the element's, since tosijs-3d 0.8.1
 
-`b3d-destroyable`'s `size` is the placeholder cube's edge length and is
-*ignored when `library` is set* — so for every piece with a real mesh, writing
-it does nothing. Worse, the element forwards only `{x, y, z, canonical}` to
-`library.instantiate`, so **`rx`/`ry`/`rz` never reach the instance either**.
-
-Both measured before trusting anything: rendered width stayed 5.273 at `scale`
-1, 2 and 4 alike, and an authored `rot: [0, 45, 0]` left the footprint at
-3.63 × 3.63 — identical to no rotation. `piece.scale` and `piece.rot` were
-documented fields that moved nothing, which is the worst kind of control there
-is. Position is the exception and always worked, because the element rewrites
-`mesh.position` from `x`/`y`/`z` every frame.
-
-The element's own `mesh` — the library instance's root `TransformNode` — does
-scale, and the element does not rewrite its scaling the way it rewrites
-position. So scale is applied there, which also makes per-axis scale free.
-Filed as tosijs-3d#47: a scale attribute belongs on the element, and then this
-goes away.
-
-**The node does not exist yet when the element is appended.** `b3d-destroyable`
-instantiates inside `lib.ready.then(...)`, so `element.mesh` is null for at
-least a microtask after `appendChild`. Applying scale once, immediately, would
-silently do nothing — the same failure as `size`, one layer down. `whenMeshed`
-below is the retry, bounded so a piece that never instantiates cannot leave an
-observer running forever.
+For years they were not. `b3d-destroyable` forwarded only position to
+`library.instantiate`, and `size` is the placeholder cube's edge, so an
+authored `rot: [0, 45, 0]` left the footprint at 3.63 × 3.63 and `scale` 1, 2
+and 4 all rendered 5.273 wide. We wrote both onto the instance's node, after
+polling for it to exist. tosijs-3d#47 and #48 fixed that upstream: the element
+forwards `rx`/`ry`/`rz`, has a uniform `scale`, and re-renders once its node
+exists. So the rotation is simply the element's attributes, and the scale goes
+through `scaleElement` (`node-transform.ts`), which uses the element's `scale`
+and keeps a non-uniform one on the node through the element's re-renders.
+No poll is left: the element's own post-load render applies both.
 
 ## Nothing to instantiate from? Draw a box.
 
@@ -58,8 +44,8 @@ is judging, so cubes in the right places beat an empty scene.
 */
 /*{"parent":"Internals","order":9}*/
 import { b3dBox, b3dDestroyable, b3dRadarBlip } from "tosijs-3d";
-import { applyEuler, applyScale } from "./node-transform.js";
-import type { TransformableNode } from "./node-transform.js";
+import { scaleElement } from "./node-transform.js";
+import type { ScalableElement } from "./node-transform.js";
 import type { SceneElement } from "../format/registry.js";
 import type { Piece, Vec3 } from "../format/types.js";
 import type { PlaceContext, Placement } from "./build.js";
@@ -106,8 +92,8 @@ export function placeMesh(
       y: at[1],
       z: at[2],
       ...rotation,
-      // Inert for a library piece — see the note above — but still the right
-      // value for the placeholder path the element falls back to.
+      // The placeholder cube's edge, if the element falls back to one; a
+      // library piece's scale is `scaleElement`'s, below.
       size: scale[0],
       /*
         The combat spec is set HERE, at creation, not by the feature afterwards.
@@ -125,23 +111,15 @@ export function placeMesh(
         : {}),
     }) as unknown as SceneElement;
 
+    // Before it is appended, so the post-load render already carries it.
+    scaleElement(element as unknown as ScalableElement, scale);
     // Creating an element does not add it. This is the step whose absence
     // produces no errors, no pieces, and nothing in the console.
     ctx.scene.appendChild(element);
-    const stopWaiting = whenMeshed(element, (node) => {
-      // BOTH, and both for the same reason: the element forwards neither to the
-      // library instance. `rx`/`ry`/`rz` are dropped by `instantiate`, and
-      // `size` is the placeholder cube's edge. Only position survives the trip.
-      applyEuler(node, [rotation.rx, rotation.ry, rotation.rz]);
-      applyScale(node, scale);
-    });
     return {
       element,
-      dispose: () => {
-        stopWaiting();
-        // No orphan reaper any more — see the note at the end of this file.
-        element.remove();
-      },
+      // No orphan reaper any more — see the note at the end of this file.
+      dispose: () => element.remove(),
     };
   }
 
@@ -157,72 +135,6 @@ export function placeMesh(
   }) as unknown as SceneElement;
   ctx.scene.appendChild(box);
   return { element: box, dispose: () => box.remove() };
-}
-
-/** Poll interval for the setup waits below. */
-const TICK_MS = 50;
-
-/**
- * ~12s of ticks. Bounded so a piece whose library never resolves cannot leave a
- * timer running for the life of the session — the editor rebuilds hundreds of
- * times and each rebuild arms these.
- */
-const TICK_BUDGET = 240;
-
-/**
- * Run `apply` once the element has a node, now or on a later tick.
- *
- * Returns a canceller. The budget is what keeps this honest: a piece whose
- * library never resolves would otherwise leave a timer running for the life of
- * the scene, and the editor rebuilds hundreds of times a session.
- *
- * The guard around `apply` stays even though this no longer runs inside a
- * render observer: the callback is consumer code reaching into Babylon, and
- * swallowing its throw is what keeps one bad piece from stopping the rest.
- */
-function whenMeshed(
-  element: SceneElement,
-  apply: (node: TransformableNode) => void,
-  tickBudget = TICK_BUDGET
-): () => void {
-  const host = element as unknown as { mesh?: TransformableNode | null };
-  if (host.mesh) {
-    apply(host.mesh);
-    return () => {};
-  }
-  /*
-    A TIMER, NOT A RENDER OBSERVER.
-
-    This waited on `scene.onBeforeRenderObservable` with a budget counted in
-    FRAMES. A backgrounded tab stops rAF entirely, so the observer never fires
-    and the budget never advances: come back to the tab and the pieces that had
-    not yet been meshed have no rotation and no scale, forever. Reported as
-    "daytime with partial content, and I ONLY ever see this when bringing the
-    editor back from background".
-
-    `setTimeout` is throttled in a hidden tab but it still RUNS, so this
-    converges whether or not anyone is watching — which is the property a
-    setup step needs and a per-frame effect does not.
-  */
-  let ticks = 0;
-  let timer: ReturnType<typeof setInterval> | null = null;
-  const stop = () => {
-    if (timer !== null) clearInterval(timer);
-    timer = null;
-  };
-  timer = setInterval(() => {
-    try {
-      if (host.mesh) {
-        apply(host.mesh);
-        stop();
-        return;
-      }
-      if (++ticks > tickBudget) stop();
-    } catch {
-      stop();
-    }
-  }, TICK_MS);
-  return stop;
 }
 
 /*

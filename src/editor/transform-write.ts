@@ -7,24 +7,18 @@ is the worst failure mode a manipulator can have.
 
 | body | write to | why |
 |---|---|---|
-| an ELEMENT (`b3d-destroyable`) | `el.x/y/z`, `el.rx/ry/rz` | the element OWNS its transform: `render()` writes `mesh.position` from those attributes, so a write straight to the mesh is undone the next time anything re-renders |
+| an ELEMENT (`b3d-destroyable`) | `el.x/y/z`, `el.rx/ry/rz`, `el.scale` | the element OWNS its transform: `render()` writes the node from those attributes, so a write straight to the node is undone the next time anything re-renders |
 | a NODE (a plain library instance) | `node.position` / `rotation` / `scaling` | nothing manages it, so the node IS the truth |
 
-## Scale is the exception, and `size` is a trap
+## Scale: the element's, unless it is a stretch
 
-`b3d-destroyable`'s `size` is documented as the *placeholder cube edge length*,
-**ignored when `library` is set** — so writing it does nothing for any piece
-with a real mesh, which is every mesh piece we place. Measured before relying on
-it: a piece's rendered width was 5.273 at `scale: 1`, `2` and `4` alike, with
-the root node's scaling sitting at `1,1,1` throughout. `piece.scale` was inert,
-and the editor's scale control was moving a number nothing read.
-
-What DOES work is the element's own node. `element.mesh` is the library
-instance's root `TransformNode`, the element manages its position and rotation
-but not its scaling, and a write there survives: setting `2, 1.5, 3` held across
-frames and took the width from 5.273 to 10.546. So scale goes to the node in
-both branches, and per-axis comes free — filed upstream as tosijs-3d#47, since
-a scale attribute belongs on the element.
+`b3d-destroyable`'s `size` is the *placeholder cube edge length*, ignored once
+`library` is set (measured: 5.273 wide at `scale` 1, 2 and 4). tosijs-3d 0.8.1
+(#47) added a UNIFORM `scale`, and re-applies it to the node on every render.
+That is what bit us: a per-axis scale we wrote to the node was reset by the
+next move or turn (`[2, 1, 3]` → `[1, 1, 1]`, measured). So `scaleElement`
+sends a uniform scale to the element and keeps a stretch on the node through
+the element's re-renders; tosijs-3d#105 asks for a way not to need that.
 
 `rx`/`ry`/`rz` are **degrees** on an element (`yaw`/`pitch`/`roll` are aliases
 for `ry`/`rx`/`rz`), matching the format. Babylon nodes are **radians**, so the
@@ -38,12 +32,15 @@ and the glTF loader always sets one. That is exactly the bug that made
 wrote `.rotation`, the quaternion won, and every value produced the model's
 baked orientation. `position` worked, which is what made it look wired up.
 
-So rotating a node here **clears the quaternion first**. Skip that and a
+So rotating a plain node here **clears the quaternion first**. Skip that and a
 rotation drag moves nothing, with no error anywhere.
 */
 /*{"parent":"Internals","order":8}*/
-import { applyEuler, applyScale } from "../runtime/node-transform.js";
-import type { TransformableNode } from "../runtime/node-transform.js";
+import { applyScale, scaleElement } from "../runtime/node-transform.js";
+import type {
+  ScalableElement,
+  TransformableNode,
+} from "../runtime/node-transform.js";
 import type { Euler, Vec3 } from "../format/types.js";
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -113,23 +110,20 @@ function writeElement(
     element.z = at[2];
   }
   if (rot) {
-    /*
-      The attributes are set for the record — a rebuild reads them back — but
-      they are NOT what turns the piece. `b3d-destroyable` forwards only
-      position to `library.instantiate`, so `rx`/`ry`/`rz` never reach the
-      instance. Measured: `element.ry = 90` left the node at rotation 0,0,0.
-    */
+    // DEGREES, and the element applies them itself since tosijs-3d 0.8.1
+    // (#48): it forwards them to the instance and re-renders once it exists.
     element.rx = rot[0];
     element.ry = rot[1];
     element.rz = rot[2];
-    applyEuler(element.mesh, rot);
   }
   /*
     NOT `element.size` — that is the placeholder-cube attribute and it is
-    ignored for a library-backed piece. The node is the only thing that
-    actually scales. See the note at the top; this was measured, not reasoned.
+    ignored for a library-backed piece. `scaleElement` uses the element's own
+    uniform `scale`, and keeps a non-uniform one on the node through the
+    element's re-renders, which reset it otherwise (measured: a turn undid a
+    [2, 1, 3] stretch).
   */
-  applyScale(element.mesh, scale);
+  scaleElement(element as unknown as ScalableElement, scale);
 }
 
 function writeNode(node: NodeBody, { at, rot, scale }: Transform): void {

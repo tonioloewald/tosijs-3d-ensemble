@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { writeTransform } from "./transform-write.js";
 
-const elementBody = () => ({
-  element: {
+const elementBody = () => {
+  const element = {
     x: 0,
     y: 0,
     z: 0,
@@ -10,19 +10,26 @@ const elementBody = () => ({
     ry: 0,
     rz: 0,
     size: 1,
+    scale: 1,
     /*
-      The library instance's root node. Only POSITION survives the trip through
-      the element: `size` is the placeholder cube's edge and is ignored once a
-      library is set, and `rx`/`ry`/`rz` are never forwarded to `instantiate`.
-      So this node is the only thing that actually turns or scales.
+      The library instance's root node. Since tosijs-3d 0.8.1 the element turns
+      it from `rx`/`ry`/`rz` and scales it from its UNIFORM `scale` — on every
+      render, which is what this stub's `render` reproduces, because it is what
+      wiped a non-uniform scale written to the node.
     */
     mesh: {
       rotation: { x: 0, y: 0, z: 0 },
       rotationQuaternion: { w: 1 } as unknown,
       scaling: { x: 1, y: 1, z: 1 },
     },
-  },
-});
+    render() {
+      element.mesh.scaling.x = element.scale;
+      element.mesh.scaling.y = element.scale;
+      element.mesh.scaling.z = element.scale;
+    },
+  };
+  return { element };
+};
 
 const nodeBody = () => ({
   node: {
@@ -48,26 +55,19 @@ describe("writeTransform", () => {
     expect(body.element.ry).toBe(90);
   });
 
-  it("also turns the NODE, because the attribute alone does nothing", () => {
+  it("turns an element body through its attributes, leaving its node alone", () => {
     /*
-      `b3d-destroyable` calls `library.instantiate` with position only, so
-      `rx`/`ry`/`rz` never reach the instance. Measured: `element.ry = 90` left
-      the node at rotation 0,0,0 with its quaternion untouched, across frames.
-      The attribute is still written — a rebuild reads it back — but it is not
-      what turns the piece.
+      tosijs-3d 0.8.1 (#48) forwards `rx`/`ry`/`rz` to the instance and
+      re-renders once it exists; measured on footprints in
+      tests/library-transform.pw.ts. Writing the node as well was a second
+      writer for one value.
     */
     const body = elementBody();
     writeTransform(body, { rot: [0, 90, 0] });
-    expect(body.element.mesh.rotation.y).toBeCloseTo(Math.PI / 2, 9);
-  });
-
-  it("clears the node quaternion before turning an element body", () => {
-    // Same trap as the node branch: a TransformNode ignores `.rotation` while
-    // it has a quaternion, and the glTF loader always sets one.
-    const body = elementBody();
-    expect(body.element.mesh.rotationQuaternion).not.toBeNull();
-    writeTransform(body, { rot: [0, 45, 0] });
-    expect(body.element.mesh.rotationQuaternion).toBeNull();
+    expect([body.element.rx, body.element.ry, body.element.rz]).toEqual([
+      0, 90, 0,
+    ]);
+    expect(body.element.mesh.rotation.y).toBe(0);
   });
 
   it("writes a node directly, converting rotation to radians", () => {
@@ -101,18 +101,15 @@ describe("writeTransform", () => {
     expect(body.node.rotationQuaternion).not.toBeNull();
   });
 
-  it("scales both kinds through the NODE, never through `size`", () => {
+  it("scales uniformly through the element's `scale`, never `size`", () => {
     /*
-      `size` is the placeholder cube's edge length and `b3d-destroyable`
-      ignores it once `library` is set. Measured in a browser before this was
-      changed: a piece's rendered width was 5.273 at scale 1, 2 and 4 alike,
-      with the root node still at 1,1,1. The old assertion here checked `size`
-      and passed the whole time the feature did nothing — which is why this one
-      checks the node and asserts `size` is left ALONE.
+      `size` is the placeholder cube's edge and is ignored once `library` is
+      set (measured: 5.273 wide at scale 1, 2 and 4). Since tosijs-3d 0.8.1
+      the element has a uniform `scale`, which it applies itself.
     */
     const element = elementBody();
     writeTransform(element, { scale: 3 });
-    expect(element.element.mesh.scaling).toEqual({ x: 3, y: 3, z: 3 });
+    expect(element.element.scale).toBe(3);
     expect(element.element.size).toBe(1);
 
     const node = nodeBody();
@@ -120,10 +117,21 @@ describe("writeTransform", () => {
     expect(node.node.scaling).toEqual({ x: 3, y: 3, z: 3 });
   });
 
-  it("scales per axis when given a triple", () => {
+  it("keeps a per-axis scale through the element's re-renders", () => {
+    /*
+      Upstream's `scale` is uniform on purpose, so a stretch goes on the node,
+      and the element resets the node to its uniform `scale` on EVERY render.
+      Measured in a browser: one turn took [2, 1, 3] back to [1, 1, 1].
+    */
     const element = elementBody();
     writeTransform(element, { scale: [2, 1, 4] });
     expect(element.element.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
+    element.element.render();
+    expect(element.element.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
+    // ...and a later uniform scale takes over from the stretch.
+    writeTransform(element, { scale: 2 });
+    element.element.render();
+    expect(element.element.mesh.scaling).toEqual({ x: 2, y: 2, z: 2 });
   });
 
   it("does not touch scale when a drag only moved the piece", () => {

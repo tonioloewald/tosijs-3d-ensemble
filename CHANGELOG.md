@@ -37,8 +37,26 @@ All notable changes to this project are documented here, in
   works.
 - New sample: `/ensembles/planet.json`; `tests/planet.pw.ts`.
 
+### Fixed
+
+- **A stretched piece lost its stretch the first time it was moved or turned.**
+  A per-axis `scale` was written to the instance's node, and since tosijs-3d
+  0.8.1 `b3d-destroyable` resets that node to its uniform `scale` on every
+  render. A uniform scale now goes to the element's own `scale`, and a
+  per-axis one is re-applied after each of the element's renders
+  (`tests/library-transform.pw.ts` measures the footprints; tosijs-3d#105
+  asks for a way not to need it).
+
+### Changed
+
+- Components use tosijs's `withAttributes()` again (tosijs#38 is fixed).
+
 ### Removed
 
+- Our rotation write onto a library piece's node, and the timer that waited
+  for the node to exist: the element turns it from `rx`/`ry`/`rz` itself since
+  tosijs-3d 0.8.1 (#48), and applies both after its node loads.
+  `applyEuler` is gone from `runtime/node-transform`; `scaleElement` is new.
 - The two leak workarounds tosijs-3d 0.10.8 makes unnecessary: `boxTracker`
   (in `editor/schema-panel`, never on the package entry; #100, bound widgets now unsubscribe in
   `dispose()`, and the editor disposes every panel it drops) and

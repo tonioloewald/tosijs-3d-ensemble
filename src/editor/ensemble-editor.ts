@@ -145,6 +145,8 @@ import type {
   LibraryRef,
 } from "../format/types.js";
 import { narrowScale, scaleVector } from "../format/scale.js";
+import { writeTransform } from "./transform-write.js";
+import type { Transform } from "./transform-write.js";
 import {
   fileNameFor,
   parseEnsemble,
@@ -280,6 +282,16 @@ const GRID_METRES = 10;
  */
 /** localStorage key for the AO preview switch: per browser, never per document. */
 const AO_PREVIEW_KEY = "tosi-ensemble-editor:ao-preview";
+/** localStorage key for the AO preview's METHOD: a view setting, like the switch. */
+const AO_METHOD_KEY = "tosi-ensemble-editor:ao-method";
+
+/** `<tosi-b3d>`'s own `ssaoMethod` spec: its options are tosijs-3d's, never ours. */
+const AO_METHOD_SPEC = () =>
+  (
+    sceneSchemas.b3d() as {
+      properties: Record<string, Record<string, unknown>>;
+    }
+  ).properties.ssaoMethod!;
 
 /** `<tosi-b3d>`'s own specs for the recommendations we store (tosijs-3d 0.8.13). */
 const AO_RECOMMENDATION_SPECS = () => {
@@ -643,6 +655,7 @@ export class EnsembleEditor extends withAttributes({
   private _applyFeatureUpdates(before: Ensemble): boolean {
     const built = this._built;
     if (!built) return false;
+    let transformed = false;
 
     const previous = new Map(
       before.pieces.map((piece) => [piece.id, piece] as const)
@@ -653,12 +666,72 @@ export class EnsembleEditor extends withAttributes({
       const was = previous.get(piece.id);
       // A new, renamed or removed piece is structural.
       if (!was) return false;
-      // Anything outside `features` — position, mesh, enabled — is not ours.
+      // Anything outside `features` and the transform — mesh, enabled, id —
+      // is structural.
+      /*
+        By what is LEFT once those are removed: spreading nulls over them
+        instead reorders the keys whenever one side lacks a `rot` (a piece
+        gains its first rotation), so identical pieces compared unequal and
+        every first turn fell back to a rebuild.
+      */
+      const rest = ({
+        features: _f,
+        at: _a,
+        rot: _r,
+        scale: _s,
+        ...other
+      }: Piece) => JSON.stringify(other);
+      if (rest(piece) !== rest(was)) return false;
+      /*
+        A TRANSFORM IS WRITTEN TO THE BODY, LIVE, as a drag writes it.
+
+        This returned false for any change to `at`, `rot` or `scale`, so
+        scrubbing the panel's rotation field REBUILT THE SCENE EVERY FRAME:
+        every piece disposed and re-instantiated, its library instance arriving
+        a frame or more later, so the piece could not settle until you stopped.
+        The owner: "Rotation doesn't seem to be live" — while the ring drag,
+        which writes the body, was. The position is a DELTA on where the body
+        is now, so a piece in a nested ensemble keeps its parent's offset.
+      */
       if (
-        JSON.stringify({ ...piece, features: null }) !==
-        JSON.stringify({ ...was, features: null })
+        JSON.stringify([piece.at, piece.rot, piece.scale]) !==
+        JSON.stringify([was.at, was.rot, was.scale])
       ) {
-        return false;
+        const body = built.pieces.get(piece.id);
+        if (!body || (!body.element && !body.node)) return false;
+        const transform: Transform = {};
+        if (JSON.stringify(piece.at) !== JSON.stringify(was.at)) {
+          const el = body.element as {
+            x?: number;
+            y?: number;
+            z?: number;
+          } | null;
+          const node = body.node as {
+            position?: { x: number; y: number; z: number };
+          } | null;
+          const now: Vec3 | null = el
+            ? [Number(el.x ?? 0), Number(el.y ?? 0), Number(el.z ?? 0)]
+            : node?.position
+            ? [node.position.x, node.position.y, node.position.z]
+            : null;
+          if (!now) return false;
+          const to = piece.at ?? [0, 0, 0];
+          const from = was.at ?? [0, 0, 0];
+          transform.at = [
+            now[0] + to[0] - from[0],
+            now[1] + to[1] - from[1],
+            now[2] + to[2] - from[2],
+          ];
+        }
+        if (JSON.stringify(piece.rot) !== JSON.stringify(was.rot))
+          transform.rot = piece.rot ?? [0, 0, 0];
+        if (JSON.stringify(piece.scale) !== JSON.stringify(was.scale))
+          transform.scale = piece.scale ?? 1;
+        writeTransform(
+          { element: body.element as never, node: body.node },
+          transform
+        );
+        transformed = true;
       }
       const names = new Set([
         ...Object.keys(piece.features ?? {}),
@@ -688,6 +761,11 @@ export class EnsembleEditor extends withAttributes({
           return false;
         }
       }
+    }
+    // The marker and the handles read the body: let them follow it now.
+    if (transformed) {
+      this._syncSelection();
+      this._syncHandles();
     }
     return true;
   }
@@ -1253,6 +1331,7 @@ export class EnsembleEditor extends withAttributes({
       that promise being cashed, and it was one function.
     */
     this._history.record(describe, this._ensemble, options?.coalesce);
+    const before = structuredClone(this._ensemble);
     mutate(this._ensemble);
     /*
       MUTATED THE RAW DOCUMENT, so tell the store — bound widgets are watching
@@ -1288,6 +1367,17 @@ export class EnsembleEditor extends withAttributes({
       this._syncSelection();
       this._syncHandles();
       if (options.chrome !== false) this._renderChrome();
+      return;
+    }
+    /*
+      APPLY IN PLACE WHEN NOTHING STRUCTURAL CHANGED — a typed or scrubbed
+      transform, a feature value. The panel's rotation field came through here
+      and rebuilt the whole scene on every step of a scrub, so a piece never
+      showed its rotation until you let go (owner: "Rotation doesn't seem to
+      be live").
+    */
+    if (this._applyFeatureUpdates(before)) {
+      if (options?.chrome !== false) this._renderChrome();
       return;
     }
     this.rebuild({ chrome: options?.chrome });
@@ -3517,6 +3607,19 @@ export class EnsembleEditor extends withAttributes({
         */
         ...(this._aoPreview
           ? [
+              /*
+                WHICH METHOD, a view setting too (the viewer's device picks
+                it). Offered because the default, `projected`, measured at
+                frame-noise level on library pieces while `screen` darkened a
+                third of the view (tosijs-3d#107): "AO on" showed nothing you
+                could judge.
+              */
+              ...(schemaWidgets({
+                schema: { properties: { ssaoMethod: AO_METHOD_SPEC() } },
+                values: { ssaoMethod: this._aoMethod },
+                fields: this._pendingFields,
+                handleChange: (_key, value) => this.setAoMethod(String(value)),
+              }) as never[]),
               label3d({
                 text: "Recommended for this scene",
                 muted: true,
@@ -3547,6 +3650,28 @@ export class EnsembleEditor extends withAttributes({
     }
   })();
 
+  /** AO preview method (`projected` | `screen`), remembered in this browser only. */
+  private _aoMethod = (() => {
+    try {
+      return (
+        localStorage.getItem(AO_METHOD_KEY) ?? String(AO_METHOD_SPEC().default)
+      );
+    } catch {
+      return String(AO_METHOD_SPEC().default);
+    }
+  })();
+
+  /** Preview AO by a method. Never touches the document. */
+  setAoMethod(method: string): void {
+    this._aoMethod = method;
+    try {
+      localStorage.setItem(AO_METHOD_KEY, method);
+    } catch {
+      /* no storage: it still applies for this visit */
+    }
+    this._renderChrome();
+  }
+
   /** The scene's own `ssaoStrength`/`ssaoRadius`, captured before any document's. */
   private _aoDefaults: Record<string, unknown> | null = null;
 
@@ -3573,6 +3698,7 @@ export class EnsembleEditor extends withAttributes({
       RECOMMENDED_KEYS.map((k) => [k, scene[k]])
     );
     scene.ssao = this._aoPreview ? "on" : "off";
+    scene.ssaoMethod = this._aoMethod;
     Object.assign(scene, this._aoDefaults);
     applyRecommendations(this._ensemble, scene);
   }

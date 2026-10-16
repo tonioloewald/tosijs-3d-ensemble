@@ -206,3 +206,90 @@ test("the AO preview is the viewer's switch and the document's look", async ({
 
   expect(realErrors(errors)).toEqual([]);
 });
+
+/*
+  THE PREVIEW CHANGES THE PICTURE — measured in pixels, because the test above
+  asks whether AO is RUNNING and passed while the owner saw nothing: "Ambient
+  occlusion toggled on doesn't seem to do anything visible". The default
+  method, `projected`, measured at frame-noise level on these pieces
+  (tosijs-3d#107); `screen` darkened a third of the view. So the preview offers
+  the method, and this holds `screen` to a visible change. `projected` is
+  logged, not asserted, until #107 says what it should look like.
+*/
+test("the AO preview's screen method visibly darkens the scene", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  const errors = collectPageErrors(page);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await ready(page);
+  await page.waitForTimeout(8000);
+  const box = (await page
+    .locator("tosi-ensemble-editor tosi-b3d")
+    .first()
+    .boundingBox())!;
+  const clip = {
+    x: box.x + box.width * 0.3,
+    y: box.y + box.height * 0.25,
+    width: box.width * 0.4,
+    height: box.height * 0.5,
+  };
+  const set = (on: boolean, method?: string) =>
+    page.evaluate(
+      ({ on, method }) => {
+        const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+          setAoPreview(on: boolean): void;
+          setAoMethod(m: string): void;
+        };
+        if (method) ed.setAoMethod(method);
+        ed.setAoPreview(on);
+      },
+      { on, method }
+    );
+  const shot = async () => {
+    await page.waitForTimeout(3000);
+    return page.screenshot({ clip });
+  };
+  const diff = (a: Buffer, b: Buffer) =>
+    page.evaluate(
+      async ([a, b]) => {
+        const load = async (src: string) => {
+          const img = new Image();
+          img.src = "data:image/png;base64," + src;
+          await img.decode();
+          const c = document.createElement("canvas");
+          c.width = img.width;
+          c.height = img.height;
+          const g = c.getContext("2d")!;
+          g.drawImage(img, 0, 0);
+          return g.getImageData(0, 0, c.width, c.height).data;
+        };
+        const x = await load(a!);
+        const y = await load(b!);
+        let sum = 0;
+        for (let k = 0; k < x.length; k += 4)
+          sum +=
+            (Math.abs(x[k]! - y[k]!) +
+              Math.abs(x[k + 1]! - y[k + 1]!) +
+              Math.abs(x[k + 2]! - y[k + 2]!)) /
+            3;
+        return sum / (x.length / 4);
+      },
+      [a.toString("base64"), b.toString("base64")]
+    );
+
+  await set(false);
+  const off = await shot();
+  const noise = await diff(off, await shot());
+  await set(true, "projected");
+  const projected = await diff(off, await shot());
+  await set(true, "screen");
+  const screen = await diff(off, await shot());
+  console.log(JSON.stringify({ noise, projected, screen }));
+  // Measured 7.1 against noise of 1.05.
+  expect(screen).toBeGreaterThan(noise * 3);
+  expect(realErrors(errors)).toEqual([]);
+});

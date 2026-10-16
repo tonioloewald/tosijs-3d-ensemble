@@ -55,12 +55,11 @@ describe("writeTransform", () => {
     expect(body.element.ry).toBe(90);
   });
 
-  it("turns an element body through its attributes, leaving its node alone", () => {
+  it("turns an element body through its attributes, leaving its node to it", () => {
     /*
-      tosijs-3d 0.8.1 (#48) forwards `rx`/`ry`/`rz` to the instance and
-      re-renders once it exists; measured on footprints in
-      tests/library-transform.pw.ts. Writing the node as well was a second
-      writer for one value.
+      tosijs-3d 0.8.1 (#48) forwards `rx`/`ry`/`rz` and turns the node itself.
+      Measured on the node's world `forward` in tests/rotate-drag.pw.ts, by a
+      ring drag and by the panel's field, on a piece built WITHOUT rotation.
     */
     const body = elementBody();
     writeTransform(body, { rot: [0, 90, 0] });

@@ -45,6 +45,19 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **Rotation from the property panel was not live.** Scrubbing a piece's
+  rotation (or typing a position or scale) rebuilt the whole scene on every
+  step, so the piece could not show the change until you let go, and a key-
+  ordering slip made a piece's FIRST rotation look structural even where the
+  live path existed. A transform-only edit is now written to the piece in
+  place, as a drag is (`tests/rotate-drag.pw.ts`: the same instance turns 60°
+  over a four-step scrub).
+- **"Ambient occlusion" in the editor showed nothing.** tosijs-3d's default
+  method, `projected`, measures at frame-noise level on library pieces
+  (tosijs-3d#107). The preview now offers the method (`projected` | `screen`),
+  remembered per browser like the switch and never written to the document,
+  and `tests/ao-preview.pw.ts` holds `screen` to a visible change in pixels.
+
 - **A stretched piece lost its stretch the first time it was moved or turned.**
   A per-axis `scale` was written to the instance's node, and since tosijs-3d
   0.8.1 `b3d-destroyable` resets that node to its uniform `scale` on every

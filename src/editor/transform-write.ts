@@ -110,8 +110,10 @@ function writeElement(
     element.z = at[2];
   }
   if (rot) {
-    // DEGREES, and the element applies them itself since tosijs-3d 0.8.1
-    // (#48): it forwards them to the instance and re-renders once it exists.
+    // DEGREES. The element applies them itself since tosijs-3d 0.8.1 (#48),
+    // through the node's QUATERNION, so `node.rotation` reads 0 while the
+    // piece is visibly turned: measure `forward`, not `.rotation` (a probe
+    // that read `.rotation` blamed upstream for a bug that was ours).
     element.rx = rot[0];
     element.ry = rot[1];
     element.rz = rot[2];
@@ -132,13 +134,22 @@ function writeNode(node: NodeBody, { at, rot, scale }: Transform): void {
     node.position.y = at[1];
     node.position.z = at[2];
   }
-  if (rot && node.rotation) {
-    // CLEAR THE QUATERNION FIRST — see the note above. While one is present the
-    // node ignores `.rotation` entirely and the drag does nothing.
-    node.rotationQuaternion = null;
-    node.rotation.x = rot[0] * DEG_TO_RAD;
-    node.rotation.y = rot[1] * DEG_TO_RAD;
-    node.rotation.z = rot[2] * DEG_TO_RAD;
-  }
+  if (rot) turnNode(node, rot);
   applyScale(node, scale);
+}
+
+/**
+ * Turn a node to euler DEGREES, CLEARING ITS QUATERNION FIRST — see the note
+ * at the top. While one is present the node ignores `.rotation` entirely and
+ * the write does nothing.
+ */
+function turnNode(
+  node: TransformableNode | null | undefined,
+  rot: Euler
+): void {
+  if (!node?.rotation) return;
+  node.rotationQuaternion = null;
+  node.rotation.x = rot[0] * DEG_TO_RAD;
+  node.rotation.y = rot[1] * DEG_TO_RAD;
+  node.rotation.z = rot[2] * DEG_TO_RAD;
 }

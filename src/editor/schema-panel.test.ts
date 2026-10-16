@@ -3,8 +3,8 @@ import { slider3d, ui } from "tosijs-3d";
 import type { BoxLike } from "./schema-panel.js";
 import {
   boundIfSet,
-  boxTracker,
   numberReadout,
+  schemaPanel,
   schemaWidgets,
 } from "./schema-panel.js";
 
@@ -401,36 +401,50 @@ describe("x-sections orders the panel and heads each section", () => {
 });
 
 /*
-  boxTracker: the tosijs-3d#100 workaround the editor's chrome and the
-  standalone schemaPanel share. A widget subscribes through the wrapper; the
-  tracker releases every subscription, so a rebuilt panel lets go of the last.
+  A DROPPED PANEL LETS GO OF ITS BOXES (tosijs-3d#100, fixed in 0.10.8).
+
+  A bound widget subscribes to its box; until 0.10.8 nothing ever
+  unsubscribed, and each rebuilt panel left a listener in tosijs's global
+  list that held the panel and its host (+125 listeners, +5,360 nodes per ten
+  rebuilds of the editor's chrome). We wrapped every box to record the
+  unsubscribes (`boxTracker`); now a panel's `dispose()` releases its rows,
+  and whoever drops a panel calls it. Counted on the box, as before.
 */
-describe("boxTracker releases what widgets subscribed", () => {
-  it("records each subscription and releases them all", () => {
-    let live = 0;
-    const box = {
+describe("a disposed panel releases what its widgets subscribed", () => {
+  const counted = () => {
+    const state = { live: 0 };
+    const box = (key: string) => ({
+      path: key,
       value: 3,
       observe: () => {
-        live++;
+        state.live++;
         return () => {
-          live--;
+          state.live--;
         };
       },
-    };
-    const boxes = boxTracker();
-    const wrapped = boxes.track(box)!;
-    wrapped.observe(() => {});
-    wrapped.observe(() => {});
-    expect([live, boxes.size]).toEqual([2, 2]);
-    boxes.release();
-    expect([live, boxes.size]).toEqual([0, 0]);
-  });
+    });
+    return { state, box };
+  };
+  const schema = {
+    type: "object",
+    properties: {
+      a: { type: "number", minimum: 0, maximum: 10 },
+      b: { type: "boolean" },
+      c: { type: "number", minimum: 0, maximum: 10 },
+    },
+    "x-sections": [{ title: "Air", keys: ["a", "b"] }],
+  } as never;
 
-  it("reads and writes through to the box, and passes undefined through", () => {
-    const box = { value: 1, observe: () => () => {} };
-    const wrapped = boxTracker().track(box)!;
-    wrapped.value = 7;
-    expect([wrapped.value, box.value]).toEqual([7, 7]);
-    expect(boxTracker().track(undefined)).toBeUndefined();
+  it("dispose() lets go of every subscription", () => {
+    const { state, box } = counted();
+    const panel = schemaPanel({
+      schema,
+      box,
+      values: { a: 3, b: true, c: 2 },
+      handleChange: () => {},
+    });
+    expect(state.live).toBeGreaterThan(0);
+    panel.dispose();
+    expect(state.live).toBe(0);
   });
 });

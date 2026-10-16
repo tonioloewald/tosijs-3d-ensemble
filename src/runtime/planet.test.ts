@@ -1,39 +1,59 @@
 import { describe, expect, it } from "bun:test";
-import { groundToLatLon } from "tosijs-3d";
-import { pinFrame, terrainConfig } from "./features-scene.js";
+import { sceneSchemas } from "tosijs-3d";
+import { registerSceneFeatures, terrainConfig } from "./features-scene.js";
+import { effectiveConfig, featureRegistration } from "../format/registry.js";
+
+registerSceneFeatures();
 
 /*
-  THE PIN (ours until tosijs-3d#103): a terrain pinned at (lat, lon) must have
-  its origin THERE, by tosijs-3d's own reckoning. So this asks sphere-map, not
-  our arithmetic: pin, then read the origin back with groundToLatLon.
+  THE PIN is tosijs-3d's since 0.10.8 (#103): the terrain stores `lat`/`lon`
+  itself. Ours was a conversion to worldU/worldV; what remains ours is only
+  that the document's pin reaches the element untouched. Whether the element
+  then puts its origin THERE is asked of the element, in tests/planet.pw.ts.
 */
-describe("pinFrame", () => {
-  const cases: Array<[number, number]> = [
-    [45, 0],
-    [12, 40],
-    [-33.9, 18.4],
-    [0, 179],
-    [60, -120],
-  ];
-  for (const [lat, lon] of cases) {
-    it(`puts the origin at ${lat}, ${lon}`, () => {
-      const frame = { radius: 4000, ...pinFrame(lat, lon) };
-      const back = groundToLatLon(0, 0, frame);
-      expect(back.lat).toBeCloseTo(lat, 6);
-      expect(back.lon).toBeCloseTo(lon, 6);
-    });
-  }
+describe("the pin", () => {
+  it("terrainConfig hands lat/lon to the element as they are", () => {
+    const out = terrainConfig({ surfaceType: "sphere", lat: 12, lon: 40 });
+    expect([out.lat, out.lon]).toEqual([12, 40]);
+    expect("worldU" in out || "worldV" in out).toBe(false);
+  });
+});
 
-  it("matches sphere-map's own example: 45 N is worldV 0.75", () => {
-    expect(pinFrame(45, 0).worldV).toBeCloseTo(0.75, 9);
+/*
+  PRESETS: a planet's `world` writes its sea, air and craters into the
+  element's own attributes once. Writing the plain defaults on every bind
+  would undo it on the first live edit, so upstream names those fields
+  (`x-preset-written`) and they must be shown but never written.
+*/
+describe("preset-written planet fields", () => {
+  const upstream = sceneSchemas.planet() as unknown as {
+    "x-preset-written": Record<string, string[]>;
+  };
+  const written = Object.values(upstream["x-preset-written"]).flat();
+  const planet = featureRegistration("planet")!;
+
+  it("upstream names some (or this test is vacuous)", () => {
+    expect(written).toContain("ocean");
+    expect(written.length).toBeGreaterThan(5);
   });
 
-  it("terrainConfig turns a pin into worldU/worldV, and drops lat/lon", () => {
-    const out = terrainConfig({ surfaceType: "sphere", lat: 12, lon: 40 });
-    expect("lat" in out || "lon" in out).toBe(false);
-    expect(out.worldU).toBeCloseTo(pinFrame(12, 40).worldU, 12);
-    expect(out.worldV).toBeCloseTo(pinFrame(12, 40).worldV, 12);
-    // No pin: the terrain keeps its own frame.
-    expect("worldU" in terrainConfig({ surfaceType: "sphere" })).toBe(false);
+  it("are shown in the panel, with their default", () => {
+    const props = planet.schema!.properties as Record<
+      string,
+      { default?: unknown }
+    >;
+    for (const key of written) expect([key, key in props]).toEqual([key, true]);
+    expect(props.ocean?.default).toBe(0.6);
+  });
+
+  it("are never written by the bind unless the document sets them", () => {
+    const out = effectiveConfig(planet, { world: "mars" });
+    for (const key of written) expect([key, key in out]).toEqual([key, false]);
+    // ...while an ordinary default still is.
+    expect(out.radius).toBe(50);
+    // ...and the author's own value always is.
+    expect(effectiveConfig(planet, { world: "mars", ocean: 0.2 }).ocean).toBe(
+      0.2
+    );
   });
 });

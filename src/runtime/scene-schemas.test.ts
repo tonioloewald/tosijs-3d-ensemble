@@ -64,6 +64,7 @@ const ADOPTED = [
   ["lightning", "lightning"],
   ["lightShafts", "lightShafts"],
   ["wind", "b3d"],
+  ["planet", "planet"],
 ] as const;
 
 const propertiesOf = (
@@ -146,8 +147,9 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
       - `cloudDeck.follow`/`shadows` are BOOLEANS and `cloudDeck.seed` an
         integer with a ceiling, for exactly the reasons `terrain.biome` and
         `terrain.seed` are.
-      - `lightning.bolts`/`sprites`/`thunder`/`shadows` and
-        `lightShafts.underwater` are BOOLEANS, the same `'on'|'off'` reason.
+      - `lightning.bolts`/`sprites`/`thunder`/`shadows`,
+        `lightShafts.underwater` and `planet.flatSea`/`biome`/`inlandWater`
+        are BOOLEANS, the same `'on'|'off'` reason.
       (`terrain.radius` used to be a fourth: we gave it a log scale over its
       six decades, and tosijs-3d@0.8.1 added the same upstream — so the
       override went, and this test is what noticed by failing on the upgrade.
@@ -168,6 +170,9 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
         'lightning.thunder.enum: undefined (ours) vs ["on","off"] (upstream)',
         'lightning.shadows.enum: undefined (ours) vs ["on","off"] (upstream)',
         'lightShafts.underwater.enum: undefined (ours) vs ["on","off"] (upstream)',
+        'planet.flatSea.enum: undefined (ours) vs ["off","on"] (upstream)',
+        'planet.biome.enum: undefined (ours) vs ["off","on"] (upstream)',
+        'planet.inlandWater.enum: undefined (ours) vs ["off","on"] (upstream)',
       ].sort()
     );
   });
@@ -183,11 +188,14 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
       }
     }
     /*
-      Deliberately OURS, each a stopgap with an upstream ask:
-      - terrain.lat / terrain.lon: the pin, converted to worldU/worldV by
-        pinFrame, until tosijs-3d#103 gives the terrain lat/lon itself.
+      Deliberately OURS:
+      - planet.terrain: the id of a terrain PIECE, resolved in the link
+        phase. tosijs-3d is adding a declarative `terrain` attribute (an
+        element selector); when it lands this maps onto it.
+      (terrain.lat / terrain.lon were here, our pin, until tosijs-3d 0.10.8
+      gave the terrain its own, and this test failed on the upgrade.)
     */
-    expect(orphaned).toEqual(["terrain.lat", "terrain.lon"]);
+    expect(orphaned).toEqual(["planet.terrain"]);
   });
 });
 

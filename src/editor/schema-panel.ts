@@ -371,49 +371,6 @@ export type BoxLike = {
   observe(cb: (...args: any[]) => void): unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
-/**
- * Hand widgets wrapped boxes, and release every subscription they made.
- *
- * ⚠️ A WORKAROUND for tosijs-3d#100: `boundValue` subscribes to a box and
- * never unsubscribes, so every bound widget leaves a listener in tosijs's
- * global list that keeps its panel (and its host) alive. The wrapper records
- * each unsubscribe; `release()` calls them all. Used by the editor's chrome
- * and by the standalone `schemaPanel`, before every rebuild. Delete with
- * #100.
- */
-export function boxTracker(): {
-  track(box: BoxLike | undefined): BoxLike | undefined;
-  release(): void;
-  readonly size: number;
-} {
-  const offs: VoidFunction[] = [];
-  return {
-    track(box) {
-      if (!box) return undefined;
-      return {
-        get value() {
-          return box.value;
-        },
-        set value(v) {
-          box.value = v;
-        },
-        observe(cb: (...args: any[]) => void) {
-          // eslint-disable-line @typescript-eslint/no-explicit-any
-          const off = box.observe(cb) as unknown;
-          if (typeof off === "function") offs.push(off as VoidFunction);
-          return off;
-        },
-      };
-    },
-    release() {
-      for (const off of offs.splice(0)) off();
-    },
-    get size() {
-      return offs.length;
-    },
-  };
-}
-
 export const boundIfSet = (
   values: Record<string, unknown>,
   key: string,
@@ -696,21 +653,21 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
  * Sections fold: a panel is laid out once, so a header's tap REBUILDS it from
  * fresh rows and swaps the new element in where the old one was.
  */
-export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
+export function schemaPanel(options: SchemaPanelOptions): DisposablePanel {
   /*
-    A fold REBUILDS the panel, so every bound widget it had subscribed is
-    released first; without this each fold leaked a panel's worth of box
-    observers (0.5.1 review m2, tosijs-3d#100).
+    A fold REBUILDS the panel, so the rows it drops are disposed first: a bound
+    row holds a subscription to its box, and without the dispose each fold
+    leaked a panel's worth (0.5.1 review m2, tosijs-3d#100).
+
+    The panel a caller holds goes stale at the first fold (a new element takes
+    its place), so EVERY panel this returns disposes whichever is current.
   */
-  const boxes = boxTracker();
-  const tracked: SchemaPanelOptions = options.box
-    ? { ...options, box: (key) => boxes.track(options.box!(key)) }
-    : options;
   const heading = () =>
     options.title ? [label3d({ text: options.title, bold: true })] : [];
-  let panel: SVGSVGElement;
-  const build = (): SVGSVGElement =>
-    panel3d(
+  let panel: DisposablePanel;
+  let disposeRows = () => {};
+  const build = (): DisposablePanel => {
+    const next = panel3d(
       {
         width: options.width ?? 260,
         // Sized by content (tosijs-3d 0.7.5's default) with a bound to scroll
@@ -720,15 +677,25 @@ export function schemaPanel(options: SchemaPanelOptions): SVGSVGElement {
         gap: 6,
       },
       ...(heading() as never[]),
-      ...(foldSections(schemaWidgets(tracked) as never[], {
+      ...(foldSections(schemaWidgets(options) as never[], {
         repaint: () => {
-          boxes.release();
+          disposeRows();
           const old = panel;
           panel = build();
           old.replaceWith(panel);
         },
       }) as never[])
-    );
+    ) as DisposablePanel;
+    disposeRows = next.dispose;
+    next.dispose = () => disposeRows();
+    return next;
+  };
   panel = build();
   return panel;
 }
+
+/**
+ * What `panel3d` returns since tosijs-3d 0.10.8: its `dispose()` releases its
+ * rows. The declaration file does not say so yet (tosijs-3d#104).
+ */
+export type DisposablePanel = SVGSVGElement & { dispose(): void };

@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=3383f719f80c" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=bdf6786f611f" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=af9151a377e7" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=04b99147293b" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -304,7 +304,7 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>47</td>
-<td><strong><code>boundValue</code> never unsubscribes</strong>, so every widget bound to a tosijs box leaks its panel and its host through tosijs&#39;s listener list (+125 listeners per ten rebuilds, flat with binding off). Worked around by <code>_tracked</code> in the editor; suggested fix uses <code>OBSERVER_SHOULD_BE_REMOVED</code></td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.8">tosijs-3d@0.10.8</a>)</strong>; <code>_tracked</code>/<code>boxTracker</code> removed, the editor disposes the panels it drops — <strong><code>boundValue</code> never unsubscribes</strong>, so every widget bound to a tosijs box leaks its panel and its host through tosijs&#39;s listener list (+125 listeners per ten rebuilds, flat with binding off). Worked around by <code>_tracked</code> in the editor; suggested fix uses <code>OBSERVER_SHOULD_BE_REMOVED</code></td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/100">#100</a></td>
 </tr>
 <tr>
@@ -314,12 +314,12 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>49</td>
-<td><strong><code>disposeMeshTree</code> disposes a library&#39;s materials when the last instance goes</strong>: library source meshes are not in <code>scene.meshes</code>, so the guard misses them and every later instance renders white. Worked around in <code>place-mesh.ts</code> (<code>detachLibraryMaterials</code>)</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.8">tosijs-3d@0.10.8</a>)</strong>; <code>detachLibraryMaterials</code> removed, rapid-edits still checks colour — <strong><code>disposeMeshTree</code> disposes a library&#39;s materials when the last instance goes</strong>: library source meshes are not in <code>scene.meshes</code>, so the guard misses them and every later instance renders white. Worked around in <code>place-mesh.ts</code> (<code>detachLibraryMaterials</code>)</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/102">#102</a></td>
 </tr>
 <tr>
 <td>50</td>
-<td><strong>For building worlds from their planet</strong> (board #3317): no <code>planetSchema()</code>; terrain&#39;s schema lacks <code>worldU</code>/<code>worldV</code> (asked for <code>lat</code>/<code>lon</code> attributes); the globe-from-ground link is code</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.8">tosijs-3d@0.10.8</a>)</strong> for the schema and the pin (<code>planetSchema()</code> with <code>x-preset-written</code>, terrain <code>lat</code>/<code>lon</code>); the declarative link is in progress upstream — <strong>For building worlds from their planet</strong> (board #3317): no <code>planetSchema()</code>; terrain&#39;s schema lacks <code>worldU</code>/<code>worldV</code> (asked for <code>lat</code>/<code>lon</code> attributes); the globe-from-ground link is code</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/103">#103</a></td>
 </tr>
 </tbody></table>
@@ -587,6 +587,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-xm7s9jyw.js"></script>
+  <script type="module" src="../hydrate-bja71ttr.js"></script>
 </body>
 </html>

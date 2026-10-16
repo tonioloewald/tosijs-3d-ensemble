@@ -198,13 +198,18 @@ bind})`; a consumer's feature must be indistinguishable from a built-in in the
   `src/runtime/scene-schemas.test.ts` fails on anything else, with four listed
   exceptions. **If you find yourself typing a `minimum` for a scene field,
   stop** — it belongs upstream.
-- **Two scene fields are still OURS, as stopgaps** (owner, 2026-10-15: "we
-  can request upstream changes and work around until they appear"): the
-  `planet` feature's schema, copied from `<tosi-b3d-planet>`'s attribute table
-  at 0.10.6, and the terrain pin `lat`/`lon` (converted to `worldU`/`worldV`
-  by `pinFrame`). Both go when tosijs-3d#103 lands, as the moon's hand schema
-  went when `moonSchema()` shipped. `scene-schemas.test.ts` names the pin as
-  its only orphaned keys, so a new one cannot slip in unnoticed.
+- **One scene field is OURS: `planet.terrain`**, the id of a terrain piece,
+  resolved in the link phase. The planet's schema and the terrain pin were
+  stopgaps too, until tosijs-3d 0.10.8 (#103); `scene-schemas.test.ts` names
+  `planet.terrain` as its only orphaned key, and failed on the upgrade when
+  the pin stopped being one. tosijs-3d is adding the link as declarative
+  attributes (`<tosi-b3d-planet terrain="…">` and `<tosi-b3d-terrain
+  planet="…">`); the owner wants either direction to work, so when they land
+  the field maps onto them rather than staying code.
+- **A field a preset WRITES is shown, never written** (`x-preset-written` in
+  an upstream schema; `pick` marks those `x-apply-default: false`, which
+  `effectiveConfig` honours). Otherwise every live edit re-applies the plain
+  default over a planet's `world` preset.
 - **Regex lives as a source string**, compiled at load — a `RegExp` makes the
   format unserializable.
 - **`rot` is euler DEGREES**, matching tosijs-3d elements. Say so where a reader

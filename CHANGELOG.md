@@ -7,10 +7,10 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer `tosijs-3d` is `^0.10.6`** (was `^0.9.0 || ^0.10.0`). The planet
-  workflow below needs `sphere-map`, `planetSurface()` and `latLonAt` (0.10.3)
-  and the planet's `world` presets (0.10.5). A consumer on tosijs-3d 0.9 must
-  move to 0.10.6.
+- **Peer `tosijs-3d` is `^0.10.8`** (was `^0.9.0 || ^0.10.0`). The planet
+  workflow below takes its schema and the terrain pin from 0.10.8
+  (`planetSchema()`, terrain `lat`/`lon`), and 0.10.8 fixes the two leaks we
+  were working around. A consumer on tosijs-3d 0.9 must move to 0.10.8.
 
 ### Added
 
@@ -21,18 +21,30 @@ All notable changes to this project are documented here, in
   are the ground's. It takes the planet's `world` presets (moon, mars, venus…),
   gas giants, sea, air, clouds, craters and rings, in sections.
 - **A sphere terrain can be pinned** to a place on its planet: `lat` / `lon`,
-  the latitude and longitude of its origin. Checked against tosijs-3d's own
-  `sphere-map`: the terrain's `latLonAt` at its origin reads the pin back.
+  the latitude and longitude of its origin (tosijs-3d's own attributes since
+  0.10.8). Checked on the element: the terrain's `latLonAt` at its origin
+  reads the pin back.
 - **`terrain.center`** (tosijs-3d's): lowers the field by half its gross
   amplitude so a sea at 0 floods the valleys. A world with a sea wants it.
 - **`x-apply-default: false`** on a schema property: its default is SHOWN in
   the panel but never WRITTEN by a bind. For fields a preset fills in (a
   planet's `world` writes its own sea, air and craters), where writing the
-  default on every edit would undo the preset.
+  default on every edit would undo the preset. A scene primitive gets it from
+  upstream's `x-preset-written`.
+- **`schemaPanel(…)` returns a `DisposablePanel`** (`editor/schema-panel`, a
+  deep import): call `dispose()` when you drop it, and its bound rows let go of their boxes. Any panel it has handed
+  out disposes whichever is current, so a reference held across a fold still
+  works.
 - New sample: `/ensembles/planet.json`; `tests/planet.pw.ts`.
 
-The planet's schema and the terrain pin are stopgaps until tosijs-3d#103
-(`planetSchema()`, and `lat`/`lon` on the terrain itself).
+### Removed
+
+- The two leak workarounds tosijs-3d 0.10.8 makes unnecessary: `boxTracker`
+  (in `editor/schema-panel`, never on the package entry; #100, bound widgets now unsubscribe in
+  `dispose()`, and the editor disposes every panel it drops) and
+  `detachLibraryMaterials` (#102, a library's materials are no longer disposed
+  with its last instance). The rapid-edits lane still checks that no piece
+  turns white.
 
 ## [0.5.2] — 2026-10-13
 

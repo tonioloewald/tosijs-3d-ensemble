@@ -117,9 +117,9 @@ import {
 } from "../runtime/recommendations.js";
 import {
   boundIfSet,
-  boxTracker,
   schemaWidgets,
   type BoxLike,
+  type DisposablePanel,
 } from "./schema-panel.js";
 import { DEFAULT_PRECISION, roundDeep } from "../format/round.js";
 import {
@@ -508,30 +508,22 @@ export class EnsembleEditor extends Component {
    * in `tosi-store.test.ts`, not assumed.
    */
   /*
-    ⚠️ A BOUND WIDGET NEVER LETS GO OF ITS BOX — so we let go for it.
+    A DROPPED PANEL IS DISPOSED, or its bound rows keep it alive.
 
-    tosijs-3d's `boundValue` subscribes with `box.observe(cb)` and drops the
-    unsubscribe it returns; no widget has a dispose. So every widget we bind
-    leaves a listener in tosijs's GLOBAL list, and its callback's closure holds
-    the widget's SVG text, its shadow root, and through it the whole editor.
-    Measured (tosijs-3d 0.8.9, after a forced GC): +5,360 DOM nodes and +125
-    listeners per ten panel rebuilds within one visit; with binding switched
-    off, listeners flat and nodes +100. Every selection, every fold, every
-    chrome repaint leaked a panel's worth. Filed as tosijs-3d#100 — the same
-    class as #96, which 0.8.9 fixed for `inputField` alone.
-
-    The boxes are OURS, so the widget gets a thin wrapper whose `observe`
-    records each subscription; the chrome releases them all before it
-    rebuilds, and on disconnect. Delete this when widgets release their own.
+    A widget bound to a box subscribes to it, and the subscription sits in
+    tosijs's GLOBAL list holding the widget, its panel, our shadow root and so
+    the whole editor. Until tosijs-3d 0.10.8 nothing released it: +5,360 DOM
+    nodes and +125 listeners per ten panel rebuilds (tosijs-3d#100, and our
+    `boxTracker` wrapper meanwhile). Now `panel3d(…).dispose()` releases its
+    rows, and the chrome calls it on every panel it drops: on each repaint,
+    and on disconnect.
   */
-  private _boxes = boxTracker();
-
-  private _tracked(box: BoxLike | undefined): BoxLike | undefined {
-    return this._boxes.track(box);
-  }
-
-  private _releasePanelObservers(): void {
-    this._boxes.release();
+  private _disposePanels(): void {
+    for (const panel of this._panels) {
+      (panel as DisposablePanel).dispose?.();
+      panel.remove();
+    }
+    this._panels = [];
   }
 
   private _box(id: string, feature: string, key: string): BoxLike | undefined {
@@ -1487,13 +1479,13 @@ export class EnsembleEditor extends Component {
       root and so the whole editor. We detached only before re-attaching on a
       render, so an editor that LEFT the page with a group attached stayed
       alive forever: +3,300 DOM nodes per editor visit, found by a heap
-      snapshot once the bound-widget leak (`_tracked`, below) was out of the
-      way. Same for the panel's box observers.
+      snapshot once the bound-widget leak (tosijs-3d#100) was out of the
+      way. Same for the panels' bound rows.
 
       Safe on a MOVE too: every connect runs the deferred mount, whose
       `rebuild()` renders the chrome again — new observers, a new group.
     */
-    this._releasePanelObservers();
+    this._disposePanels();
     this._detachFields?.();
     this._detachFields = null;
     if (this._deferredMount !== null) {
@@ -3022,10 +3014,8 @@ export class EnsembleEditor extends Component {
     fields rendered below the fold with no visible scroll affordance.
   */
   private _renderChrome(): void {
-    this._releasePanelObservers();
     this._applyAoPreview();
-    for (const panel of this._panels) panel.remove();
-    this._panels = [];
+    this._disposePanels();
     this._stackTop = { left: 8, right: 8 };
     /*
       ONE GROUP OWNS THE KEYBOARD, so it has to own EVERY field on screen.
@@ -4105,9 +4095,7 @@ export class EnsembleEditor extends Component {
         */
         this._changesPanelShape(name, key)
           ? undefined
-          : boundIfSet(values, key, (k) =>
-              this._tracked(this._box(selected.id, name, k))
-            );
+          : boundIfSet(values, key, (k) => this._box(selected.id, name, k));
       /*
         WHAT WAS ACTUALLY BOUND, not what COULD have been.
 

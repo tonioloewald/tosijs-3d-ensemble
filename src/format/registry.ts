@@ -266,6 +266,15 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   insertAt?: "point" | "height" | Vec3;
   /**
+   * How far BELOW the insert height a new piece of this kind goes, from its
+   * config with every default applied, so a new piece does not bury what is
+   * already there. A terrain's noise rises from its base up to its gross plus
+   * detail amplitude: inserted at the cove's y 0 it put up to 295 m of ground
+   * over everything, camera included (owner: a new terrain's highest point
+   * sits at the insert height, "sounds reasonable").
+   */
+  insertBelow?: (config: Record<string, unknown>) => number;
+  /**
    * ONE PER SCENE: a sky, a sun, fog, a wind. A primitive that says so is a
    * FIXED ROW in the editor's environment list, there whether or not the
    * document has it, with a state (not included, disabled, enabled) picked
@@ -611,4 +620,24 @@ export function linkPayload(link: Link): Record<string, unknown> {
   void to;
   void kind;
   return { ...rest, ...(values ?? {}) };
+}
+
+/**
+ * Where a new piece of `feature` goes: its `insertAt` rule applied to the
+ * clicked point (or the origin, when there is no click), lowered by its
+ * `insertBelow`. The ONE rule, for the Insert tool and the environment list.
+ */
+export function insertPosition(feature: string, clicked: Vec3 | null): Vec3 {
+  const registration = features.get(feature);
+  const rule = registration?.insertAt ?? "point";
+  const at = clicked ?? [0, 0, 0];
+  const where: Vec3 =
+    rule === "point"
+      ? [at[0], at[1], at[2]]
+      : rule === "height"
+      ? [0, at[1], 0]
+      : [rule[0], rule[1], rule[2]];
+  const below = registration?.insertBelow?.(effectiveConfig(registration, {}));
+  if (typeof below === "number" && Number.isFinite(below)) where[1] -= below;
+  return where;
 }

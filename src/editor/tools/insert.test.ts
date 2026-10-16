@@ -78,10 +78,15 @@ beforeEach(() => {
 
 describe("inserting a utility", () => {
   it("places a piece whose feature is its body — no mesh", () => {
-    // A terrain declares `insertAt: 'height'`, so the click supplies only Y.
+    /*
+      A terrain declares `insertAt: 'height'`, so the click supplies only Y,
+      and `insertBelow` lowers it by its default relief (250 + 45 m), so its
+      HIGHEST point is at the clicked height: inserted at y 0 it used to put
+      295 m of ground over the whole cove, camera included.
+    */
     place({ feature: "terrain", library: "utilities" });
     expect(ensemble.pieces).toEqual([
-      { id: "terrain", at: [0, 0, 0], features: { terrain: {} } },
+      { id: "terrain", at: [0, -295, 0], features: { terrain: {} } },
     ]);
   });
 

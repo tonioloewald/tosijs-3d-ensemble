@@ -130,6 +130,7 @@ import {
 import {
   effectiveConfig,
   featureRegistration,
+  insertPosition,
   registeredFeatures,
 } from "../format/registry.js";
 import type { EditorRay } from "./input/pointer.js";
@@ -4169,8 +4170,7 @@ export class EnsembleEditor extends withAttributes({
    * origin. Selected, so its panel is the next thing you see.
    */
   includeFeature(feature: string, enabled = true): void {
-    const rule = featureRegistration(feature)?.insertAt ?? "point";
-    const at: Vec3 = Array.isArray(rule) ? ([...rule] as Vec3) : [0, 0, 0];
+    const at = insertPosition(feature, null);
     const id = uniqueId(
       slugify(feature),
       this._ensemble.pieces.map((p) => p.id)

@@ -1377,6 +1377,11 @@ function registerSceneFeaturesNow(): void {
     icon: "⛰️",
     primitive: true,
     insertAt: "height",
+    // Its highest possible point at the insert height, not 295 m above it.
+    insertBelow: (cfg) =>
+      cfg.center === true
+        ? Number(cfg.grossAmplitude ?? 0) / 2 + Number(cfg.detailAmplitude ?? 0)
+        : Number(cfg.grossAmplitude ?? 0) + Number(cfg.detailAmplitude ?? 0),
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {

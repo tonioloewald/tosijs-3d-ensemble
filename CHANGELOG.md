@@ -17,6 +17,12 @@ All notable changes to this project are documented here, in
   - A repeatable one (terrain, weather cell, sound, planet, moon) is a
     subgroup of its pieces ending in an inline "add".
   - Three categories, each folding: environment, lights, objects.
+- **A new terrain no longer buries the scene.** Its highest possible point
+  now sits at the insert height (y −295 at the defaults) instead of rising
+  295 m above it, over everything, camera included. A feature declares this
+  with **`insertBelow`** on its registration; the Insert tool and the
+  environment list share one rule (`insertPosition`). For "sea level at 0"
+  instead, turn on the terrain's `center`.
 - **`single`** and **`group`** on a feature registration say which of those a
   primitive is, so a consumer's own feature lands in the right place.
 

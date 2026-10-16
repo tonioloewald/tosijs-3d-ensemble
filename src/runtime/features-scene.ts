@@ -224,7 +224,9 @@ ambient occlusion, stays the viewer's (see `recommends`).
 
 A `planet` piece is a globe in the scene: its own world from its own seed, or
 drawn from a sphere `terrain` piece it names, so its coasts are that ground's.
-A sphere terrain can be pinned to a place on its planet with `lat` / `lon`
+Or the other way round: a sphere terrain's `planet` names a planet piece and
+the ground takes the globe's sea, coasts and mountain ranges. Either can be the
+source. A sphere terrain is pinned to a place on its planet with `lat` / `lon`
 (the latitude and longitude of the terrain's origin).
 
 ```jsonc
@@ -233,9 +235,9 @@ A sphere terrain can be pinned to a place on its planet with `lat` / `lon`
 ```
 
 The whole scene is `/ensembles/planet.json`; `tests/planet.pw.ts` checks the
-pin and the link on the elements. The planet's schema and the pin are
-tosijs-3d's (`planetSchema()`, the terrain's own `lat` / `lon`); the `terrain`
-link field is ours, an id in the document resolved once every piece is built.
+pin and both directions of the link on the elements. The schemas, the pin and
+the links are tosijs-3d's; what is ours is that a link names a PIECE id, which
+the link phase turns into the selector the element reads.
 
 ## Combat is somewhere else, on purpose
 
@@ -626,55 +628,90 @@ function placePlanetRoot(element: SceneElement, ctx: FeatureContext): void {
   ctx.onDispose(() => clearInterval(timer));
 }
 
+/*
+  PLANET <-> TERRAIN, BY PIECE ID (board #3317, tosijs-3d#3344 in 0.10.9).
+
+  Upstream links the two by SELECTOR: `<tosi-b3d-planet terrain="#t">` draws
+  the globe from the ground, `<tosi-b3d-terrain planet="#p">` gives the ground
+  the globe's shape, and each follows the other's changes. Either can be the
+  source (owner: "can we allow it to work either way?").
+
+  The document names a PIECE, not a selector: a piece id is the format's
+  identity, survives namespacing (`rig-a/land`) and means nothing about the
+  DOM. So the link phase (every piece bound) finds that piece's element, gives
+  it a DOM id if it has none, and writes `#id` to upstream's attribute. This
+  replaced our own loop, which polled the terrain's `generationKey` and copied
+  `planetSurface()` across — the same thing, done upstream now.
+
+  A changed link declines the live update, so the editor rebuilds and the link
+  phase runs again: an attribute write cannot resolve a piece id.
+*/
+let linkIds = 0;
+
+/** A selector for an element another element names. */
+function selectorFor(element: { id?: string }): string {
+  if (!element.id) element.id = `tosi-ensemble-link-${++linkIds}`;
+  return `#${
+    typeof CSS !== "undefined" && CSS.escape
+      ? CSS.escape(element.id)
+      : element.id
+  }`;
+}
+
+const linkedTo = new WeakMap<object, unknown>();
+
+/** Remember what a handle was linked to, so an update can tell if it moved. */
+function recordLink(handle: unknown, value: unknown): void {
+  if (handle && typeof handle === "object") linkedTo.set(handle, value ?? "");
+}
+
+/** Has this config's link field changed since the build? Then rebuild. */
+function linkChanged(handle: unknown, value: unknown): boolean {
+  return (
+    !!handle &&
+    typeof handle === "object" &&
+    linkedTo.get(handle) !== (value ?? "")
+  );
+}
+
 /**
- * Draw a planet from a sphere terrain: `planet.surface = terrain.planetSurface()`
- * and a regenerate, again whenever the terrain's shape changes (its
- * `generationKey`). On a timer rather than a render observer: a throw in an
- * observer kills the render loop, and this has to converge in a hidden tab.
+ * Point `handle[key]` at the element of the piece the document names, as a
+ * selector, in the link phase.
  */
-export function linkPlanetToTerrain(
-  planet: SceneElement,
-  terrain: unknown,
-  id: string,
-  ctx: FeatureContext
+function linkToPiece(
+  handle: unknown,
+  ctx: FeatureContext,
+  feature: string,
+  key: string,
+  targetFeature: string
 ): void {
-  const ground = terrain as {
-    planetSurface?: () => unknown;
-    generationKey?: string;
-  } | null;
-  if (!ground || typeof ground.planetSurface !== "function") {
+  const id = (ctx.piece.features?.[feature] as Record<string, unknown>)?.[key];
+  if (typeof id !== "string" || !id) return;
+  /*
+    `ctx.handle(id)` is a piece's BODY, and a terrain or planet piece has none:
+    it hands back the built piece, whose `handles` hold each feature's.
+  */
+  const target = ctx.handle(id) as { handles?: Map<string, unknown> } | null;
+  const element = target?.handles?.get?.(targetFeature) as
+    | { id?: string }
+    | null
+    | undefined;
+  if (!element || typeof element !== "object") {
     console.warn(
-      `tosijs-3d-ensemble: planet.terrain "${id}" is not a terrain piece in this ensemble; the planet is its own world.`
+      `tosijs-3d-ensemble: ${feature}.${key} "${id}" is not a ${targetFeature} piece in this ensemble; the link is ignored.`
     );
     return;
   }
-  const globe = planet as unknown as {
-    surface?: unknown;
-    regenerate?: () => void;
-  };
-  let built = "";
-  const timer = setInterval(() => {
-    try {
-      const key = ground.generationKey;
-      if (!key || key === built) return;
-      const surface = ground.planetSurface!();
-      // null until the terrain is a SPHERE with a shape.
-      if (surface == null) return;
-      built = key;
-      globe.surface = surface;
-      globe.regenerate?.();
-    } catch {
-      clearInterval(timer);
-    }
-  }, 250);
-  ctx.onDispose(() => clearInterval(timer));
+  (handle as Record<string, unknown>)[key] = selectorFor(element);
 }
 
 export function terrainConfig(
   cfg: Record<string, unknown>
 ): Record<string, unknown> {
+  // `planet` is a PIECE id here; the link phase writes the selector.
+  const { planet: _link, ...rest } = cfg;
   const out: Record<string, unknown> = {
-    ...cfg,
+    ...rest,
     biome: cfg.biome ? "on" : "off",
   };
   if (cfg.biomeTemperature === -1) {
@@ -1336,6 +1373,7 @@ function registerSceneFeaturesNow(): void {
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {
+      if (linkChanged(handle, cfg.planet)) return false;
       const changed = updateAttrs(handle, terrainConfig(cfg));
       // Setting attributes is not rebuilding the ground. Without this a slider
       // moves a number and the terrain keeps its old shape — the same silent
@@ -1380,6 +1418,8 @@ function registerSceneFeaturesNow(): void {
           // of its origin (tosijs-3d#103).
           "lat",
           "lon",
+          // The planet this is the ground of (a piece id; see linkToPiece).
+          "planet",
           "grossScale",
           "detailScale",
           "horizScale",
@@ -1459,6 +1499,13 @@ function registerSceneFeaturesNow(): void {
           // terrain is a plane, where it moves nothing.)
           lat: { "x-requires": { surfaceType: "sphere" } },
           lon: { "x-requires": { surfaceType: "sphere" } },
+          // A PIECE id in the document, where upstream's is a selector.
+          planet: {
+            title: "Ground of planet",
+            description:
+              "The id of a planet piece: this ground takes that globe's sea, coasts and mountain ranges, and follows it when it changes. A sphere terrain only. (Or link the other way: a planet's own `terrain`.)",
+            "x-requires": { surfaceType: "sphere" },
+          },
         }
       ),
     },
@@ -1474,8 +1521,11 @@ function registerSceneFeaturesNow(): void {
         b3dTerrain({ baseHeight: ctx.at[1], ...terrainConfig(cfg) })
       );
       regenerateWhenReady(element, ctx);
+      recordLink(element, cfg.planet);
       return element;
     },
+    link: (handle, ctx) =>
+      linkToPiece(handle, ctx, "terrain", "planet", "planet"),
   });
 
   registerFeature({
@@ -1833,37 +1883,32 @@ function registerSceneFeaturesNow(): void {
     shows the plain default but the bind never writes it, or every live edit
     would undo the preset.
 
-    `terrain` names a sphere terrain PIECE, and is OURS: an id in the
-    document, resolved in the link phase (every piece bound first) by handing
-    the globe that terrain's own height function (`terrain.planetSurface()`),
-    so its coasts are the ground's, redrawn whenever the terrain's shape
-    changes. Without it the planet is its own world, from its own seed and
-    noise. (tosijs-3d is adding the same link declaratively, as a `terrain`
-    attribute on the planet and a `planet` one on the terrain; this field is
-    the shape that will map onto.)
+    `terrain` names a sphere terrain PIECE: the globe is drawn from that
+    ground and follows it. A terrain's `planet` is the other direction: the
+    ground takes the globe's shape. Upstream's attributes are selectors; the
+    document's are piece ids, resolved in the link phase (`linkToPiece`).
   */
   const PLANET_TOGGLES = ["flatSea", "biome", "inlandWater"];
   const planetToElement = onOffToElement(PLANET_TOGGLES);
-  const PLANET_PROPERTIES: Record<string, Spec> = {
-    terrain: {
-      type: "string",
-      title: "Drawn from terrain",
-      description:
-        "The id of a sphere terrain piece: the globe takes that ground's shape and climate. Empty: the planet is its own world.",
-      default: "",
-    },
-    ...pick(
-      "planet",
-      // Everything upstream offers but the debug wireframe.
-      acceptsOf("planet").filter((key) => key !== "wireframe"),
-      Object.fromEntries(
+  const PLANET_PROPERTIES: Record<string, Spec> = pick(
+    "planet",
+    // Everything upstream offers but the debug wireframe.
+    acceptsOf("planet").filter((key) => key !== "wireframe"),
+    {
+      ...Object.fromEntries(
         PLANET_TOGGLES.map((key) => [
           key,
           { type: "boolean", enum: undefined, default: false },
         ])
-      )
-    ),
-  };
+      ),
+      // A PIECE id in the document, where upstream's is a selector.
+      terrain: {
+        title: "Drawn from terrain",
+        description:
+          "The id of a sphere terrain piece: the globe takes that ground's shape and climate, again whenever it changes. Empty: the planet is its own world. (Or link the other way: a terrain's own `planet`.)",
+      },
+    }
+  );
   // Upstream's sections, with the link where a person looks for "which world".
   const PLANET_SECTIONS = (
     sectionsOf("planet") as Array<{ title: string; keys: string[] }>
@@ -1888,11 +1933,13 @@ function registerSceneFeaturesNow(): void {
     name: "planet",
     icon: "🪐",
     primitive: true,
-    update: (handle, cfg) => updateAttrs(handle, planetAttrs(cfg)),
+    update: (handle, cfg) =>
+      !linkChanged(handle, cfg.terrain) &&
+      updateAttrs(handle, planetAttrs(cfg)),
     schema: {
       type: "object",
       title: "Planet",
-      "x-accepts": [...acceptsOf("planet"), "terrain"],
+      "x-accepts": acceptsOf("planet"),
       "x-fetched": fetchedOf("planet"),
       "x-sections": PLANET_SECTIONS,
       properties: PLANET_PROPERTIES,
@@ -1900,22 +1947,11 @@ function registerSceneFeaturesNow(): void {
     bind: (_piece, cfg, ctx) => {
       const element = add(ctx, b3dPlanet(planetAttrs(cfg)));
       placePlanetRoot(element, ctx);
+      recordLink(element, cfg.terrain);
       return element;
     },
-    link: (handle, ctx) => {
-      const id = (ctx.piece.features?.planet as { terrain?: unknown })?.terrain;
-      if (typeof id !== "string" || !id) return;
-      /*
-        `ctx.handle(id)` is a piece's BODY, and a terrain piece has none: it
-        hands back the built piece, whose `handles` hold each feature's.
-        (Measured: passing the built piece through read as "not a terrain".)
-      */
-      const target = ctx.handle(id) as {
-        handles?: Map<string, unknown>;
-      } | null;
-      const terrain = target?.handles?.get?.("terrain") ?? target;
-      linkPlanetToTerrain(handle as SceneElement, terrain, id, ctx);
-    },
+    link: (handle, ctx) =>
+      linkToPiece(handle, ctx, "planet", "terrain", "terrain"),
   });
 
   const shaftsToElement = onOffToElement(["underwater"]);

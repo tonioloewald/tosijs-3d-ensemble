@@ -198,14 +198,14 @@ bind})`; a consumer's feature must be indistinguishable from a built-in in the
   `src/runtime/scene-schemas.test.ts` fails on anything else, with four listed
   exceptions. **If you find yourself typing a `minimum` for a scene field,
   stop** — it belongs upstream.
-- **One scene field is OURS: `planet.terrain`**, the id of a terrain piece,
-  resolved in the link phase. The planet's schema and the terrain pin were
-  stopgaps too, until tosijs-3d 0.10.8 (#103); `scene-schemas.test.ts` names
-  `planet.terrain` as its only orphaned key, and failed on the upgrade when
-  the pin stopped being one. tosijs-3d is adding the link as declarative
-  attributes (`<tosi-b3d-planet terrain="…">` and `<tosi-b3d-terrain
-  planet="…">`); the owner wants either direction to work, so when they land
-  the field maps onto them rather than staying code.
+- **No scene field is ours any more**, and `scene-schemas.test.ts` says so
+  (it failed on each upgrade that retired one). The last was the planet ↔
+  terrain link, now upstream's in 0.10.9. One meaning stays OURS: in a document
+  `planet.terrain` and `terrain.planet` name a PIECE id, where the elements
+  take a selector. The link phase resolves the piece, gives its element a DOM
+  id and writes `#id` (`linkToPiece`); a changed link declines the live update
+  so the editor rebuilds and links again. Either direction works (owner:
+  "can we allow it to work either way?").
 - **A field a preset WRITES is shown, never written** (`x-preset-written` in
   an upstream schema; `pick` marks those `x-apply-default: false`, which
   `effectiveConfig` honours). Otherwise every live edit re-applies the plain

@@ -188,14 +188,12 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
       }
     }
     /*
-      Deliberately OURS:
-      - planet.terrain: the id of a terrain PIECE, resolved in the link
-        phase. tosijs-3d is adding a declarative `terrain` attribute (an
-        element selector); when it lands this maps onto it.
-      (terrain.lat / terrain.lon were here, our pin, until tosijs-3d 0.10.8
-      gave the terrain its own, and this test failed on the upgrade.)
+      None. The last were stopgaps, each failing this test on the upgrade that
+      made it redundant: terrain.lat / terrain.lon (our pin, until tosijs-3d
+      0.10.8) and planet.terrain (our link field, until 0.10.9 gave the planet
+      a `terrain` attribute; ours still holds a piece id, not a selector).
     */
-    expect(orphaned).toEqual(["planet.terrain"]);
+    expect(orphaned).toEqual([]);
   });
 });
 

@@ -270,6 +270,8 @@ const FREE_TEXT: Record<string, string> = {
   "animation.clip": "an animation clip name on the mesh",
   "planet.terrain":
     "a piece id in this document (the terrain it is drawn from)",
+  "terrain.planet":
+    "a piece id in this document (the planet it is the ground of)",
   "planet.atmosphereColor": "a CSS colour that may carry alpha, 'rgba(…)'",
   "planet.bandColors": "a gas giant's band colours, a list of CSS colours",
 };

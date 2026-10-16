@@ -1,0 +1,4 @@
+import{zy,Gy}from"./site-ggbb5sd4.js";export{zy as EXT_lights_image_based,Gy as RegisterEXT_lights_image_based};
+
+//# debugId=7F2DB296BC7AB92164756E2164756E21
+//# sourceMappingURL=EXT_lights_image_based-nf3431x1.js.map

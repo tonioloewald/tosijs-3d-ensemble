@@ -7,18 +7,24 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer `tosijs-3d` is `^0.10.8`** (was `^0.9.0 || ^0.10.0`). The planet
+- **Peer `tosijs-3d` is `^0.10.9`** (was `^0.9.0 || ^0.10.0`). The planet
   workflow below takes its schema and the terrain pin from 0.10.8
-  (`planetSchema()`, terrain `lat`/`lon`), and 0.10.8 fixes the two leaks we
-  were working around. A consumer on tosijs-3d 0.9 must move to 0.10.8.
+  (`planetSchema()`, terrain `lat`/`lon`) and the planet ↔ terrain links from
+  0.10.9, and 0.10.8 fixes the two leaks we were working around. A consumer on
+  tosijs-3d 0.9 must move to 0.10.9.
 
 ### Added
 
 - **Planets** (board #3317, the owner's "show the planet, tweak it, pin the
   terrain to a spot on it" for Manta). A `planet` feature puts a globe in the
-  scene: its own world, or drawn from a sphere `terrain` piece it names (in the
-  link phase, redrawn when the terrain's shape changes), so the globe's coasts
-  are the ground's. It takes the planet's `world` presets (moon, mars, venus…),
+  scene: its own world, or drawn from a sphere `terrain` piece it names, so
+  the globe's coasts are the ground's. **Or the other way round**: a sphere
+  terrain's `planet` names a planet piece and the ground takes the globe's
+  sea, coasts and mountain ranges. Each follows the other's changes. The
+  document names PIECES; the link phase writes the selectors tosijs-3d's
+  elements read (0.10.9). `tests/planet.pw.ts` measures both directions, with
+  an unlinked build as the control (sea/land agreement 0.875 linked, 0.465
+  not). It takes the planet's `world` presets (moon, mars, venus…),
   gas giants, sea, air, clouds, craters and rings, in sections.
 - **A sphere terrain can be pinned** to a place on its planet: `lat` / `lon`,
   the latitude and longitude of its origin (tosijs-3d's own attributes since

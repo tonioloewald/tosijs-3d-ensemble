@@ -164,9 +164,11 @@ export interface FeatureRegistration<Handle = unknown> {
    * Return true if it was applied. Return false, or omit this, and the caller
    * rebuilds the whole ensemble instead — which is correct but expensive, and
    * in an editor it is visible: a rebuild disposes and re-instantiates every
-   * piece, and `place-mesh` applies rotation on a RETRY over several frames, so
-   * rebuilding once per frame means no piece's rotation ever settles. Dragging
-   * a sky slider straightened every ship in the scene until the drag ended.
+   * piece, so rebuilding once per frame means no library piece ever finishes
+   * loading. (When rotation was applied on a retry, dragging a sky slider
+   * straightened every ship in the scene until the drag ended.) Return false
+   * on purpose when an edit needs the link phase again: a field naming
+   * another piece cannot be resolved by an attribute write.
    *
    * Most features are a thin mapping onto an element's attributes, and for
    * those this is one line — see `updateAttrs`.

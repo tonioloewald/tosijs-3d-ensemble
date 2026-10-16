@@ -65,3 +65,27 @@ describe("migrate removes the legacy biomeTemperature -1", () => {
     expect(other.changes).toEqual([]);
   });
 });
+
+describe("migrate: terrain surfaceType 'plane'", () => {
+  it("rewrites it to what it rendered as, cylinder, and says so", () => {
+    const doc = {
+      name: "t",
+      pieces: [
+        {
+          id: "land",
+          at: [0, 0, 0],
+          features: { terrain: { surfaceType: "plane" } },
+        },
+      ],
+    };
+    const { ensemble, changes } = migrate(doc as never) as never as {
+      ensemble: typeof doc;
+      changes: Array<{ path: string }>;
+    };
+    expect(
+      (ensemble.pieces[0]!.features.terrain as Record<string, unknown>)
+        .surfaceType
+    ).toBe("cylinder");
+    expect(changes.some((c) => c.path.endsWith("/surfaceType"))).toBe(true);
+  });
+});

@@ -32,7 +32,7 @@
       "features": {
         "terrain": {
           "seed": 111,
-          "surfaceType": "plane",
+          "surfaceType": "cylinder",
           "grossScale": 0.015,
           "detailScale": 0.09,
           "horizScale": 8,

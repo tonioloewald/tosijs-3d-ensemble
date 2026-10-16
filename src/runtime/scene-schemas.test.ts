@@ -177,6 +177,30 @@ describe("scene schemas come from tosijs-3d, not from us", () => {
     );
   });
 
+  it("offers no default outside its own enum", () => {
+    /*
+      `terrain.surfaceType` defaulted to "plane" for months after upstream's
+      enum became cylinder | torus | sphere. Nothing failed: the panel showed
+      the first legal option (cylinder) while the element was handed "plane",
+      so the panel lied about what the scene was doing. The facet checks above
+      compare OUR enum with THEIRS and never asked whether our default is in
+      either.
+    */
+    const outside: string[] = [];
+    for (const [feature] of ADOPTED) {
+      for (const [key, spec] of Object.entries(propertiesOf(feature))) {
+        const values = spec.enum as unknown[] | undefined;
+        if (
+          values &&
+          spec.default !== undefined &&
+          !values.includes(spec.default)
+        )
+          outside.push(`${feature}.${key}: ${JSON.stringify(spec.default)}`);
+      }
+    }
+    expect(outside).toEqual([]);
+  });
+
   it("overrides only keys that still exist upstream", () => {
     // An override on a vanished key is not a crash — it is a property that
     // reappears with upstream's default and looks like it was never set.

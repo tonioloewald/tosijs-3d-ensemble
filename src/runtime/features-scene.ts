@@ -1458,8 +1458,14 @@ function registerSceneFeaturesNow(): void {
           baseHeight: { default: undefined },
           // A seed is typed or stepped, never dragged: no seed is near another.
           seed: { type: "integer", maximum: 9999, default: 111 },
-          // An ensemble's terrain is a landscape. A cylinder is a planet.
-          surfaceType: { default: "plane" },
+          /*
+            NO `surfaceType` override. This defaulted to "plane", which
+            upstream's enum (cylinder | torus | sphere) no longer has: the
+            panel showed "cylinder" while the element was handed "plane". Nor
+            was the reason right: `surfaceType` is how the NOISE wraps, not a
+            curved ground, so a cylinder is a landscape too.
+            `scene-schemas.test.ts` now checks a default is in its enum.
+          */
           /*
             ⚠️ NO `x-scale` HERE ANY MORE. We added one because six decades of
             travel make a linear track unusable; tosijs-3d@0.8.1 added the same

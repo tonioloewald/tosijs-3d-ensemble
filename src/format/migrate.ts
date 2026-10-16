@@ -200,6 +200,20 @@ export function migrate(input: Ensemble): Migration {
       });
     }
 
+    /*
+      `terrain.surfaceType: "plane"` is not a value tosijs-3d has: anything
+      but torus or sphere samples as a cylinder, so that is what such a scene
+      has been rendering. Said so, as `ambient.preset` is below. (This
+      package's own authoring default WAS "plane", so files it wrote carry it.)
+    */
+    if (terrain && terrain.surfaceType === "plane") {
+      terrain.surfaceType = "cylinder";
+      changes.push({
+        path: at("terrain", "surfaceType"),
+        note: `"plane" is not a surface type; "${piece.id}" has been rendering as a "cylinder" — said so`,
+      });
+    }
+
     const ambient = features.ambient;
     if (ambient && typeof ambient.preset === "string") {
       if (!AMBIENT_PRESETS.includes(ambient.preset)) {

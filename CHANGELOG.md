@@ -45,6 +45,14 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **A new terrain's panel said "cylinder" while the scene got "plane".** Our
+  authoring default for `terrain.surfaceType` was "plane", which tosijs-3d's
+  enum (cylinder | torus | sphere) no longer has; anything but torus or sphere
+  samples as a cylinder. The override is gone (upstream's default applies),
+  `migrate()` rewrites a document's "plane" to "cylinder" (what it rendered
+  as), two samples are updated, and `scene-schemas.test.ts` now fails on any
+  offered default outside its own enum.
+
 - **Rotation from the property panel was not live.** Scrubbing a piece's
   rotation (or typing a position or scale) rebuilt the whole scene on every
   step, so the piece could not show the change until you let go, and a key-

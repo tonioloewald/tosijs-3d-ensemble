@@ -86,7 +86,7 @@
       "features": {
         "terrain": {
           "seed": 111,
-          "surfaceType": "plane",
+          "surfaceType": "cylinder",
           "grossScale": 0.01,
           "detailScale": 0.09,
           "horizScale": 3.31,

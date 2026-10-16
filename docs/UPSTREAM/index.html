@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=b94ea83a4400" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=494e58ad1d52" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -134,7 +134,7 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>19</td>
-<td><strong>A STILL sky updates once and never recovers.</strong> <code>b3d-skybox</code> re-runs <code>updateSky</code> from its frame observer only when <code>timeOfDay !== _lastSkyTime</code>, and <code>updateSky</code> writes <code>sunPosition</code>/<code>rayleigh</code>/<code>turbidity</code> only inside <code>if (sunEl?.light != null)</code>. The sun is a separate element whose light appears on its own schedule, so a first call that lands too early leaves the SkyMaterial at its defaults — a dark sky that reads as night. The default <code>realtimeScale: 10</code> hides this by drifting the clock so the gate reopens every tick; set it to 0 for a reproducible scene and four loads in five come up dark. Ask: re-run when the INPUTS change (or when a sun appears), not only when the clock does</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.1">tosijs-3d@0.8.1</a>)</strong>, workaround retired; <code>tests/still-sky.pw.ts</code> takes five cold loads with a 1 am control — <strong>A STILL sky updates once and never recovers.</strong> <code>b3d-skybox</code> re-runs <code>updateSky</code> from its frame observer only when <code>timeOfDay !== _lastSkyTime</code>, and <code>updateSky</code> writes <code>sunPosition</code>/<code>rayleigh</code>/<code>turbidity</code> only inside <code>if (sunEl?.light != null)</code>. The sun is a separate element whose light appears on its own schedule, so a first call that lands too early leaves the SkyMaterial at its defaults — a dark sky that reads as night. The default <code>realtimeScale: 10</code> hides this by drifting the clock so the gate reopens every tick; set it to 0 for a reproducible scene and four loads in five come up dark. Ask: re-run when the INPUTS change (or when a sun appears), not only when the clock does</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/55">#55</a></td>
 </tr>
 <tr>
@@ -199,7 +199,7 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>19</td>
-<td><strong>Constructing a b3d scene inside another component&#39;s rAF render pass corrupts materials</strong> — dark sky, WHITE meshes, empty scene, half-loaded scene, ~70% of loads, all one cause. Isolated by side-by-side comparison in one page. We defer our mount to a macrotask and it goes to zero; filed informationally in case <code>b3d</code> should defer its own engine creation, or the rule should be documented</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.1">tosijs-3d@0.8.1</a>)</strong>, workaround retired; <code>tests/still-sky.pw.ts</code> takes five cold loads with a 1 am control — <strong>Constructing a b3d scene inside another component&#39;s rAF render pass corrupts materials</strong> — dark sky, WHITE meshes, empty scene, half-loaded scene, ~70% of loads, all one cause. Isolated by side-by-side comparison in one page. We defer our mount to a macrotask and it goes to zero; filed informationally in case <code>b3d</code> should defer its own engine creation, or the rule should be documented</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/56">#56</a></td>
 </tr>
 <tr>

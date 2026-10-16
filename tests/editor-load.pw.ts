@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { collectPageErrors } from "./page-errors.js";
 
 /*
   PAGE-LEVEL EDITOR BEHAVIOUR — the part that is not a doc fence.
@@ -31,6 +32,7 @@ test.describe("a load is not overtaken by the page's own src", () => {
       window rather than sampling the end of it: the failure was invisible to a
       single reading taken at the wrong moment, which is how it survived.
     */
+    collectPageErrors(page); // for its doc-corpus report recorder
     await page.goto("/editor/", { waitUntil: "domcontentloaded" });
     await page.waitForFunction(
       () =>

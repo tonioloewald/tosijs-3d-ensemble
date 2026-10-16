@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { appendFileSync, mkdirSync } from "node:fs";
 
 /*
   PAGE ERRORS, WITH THEIR STACKS.
@@ -10,8 +11,10 @@ import { test, expect } from "@playwright/test";
   found on every machine, not just the runner — see KNOWN below.)
 */
 export const collectPageErrors = (page: {
-  on: (event: "pageerror", cb: (e: Error) => void) => void;
+  on: ((event: "pageerror", cb: (e: Error) => void) => void) &
+    ((event: "request", cb: (r: ReportRequest) => void) => void);
 }): string[] => {
+  recordDocReports(page);
   const errors: string[] = [];
   page.on("pageerror", (e) => {
     /*
@@ -65,3 +68,74 @@ const KNOWN: ReadonlyArray<{ match: string; why: string }> = [
 
 export const realErrors = (errors: string[]): string[] =>
   errors.filter((e) => !KNOWN.some((k) => e.includes(k.match)));
+
+/*
+  EVERY DOC-CORPUS REPORT, KEPT (board #3172).
+
+  tosijs-ui's doc browser runs the whole ```test corpus in hidden frames on ANY
+  localhost doc page and POSTs the totals to `/report` — measured: one plain
+  visit to /editor/ ran all six and posted. So every test here that opens a
+  doc page also runs the corpus in the background, and the dev server keeps
+  only the LAST post (`.browser-tests.json`). A "2 failed" seen in the lane's
+  log could therefore come from any visit, and its names were gone by the end.
+
+  This appends each post, with the test that caused it and the page it came
+  from, to `test-results/doc-reports.jsonl` (Playwright clears the folder at
+  the start of each run). A failed one names its failures.
+*/
+interface ReportRequest {
+  url(): string;
+  method(): string;
+  postData(): string | null;
+  frame(): { url(): string } | null;
+}
+
+const REPORTS = "test-results/doc-reports.jsonl";
+
+function recordDocReports(page: {
+  on: (event: "request", cb: (r: ReportRequest) => void) => void;
+}): void {
+  let title = "?";
+  try {
+    title = test.info().titlePath.join(" › ");
+  } catch {
+    // Outside a test: still record, unattributed.
+  }
+  page.on("request", (r) => {
+    if (r.method() !== "POST" || !r.url().endsWith("/report")) return;
+    let body: {
+      passed?: number;
+      failed?: number;
+      pages?: Record<
+        string,
+        { tests?: Array<{ name: string; passed: boolean; error?: string }> }
+      >;
+    } = {};
+    try {
+      body = JSON.parse(r.postData() ?? "{}");
+    } catch {
+      // A report that is not JSON is itself worth a line.
+    }
+    const failures = Object.entries(body.pages ?? {}).flatMap(([pageName, p]) =>
+      (p.tests ?? [])
+        .filter((t) => !t.passed)
+        .map((t) => `${pageName}: ${t.name}${t.error ? ` — ${t.error}` : ""}`)
+    );
+    try {
+      mkdirSync("test-results", { recursive: true });
+      appendFileSync(
+        REPORTS,
+        JSON.stringify({
+          at: new Date().toISOString(),
+          test: title,
+          page: r.frame()?.url() ?? "?",
+          passed: body.passed,
+          failed: body.failed,
+          failures,
+        }) + "\n"
+      );
+    } catch {
+      // Recording must never fail a test.
+    }
+  });
+}

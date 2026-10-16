@@ -128,8 +128,7 @@ el?.addEventListener('built', (e) => console.log(e.detail.problems))
 ```
 */
 /*{"parent":"Runtime","order":2}*/
-import { Component } from "tosijs";
-import type { ComponentAttrs } from "tosijs";
+import { withAttributes } from "tosijs";
 import { buildEnsemble, fetchEnsembleData } from "./build.js";
 import { placeMesh } from "./place-mesh.js";
 import { mountLibraries } from "./libraries.js";
@@ -138,21 +137,16 @@ import type { BuiltEnsemble } from "./build.js";
 import type { Ensemble as EnsembleData, Vec3 } from "../format/types.js";
 import type { SceneElement } from "../format/registry.js";
 
-// Attributes typed from their VALUES — see the note on `EnsembleEditor`, which
-// also explains why this is not `withAttributes()` yet. The old
-// `static initAttributes` + `declare` pair states each attribute twice, and a
-// pair that must agree is a pair that eventually does not.
-export interface TosiEnsemble
-  extends ComponentAttrs<typeof TosiEnsemble.initAttributes> {}
-export class TosiEnsemble extends Component {
+// Attributes typed from their VALUES (see the note on `EnsembleEditor`). The
+// old `static initAttributes` + `declare` pair states each attribute twice,
+// and a pair that must agree is a pair that eventually does not.
+export class TosiEnsemble extends withAttributes({
+  src: "",
+  library: "",
+  /** Where the ensemble's local origin sits in the world: `"x y z"`. */
+  at: "0 0 0",
+}) {
   static override preferredTagName = "tosi-ensemble";
-
-  static override initAttributes = {
-    src: "",
-    library: "",
-    /** Where the ensemble's local origin sits in the world: `"x y z"`. */
-    at: "0 0 0",
-  };
 
   override content = null;
 

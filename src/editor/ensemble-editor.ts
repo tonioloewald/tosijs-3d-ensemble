@@ -58,8 +58,7 @@ tosijs-3d has since shipped `<tosi-b3d-manipulator>`; whether it should replace
 these grips is an open comparison (board #2794).
 */
 /*{"parent":"Editing","order":1}*/
-import { Component, tosi } from "tosijs";
-import type { ComponentAttrs } from "tosijs";
+import { tosi, withAttributes } from "tosijs";
 import {
   b3d,
   b3dGround,
@@ -348,20 +347,16 @@ function pickFile(onText: (text: string) => void): void {
   compile. tosijs 1.10.0 dropped it (tosijs#36) and `tsc` reported the one
   place we had been getting away with it.
 
-  The `ComponentAttrs` interface below types every attribute from its value, so
-  there is no second declaration to keep in step and a new attribute needs no
-  new line at all. `backdrop` carries an `as Backdrop` because a literal widens
-  to `string` otherwise, and the union is the point.
+  `withAttributes({…})` types every attribute from its value, so there is no
+  second declaration to keep in step and a new attribute needs no new line at
+  all. `backdrop` carries an `as Backdrop` because a literal widens to
+  `string` otherwise, and the union is the point.
 
-  ⚠️ NOT `withAttributes()`, which is the shape tosijs's own migration note
-  recommends. Its return type is not nameable from `'tosijs'`, so `tsc -p
-  tsconfig.build.json` cannot emit our `.d.ts` (TS2742) — and `bun run build`
-  runs that, which is the only reason we know. Filed as tosijs#38, already
-  fixed upstream and unpublished; switch when it lands. `ComponentAttrs` is
-  documented for exactly this case and costs one line.
+  (Until tosijs#38 shipped this was a `ComponentAttrs` interface beside a
+  `static initAttributes`: `withAttributes()`'s return type was not nameable
+  from 'tosijs', so our `.d.ts` emit failed TS2742. `bun run build` is the
+  check that would notice it coming back.)
 */
-export interface EnsembleEditor
-  extends ComponentAttrs<typeof EnsembleEditor.initAttributes> {}
 /**
  * Glyphs the piece list's row menu draws.
  *
@@ -380,30 +375,27 @@ export const PIECE_ROW_ICONS = {
   delete: "trash",
 } as const;
 
-export class EnsembleEditor extends Component {
-  static override preferredTagName = "tosi-ensemble-editor";
-
-  static override initAttributes = {
-    /**
-     * Library `type` to instantiate meshes from. Empty means "no library":
-     * pieces render as placeholder cubes, which is the useful failure — the
-     * arrangement is most of what an author is judging.
-     */
-    library: "",
-    /** URL of a `.glb` library to load. Optional if the page loads its own. */
-    libraryUrl: "",
-    /**
-     * Libraries an AUTHOR may insert from, as JSON: `[{"name","url"}]`.
-     *
-     * Distinct from the ensemble's own `libraries`, which are what the file
-     * NEEDS to render. These are what the editor OFFERS — a kit shelf. An
-     * ensemble that uses none of them still loads unchanged, and one that uses
-     * a mesh from one gains the declaration when the piece is inserted.
-     */
-    libraries: "",
-    /** Ensemble JSON to load on connect. */
-    src: "",
-    /*
+export class EnsembleEditor extends withAttributes({
+  /**
+   * Library `type` to instantiate meshes from. Empty means "no library":
+   * pieces render as placeholder cubes, which is the useful failure — the
+   * arrangement is most of what an author is judging.
+   */
+  library: "",
+  /** URL of a `.glb` library to load. Optional if the page loads its own. */
+  libraryUrl: "",
+  /**
+   * Libraries an AUTHOR may insert from, as JSON: `[{"name","url"}]`.
+   *
+   * Distinct from the ensemble's own `libraries`, which are what the file
+   * NEEDS to render. These are what the editor OFFERS — a kit shelf. An
+   * ensemble that uses none of them still loads unchanged, and one that uses
+   * a mesh from one gains the declaration when the piece is inserted.
+   */
+  libraries: "",
+  /** Ensemble JSON to load on connect. */
+  src: "",
+  /*
       SNAP IS THE EDITOR'S, NOT EACH TOOL'S.
 
       Insert and the transform tool both used to carry their own `gridSnap`, so
@@ -413,36 +405,37 @@ export class EnsembleEditor extends Component {
       control. Tool MODES stay per-tool and sticky — that is genuinely per-tool
       — but a snap distance is a property of the workspace.
     */
-    // 0.25m, not 1m: a metre is coarser than the things being arranged, so the
-    // default fought the author instead of helping.
-    gridSnap: 0.25,
-    angleSnap: 5,
-    /** Sample world to author against — authoring context, never saved. */
-    backdrop: "land" as Backdrop,
-    /**
-     * Metres between the water surface and the backdrop's grid plane.
-     *
-     * The grid plane used to be SUPPRESSED whenever anything supplied water,
-     * because two surfaces at the same level z-fight. But suppressing it threw
-     * away the one thing that makes a sea authorable — a floor with a scale on
-     * it — so a cove looked like ships floating in a void. Below rather than
-     * absent: no coincident surfaces, and the seabed reads as a seabed.
-     *
-     * Customisable because the right depth is a judgement about the scene: too
-     * shallow and the grid shows through the water it is meant to sit under;
-     * too deep and it is invisible haze. Zero puts them back in the same plane
-     * and brings back the flicker, so the floor is a centimetre.
-     */
-    seabed: 12,
-    /**
-     * Hide the piece list and property panel.
-     *
-     * Inverted on purpose: an HTML boolean attribute is false-by-default
-     * (presence = true), so a `chrome: true` default cannot reflect and tosijs
-     * refuses it outright rather than letting it silently become false.
-     */
-    hideChrome: false,
-  };
+  // 0.25m, not 1m: a metre is coarser than the things being arranged, so the
+  // default fought the author instead of helping.
+  gridSnap: 0.25,
+  angleSnap: 5,
+  /** Sample world to author against — authoring context, never saved. */
+  backdrop: "land" as Backdrop,
+  /**
+   * Metres between the water surface and the backdrop's grid plane.
+   *
+   * The grid plane used to be SUPPRESSED whenever anything supplied water,
+   * because two surfaces at the same level z-fight. But suppressing it threw
+   * away the one thing that makes a sea authorable — a floor with a scale on
+   * it — so a cove looked like ships floating in a void. Below rather than
+   * absent: no coincident surfaces, and the seabed reads as a seabed.
+   *
+   * Customisable because the right depth is a judgement about the scene: too
+   * shallow and the grid shows through the water it is meant to sit under;
+   * too deep and it is invisible haze. Zero puts them back in the same plane
+   * and brings back the flicker, so the floor is a centimetre.
+   */
+  seabed: 12,
+  /**
+   * Hide the piece list and property panel.
+   *
+   * Inverted on purpose: an HTML boolean attribute is false-by-default
+   * (presence = true), so a `chrome: true` default cannot reflect and tosijs
+   * refuses it outright rather than letting it silently become false.
+   */
+  hideChrome: false,
+}) {
+  static override preferredTagName = "tosi-ensemble-editor";
 
   /** The `src` this editor has already fetched. See the note in the mount. */
   private _loadedSrc: string | null = null;

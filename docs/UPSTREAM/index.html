@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=eb64a50b19c3" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=b178eabd59bb" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=594c0f934f36" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=b94ea83a4400" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -109,12 +109,12 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>11</td>
-<td><code>b3d-destroyable</code> cannot scale a library-backed piece at all — <code>size</code> is the placeholder cube&#39;s edge and is ignored once <code>library</code> is set. Measured: width identical at scale 1, 2 and 4</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.1">tosijs-3d@0.8.1</a>)</strong>, workaround retired: a uniform scale is the element&#39;s <code>scale</code>; a per-axis one still goes on the node, kept through the element&#39;s re-renders (#105) — <code>b3d-destroyable</code> cannot scale a library-backed piece at all — <code>size</code> is the placeholder cube&#39;s edge and is ignored once <code>library</code> is set. Measured: width identical at scale 1, 2 and 4</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/47">#47</a></td>
 </tr>
 <tr>
 <td>12</td>
-<td><code>b3d-destroyable</code> drops <code>rx</code>/<code>ry</code>/<code>rz</code> — <code>instantiate</code> is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored <code>rot: [0,45,0]</code> left the footprint identical</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.8.1">tosijs-3d@0.8.1</a>)</strong>, workaround retired: rotation is the element&#39;s <code>rx</code>/<code>ry</code>/<code>rz</code> alone — <code>b3d-destroyable</code> drops <code>rx</code>/<code>ry</code>/<code>rz</code> — <code>instantiate</code> is called with position only, so a library-backed piece cannot be rotated at all. Measured: authored <code>rot: [0,45,0]</code> left the footprint identical</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/48">#48</a></td>
 </tr>
 <tr>
@@ -321,6 +321,16 @@ older than its card; when they disagree, the card wins.</p>
 <td>50</td>
 <td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.8">tosijs-3d@0.10.8</a>)</strong> for the schema and the pin (<code>planetSchema()</code> with <code>x-preset-written</code>, terrain <code>lat</code>/<code>lon</code>); the declarative link is in progress upstream — <strong>For building worlds from their planet</strong> (board #3317): no <code>planetSchema()</code>; terrain&#39;s schema lacks <code>worldU</code>/<code>worldV</code> (asked for <code>lat</code>/<code>lon</code> attributes); the globe-from-ground link is code</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/103">#103</a></td>
+</tr>
+<tr>
+<td>51</td>
+<td><strong><code>panel3d</code>&#39;s declared return type has no <code>dispose()</code></strong>, though 0.10.8 adds one and its CHANGELOG says to call it. Worked around by a local <code>DisposablePanel</code> type</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/104">#104</a></td>
+</tr>
+<tr>
+<td>52</td>
+<td><strong><code>b3d-destroyable</code> resets the instance&#39;s scaling to its uniform <code>scale</code> on every render</strong>, so a per-axis scale cannot be kept; a stretched piece lost its stretch on its first move or turn. Worked around by <code>scaleElement</code> re-applying it after each render</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/105">#105</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
@@ -587,6 +597,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-q3t4vhpn.js"></script>
+  <script type="module" src="../hydrate-byxav3me.js"></script>
 </body>
 </html>

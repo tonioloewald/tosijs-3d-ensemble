@@ -57,6 +57,10 @@ All notable changes to this project are documented here, in
   for the node to exist: the element turns it from `rx`/`ry`/`rz` itself since
   tosijs-3d 0.8.1 (#48), and applies both after its node loads.
   `applyEuler` is gone from `runtime/node-transform`; `scaleElement` is new.
+- `refreshSkyWhenSunExists`, which polled a still sky's `updateSky` until the
+  sun existed (tosijs-3d#55, fixed upstream in 0.8.1). `tests/still-sky.pw.ts`
+  measures five cold loads of the standard scene, looking up, against a 1 am
+  control: lit every time.
 - The two leak workarounds tosijs-3d 0.10.8 makes unnecessary: `boxTracker`
   (in `editor/schema-panel`, never on the package entry; #100, bound widgets now unsubscribe in
   `dispose()`, and the editor disposes every panel it drops) and

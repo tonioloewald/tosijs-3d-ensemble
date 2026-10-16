@@ -12,7 +12,9 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
 */
 type Ed = Element & {
   shadowRoot: ShadowRoot | null;
-  ensemble: { pieces: Array<{ id: string; features?: Record<string, unknown> }> };
+  ensemble: {
+    pieces: Array<{ id: string; features?: Record<string, unknown> }>;
+  };
   setTool(name: string): void;
   setToolOption(key: string, value: unknown): void;
 };
@@ -58,15 +60,23 @@ test("terrain and a cloud deck can be inserted into the default scene", async ({
         const ed = document.querySelector("tosi-ensemble-editor") as Ed;
         const pieces = ed.ensemble.pieces;
         const added = pieces.slice(before);
-        const tag = { terrain: "tosi-b3d-terrain", cloudDeck: "tosi-b3d-cloud-deck" }[
-          feature
-        ]!;
+        const tag = {
+          terrain: "tosi-b3d-terrain",
+          cloudDeck: "tosi-b3d-cloud-deck",
+        }[feature]!;
         const el = ed.shadowRoot!.querySelector(tag) as
           | (Element & { scene?: unknown })
           | null;
         const scene = (
           ed.shadowRoot!.querySelector("tosi-b3d") as unknown as {
-            scene: { meshes: Array<{ name: string; isVisible: boolean; isEnabled(): boolean; getTotalVertices(): number }> };
+            scene: {
+              meshes: Array<{
+                name: string;
+                isVisible: boolean;
+                isEnabled(): boolean;
+                getTotalVertices(): number;
+              }>;
+            };
           }
         ).scene;
         return {
@@ -85,9 +95,17 @@ test("terrain and a cloud deck can be inserted into the default scene", async ({
   const meshesBefore = await page.evaluate(
     () =>
       (
-        (document.querySelector("tosi-ensemble-editor") as Ed).shadowRoot!.querySelector(
-          "tosi-b3d"
-        ) as unknown as { scene: { meshes: Array<{ isVisible: boolean; isEnabled(): boolean; getTotalVertices(): number }> } }
+        (
+          document.querySelector("tosi-ensemble-editor") as Ed
+        ).shadowRoot!.querySelector("tosi-b3d") as unknown as {
+          scene: {
+            meshes: Array<{
+              isVisible: boolean;
+              isEnabled(): boolean;
+              getTotalVertices(): number;
+            }>;
+          };
+        }
       ).scene.meshes.filter(
         (m) => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0
       ).length

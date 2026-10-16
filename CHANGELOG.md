@@ -68,6 +68,10 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
+- **`clouds` is off the Insert shelf** in favour of `cloudDeck` (owner: "we can
+  revisit clouds later when they're better"). A document with a `clouds` piece
+  still loads and builds.
+
 - Components use tosijs's `withAttributes()` again (tosijs#38 is fixed).
 
 ### Removed

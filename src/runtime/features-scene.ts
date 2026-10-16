@@ -1589,7 +1589,14 @@ function registerSceneFeaturesNow(): void {
   registerFeature({
     name: "clouds",
     icon: "☁️",
-    primitive: true,
+    /*
+      OFF THE SHELF, still loadable (owner, 2026-10-16: "for now I'd ditch
+      'clouds' in favor of the cloud deck. We can revisit clouds later when
+      they're better"). A document that has a `clouds` piece still builds; an
+      author is simply not offered one. `primitive` is only what fills the
+      Insert shelf, so turning it back on is this one line.
+    */
+    primitive: false,
     insertAt: [0, 0, 0],
     update: updateAttrs,
     schema: {

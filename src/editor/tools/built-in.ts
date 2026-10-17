@@ -12,7 +12,7 @@ separate select tool meant declaring your intent to a palette before declaring
 it again to the thing you were pointing at.
 */
 /*{"parent":"Editing","order":3}*/
-import { featureRegistration } from "../../format/registry.js";
+import { featureRegistration, insertPosition } from "../../format/registry.js";
 import { snapVec3 } from "../handles.js";
 import type { Vec3 } from "../../format/types.js";
 import { registerCommand, registerTool } from "./tool-registry.js";
@@ -147,13 +147,7 @@ export function registerEditorTools(): void {
             coordinate that means nothing and, for the sun, aims it somewhere
             arbitrary.
           */
-          const rule = featureRegistration(feature)?.insertAt ?? "point";
-          const where: Vec3 =
-            rule === "point"
-              ? at
-              : rule === "height"
-              ? [0, at[1], 0]
-              : ([...rule] as Vec3);
+          const where = insertPosition(feature, at);
           /*
             An environment primitive: no mesh, and the feature IS the body.
             Empty config, so every default in its schema applies — a `terrain`

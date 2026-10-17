@@ -101,7 +101,8 @@ import {
   registeredCommands,
   registeredTools,
 } from "./tools/tool-registry.js";
-import { registerEditorTools } from "./tools/built-in.js";
+import { registerEditorTools, uniqueId } from "./tools/built-in.js";
+import { slugify } from "../format/migrate.js";
 import { registerTransformTool, transformsOf } from "./tools/transform.js";
 import { createHandles } from "./handles-view.js";
 import { createHistory } from "./history.js";
@@ -129,6 +130,7 @@ import {
 import {
   effectiveConfig,
   featureRegistration,
+  insertPosition,
   registeredFeatures,
 } from "../format/registry.js";
 import type { EditorRay } from "./input/pointer.js";
@@ -400,6 +402,9 @@ const movedWithFeatures = (before: Ensemble, after: Ensemble): boolean => {
   });
 };
 
+/** Row-id prefix for a feature the document does not have (never a piece id). */
+const ABSENT = "+";
+
 export const PIECE_ROW_ICONS = {
   /** The row's own ⋯ button. */
   menu: "moreVertical",
@@ -407,6 +412,12 @@ export const PIECE_ROW_ICONS = {
   disable: "square",
   duplicate: "copy",
   delete: "trash",
+  /** An environment row's state circle: in the document and on... */
+  stateOn: "checkCircle",
+  /** ...in the document and disabled... */
+  stateOff: "circle",
+  /** ...or not in the document at all (and the inline "add" row). */
+  stateAbsent: "plusCircle",
 } as const;
 
 export class EnsembleEditor extends withAttributes({
@@ -3755,7 +3766,12 @@ export class EnsembleEditor extends withAttributes({
     this._addPanel(
       "left",
       panel3d(
-        { width: PANEL_WIDTH, maxHeight: 340, padding: 8, gap: 4 },
+        {
+          width: PANEL_WIDTH,
+          maxHeight: this._spaceBelow("left"),
+          padding: 8,
+          gap: 4,
+        },
         /*
           ENVIRONMENT AND CONTENT ARE DIFFERENT KINDS OF THING.
 
@@ -3967,55 +3983,236 @@ export class EnsembleEditor extends withAttributes({
     });
     out.push(this._collectField(filterField) as never);
 
-    const environment = this._ensemble.pieces.filter((p) => !p.mesh);
-    const content = this._ensemble.pieces.filter((p) => p.mesh);
-    for (const [title, group] of [
-      ["environment", environment],
-      ["pieces", content],
-    ] as Array<[string, Piece[]]>) {
-      if (!group.length) continue;
-      out.push(label3d({ text: title, muted: true, compact: true }));
-      const rows: TableRow[] = group.map((piece) => ({
-        id: piece.id,
-        kind: this._kindIcon(piece),
-        // KIND AND STATE ARE DIFFERENT THINGS, so they do not share a glyph. A
-        // disabled lamp is still a lamp: the icon says which, and the state is
-        // a word after the name. An early version replaced the whole label
-        // with `◌ id`, throwing the kind away to say something about state.
-        name: `${piece.id}${piece.enabled === false ? " · off" : ""}`,
-        actions: PIECE_ROW_ICONS.menu,
-      }));
-      const built = ui.table({
-        rows,
-        columns: [
-          { key: "kind", width: 22, align: "center", label: "" },
-          { key: "name", flex: 1, minWidth: 80, label: "" },
-          {
-            key: "actions",
-            kind: "button",
-            width: 26,
-            label: "",
-            menu: (row: Record<string, unknown>) =>
-              this._pieceMenu(String(row.id)),
-          },
-        ],
-        // No captions: three columns called "kind", "name" and "actions" tell
-        // an author nothing they cannot see. The header row is the space.
-        headerHeight: 0,
-        rowHeight: 26,
-        height: Math.min(group.length, 7) * 26,
-        selection: "single",
-        // `null` is what `setFilter` takes for "everything"; the OPTION wants
-        // it absent. Same idea, two spellings, one `??`.
-        filter: this._pieceFilterPredicate() ?? undefined,
-        handleSelect: ([id]: string[]) => {
-          if (id) this.select(id);
-        },
-      });
-      this._pieceTables.push(built);
-      out.push(built as never);
+    /*
+      THREE CATEGORIES, EACH FOLDING (owner, 2026-10-16): environment, lights
+      and objects.
+
+      EVERY ENVIRONMENT FEATURE IS LISTED, whether or not the document has it:
+      "every environment component could just be in the list by default rather
+      than needing to be inserted". A one-per-scene feature (`single` in its
+      registration: a sky, fog, a wind) is a fixed row whose circle says its
+      state, not included / disabled / enabled, and opens a menu to change
+      it. A repeatable one (a terrain, a weather cell, a sound) is a subgroup
+      of its pieces with an inline "add" ("I'd have the more than one options
+      as subgroups with an inline add widget"). Which is which, and which
+      category, is the registration's, so a consumer's own primitive lands in
+      the right place with no list of names here.
+
+      Before this, a terrain was reachable only through Insert → the library
+      picker → "utilities" → a click on something pickable, and the owner,
+      on the default scene: "I don't seem to be able to toggle on terrain".
+    */
+    const rows: unknown[] = [];
+    const primitives = registeredFeatures()
+      .filter((f) => f.primitive)
+      .sort((x, y) => x.name.localeCompare(y.name));
+    const featureOf = (piece: Piece) => {
+      const names = Object.keys(piece.features ?? {});
+      return names.find((n) => featureRegistration(n)?.primitive) ?? names[0];
+    };
+    const bare = this._ensemble.pieces.filter((p) => !p.mesh);
+    const claimed = new Set<string>();
+    const pieceRow = (piece: Piece, icon?: string): TableRow => ({
+      id: piece.id,
+      state:
+        piece.enabled === false
+          ? PIECE_ROW_ICONS.stateOff
+          : PIECE_ROW_ICONS.stateOn,
+      kind: icon ?? this._kindIcon(piece),
+      // The table carries no selection of its own (see `_pieceTable`), so the
+      // selected piece is marked here.
+      name: piece.id === this.selection?.id ? `▸ ${piece.id}` : piece.id,
+      actions: PIECE_ROW_ICONS.menu,
+    });
+    const addRow = (feature: string): TableRow => ({
+      id: `${ABSENT}${feature}`,
+      state: PIECE_ROW_ICONS.stateAbsent,
+      kind: "",
+      name: `add ${feature}`,
+      actions: PIECE_ROW_ICONS.menu,
+    });
+
+    for (const [category, title] of [
+      ["environment", "environment"],
+      ["lights", "lights"],
+    ] as const) {
+      const here = primitives.filter(
+        (f) => (f.group ?? "environment") === category
+      );
+      if (!here.length) continue;
+      rows.push(label3d({ text: title, collapsible: true, open: true }));
+      // One per scene: a fixed row each, there whether included or not.
+      const singles: TableRow[] = here
+        .filter((f) => f.single)
+        .map((f) => {
+          const piece = bare.find((p) => featureOf(p) === f.name);
+          if (piece) {
+            claimed.add(piece.id);
+            return pieceRow(piece, f.icon);
+          }
+          return {
+            id: `${ABSENT}${f.name}`,
+            state: PIECE_ROW_ICONS.stateAbsent,
+            kind: f.icon ?? "▪️",
+            name: f.name,
+            actions: PIECE_ROW_ICONS.menu,
+          };
+        });
+      if (singles.length) rows.push(this._pieceTable(singles));
+      // Repeatable: a subgroup of its pieces, ending in an inline add.
+      for (const f of here.filter((f) => !f.single)) {
+        const pieces = bare.filter((p) => featureOf(p) === f.name);
+        for (const p of pieces) claimed.add(p.id);
+        rows.push(
+          label3d({
+            text: `${f.icon ?? ""} ${f.name}`,
+            muted: true,
+            compact: true,
+          })
+        );
+        rows.push(
+          this._pieceTable([
+            ...pieces.map((p) => pieceRow(p, f.icon)),
+            addRow(f.name),
+          ])
+        );
+      }
     }
+    // Anything bare that no offered primitive claims (a consumer's own body
+    // feature, a legacy `clouds`) is still listed: nothing in the document
+    // may be invisible here.
+    const other = bare.filter((p) => !claimed.has(p.id));
+    if (other.length) {
+      rows.push(label3d({ text: "other", collapsible: true, open: true }));
+      rows.push(this._pieceTable(other.map((p) => pieceRow(p))));
+    }
+    const objects = this._ensemble.pieces.filter((p) => p.mesh);
+    if (objects.length) {
+      rows.push(label3d({ text: "objects", collapsible: true, open: true }));
+      rows.push(this._pieceTable(objects.map((p) => pieceRow(p))));
+    }
+    out.push(
+      ...(foldSections(rows as never[], {
+        key: "tosi-ensemble-editor:pieces",
+        repaint: () => this._renderChrome(),
+      }) as unknown[])
+    );
     return out;
+  }
+
+  /**
+   * One table of the piece list: a state circle, the kind, the name and the
+   * row's own ⋯. A row whose id starts with `ABSENT` stands for a feature the
+   * document does not have (a fixed environment row, or an inline add).
+   */
+  private _pieceTable(rows: TableRow[]): Table {
+    const built = ui.table({
+      rows,
+      columns: [
+        {
+          key: "state",
+          kind: "button",
+          width: 24,
+          label: "",
+          menu: (row: Record<string, unknown>) =>
+            this._stateMenu(String(row.id)),
+        },
+        { key: "kind", width: 22, align: "center", label: "" },
+        { key: "name", flex: 1, minWidth: 80, label: "" },
+        {
+          key: "actions",
+          kind: "button",
+          width: 26,
+          label: "",
+          menu: (row: Record<string, unknown>) =>
+            String(row.id).startsWith(ABSENT)
+              ? this._stateMenu(String(row.id))
+              : this._pieceMenu(String(row.id)),
+        },
+      ],
+      // No captions: the columns tell an author nothing they cannot see.
+      headerHeight: 0,
+      rowHeight: 26,
+      // Every row: the PANEL scrolls, and categories fold. A table capped at
+      // seven rows scrolled inside a scrolling panel, hiding rows two deep.
+      height: rows.length * 26,
+      /*
+        NO `selection`. A selectable table draws a radio circle on every row,
+        and the owner read that circle as an on/off toggle that did not work
+        ("a whole bunch of things with a circle next to them"). The state
+        circle is now the only circle, and a tap is `handleActivate`.
+      */
+      // `null` is what `setFilter` takes for "everything"; the OPTION wants
+      // it absent. Same idea, two spellings, one `??`.
+      filter: this._pieceFilterPredicate() ?? undefined,
+      handleActivate: (row: TableRow) => {
+        const id = String(row.id);
+        // Choosing an absent feature's row includes it, enabled.
+        if (id.startsWith(ABSENT)) this.includeFeature(id.slice(ABSENT.length));
+        else this.select(id);
+      },
+    });
+    this._pieceTables.push(built);
+    return built;
+  }
+
+  /** The state circle's menu: not included, disabled, enabled. */
+  private _stateMenu(id: string): MenuAction[] {
+    if (id.startsWith(ABSENT)) {
+      const feature = id.slice(ABSENT.length);
+      return [
+        {
+          label: "Enabled",
+          icon: PIECE_ROW_ICONS.stateOn,
+          handleSelect: () => this.includeFeature(feature),
+        },
+        {
+          label: "Disabled",
+          icon: PIECE_ROW_ICONS.stateOff,
+          handleSelect: () => this.includeFeature(feature, false),
+        },
+      ];
+    }
+    return [
+      {
+        label: "Enabled",
+        icon: PIECE_ROW_ICONS.stateOn,
+        handleSelect: () => this.update(id, { enabled: undefined }),
+      },
+      {
+        label: "Disabled",
+        icon: PIECE_ROW_ICONS.stateOff,
+        handleSelect: () => this.update(id, { enabled: false }),
+      },
+      {
+        label: "Not included",
+        icon: PIECE_ROW_ICONS.delete,
+        handleSelect: () => this._runCommandOn(id, "delete"),
+      },
+    ];
+  }
+
+  /**
+   * Add an environment feature to the document, as Insert would: its own
+   * piece, empty config (every schema default applies), placed by the
+   * feature's `insertAt` rule with no click to take a point from, so at the
+   * origin. Selected, so its panel is the next thing you see.
+   */
+  includeFeature(feature: string, enabled = true): void {
+    const at = insertPosition(feature, null);
+    const id = uniqueId(
+      slugify(feature),
+      this._ensemble.pieces.map((p) => p.id)
+    );
+    this.edit(`include ${feature}`, (ensemble) => {
+      ensemble.pieces.push({
+        id,
+        at,
+        features: { [feature]: {} },
+        ...(enabled ? {} : { enabled: false }),
+      });
+    });
+    this.select(id);
   }
 
   /** Live tables, held so the filter can reach them without a re-render. */

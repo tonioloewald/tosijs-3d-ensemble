@@ -3,6 +3,35 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Added
+
+- **The environment list** (owner, 2026-10-16). Every environment feature is in
+  the piece list whether or not the document has it, so nothing needs finding
+  on the Insert shelf first ("I don't seem to be able to toggle on terrain").
+  - A one-per-scene feature (sky, sun, fog, wind, cloud deck…) is a fixed row
+    whose circle shows its state: ⊕ not included, ○ disabled, ✓ enabled.
+    Tapping the circle opens a menu to change it; tapping an absent row
+    includes it.
+  - A repeatable one (terrain, weather cell, sound, planet, moon) is a
+    subgroup of its pieces ending in an inline "add".
+  - Three categories, each folding: environment, lights, objects.
+- **A new terrain no longer buries the scene.** Its highest possible point
+  now sits at the insert height (y −295 at the defaults) instead of rising
+  295 m above it, over everything, camera included. A feature declares this
+  with **`insertBelow`** on its registration; the Insert tool and the
+  environment list share one rule (`insertPosition`). For "sea level at 0"
+  instead, turn on the terrain's `center`.
+- **`single`** and **`group`** on a feature registration say which of those a
+  primitive is, so a consumer's own feature lands in the right place.
+
+### Changed
+
+- The piece list's tables no longer select rows themselves: the radio circle
+  they drew read as an on/off toggle that did nothing. The selected piece is
+  marked "▸ id".
+
 ## [0.6.0] — 2026-10-16
 
 ### ⚠️ Breaking

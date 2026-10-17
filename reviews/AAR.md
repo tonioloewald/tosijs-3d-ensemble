@@ -3,6 +3,30 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.6.0 — 2026-10-17
+
+- Went well: tosijs-3d 0.10.8/0.10.9 retired six stopgaps (planet schema,
+  terrain pin, two leak workarounds, the polling planet link, the sky poll);
+  each removal was proven by its test still passing, and every new check was
+  falsified. The planet <-> terrain link works either way, measured against
+  an unlinked control. Pre-minor review: no blockers, three majors, all fixed
+  with checks that fail when the fix is reverted.
+- Didn't: two regressions reached the owner while they used the editor —
+  panel rotation was not live (rebuild per scrub, plus a key-order slip) and
+  AO "did nothing" (projected AO at noise level; our test asserted the flag).
+  I filed tosijs-3d#108 from a probe that read `node.rotation` while the
+  element turns by quaternion, and had to retract it.
+- Surprised: the circle the owner was clicking was the table's selection
+  radio, not a toggle; terrain's "plane" default had been outside upstream's
+  enum for months; two test probes passed vacuously (still-sky clipping the
+  ground, the rotate-drag falsification served from a shared build tree).
+- Friction: dev servers I started for the owner shared the build tree with
+  the test lanes and contended for the build lock: one falsification was
+  meaningless and the first attestation timed out. Stop them during lanes.
+- Cycle: doctor clean -> pre-minor GO_WITH_FOLLOWUPS (3 majors) -> fixed ->
+  attest (failed under load, passed quiet) -> dry run -> tag -> approved ->
+  verified.
+
 ## 0.5.2 — 2026-10-13
 
 - Went well: tosijs-3d 0.10 admitted by WIDENING the peer range, so 0.9

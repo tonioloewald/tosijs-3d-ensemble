@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { allPanelTexts, reveal } from "./panel-locate.js";
 
 /*
   THE SKY PANEL FOLDS — on screen, not in a unit test.
@@ -21,39 +22,26 @@ type Ed = Element & {
   shadowRoot: ShadowRoot | null;
 };
 
-/** The visible captions in the editor's chrome. */
-const captions = (page: import("@playwright/test").Page) =>
-  page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    return Array.from(ed.shadowRoot?.querySelectorAll("text") ?? [])
-      .filter((t) => {
-        const b = (t as SVGGraphicsElement).getBoundingClientRect();
-        return (
-          b.width > 0 &&
-          getComputedStyle(t as unknown as Element).display !== "none"
-        );
-      })
-      .map((t) => (t.textContent ?? "").trim());
-  });
+/**
+ * The captions the editor's chrome is showing: every <text> in its panels'
+ * content. Drawn in the scene now, so nothing has a DOM box; a folded
+ * section's rows are left out of the content altogether, which is what this
+ * test asks about.
+ */
+const captions = (page: import("@playwright/test").Page) => allPanelTexts(page);
 
-/** Tap a section header by its caption's on-screen box. */
+/** Tap a section header, found on screen (see panel-locate.ts). */
 const tapHeader = async (
   page: import("@playwright/test").Page,
   caption: string
 ) => {
-  const at = await page.evaluate((caption) => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    const t = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? []).find(
-      (x) => (x.textContent ?? "").trim() === caption
-    );
-    const b = (t as SVGGraphicsElement | undefined)?.getBoundingClientRect();
-    return b && { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-  }, caption);
-  expect(at, `no "${caption}" header`).toBeTruthy();
-  expect(at!.y, `"${caption}" is below the viewport`).toBeLessThan(
+  const b = await reveal(page, caption);
+  expect(b, `no "${caption}" header`).toBeTruthy();
+  const at = { x: b!.x + b!.w / 2, y: b!.y + b!.h / 2 };
+  expect(at.y, `"${caption}" is below the viewport`).toBeLessThan(
     await page.evaluate(() => innerHeight)
   );
-  await page.mouse.click(at!.x, at!.y);
+  await page.mouse.click(at.x, at.y);
   await page.waitForTimeout(600);
 };
 

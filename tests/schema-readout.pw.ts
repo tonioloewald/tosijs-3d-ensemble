@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { allPanelTexts, readProbe, sliderTrack } from "./panel-locate.js";
 
 /*
   THE READOUT AN AUTHOR ACTUALLY SEES — tosijs-3d's `x-unit` and
@@ -55,7 +56,7 @@ test("a frequency slider shows its unit and its wavelength", async ({
     { timeout: 60_000 }
   );
 
-  const found = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const ed = document.querySelector("tosi-ensemble-editor") as Element & {
       load: (u: string) => Promise<void>;
       select: (id: string | null) => void;
@@ -67,34 +68,17 @@ test("a frequency slider shows its unit and its wavelength", async ({
     await new Promise((r) => setTimeout(r, 800));
     ed.select("land");
     await new Promise((r) => setTimeout(r, 800));
-
-    // Find the slider by its CAPTION — which is what is on screen at rest,
-    // the value being the thing this test is here to make appear.
-    const caption = Array.from(
-      ed.shadowRoot?.querySelectorAll("text") ?? []
-    ).find((t) => (t.textContent ?? "").startsWith("Gross scale"));
-    let group: Element | null = caption ?? null;
-    while (group && group.getAttribute?.("data-w3d") !== "slider")
-      group = group.parentElement;
-    group?.setAttribute("data-probe", "gross-scale");
-
-    // The TRACK: the 6px-high bar. Its centre is over the hit rect and clear
-    // of the caption text, which is the combination that actually peeks.
-    const track = Array.from(group?.querySelectorAll("rect") ?? [])
-      .map((r) => r.getBoundingClientRect())
-      .filter((b) => b.height > 0 && b.height < 12 && b.width > 20)
-      .sort((a, b) => b.width - a.width)[0];
-
-    return {
-      rest: caption?.textContent ?? null,
-      track: track && {
-        x: track.x + track.width / 2,
-        y: track.y + track.height / 2,
-      },
-      trackWidth: track?.width,
-    };
   });
 
+  /*
+    Find the slider by its CAPTION (what is on screen at rest), and its
+    TRACK on screen: the chrome is drawn in the scene (panel-locate.ts).
+  */
+  const rest = (await allPanelTexts(page)).find((t) =>
+    t.startsWith("Gross scale")
+  );
+  const track = await sliderTrack(page, "Gross scale", 0.5, "gross-scale");
+  const found = { rest: rest ?? null, track, trackWidth: track?.width };
   expect(found.track, "no Gross scale track on screen").toBeTruthy();
   // The caption at rest. If this ever reads as the value instead, `showValue`
   // changed and the assertion below is measuring something else.
@@ -116,17 +100,7 @@ test("a frequency slider shows its unit and its wavelength", async ({
     worked and the unit is missing" (a bare `0.015`), and reading every
     visible string in the one slider says both without depending on layout.
   */
-  const visible = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-      shadowRoot: ShadowRoot | null;
-    };
-    const group = ed.shadowRoot?.querySelector('[data-probe="gross-scale"]');
-    return Array.from(group?.querySelectorAll("text") ?? [])
-      .filter(
-        (t) => getComputedStyle(t as unknown as Element).display !== "none"
-      )
-      .map((t) => (t.textContent ?? "").trim());
-  });
+  const visible = (await readProbe(page, "gross-scale"))?.texts ?? [];
 
   /*
     THE CLAIM. `0.015 1/m ≈66.7 m` — the value, its unit, and the number a
@@ -141,18 +115,8 @@ test("a frequency slider shows its unit and its wavelength", async ({
     visible band inside the track, narrower than it: a band as wide as the
     track would mean the range was read as the whole thing.
   */
-  const band = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-      shadowRoot: ShadowRoot | null;
-    };
-    const group = ed.shadowRoot?.querySelector('[data-probe="gross-scale"]');
-    const el = group?.querySelector('[data-part="useful"]') as
-      | SVGGraphicsElement
-      | null
-      | undefined;
-    if (!el || getComputedStyle(el).display === "none") return null;
-    return el.getBoundingClientRect().width;
-  });
+  const band =
+    (await readProbe(page, "gross-scale", "useful"))?.partWidth ?? null;
   expect(band, "no useful band on the Gross scale track").toBeGreaterThan(5);
   expect(band!).toBeLessThan(found.trackWidth! * 0.9);
 

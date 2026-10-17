@@ -167,7 +167,7 @@ export const sliderTrack = (
   captionPrefix: string,
   fraction: number,
   probe?: string
-): Promise<{ x: number; y: number } | null> =>
+): Promise<{ x: number; y: number; width: number } | null> =>
   page.evaluate(
     ({ captionPrefix, fraction, probe }) => {
       const TITLE_BAR = 28;
@@ -222,6 +222,7 @@ export const sliderTrack = (
         return {
           x: left + (bar.x - s.x) + bar.width * fraction,
           y: top + (bar.y - s.y) + bar.height / 2,
+          width: bar.width,
         };
       }
       return null;
@@ -256,3 +257,64 @@ export const panelTexts = (page: Page, title: string) =>
       (t.textContent ?? "").trim()
     );
   }, title);
+
+/** Every <text> in every one of the editor's system panels, trimmed. */
+export const allPanelTexts = (page: Page) =>
+  page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      shadowRoot: ShadowRoot;
+    };
+    return Array.from(ed.shadowRoot.querySelectorAll("tosi-b3d-panel")).flatMap(
+      (p) =>
+        Array.from(
+          (
+            p as HTMLElement & { svg: SVGSVGElement | null }
+          ).svg?.querySelectorAll("text") ?? []
+        ).map((t) => (t.textContent ?? "").trim())
+    );
+  });
+
+/**
+ * Read the element marked `data-probe` in a panel's content, with the
+ * content attached off-screen for the moment (detached, nothing has a style
+ * or a size): its visible <text>s, and the width of one part inside it.
+ */
+export const readProbe = (page: Page, probe: string, part?: string) =>
+  page.evaluate(
+    ({ probe, part }) => {
+      const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+        shadowRoot: ShadowRoot;
+      };
+      for (const p of Array.from(
+        ed.shadowRoot.querySelectorAll("tosi-b3d-panel")
+      ) as Array<HTMLElement & { svg: SVGSVGElement | null }>) {
+        const svg = p.svg;
+        const group = svg?.querySelector(`[data-probe="${probe}"]`);
+        if (!svg || !group) continue;
+        const parent = svg.parentNode;
+        const next = svg.nextSibling;
+        const holder = document.createElement("div");
+        holder.style.cssText = "position:fixed;left:-20000px;top:0;";
+        document.body.append(holder);
+        holder.append(svg);
+        const texts = Array.from(group.querySelectorAll("text"))
+          .filter((t) => getComputedStyle(t).display !== "none")
+          .map((t) => (t.textContent ?? "").trim());
+        const el = part
+          ? (group.querySelector(
+              `[data-part="${part}"]`
+            ) as SVGGraphicsElement | null)
+          : null;
+        const partWidth =
+          el && getComputedStyle(el).display !== "none"
+            ? el.getBoundingClientRect().width
+            : null;
+        if (parent) parent.insertBefore(svg, next);
+        else svg.remove();
+        holder.remove();
+        return { texts, partWidth };
+      }
+      return null;
+    },
+    { probe, part }
+  );

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { reveal } from "./panel-locate.js";
 
 /*
   A REAL KEYSTROKE, ON A REAL FIELD — the half `property-panel.pw.ts` cannot
@@ -70,28 +71,24 @@ test("typing into a SET string property edits it, and moves nothing", async ({
       | { at?: number[]; features?: { ground?: { texture?: string } } }
       | undefined;
 
-    // Locate the field by the value it is showing, and hand back page
-    // coordinates — the click has to be a real one, through the browser, or
-    // the group never makes it active.
-    const node = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? []).find(
-      (t) => (t.textContent ?? "").includes("grid-10.svg")
-    );
-    const box = (
-      node as SVGGraphicsElement | undefined
-    )?.getBoundingClientRect();
-
     return {
       texture: piece?.features?.ground?.texture,
       at: [...(piece?.at ?? [])],
-      box: box && { x: box.x + box.width / 2, y: box.y + box.height / 2 },
     };
   });
+  /*
+    Locate the field by the value it is showing, in PROPERTIES, on screen
+    (the chrome is drawn in the scene: see panel-locate.ts). The click has to
+    be a real one, through the browser, or the group never makes it active.
+  */
+  const field = await reveal(page, "/grid-10.svg", "exact", "text");
+  const box = field && { x: field.x + field.w / 2, y: field.y + field.h / 2 };
 
   // The precondition IS the case under test: an UNSET field always worked.
   expect(before.texture).toBe("/grid-10.svg");
-  expect(before.box).toBeTruthy();
+  expect(box).toBeTruthy();
 
-  await page.mouse.click(before.box!.x, before.box!.y);
+  await page.mouse.click(box!.x, box!.y);
   await page.keyboard.type("99");
   await page.waitForTimeout(400);
 

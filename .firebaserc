@@ -1,0 +1,6 @@
+{
+  "projects": { "default": "tjs-platform" },
+  "targets": {
+    "tjs-platform": { "hosting": { "ensemble": ["tosijs-ensemble"] } }
+  }
+}

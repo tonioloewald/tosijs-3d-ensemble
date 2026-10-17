@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "target": "ensemble",
+    "public": "docs",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "CNAME"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "**/*.@(html|json)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
+}

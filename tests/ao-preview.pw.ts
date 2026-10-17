@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { hasProbe, reveal, sliderTrack } from "./panel-locate.js";
 
 /*
   THE EDITOR'S AO PREVIEW: a viewer's switch, the author's look.
@@ -76,19 +77,12 @@ const state = (page: import("@playwright/test").Page) =>
   rect and takes the click itself (tosijs-3d#84, see schema-readout.pw.ts).
 */
 const tapToggle = async (page: import("@playwright/test").Page) => {
-  const at = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    const t = Array.from(ed.shadowRoot!.querySelectorAll("text")).find(
-      (x) => (x.textContent ?? "").trim() === "Ambient occlusion"
-    );
-    let group: Element | null = t ?? null;
-    while (group && !group.getAttribute?.("data-w3d"))
-      group = group.parentElement;
-    const b = (group as SVGGraphicsElement | null)?.getBoundingClientRect();
-    return b && { x: b.right - 18, y: b.y + b.height / 2 };
-  });
-  expect(at, "no Ambient occlusion toggle").toBeTruthy();
-  await page.mouse.click(at!.x, at!.y);
+  // The chrome is drawn in the scene: `reveal` finds the row on screen (see
+  // panel-locate.ts). The switch is at the row's right end, inside the
+  // panel's 8 px padding.
+  const row = await reveal(page, "Ambient occlusion");
+  expect(row, "no Ambient occlusion toggle").toBeTruthy();
+  await page.mouse.click(row!.panelRight - 8 - 18, row!.y + row!.h / 2);
   await page.waitForTimeout(800);
 };
 
@@ -141,21 +135,7 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   // The SLIDERS write the recommendation: click a quarter of the way along
   // the strength track (tosijs-3d's range, 0-3) and the document, the
   // preview and the panel must agree. Track, not caption: tosijs-3d#84.
-  const track = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    const caption = Array.from(ed.shadowRoot!.querySelectorAll("text")).find(
-      (t) => (t.textContent ?? "").startsWith("ssaoStrength")
-    );
-    let group: Element | null = caption ?? null;
-    while (group && group.getAttribute?.("data-w3d") !== "slider")
-      group = group.parentElement;
-    group?.setAttribute("data-probe", "ao-strength");
-    const bar = Array.from(group?.querySelectorAll("rect") ?? [])
-      .map((r) => r.getBoundingClientRect())
-      .filter((b) => b.height > 0 && b.height < 12 && b.width > 20)
-      .sort((x, y) => y.width - x.width)[0];
-    return bar && { x: bar.x + bar.width * 0.25, y: bar.y + bar.height / 2 };
-  });
+  const track = await sliderTrack(page, "ssaoStrength", 0.25, "ao-strength");
   expect(track, "no ssaoStrength slider under the AO toggle").toBeTruthy();
   await page.mouse.click(track!.x, track!.y);
   await page.waitForTimeout(800);
@@ -165,12 +145,7 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   expect(Math.abs(written - 0.75)).toBeLessThan(0.2);
   expect(slid.strength, "the preview did not follow").toBe(written);
   expect(
-    await page.evaluate(
-      () =>
-        !!(
-          document.querySelector("tosi-ensemble-editor") as Ed
-        ).shadowRoot!.querySelector('[data-probe="ao-strength"]')
-    ),
+    await hasProbe(page, "ao-strength"),
     "the panel was rebuilt under the slider"
   ).toBe(true);
 

@@ -71,6 +71,7 @@ import {
   label3d,
   list3d,
   panel3d,
+  b3dPanel,
   row3d,
   iconBar3d,
   select3d,
@@ -159,7 +160,16 @@ import {
   writeSaved,
 } from "./storage.js";
 import type { SceneElement } from "../format/registry.js";
-import type { MenuAction, Panel3d, Table, TableRow } from "tosijs-3d";
+import type { B3dPanel, MenuAction, Panel3d, Table, TableRow } from "tosijs-3d";
+import { BAR_HEIGHT } from "tosijs-3d/system-bar";
+
+/** Where tosijs-3d opens a system panel under its bar (its `UNDER_BAR`). */
+const UNDER_BAR = 8 + BAR_HEIGHT + 8;
+/**
+ * The title bar a system panel draws over its content (tosijs-3d's
+ * `TITLE_BAR` in widgets3d, 28, not exported): counted when stacking.
+ */
+const TITLE_BAR = 28;
 
 /**
  * A tosijs store holding one ensemble.
@@ -419,6 +429,27 @@ export interface HostAction {
   label: string;
   /** Called with a copy of the current document, saved or not. */
   handleAction: (ensemble: Ensemble) => void;
+}
+
+/**
+ * Each chrome panel's system-bar button and title (tosijs-3d system panels,
+ * #106/#111). Names, checked against `iconData` by `icon-names.test.ts`: a
+ * wrong one draws an empty square and says nothing.
+ */
+export const PANEL_ICONS = {
+  tools: "mousePointer",
+  file: "bookOpen",
+  pieces: "menu",
+  library: "backpack",
+  options: "settings",
+  properties: "checkSquare",
+} as const;
+
+/** Which system panel a chrome panel is: its key, button and title. */
+interface PanelSlot {
+  key: string;
+  icon: string;
+  title: string;
 }
 
 /** Row-id prefix for a feature the document does not have (never a piece id). */
@@ -3205,7 +3236,13 @@ export class EnsembleEditor extends withAttributes({
       pass that builds one.
     */
     this._pendingFields = [];
-    if (this.hideChrome) return;
+    if (this.hideChrome) {
+      // System panels live in the scene, not in an overlay we can skip
+      // drawing: take them (and their bar buttons) away.
+      for (const el of this._systemPanels.values()) el.remove();
+      this._systemPanels.clear();
+      return;
+    }
 
     this._renderPalette();
     this._renderToolOptions();
@@ -3276,9 +3313,9 @@ export class EnsembleEditor extends withAttributes({
     );
     this._addPanel(
       "left",
+      { key: "tools", icon: PANEL_ICONS.tools, title: "Tools" },
       panel3d(
         { width: PANEL_WIDTH, padding: 8, gap: 6 },
-        label3d({ text: "Tools", bold: true }),
         iconGrid3d({
           mode: "radio",
           selected: current,
@@ -3336,9 +3373,9 @@ export class EnsembleEditor extends withAttributes({
     });
     this._addPanel(
       "right",
+      { key: "options", icon: PANEL_ICONS.options, title: tool.label },
       panel3d(
         { width: PANEL_WIDTH, padding: 10, gap: 6 },
-        label3d({ text: tool.label, bold: true }),
         ...(widgets as never[])
       )
     );
@@ -3550,9 +3587,13 @@ export class EnsembleEditor extends withAttributes({
     if (currentLibrary === EnsembleEditor.UTILITIES) {
       this._addPanel(
         "left",
+        {
+          key: "pieces",
+          icon: PANEL_ICONS.library,
+          title: `Library (${utilities.length})`,
+        },
         panel3d(
           { width: PANEL_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
-          label3d({ text: `Library (${utilities.length})`, bold: true }),
           ...this._shelfSpinner(),
           label3d({ text: "library", muted: true, compact: true }),
           select3d({
@@ -3598,11 +3639,15 @@ export class EnsembleEditor extends withAttributes({
 
     this._addPanel(
       "left",
+      {
+        key: "pieces",
+        icon: PANEL_ICONS.library,
+        title: `Library (${inLibrary.length})`,
+      },
       panel3d(
         // A LIST is the one case for a bound: it is arbitrarily long, and
         // `maxHeight` scrolls past it instead of growing off the screen.
         { width: PANEL_WIDTH, maxHeight: 320, padding: 8, gap: 4 },
-        label3d({ text: `Library (${inLibrary.length})`, bold: true }),
         // Only when there IS a choice: one library and this is a control that
         // can only tell you what you already know.
         ...(libraries.length > 1
@@ -3677,6 +3722,7 @@ export class EnsembleEditor extends withAttributes({
   private _renderFilePanel(): void {
     this._addPanel(
       "left",
+      { key: "file", icon: PANEL_ICONS.file, title: "Ensemble" },
       panel3d(
         { width: PANEL_WIDTH, padding: 8, gap: 4 },
         // Into the keyboard group — see `_renderChrome`. Ungrouped, this was
@@ -3882,7 +3928,11 @@ export class EnsembleEditor extends withAttributes({
         */
       ...(groups as never[])
     );
-    this._addPanel("left", this._pieceListPanel);
+    this._addPanel(
+      "left",
+      { key: "pieces", icon: PANEL_ICONS.pieces, title: "Scene" },
+      this._pieceListPanel
+    );
   }
 
   /**
@@ -4704,6 +4754,7 @@ export class EnsembleEditor extends withAttributes({
       }, 0);
     this._addPanel(
       "right",
+      { key: "properties", icon: PANEL_ICONS.properties, title: "Properties" },
       panel3d(
         /*
           Height is sized by its content UP TO the room left below the panels
@@ -4838,60 +4889,53 @@ export class EnsembleEditor extends withAttributes({
 
   private _detachShortcuts: (() => void) | null = null;
 
-  private _addPanel(side: "left" | "right", panel: SVGSVGElement): void {
-    panel.classList.add("ensemble-editor-chrome");
+  /*
+    A CHROME PANEL IS A tosijs-3d SYSTEM PANEL (#106, #111): a
+    `<tosi-b3d-panel>` with a button on the scene's system bar, a title bar
+    with move and ×, drawn IN THE SCENE flat as in a headset (owner, flat-ui
+    "scene"). One element per slot, made once and kept: a re-render assigns
+    its new content (`el.svg = panel`), which keeps its button, its dragged
+    spot and its open state. `exclusive: "off"` keeps the panels open
+    together; `screenAnchor` is where each FIRST opens, stacked in its column
+    under the bar, as the hand-placed overlay was.
+  */
+  private _addPanel(
+    side: "left" | "right",
+    slot: PanelSlot,
+    panel: SVGSVGElement
+  ): void {
+    const top = UNDER_BAR + this._stackTop[side] - 8;
+    let el = this._systemPanels.get(slot.key);
+    if (!el && this._scene) {
+      el = b3dPanel({
+        icon: slot.icon,
+        title: slot.title,
+        exclusive: "off",
+        open: true,
+      }) as B3dPanel;
+      el.screenAnchor = { [side]: 8, top } as never;
+      this._systemPanels.set(slot.key, el);
+      (this._scene as unknown as HTMLElement).append(el);
+    }
+    if (el) {
+      if (el.title !== slot.title) el.title = slot.title;
+      if (el.icon !== slot.icon) el.icon = slot.icon;
+      el.svg = panel;
+    }
     /*
-      GIVE THE PANEL SOMEWHERE TO PUT A POPUP.
-
-      A menu or an on-screen keyboard is bigger than the panel that raised it,
-      and `showPopup` alone caps to the panel's own viewBox — so a keyboard on a
-      short panel came out squeezed flat over the field it types into.
-      `useDomLayer` mounts flat popups as positioned siblings OUTSIDE the
-      panel's `<svg>`, which is the presentation-specific half; in a headset
-      `panelScene` mounts the same popup as its own plane.
-
-      This is what makes a summonable keyboard work at all, and it is why the
-      container must be the panel's parent rather than the panel.
-    */
-    /*
-      THE POPUP LAYER GOES IN THE DOCUMENT. Three containers, two of them wrong:
-
-      - the SHADOW ROOT throws. `useDomLayer` calls `getComputedStyle`, and a
-        `ShadowRoot` is not an Element — it took the whole chrome down.
-      - the HOST element does not throw and does not work. The layer becomes a
-        LIGHT-DOM child of an element whose shadow root has no `<slot>`, so it
-        is never rendered: measured, the keyboard was present the whole time at
-        `360×209`, connected, `getBoundingClientRect()` all zeros. That is what
-        "the keyboard doesn't open" actually was.
-      - `document.body` renders, and is where the layer's document-level
-        stylesheet applies.
-
-      Saying NOTHING does not work either, though 0.7.6 installs the layer
-      itself "when the panel is on the page": ours are not on the page, they are
-      in this element's shadow root. Measured with no call — no keypad anywhere
-      in the document and no light-DOM children on the host. So the explicit
-      call stays; only its argument was ever wrong.
-    */
-    const withLayer = panel as SVGSVGElement & {
-      useDomLayer?: (container: Element) => void;
-    };
-    withLayer.useDomLayer?.(document.body);
-    panel.style.top = `${this._stackTop[side]}px`;
-    panel.style[side] = "8px";
-    /*
-      Read the height the panel SETTLED on, not one we told it.
-
-      With `height: 'fit'` the attribute is written during layout, so the stack
-      offset has to come from the panel afterwards. Falling back to 0 would pile
-      every panel at the same top — which looks like only one panel exists.
+      Read the height the panel SETTLED on, not one we told it: with
+      `height: 'fit'` it is written during layout.
     */
     const height =
       Number(panel.getAttribute("height") ?? 0) ||
-      panel.getBoundingClientRect().height;
-    this._stackTop[side] += height + 10;
-    this._root.append(panel);
+      panel.viewBox?.baseVal?.height ||
+      0;
+    this._stackTop[side] += height + 10 + TITLE_BAR;
     this._panels.push(panel);
   }
+
+  /** The system panel of each chrome slot, made once (see `_addPanel`). */
+  private _systemPanels = new Map<string, B3dPanel>();
 
   private _stackTop: { left: number; right: number } = { left: 8, right: 8 };
 
@@ -4914,7 +4958,13 @@ export class EnsembleEditor extends withAttributes({
     const total = this.getBoundingClientRect().height;
     // A floor, so a panel is never so short it cannot be scrolled meaningfully
     // — and so a zero height during layout does not collapse it to nothing.
-    return Math.max(220, total - this._stackTop[side] - 16);
+    /*
+      Counted the way `_addPanel` places a system panel: under the bar, with
+      its own title bar on top. Measured without this: a list taller than the
+      room was SCALED DOWN by the panel host to fit, rather than scrolled.
+    */
+    const top = UNDER_BAR - 8 + this._stackTop[side] + TITLE_BAR;
+    return Math.max(220, total - top - 16);
   }
 }
 

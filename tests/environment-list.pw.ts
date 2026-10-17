@@ -1,5 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import {
+  locate,
+  reveal as revealLocated,
+  type Located,
+} from "./panel-locate.js";
 
 /*
   THE ENVIRONMENT LIST (owner, 2026-10-16): every environment feature is in
@@ -22,87 +27,29 @@ type Ed = Element & {
   ensemble: { pieces: Piece[] };
 };
 
-/**
- * The on-screen box of the first <text> reading exactly `label`, with the box
- * of the panel it sits in (its outermost <svg>): a row scrolled out of its
- * panel still HAS a box, below the panel's clip, and a click there lands on
- * the scene. That is how the first run of this test failed.
- */
-const textBox = (page: Page, label: string) =>
-  page.evaluate((label) => {
-    // The editor's own root: the circle opens no popup any more, and walking
-    // every shadow root on the doc site is slow enough to time the test out.
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    const t = Array.from(ed.shadowRoot.querySelectorAll("text")).find(
-      (x) =>
-        (x.textContent ?? "").trim() === label &&
-        x.getBoundingClientRect().width > 0
-    );
-    if (!t) return null;
-    let panel: Element = t;
-    for (let el: Element | null = t; el; el = el.parentElement)
-      if (el.tagName.toLowerCase() === "svg") panel = el;
-    const b = t.getBoundingClientRect();
-    const p = panel.getBoundingClientRect();
-    return b.width > 0
-      ? {
-          x: b.x,
-          y: b.y,
-          w: b.width,
-          h: b.height,
-          inside: b.y >= p.y && b.y + b.height <= p.y + p.height,
-          panel: { x: p.x + p.width / 2, y: p.y + p.height / 2 },
-          // The state circle: the first column, 24 px wide, past the
-          // panel's 8 px padding. Measured at x 28 against the name at 78.
-          circleX: p.x + 8 + 12,
-        }
-      : null;
-  }, label);
+/*
+  THE CHROME IS IN THE SCENE (tosijs-3d system panels, flat-ui "scene"), so a
+  row has no DOM box: `locate` derives where it is on screen (see
+  panel-locate.ts, and tosijs-3d#113 for the proper hook). `circleX` is a
+  row's leading state circle: the first column, 24 px wide, past the panel's
+  8 px padding.
+*/
+const withCircle = (b: Located | null) =>
+  b && { ...b, circleX: b.panelX + 8 + 12 };
+const textBox = async (page: Page, label: string) =>
+  withCircle(await locate(page, label));
 
-/** The first <text> whose content ENDS with `word` (a heading: "⛰️ terrain"). */
-const revealIncluding = async (page: Page, word: string) => {
-  const label = await page.evaluate((word) => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    return (
-      Array.from(ed.shadowRoot.querySelectorAll("text"))
-        .map((t) => (t.textContent ?? "").trim())
-        .find((t) => t !== word && t.endsWith(` ${word}`)) ?? null
-    );
-  }, word);
-  return label ? reveal(page, label) : null;
-};
+/** A subgroup heading ("⛰️ terrain"): the first <text> ending in ` word`. */
+const revealIncluding = async (page: Page, word: string) =>
+  withCircle(await revealLocated(page, ` ${word}`, "endsWith"));
 
 /** The heading's add icon, found by its <title> ("add terrain"). */
 const addIcon = (page: Page, feature: string) =>
-  page.evaluate((feature) => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
-    const title = Array.from(ed.shadowRoot.querySelectorAll("title")).find(
-      (t) => (t.textContent ?? "").trim() === `add ${feature}`
-    );
-    const b = title?.parentElement?.getBoundingClientRect();
-    return b && b.width > 0
-      ? { x: b.x + b.width / 2, y: b.y + b.height / 2 }
-      : null;
-  }, feature);
+  locate(page, `add ${feature}`, "exact", "title");
 
-/** Scroll the row's panel until the row is inside it, as a person would. */
-const reveal = async (page: Page, label: string) => {
-  for (let i = 0; i < 40; i++) {
-    const b = await textBox(page, label);
-    if (process.env.DEBUG_REVEAL)
-      console.log(
-        new Date().toISOString().slice(14, 23),
-        "reveal",
-        label,
-        JSON.stringify(b)
-      );
-    if (!b || b.inside) return b;
-    await page.mouse.move(b.panel.x, b.panel.y);
-    await page.mouse.wheel(0, b.y > b.panel.y ? 80 : -80);
-    await page.waitForTimeout(120);
-  }
-  return textBox(page, label);
-};
+/** Scroll the row's panel until the row is inside it. */
+const reveal = async (page: Page, label: string) =>
+  withCircle(await revealLocated(page, label));
 
 const pieces = (page: Page) =>
   page.evaluate(
@@ -135,7 +82,7 @@ test("environment features are listed, added from a heading, and toggled on and 
   expect(heading, "no terrain subgroup heading").toBeTruthy();
   const plus = await addIcon(page, "terrain");
   expect(plus, "no add icon on the terrain heading").toBeTruthy();
-  await page.mouse.click(plus!.x, plus!.y);
+  await page.mouse.click(plus!.x + plus!.w / 2, plus!.y + plus!.h / 2);
   await page.waitForTimeout(2000);
   const added = await has("terrain");
   expect(added, "the (+) added no terrain").toHaveLength(1);

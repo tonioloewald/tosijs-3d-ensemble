@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { iconData } from "tosijs-3d";
 import { registerEditorTools } from "./tools/built-in.js";
 import { registeredCommands, registeredTools } from "./tools/tool-registry.js";
-import { PIECE_ROW_ICONS } from "./ensemble-editor.js";
+import { PANEL_ICONS, PIECE_ROW_ICONS } from "./ensemble-editor.js";
 
 /*
   AN ICON NAME IS A STRING, AND A WRONG ONE FAILS QUIETLY.
@@ -41,6 +41,11 @@ const iconsInUse = (): Array<{ owner: string; icon: string }> => [
   // the editor.
   ...Object.entries(PIECE_ROW_ICONS).map(([name, icon]) => ({
     owner: `piece-row:${name}`,
+    icon,
+  })),
+  // The system panels' bar buttons.
+  ...Object.entries(PANEL_ICONS).map(([name, icon]) => ({
+    owner: `panel:${name}`,
     icon,
   })),
 ];

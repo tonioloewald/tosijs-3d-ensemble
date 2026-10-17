@@ -120,9 +120,7 @@
       "id": "sea",
       "at": [0, 147, 0],
       "features": {
-        "water": {
-          "waterSize": 8000
-        }
+        "water": { "twoSided": true, "waterSize": 8000 }
       }
     }
   ]

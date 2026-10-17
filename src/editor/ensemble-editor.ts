@@ -72,6 +72,7 @@ import {
   list3d,
   panel3d,
   row3d,
+  iconBar3d,
   select3d,
   euler3d,
   foldSections,
@@ -101,7 +102,7 @@ import {
   registeredCommands,
   registeredTools,
 } from "./tools/tool-registry.js";
-import { registerEditorTools, uniqueId } from "./tools/built-in.js";
+import { isSingle, registerEditorTools, uniqueId } from "./tools/built-in.js";
 import { slugify } from "../format/migrate.js";
 import { registerTransformTool, transformsOf } from "./tools/transform.js";
 import { createHandles } from "./handles-view.js";
@@ -402,6 +403,17 @@ const movedWithFeatures = (before: Ensemble, after: Ensemble): boolean => {
   });
 };
 
+/**
+ * What a one-per-scene piece is CALLED: its feature ("water"), not its id
+ * ("sea"). The id stays in the file; an author sees one name, once (owner,
+ * 2026-10-17: "It should just be 'water' and not renamable and not have a
+ * redundant heading").
+ */
+const singleName = (piece: Piece): string | null =>
+  Object.keys(piece.features ?? {}).find(
+    (name) => featureRegistration(name)?.single === true
+  ) ?? null;
+
 /** A host's own button in the editor (see `hostActions`). */
 export interface HostAction {
   label: string;
@@ -421,10 +433,8 @@ export const PIECE_ROW_ICONS = {
   delete: "trash",
   /** An environment row's state circle: in the document and on... */
   stateOn: "checkCircle",
-  /** ...in the document and disabled... */
+  /** ...disabled, or (a one-per-scene feature) not in the document at all. */
   stateOff: "circle",
-  /** ...or not in the document at all (and the inline "add" row). */
-  stateAbsent: "plusCircle",
 } as const;
 
 export class EnsembleEditor extends withAttributes({
@@ -2775,9 +2785,15 @@ export class EnsembleEditor extends withAttributes({
         */
         Object.assign(piece, roundDeep(patch));
       },
-      // The scene DOES need rebuilding — a typed coordinate moves the piece —
-      // but the panel does not, and redrawing it is what steals the focus.
-      { chrome: false }
+      /*
+        The scene DOES need rebuilding — a typed coordinate moves the piece —
+        but the panel does not, and redrawing it is what steals the focus.
+        EXCEPT for `enabled`, which BOTH panels show: the property toggle and
+        the list's circle disagreed until something else redrew them (owner:
+        "If I toggle enabled off in the ambient panel it doesn't update the
+        scene content panel and vice versa"). A toggle holds no focus.
+      */
+      { chrome: "enabled" in patch }
     );
   }
 
@@ -2810,6 +2826,9 @@ export class EnsembleEditor extends withAttributes({
   renamePiece(id: string, next: string): boolean {
     const name = next.trim();
     if (!name || name === id) return false;
+    const target = this._ensemble.pieces.find((p) => p.id === id);
+    // One-per-scene features keep their ids (owner, 2026-10-17).
+    if (target && isSingle(target)) return false;
     if (this._ensemble.pieces.some((p) => p.id === name)) return false;
 
     const refFields = (piece: Piece): Array<[string, string]> => {
@@ -3203,8 +3222,39 @@ export class EnsembleEditor extends withAttributes({
     */
     this._renderFilePanel();
     if (this._tool === "insert") this._renderLibraryPalette();
-    else this._renderPieceList();
+    else {
+      this._renderPieceList();
+      requestAnimationFrame(() => this._revealSelectedRow());
+    }
     this._renderProperties();
+  }
+
+  /*
+    KEEP THE SELECTED ROW IN VIEW across a rebuild of the list.
+
+    A chrome render builds the piece-list panel afresh, scrolled to the top,
+    so adding a terrain from its heading selected it and then scrolled it out
+    of sight (owner, 2026-10-17). A panel can be scrolled (`scrollBy`) but not
+    asked where it is, so this finds the selected row on screen and scrolls
+    it into the middle. FLAT ONLY: it measures the DOM. tosijs-3d#110 asks
+    for a scroll position on a panel, or a way to reveal a widget.
+  */
+  private _revealSelectedRow(): void {
+    const panel = this._panels.find((p) =>
+      Array.from(p.querySelectorAll("text")).some((t) =>
+        (t.textContent ?? "").startsWith("▸ ")
+      )
+    ) as (SVGSVGElement & { scrollBy?: (dy: number) => void }) | undefined;
+    if (!panel?.scrollBy) return;
+    const row = Array.from(panel.querySelectorAll("text")).find((t) =>
+      (t.textContent ?? "").startsWith("▸ ")
+    );
+    if (!row) return;
+    const box = panel.getBoundingClientRect();
+    const at = row.getBoundingClientRect();
+    if (at.top >= box.top && at.bottom <= box.bottom) return;
+    // Panel units are CSS pixels in the flat overlay.
+    panel.scrollBy(at.top - (box.top + box.height / 2));
   }
 
   private _renderPalette(): void {
@@ -3802,6 +3852,13 @@ export class EnsembleEditor extends withAttributes({
   private _renderPieceList(): void {
     const problems = this.problems;
     const errors = problems.filter((p) => p.severity === "error").length;
+    /*
+      THE FILTER IS PINNED above the scrolling list. Keeping the selected row
+      in view scrolls the panel, and the filter, being its first row,
+      scrolled away with it: select a piece far down and there was nothing
+      to type into.
+    */
+    const [filter, ...groups] = this._pieceGroups();
     this._addPanel(
       "left",
       panel3d(
@@ -3810,6 +3867,7 @@ export class EnsembleEditor extends withAttributes({
           maxHeight: this._spaceBelow("left"),
           padding: 8,
           gap: 4,
+          header: [filter as never],
         },
         /*
           ENVIRONMENT AND CONTENT ARE DIFFERENT KINDS OF THING.
@@ -3828,7 +3886,7 @@ export class EnsembleEditor extends withAttributes({
           the document and still selectable, which is the whole point of
           disabling instead of deleting.
         */
-        ...(this._pieceGroups() as never[])
+        ...(groups as never[])
       )
     );
   }
@@ -4051,26 +4109,21 @@ export class EnsembleEditor extends withAttributes({
     };
     const bare = this._ensemble.pieces.filter((p) => !p.mesh);
     const claimed = new Set<string>();
-    const pieceRow = (piece: Piece, icon?: string): TableRow => ({
-      id: piece.id,
-      state:
-        piece.enabled === false
-          ? PIECE_ROW_ICONS.stateOff
-          : PIECE_ROW_ICONS.stateOn,
-      kind: icon ?? this._kindIcon(piece),
-      // The table carries no selection of its own (see `_pieceTable`), so the
-      // selected piece is marked here.
-      name: piece.id === this.selection?.id ? `▸ ${piece.id}` : piece.id,
-      actions: PIECE_ROW_ICONS.menu,
-    });
-    const addRow = (feature: string): TableRow => ({
-      id: `${ABSENT}${feature}`,
-      state: PIECE_ROW_ICONS.stateAbsent,
-      kind: "",
-      name: `add ${feature}`,
-      actions: PIECE_ROW_ICONS.menu,
-    });
-
+    const pieceRow = (piece: Piece, icon?: string): TableRow => {
+      const shown = singleName(piece) ?? piece.id;
+      return {
+        id: piece.id,
+        state:
+          piece.enabled === false
+            ? PIECE_ROW_ICONS.stateOff
+            : PIECE_ROW_ICONS.stateOn,
+        kind: icon ?? this._kindIcon(piece),
+        // The table carries no selection of its own (see `_pieceTable`), so the
+        // selected piece is marked here.
+        name: piece.id === this.selection?.id ? `▸ ${shown}` : shown,
+        actions: PIECE_ROW_ICONS.menu,
+      };
+    };
     for (const [category, title] of [
       ["environment", "environment"],
       ["lights", "lights"],
@@ -4089,32 +4142,48 @@ export class EnsembleEditor extends withAttributes({
             claimed.add(piece.id);
             return pieceRow(piece, f.icon);
           }
+          // Absent and disabled look alike: a one-per-scene feature is ON or
+          // OFF (owner, 2026-10-17). Turning it on adds it if it is not there.
           return {
             id: `${ABSENT}${f.name}`,
-            state: PIECE_ROW_ICONS.stateAbsent,
+            state: PIECE_ROW_ICONS.stateOff,
             kind: f.icon ?? "▪️",
             name: f.name,
             actions: PIECE_ROW_ICONS.menu,
           };
         });
-      if (singles.length) rows.push(this._pieceTable(singles));
+      // No ⋮: on/off is the whole of a singleton's menu, and the circle is it.
+      if (singles.length)
+        rows.push(this._pieceTable(singles, { actions: false }));
       // Repeatable: a subgroup of its pieces, ending in an inline add.
       for (const f of here.filter((f) => !f.single)) {
         const pieces = bare.filter((p) => featureOf(p) === f.name);
         for (const p of pieces) claimed.add(p.id);
+        // The heading carries the add: no line of its own (owner: "can't
+        // we put a (+) button on the heading line?").
         rows.push(
-          label3d({
-            text: `${f.icon ?? ""} ${f.name}`,
-            muted: true,
-            compact: true,
-          })
+          row3d(
+            { weights: [6, 1], gap: 4 },
+            label3d({
+              text: `${f.icon ?? ""} ${f.name}`,
+              muted: true,
+              compact: true,
+            }),
+            // An icon, not a button: the heading's add should not outweigh
+            // the heading (owner: "can the + button be a bit smaller?").
+            iconBar3d({
+              items: [
+                {
+                  icon: "plusCircle",
+                  title: `add ${f.name}`,
+                  handleClick: () => this.includeFeature(f.name),
+                },
+              ],
+            })
+          )
         );
-        rows.push(
-          this._pieceTable([
-            ...pieces.map((p) => pieceRow(p, f.icon)),
-            addRow(f.name),
-          ])
-        );
+        if (pieces.length)
+          rows.push(this._pieceTable(pieces.map((p) => pieceRow(p, f.icon))));
       }
     }
     // Anything bare that no offered primitive claims (a consumer's own body
@@ -4144,7 +4213,10 @@ export class EnsembleEditor extends withAttributes({
    * row's own ⋯. A row whose id starts with `ABSENT` stands for a feature the
    * document does not have (a fixed environment row, or an inline add).
    */
-  private _pieceTable(rows: TableRow[]): Table {
+  private _pieceTable(
+    rows: TableRow[],
+    { actions = true }: { actions?: boolean } = {}
+  ): Table {
     const built = ui.table({
       rows,
       columns: [
@@ -4153,21 +4225,28 @@ export class EnsembleEditor extends withAttributes({
           kind: "button",
           width: 24,
           label: "",
-          menu: (row: Record<string, unknown>) =>
-            this._stateMenu(String(row.id)),
+          /*
+            A TOGGLE, not a menu: the row's ⋮ already holds every choice
+            (owner: "I don't think we need the toggle to spawn a menu if more
+            vertical also does"). Absent → included; enabled ⇄ disabled.
+          */
+          handlePress: (row: Record<string, unknown>) =>
+            this._toggleState(String(row.id)),
         },
         { key: "kind", width: 22, align: "center", label: "" },
         { key: "name", flex: 1, minWidth: 80, label: "" },
-        {
-          key: "actions",
-          kind: "button",
-          width: 26,
-          label: "",
-          menu: (row: Record<string, unknown>) =>
-            String(row.id).startsWith(ABSENT)
-              ? this._stateMenu(String(row.id))
-              : this._pieceMenu(String(row.id)),
-        },
+        ...(actions
+          ? [
+              {
+                key: "actions",
+                kind: "button" as const,
+                width: 26,
+                label: "",
+                menu: (row: Record<string, unknown>) =>
+                  this._pieceMenu(String(row.id)),
+              },
+            ]
+          : []),
       ],
       // No captions: the columns tell an author nothing they cannot see.
       headerHeight: 0,
@@ -4195,40 +4274,21 @@ export class EnsembleEditor extends withAttributes({
     return built;
   }
 
-  /** The state circle's menu: not included, disabled, enabled. */
-  private _stateMenu(id: string): MenuAction[] {
+  /**
+   * The state circle, pressed: include an absent feature (enabled), or flip
+   * an included piece between enabled and disabled. Removing it is the ⋮
+   * menu's Delete, so a mis-tap on the circle never deletes anything.
+   */
+  private _toggleState(id: string): void {
     if (id.startsWith(ABSENT)) {
-      const feature = id.slice(ABSENT.length);
-      return [
-        {
-          label: "Enabled",
-          icon: PIECE_ROW_ICONS.stateOn,
-          handleSelect: () => this.includeFeature(feature),
-        },
-        {
-          label: "Disabled",
-          icon: PIECE_ROW_ICONS.stateOff,
-          handleSelect: () => this.includeFeature(feature, false),
-        },
-      ];
+      this.includeFeature(id.slice(ABSENT.length));
+      return;
     }
-    return [
-      {
-        label: "Enabled",
-        icon: PIECE_ROW_ICONS.stateOn,
-        handleSelect: () => this.update(id, { enabled: undefined }),
-      },
-      {
-        label: "Disabled",
-        icon: PIECE_ROW_ICONS.stateOff,
-        handleSelect: () => this.update(id, { enabled: false }),
-      },
-      {
-        label: "Not included",
-        icon: PIECE_ROW_ICONS.delete,
-        handleSelect: () => this._runCommandOn(id, "delete"),
-      },
-    ];
+    const piece = this._ensemble.pieces.find((p) => p.id === id);
+    if (!piece) return;
+    this.update(id, {
+      enabled: piece.enabled === false ? undefined : false,
+    });
   }
 
   /**
@@ -4247,7 +4307,11 @@ export class EnsembleEditor extends withAttributes({
       ensemble.pieces.push({
         id,
         at,
-        features: { [feature]: {} },
+        features: {
+          [feature]: structuredClone(
+            featureRegistration(feature)?.insertConfig ?? {}
+          ),
+        },
         ...(enabled ? {} : { enabled: false }),
       });
     });
@@ -4571,8 +4635,12 @@ export class EnsembleEditor extends withAttributes({
         A feature with sections folds per section; folding its own heading
         hides only the rows before its first section.
       */
+      // A one-per-scene piece's title already IS this name: no second one.
+      const titled = isSingle(selected) && singleName(selected) === name;
       fields.push(
-        label3d({ text: name, collapsible: true, open: true }),
+        ...(titled
+          ? []
+          : [label3d({ text: name, collapsible: true, open: true })]),
         ...(widgets as never[])
       );
     }
@@ -4670,14 +4738,21 @@ export class EnsembleEditor extends withAttributes({
         row3d(
           { gap: 6, weights: [1, 8], align: "middle" },
           label3d({ text: this._kindIcon(selected) }),
-          // Same group. A rename field you cannot type into renames nothing.
-          this._collectField(
-            ui.inputField({
-              value: selected.id,
-              placeholder: "id",
-              handleChange: (value: string) => renameLater(value),
-            })
-          ) as never
+          /*
+            A one-per-scene feature's id is not the author's to change (owner,
+            2026-10-17): there is only one sky, and its row is found by its
+            feature, not its name. Shown, not edited.
+          */
+          isSingle(selected)
+            ? label3d({ text: singleName(selected) ?? selected.id, bold: true })
+            : // Same group. A rename field you cannot type into renames nothing.
+              (this._collectField(
+                ui.inputField({
+                  value: selected.id,
+                  placeholder: "id",
+                  handleChange: (value: string) => renameLater(value),
+                })
+              ) as never)
         ),
         /*
           The mesh, when there is one, is information rather than a repeat: a

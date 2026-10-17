@@ -149,3 +149,28 @@ describe("id generation", () => {
     expect(uniqueId("gun", ["gun", "gun-2"])).toBe("gun-3");
   });
 });
+
+/*
+  A ONE-PER-SCENE FEATURE IS ON OR OFF (owner, 2026-10-17: "Not sure why we
+  have the ability to delete or duplicate singleton environment features").
+  Delete and Duplicate are greyed for one; a repeatable keeps both.
+*/
+describe("delete and duplicate on a singleton", () => {
+  it("are disabled for a sky, enabled for a terrain", async () => {
+    const { registerSceneFeatures } = await import(
+      "../../runtime/features-scene.js"
+    );
+    registerSceneFeatures();
+    registerEditorTools();
+    const cmd = (name: string) =>
+      registeredCommands().find((c) => c.name === name)!;
+    const on = (piece: Record<string, unknown>) =>
+      ({ selection: piece } as unknown as ToolContext);
+    const sky = { id: "sky", at: [0, 0, 0], features: { skybox: {} } };
+    const land = { id: "land", at: [0, 0, 0], features: { terrain: {} } };
+    for (const name of ["delete", "duplicate"]) {
+      expect([name, cmd(name).enabled?.(on(sky))]).toEqual([name, false]);
+      expect([name, cmd(name).enabled?.(on(land))]).toEqual([name, true]);
+    }
+  });
+});

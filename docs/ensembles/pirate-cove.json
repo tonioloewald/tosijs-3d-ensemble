@@ -48,6 +48,7 @@
       "at": [0, 0, 0],
       "features": {
         "water": {
+          "twoSided": true,
           "waterSize": 600,
           "waveHeight": 0.15,
           "windForce": 4

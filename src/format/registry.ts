@@ -266,14 +266,16 @@ export interface FeatureRegistration<Handle = unknown> {
    */
   insertAt?: "point" | "height" | Vec3;
   /**
-   * How far BELOW the insert height a new piece of this kind goes, from its
-   * config with every default applied, so a new piece does not bury what is
-   * already there. A terrain's noise rises from its base up to its gross plus
-   * detail amplitude: inserted at the cove's y 0 it put up to 295 m of ground
-   * over everything, camera included (owner: a new terrain's highest point
-   * sits at the insert height, "sounds reasonable").
+   * The config a NEWLY INSERTED piece of this kind starts with, written into
+   * the document as the author's starting point (it is visible and
+   * editable, not a hidden default). A terrain starts `center: true`, so its
+   * land straddles the insert height and a sea at 0 floods the valleys
+   * (owner, 2026-10-17: "sea level lining up with 0"). An earlier rule put
+   * its highest possible point at the insert height, and since noise seldom
+   * reaches its maximum, a new terrain sat almost entirely underwater ("WAY
+   * below sea level").
    */
-  insertBelow?: (config: Record<string, unknown>) => number;
+  insertConfig?: Record<string, unknown>;
   /**
    * ONE PER SCENE: a sky, a sun, fog, a wind. A primitive that says so is a
    * FIXED ROW in the editor's environment list, there whether or not the
@@ -624,8 +626,8 @@ export function linkPayload(link: Link): Record<string, unknown> {
 
 /**
  * Where a new piece of `feature` goes: its `insertAt` rule applied to the
- * clicked point (or the origin, when there is no click), lowered by its
- * `insertBelow`. The ONE rule, for the Insert tool and the environment list.
+ * clicked point (or the origin, when there is no click). The ONE rule, for
+ * the Insert tool and the environment list; `insertConfig` is the other half.
  */
 export function insertPosition(feature: string, clicked: Vec3 | null): Vec3 {
   const registration = features.get(feature);
@@ -637,7 +639,5 @@ export function insertPosition(feature: string, clicked: Vec3 | null): Vec3 {
       : rule === "height"
       ? [0, at[1], 0]
       : [rule[0], rule[1], rule[2]];
-  const below = registration?.insertBelow?.(effectiveConfig(registration, {}));
-  if (typeof below === "number" && Number.isFinite(below)) where[1] -= below;
   return where;
 }

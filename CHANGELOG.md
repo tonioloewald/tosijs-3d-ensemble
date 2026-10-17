@@ -16,18 +16,24 @@ All notable changes to this project are documented here, in
   the piece list whether or not the document has it, so nothing needs finding
   on the Insert shelf first ("I don't seem to be able to toggle on terrain").
   - A one-per-scene feature (sky, sun, fog, wind, cloud deck…) is a fixed row
-    whose circle shows its state: ⊕ not included, ○ disabled, ✓ enabled.
-    Tapping the circle opens a menu to change it; tapping an absent row
-    includes it.
+    whose circle is ON (✓) or OFF (○); tapping it turns the feature on or
+    off, adding it to the document the first time. A singleton is never
+    deleted, duplicated or renamed, and is named by its feature ("water",
+    not its id "sea"), with no second heading in its panel.
   - A repeatable one (terrain, weather cell, sound, planet, moon) is a
-    subgroup of its pieces ending in an inline "add".
+    subgroup of its pieces, with an add icon on the subgroup's heading.
+    Its circle toggles too; its ⋮ menu has Duplicate and Delete.
   - Three categories, each folding: environment, lights, objects.
-- **A new terrain no longer buries the scene.** Its highest possible point
-  now sits at the insert height (y −295 at the defaults) instead of rising
-  295 m above it, over everything, camera included. A feature declares this
-  with **`insertBelow`** on its registration; the Insert tool and the
-  environment list share one rule (`insertPosition`). For "sea level at 0"
-  instead, turn on the terrain's `center`.
+- **A new terrain's sea level is the insert height.** It starts with
+  `center: true`, so its land straddles the height it was placed at, instead
+  of rising up to 295 m over everything, camera included. A feature declares
+  a new piece's starting config with **`insertConfig`** on its registration;
+  the Insert tool and the environment list share one placement rule
+  (`insertPosition`).
+- **Water has an underside.** `twoSided`, `underside`, `caustics` and the
+  underwater colours are offered (they never were, so every ensemble sea was
+  invisible from below), a newly inserted water starts two-sided, and the
+  samples' seas are two-sided.
 - **`single`** and **`group`** on a feature registration say which of those a
   primitive is, so a consumer's own feature lands in the right place.
 
@@ -42,6 +48,12 @@ All notable changes to this project are documented here, in
   text field.
 
 ### Changed
+
+- **Enabling or disabling a piece updates both panels.** The properties
+  toggle and the list's circle disagreed until something else redrew them.
+- The piece list keeps the selected row in view across a rebuild (flat view;
+  tosijs-3d#110 asks for the panel API to do it properly), and its filter is
+  pinned above the scrolling list.
 
 - The piece list's tables no longer select rows themselves: the radio circle
   they drew read as an on/off toggle that did nothing. The selected piece is

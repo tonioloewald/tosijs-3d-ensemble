@@ -1377,11 +1377,8 @@ function registerSceneFeaturesNow(): void {
     icon: "⛰️",
     primitive: true,
     insertAt: "height",
-    // Its highest possible point at the insert height, not 295 m above it.
-    insertBelow: (cfg) =>
-      cfg.center === true
-        ? Number(cfg.grossAmplitude ?? 0) / 2 + Number(cfg.detailAmplitude ?? 0)
-        : Number(cfg.grossAmplitude ?? 0) + Number(cfg.detailAmplitude ?? 0),
+    // A new terrain's sea level is the insert height (see `insertConfig`).
+    insertConfig: { center: true },
     // `biome` is an on/off ENUM upstream, so it needs the same mapping the
     // bind applies. `updateAttrs` alone would write a boolean and do nothing.
     update: (handle, cfg) => {
@@ -1560,6 +1557,8 @@ function registerSceneFeaturesNow(): void {
     icon: "🌊",
     primitive: true,
     single: true,
+    // A NEW sea is seen from below too; a document keeps what it says.
+    insertConfig: { twoSided: true },
     insertAt: "height",
     update: updateAttrs,
     schema: {
@@ -1592,6 +1591,23 @@ function registerSceneFeaturesNow(): void {
           "waterColor",
           "underwaterFog",
           "underwaterMurk",
+          /*
+            THE UNDERSIDE (owner: "Is the water in the scene not getting the
+            underside?"). It was not: these were never offered, so every
+            ensemble sea was one-sided, invisible from below, with no Snell's
+            window and no caustics. `underside` and `caustics` default to
+            `auto`, which is on whenever `twoSided` is.
+          */
+          "twoSided",
+          "fogColor",
+          "fogTransition",
+          "underside",
+          "undersideColor",
+          "undersideDepthColor",
+          "undersideSky",
+          "caustics",
+          "causticsStrength",
+          "causticsScale",
         ],
         {
           waterSize: { default: 2000 },

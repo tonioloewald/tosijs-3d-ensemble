@@ -13,6 +13,19 @@ it again to the thing you were pointing at.
 */
 /*{"parent":"Editing","order":3}*/
 import { featureRegistration, insertPosition } from "../../format/registry.js";
+
+/**
+ * Is this piece a one-per-scene environment feature (a sky, the sun, fog)?
+ * Those are on or off: never deleted, never duplicated.
+ */
+export const isSingle = (piece: {
+  mesh?: string;
+  features?: object;
+}): boolean =>
+  !piece.mesh &&
+  Object.keys(piece.features ?? {}).some(
+    (name) => featureRegistration(name)?.single === true
+  );
 import { snapVec3 } from "../handles.js";
 import type { Vec3 } from "../../format/types.js";
 import { registerCommand, registerTool } from "./tool-registry.js";
@@ -159,7 +172,11 @@ export function registerEditorTools(): void {
             ensemble.pieces.push({
               id,
               at: where,
-              features: { [feature]: {} },
+              features: {
+                [feature]: structuredClone(
+                  featureRegistration(feature)?.insertConfig ?? {}
+                ),
+              },
             });
           });
           ctx.select(id);
@@ -265,7 +282,9 @@ export function registerEditorTools(): void {
     name: "delete",
     label: "Delete",
     icon: "trash",
-    enabled: (ctx) => ctx.selection !== null,
+    // Not a one-per-scene environment feature: those are on or off, never
+    // gone or doubled (owner, 2026-10-17).
+    enabled: (ctx) => ctx.selection !== null && !isSingle(ctx.selection),
     run(ctx) {
       const id = ctx.selection?.id;
       if (!id) return;
@@ -285,7 +304,7 @@ export function registerEditorTools(): void {
     name: "duplicate",
     label: "Duplicate",
     icon: "copy",
-    enabled: (ctx) => ctx.selection !== null,
+    enabled: (ctx) => ctx.selection !== null && !isSingle(ctx.selection),
     run(ctx) {
       const source = ctx.selection;
       if (!source) return;

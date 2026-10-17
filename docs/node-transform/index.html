@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=9beceeae54d6" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=3a0b21563915" data-tosi-doc-system />
   <title>Writing a transform to a node — tosijs-3d-ensemble</title>
   <meta name="description" content="Rotation and scale, written onto the Babylon node itself, in the RUNTIME layer because both the instantiator and the editor need them and the dependency may…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ea6f2d862601" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=c150f8d7f68c" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Writing a transform to a node</h1>
 <p>Rotation and scale, written onto the Babylon node itself, in the RUNTIME layer
@@ -57,14 +57,13 @@ and <code>size</code> is the placeholder cube&#39;s edge. We wrote both onto the
 <li><strong>rotation</strong> is the element&#39;s <code>rx</code>/<code>ry</code>/<code>rz</code> (DEGREES), full stop. It
 forwards them, and re-renders once its node exists.</li>
 <li><strong>a uniform scale</strong> is the element&#39;s <code>scale</code>.</li>
-<li><strong>a non-uniform scale</strong> (the format&#39;s <code>Vec3</code>) is still written to the node,
-because upstream&#39;s <code>scale</code> is uniform on purpose (&quot;a modelling decision, not
-a placement one&quot;). And here is the trap that cost a bug: the element
-re-applies its uniform <code>scale</code> on EVERY render, so a stretch written once to
-the node was wiped by the next move or turn — measured <code>[2, 1, 3]</code> back to
-<code>[1, 1, 1]</code> after one <code>ry</code> write. <code>scaleElement</code> therefore re-applies it
-after each of that element&#39;s renders. <code>tests/library-transform.pw.ts</code>
-measures all of it on rendered footprints.</li>
+<li><strong>a non-uniform scale</strong> (the format&#39;s <code>Vec3</code>) is the element&#39;s <code>stretch</code>,
+per axis, times <code>scale</code> (tosijs-3d 0.10.12, #105). Before that we wrote it
+to the node, and the element reset the node on every render, so a stretch
+was wiped by the next move or turn, and one set at build time was lost when
+the instance arrived; a render wrapper re-applied it. Both are measured in
+<code>tests/library-transform.pw.ts</code> on rendered footprints (a built [2, 1, 3]
+is 18.108 wide), now with no wrapper.</li>
 </ul>
 <p>A plain node (no element) has nothing managing it, so <code>applyScale</code> writes it
 directly; the editor&#39;s node path rotates it directly too.</p>
@@ -148,6 +147,6 @@ directly; the editor&#39;s node path rotates it directly too.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-efjwpq5n.js"></script>
+  <script type="module" src="../hydrate-fw4vx8eh.js"></script>
 </body>
 </html>

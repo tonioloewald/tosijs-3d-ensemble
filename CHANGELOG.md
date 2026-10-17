@@ -7,10 +7,10 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer `tosijs-3d` is `^0.10.10`** (was `^0.10.9`): projected AO now
+- **Peer `tosijs-3d` is `^0.10.12`** (was `^0.10.9`): projected AO now
   reaches library pieces (#107), `Panel3d` is typed with `dispose()` (#104,
-  `DisposablePanel` is now an alias of it), a per-axis scale survives
-  re-renders (#105), and the system panels the editor's chrome is moving onto
+  `DisposablePanel` is now an alias of it), a per-axis scale is the element's
+  own `stretch` (#105; our render wrapper is gone), and the system panels the editor's chrome is moving onto
   ship there (#106). The AO pixel test now holds `projected` to a visible
   change as well as `screen`.
 

@@ -280,9 +280,9 @@ places:
 
 Unreleased; this section grows with the release.
 
-- **Peer `tosijs-3d` is `^0.10.10`.** It fixes projected ambient occlusion on
-  library pieces (#107), types `panel3d`'s `dispose()` (#104), keeps a
-  per-axis scale through re-renders (#105), and adds the system panels the
+- **Peer `tosijs-3d` is `^0.10.12`.** It fixes projected ambient occlusion on
+  library pieces (#107), types `panel3d`'s `dispose()` (#104), gives a piece
+  a per-axis `stretch` (#105), and adds the system panels the
   editor's chrome is moving onto (#106).
 - **The piece list's tables no longer select rows themselves**, and singleton
   environment features are on/off only (never deleted, duplicated or

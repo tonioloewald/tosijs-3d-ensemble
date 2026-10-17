@@ -32,8 +32,8 @@ and 4 all rendered 5.273 wide. We wrote both onto the instance's node, after
 polling for it to exist. tosijs-3d#47 and #48 fixed that upstream: the element
 forwards `rx`/`ry`/`rz`, has a uniform `scale`, and re-renders once its node
 exists. So the rotation is simply the element's attributes, and the scale goes
-through `scaleElement` (`node-transform.ts`), which uses the element's `scale`
-and keeps a non-uniform one on the node through the element's re-renders.
+through `scaleElement` (`node-transform.ts`), which writes the element's
+`scale` and per-axis `stretch` (tosijs-3d 0.10.12).
 No poll is left: the element's own post-load render applies both.
 
 ## Nothing to instantiate from? Draw a box.

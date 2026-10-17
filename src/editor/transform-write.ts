@@ -14,11 +14,10 @@ is the worst failure mode a manipulator can have.
 
 `b3d-destroyable`'s `size` is the *placeholder cube edge length*, ignored once
 `library` is set (measured: 5.273 wide at `scale` 1, 2 and 4). tosijs-3d 0.8.1
-(#47) added a UNIFORM `scale`, and re-applies it to the node on every render.
-That is what bit us: a per-axis scale we wrote to the node was reset by the
-next move or turn (`[2, 1, 3]` → `[1, 1, 1]`, measured). So `scaleElement`
-sends a uniform scale to the element and keeps a stretch on the node through
-the element's re-renders; tosijs-3d#105 asks for a way not to need that.
+(#47) added a UNIFORM `scale`, and 0.10.12 (#105) a per-axis `stretch`, times
+`scale`, which it keeps through renders. `scaleElement` writes those two. (A
+per-axis scale written to the node had been reset by the next move or turn,
+`[2, 1, 3]` → `[1, 1, 1]` measured, which is why the attribute exists.)
 
 `rx`/`ry`/`rz` are **degrees** on an element (`yaw`/`pitch`/`roll` are aliases
 for `ry`/`rx`/`rz`), matching the format. Babylon nodes are **radians**, so the
@@ -120,10 +119,8 @@ function writeElement(
   }
   /*
     NOT `element.size` — that is the placeholder-cube attribute and it is
-    ignored for a library-backed piece. `scaleElement` uses the element's own
-    uniform `scale`, and keeps a non-uniform one on the node through the
-    element's re-renders, which reset it otherwise (measured: a turn undid a
-    [2, 1, 3] stretch).
+    ignored for a library-backed piece. `scaleElement` writes the element's
+    own `scale` and `stretch`.
   */
   scaleElement(element as unknown as ScalableElement, scale);
 }

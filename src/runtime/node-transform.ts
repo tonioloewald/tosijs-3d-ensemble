@@ -18,14 +18,13 @@ and `size` is the placeholder cube's edge. We wrote both onto the node. tosijs-3
 - **rotation** is the element's `rx`/`ry`/`rz` (DEGREES), full stop. It
   forwards them, and re-renders once its node exists.
 - **a uniform scale** is the element's `scale`.
-- **a non-uniform scale** (the format's `Vec3`) is still written to the node,
-  because upstream's `scale` is uniform on purpose ("a modelling decision, not
-  a placement one"). And here is the trap that cost a bug: the element
-  re-applies its uniform `scale` on EVERY render, so a stretch written once to
-  the node was wiped by the next move or turn — measured `[2, 1, 3]` back to
-  `[1, 1, 1]` after one `ry` write. `scaleElement` therefore re-applies it
-  after each of that element's renders. `tests/library-transform.pw.ts`
-  measures all of it on rendered footprints.
+- **a non-uniform scale** (the format's `Vec3`) is the element's `stretch`,
+  per axis, times `scale` (tosijs-3d 0.10.12, #105). Before that we wrote it
+  to the node, and the element reset the node on every render, so a stretch
+  was wiped by the next move or turn, and one set at build time was lost when
+  the instance arrived; a render wrapper re-applied it. Both are measured in
+  `tests/library-transform.pw.ts` on rendered footprints (a built [2, 1, 3]
+  is 18.108 wide), now with no wrapper.
 
 A plain node (no element) has nothing managing it, so `applyScale` writes it
 directly; the editor's node path rotates it directly too.
@@ -58,18 +57,17 @@ export function applyScale(
 
 /** A `b3d-destroyable`, as much of one as scaling needs. */
 export interface ScalableElement {
-  mesh?: TransformableNode | null;
   scale?: number;
-  render(): void;
+  /** Per axis, times `scale`: `"2 1 3"`; empty for none (tosijs-3d 0.10.12). */
+  stretch?: string;
 }
 
-const stretches = new WeakMap<object, Vec3>();
-const hooked = new WeakSet<object>();
-
 /**
- * Scale a library-backed element: uniform through its own `scale`, a stretch
- * on its node, re-applied after each of its renders (which reset the node to
- * the uniform `scale`). See the note at the top.
+ * Scale a library-backed element, uniform or per axis, through its own
+ * attributes: `scale` and, since tosijs-3d 0.10.12 (#105), `stretch`, which
+ * the element applies when its instance arrives and keeps through renders.
+ * This used to write the node and re-apply it after every render of the
+ * element, because the element reset it; that wrapper is gone.
  */
 export function scaleElement(
   element: ScalableElement,
@@ -78,36 +76,10 @@ export function scaleElement(
   if (scale === undefined) return;
   const v = scaleVector(scale);
   if (v[0] === v[1] && v[1] === v[2]) {
-    const wasStretched = stretches.delete(element);
+    element.stretch = "";
     element.scale = v[0];
-    /*
-      From a stretch, write the node too: the element's `scale` was held at 1
-      under the stretch, so going back to uniform 1 is an UNCHANGED write,
-      tosijs's setter skips it, nothing renders, and the node keeps the
-      stretch (0.6.0 review M1).
-    */
-    if (wasStretched) applyScale(element.mesh, v);
     return;
   }
-  stretches.set(element, v);
-  /*
-    STILL NEEDED after tosijs-3d 0.10.10 (#105), for ONE case. #105 stopped
-    every render resetting the node, so a stretch now survives a move or a
-    turn. But a stretch set at BUILD time is set before the library instance
-    exists; when the node arrives the element writes its uniform `scale` onto
-    it, and nothing writes the stretch. Measured with this hook removed: a
-    piece authored `scale: [2, 1, 3]` rendered unstretched (6.036 wide where
-    18.108 is right). Reported on #105.
-  */
-  if (!hooked.has(element)) {
-    hooked.add(element);
-    const render = element.render;
-    element.render = function (this: ScalableElement) {
-      render.call(this);
-      const stretch = stretches.get(this);
-      if (stretch) applyScale(this.mesh, stretch);
-    };
-  }
   element.scale = 1;
-  applyScale(element.mesh, v);
+  element.stretch = `${v[0]} ${v[1]} ${v[2]}`;
 }

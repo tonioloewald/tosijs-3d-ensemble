@@ -2,6 +2,20 @@ import { describe, expect, it } from "bun:test";
 import { writeTransform } from "./transform-write.js";
 
 const elementBody = () => {
+  /*
+    A STUB OF tosijs-3d 0.10.12's element, so it fails where the real one
+    would: `scale` and `stretch` RENDER ONLY ON CHANGE (tosijs's setter skips
+    an unchanged value; a stub that rendered on every write hid the 0.6.0
+    review's M1), and a render writes `scale × stretch` onto the node, as the
+    element does since #105.
+  */
+  let scale = 1;
+  let stretch = "";
+  const mesh = {
+    rotation: { x: 0, y: 0, z: 0 },
+    rotationQuaternion: { w: 1 } as unknown,
+    scaling: { x: 1, y: 1, z: 1 },
+  };
   const element = {
     x: 0,
     y: 0,
@@ -10,22 +24,28 @@ const elementBody = () => {
     ry: 0,
     rz: 0,
     size: 1,
-    scale: 1,
-    /*
-      The library instance's root node. Since tosijs-3d 0.8.1 the element turns
-      it from `rx`/`ry`/`rz` and scales it from its UNIFORM `scale` — on every
-      render, which is what this stub's `render` reproduces, because it is what
-      wiped a non-uniform scale written to the node.
-    */
-    mesh: {
-      rotation: { x: 0, y: 0, z: 0 },
-      rotationQuaternion: { w: 1 } as unknown,
-      scaling: { x: 1, y: 1, z: 1 },
-    },
+    mesh,
     render() {
-      element.mesh.scaling.x = element.scale;
-      element.mesh.scaling.y = element.scale;
-      element.mesh.scaling.z = element.scale;
+      const [sx, sy, sz] = stretch ? stretch.split(" ").map(Number) : [1, 1, 1];
+      mesh.scaling.x = scale * sx!;
+      mesh.scaling.y = scale * sy!;
+      mesh.scaling.z = scale * sz!;
+    },
+    get scale() {
+      return scale;
+    },
+    set scale(v: number) {
+      if (v === scale) return;
+      scale = v;
+      element.render();
+    },
+    get stretch() {
+      return stretch;
+    },
+    set stretch(v: string) {
+      if (v === stretch) return;
+      stretch = v;
+      element.render();
     },
   };
   return { element };
@@ -116,46 +136,37 @@ describe("writeTransform", () => {
     expect(node.node.scaling).toEqual({ x: 3, y: 3, z: 3 });
   });
 
-  it("keeps a per-axis scale through the element's re-renders", () => {
+  it("writes a per-axis scale as `stretch`, through re-renders", () => {
     /*
-      Upstream's `scale` is uniform on purpose, so a stretch goes on the node,
-      and the element resets the node to its uniform `scale` on EVERY render.
-      Measured in a browser: one turn took [2, 1, 3] back to [1, 1, 1].
+      tosijs-3d 0.10.12 (#105): `stretch` is per axis, times `scale`, applied
+      when the instance arrives and kept through renders. Measured in a
+      browser: a piece built at [2, 1, 3] rendered 18.108 wide, as it should,
+      with our old render wrapper gone.
     */
     const element = elementBody();
     writeTransform(element, { scale: [2, 1, 4] });
+    expect([element.element.scale, element.element.stretch]).toEqual([
+      1,
+      "2 1 4",
+    ]);
     expect(element.element.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
     element.element.render();
     expect(element.element.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
     // ...and a later uniform scale takes over from the stretch.
     writeTransform(element, { scale: 2 });
-    element.element.render();
     expect(element.element.mesh.scaling).toEqual({ x: 2, y: 2, z: 2 });
   });
 
   it("goes back to uniform 1 from a stretch", () => {
     /*
-      0.6.0 review M1. The stub's `scale` RENDERS ONLY ON CHANGE, as tosijs's
-      setter does: a stub that renders on every write hid this. From
-      [2, 1, 4], uniform 1 wrote `element.scale = 1`, which it already was,
-      so nothing re-applied it and the node kept the stretch.
+      0.6.0 review M1: from [2, 1, 4], uniform 1 wrote `scale = 1`, which it
+      already was, so nothing re-applied it and the node kept the stretch.
+      Clearing `stretch` is a CHANGE, so it renders.
     */
     const body = elementBody();
-    const el = body.element as typeof body.element & { scale: number };
-    let scale = el.scale;
-    Object.defineProperty(el, "scale", {
-      get: () => scale,
-      set: (v: number) => {
-        if (v === scale) return;
-        scale = v;
-        el.render();
-      },
-    });
     writeTransform(body, { scale: [2, 1, 4] });
-    el.render();
-    expect(el.mesh.scaling).toEqual({ x: 2, y: 1, z: 4 });
     writeTransform(body, { scale: 1 });
-    expect(el.mesh.scaling).toEqual({ x: 1, y: 1, z: 1 });
+    expect(body.element.mesh.scaling).toEqual({ x: 1, y: 1, z: 1 });
   });
 
   it("does not touch scale when a drag only moved the piece", () => {

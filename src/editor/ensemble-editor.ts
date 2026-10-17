@@ -402,6 +402,13 @@ const movedWithFeatures = (before: Ensemble, after: Ensemble): boolean => {
   });
 };
 
+/** A host's own button in the editor (see `hostActions`). */
+export interface HostAction {
+  label: string;
+  /** Called with a copy of the current document, saved or not. */
+  handleAction: (ensemble: Ensemble) => void;
+}
+
 /** Row-id prefix for a feature the document does not have (never a piece id). */
 const ABSENT = "+";
 
@@ -888,6 +895,31 @@ export class EnsembleEditor extends withAttributes({
    * component could never read it.
    */
   handleSave: ((ensemble: Ensemble) => void | Promise<void>) | null = null;
+
+  /**
+   * THE HOST'S OWN BUTTONS (board #3364, from Manta: "run the level and see
+   * how well it plays"). The game is the host's, so the editor cannot know how
+   * to run it; it gives the host a place to put that button. Each action is a
+   * button in the file panel, handed a COPY of the current document, saved or
+   * not, so the host can open the game on it and nothing it does to that copy
+   * reaches the editor except through an edit.
+   *
+   * ```js
+   * editor.hostActions = [
+   *   { label: 'Play', handleAction: (level) => openGame(level) },
+   * ]
+   * ```
+   *
+   * JS-only, like `handleSave`. Setting it redraws the panel.
+   */
+  get hostActions(): HostAction[] {
+    return this._hostActions;
+  }
+  set hostActions(actions: HostAction[] | null | undefined) {
+    this._hostActions = Array.isArray(actions) ? [...actions] : [];
+    if (this.isConnected) this._renderChrome();
+  }
+  private _hostActions: HostAction[] = [];
 
   private _built: BuiltEnsemble | null = null;
   private _hub = new PointerHub();
@@ -3625,6 +3657,13 @@ export class EnsembleEditor extends withAttributes({
         button3d({ label: "New", handleClick: () => this.newEnsemble() }),
         button3d({ label: "Download", handleClick: () => this.saveFile() }),
         button3d({ label: "Open file…", handleClick: () => this.openFile() }),
+        ...this._hostActions.map((action) =>
+          button3d({
+            label: action.label,
+            handleClick: () =>
+              action.handleAction(structuredClone(this._ensemble)),
+          })
+        ),
         /*
           AMBIENT OCCLUSION, PREVIEW ONLY.
 

@@ -7,6 +7,11 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **`hostActions`** on the editor (board #3364, from Manta: "run the level and
+  see how well it plays"): the host's own buttons in the file panel, each
+  handed a copy of the current document, unsaved edits included.
+  `editor.hostActions = [{ label: 'Play', handleAction: (level) => … }]`.
+
 - **The environment list** (owner, 2026-10-16). Every environment feature is in
   the piece list whether or not the document has it, so nothing needs finding
   on the Insert shelf first ("I don't seem to be able to toggle on terrain").

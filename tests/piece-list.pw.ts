@@ -63,9 +63,7 @@ test("filtering hides rows without touching the selection", async ({
       for (let i = 0; i < 4 && panel?.parentElement; i++)
         panel = panel.parentElement;
       const shown = Array.from(panel?.querySelectorAll("text") ?? [])
-        // The selected row is marked "▸ id" (the list's tables carry no
-        // selection of their own since the environment list).
-        .map((t) => (t.textContent ?? "").trim().replace(/^▸ /, ""))
+        .map((t) => (t.textContent ?? "").trim())
         .filter((t) => ids.has(t));
       return { shown, selected: ed.selection?.id ?? null };
     });

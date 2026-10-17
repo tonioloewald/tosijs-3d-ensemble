@@ -143,7 +143,7 @@ test("environment features are listed, added from a heading, and toggled on and 
   expect(added[0]!.features!.terrain).toEqual({ center: true });
   // ...and the list kept the new, selected row in view rather than
   // scrolling back to the top (owner, 2026-10-17).
-  const row = await textBox(page, `▸ ${added[0]!.id}`);
+  const row = await textBox(page, added[0]!.id);
   expect(row?.inside, "the new terrain's row is out of view").toBe(true);
 
   expect(
@@ -182,11 +182,11 @@ test("environment features are listed, added from a heading, and toggled on and 
   let fogs = await has("fog");
   expect(fogs, "tapping fog's circle did not turn it on").toHaveLength(1);
   expect(fogs[0]!.enabled).not.toBe(false);
-  // Turning fog on selected it: its row reads "▸ fog".
-  await tapCircle(`▸ ${fogs[0]!.id}`);
+  // Turning fog on selected it; its row is highlighted, still named "fog".
+  await tapCircle("fog");
   fogs = await has("fog");
   expect(fogs[0]!.enabled, "the second tap did not turn fog off").toBe(false);
-  await tapCircle(`▸ ${fogs[0]!.id}`);
+  await tapCircle("fog");
   expect((await has("fog"))[0]!.enabled).not.toBe(false);
   // Off is never gone: a singleton is on or off (owner, 2026-10-17).
   expect(await has("fog")).toHaveLength(1);

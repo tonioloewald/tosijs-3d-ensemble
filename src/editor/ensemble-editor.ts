@@ -159,7 +159,7 @@ import {
   writeSaved,
 } from "./storage.js";
 import type { SceneElement } from "../format/registry.js";
-import type { MenuAction, Table, TableRow } from "tosijs-3d";
+import type { MenuAction, Panel3d, Table, TableRow } from "tosijs-3d";
 
 /**
  * A tosijs store holding one ensemble.
@@ -3234,28 +3234,25 @@ export class EnsembleEditor extends withAttributes({
 
     A chrome render builds the piece-list panel afresh, scrolled to the top,
     so adding a terrain from its heading selected it and then scrolled it out
-    of sight (owner, 2026-10-17). A panel can be scrolled (`scrollBy`) but not
-    asked where it is, so this finds the selected row on screen and scrolls
-    it into the middle. FLAT ONLY: it measures the DOM. tosijs-3d#110 asks
-    for a scroll position on a panel, or a way to reveal a widget.
+    of sight (owner, 2026-10-17). The panel reveals the row's band within its
+    table (tosijs-3d 0.10.11, our #110): no DOM measurement, so it works in
+    a headset too, where the old workaround could not.
   */
   private _revealSelectedRow(): void {
-    const panel = this._panels.find((p) =>
-      Array.from(p.querySelectorAll("text")).some((t) =>
-        (t.textContent ?? "").startsWith("▸ ")
-      )
-    ) as (SVGSVGElement & { scrollBy?: (dy: number) => void }) | undefined;
-    if (!panel?.scrollBy) return;
-    const row = Array.from(panel.querySelectorAll("text")).find((t) =>
-      (t.textContent ?? "").startsWith("▸ ")
-    );
-    if (!row) return;
-    const box = panel.getBoundingClientRect();
-    const at = row.getBoundingClientRect();
-    if (at.top >= box.top && at.bottom <= box.bottom) return;
-    // Panel units are CSS pixels in the flat overlay.
-    panel.scrollBy(at.top - (box.top + box.height / 2));
+    const id = this.selection?.id;
+    const panel = this._pieceListPanel;
+    if (!id || !panel) return;
+    for (const table of this._pieceTables) {
+      const box = table.rowBox(id);
+      if (box) {
+        panel.reveal(table as never, box);
+        return;
+      }
+    }
   }
+
+  /** The piece-list panel, held so a rebuild can reveal the selection in it. */
+  private _pieceListPanel: Panel3d | null = null;
 
   private _renderPalette(): void {
     const tools = registeredTools();
@@ -3858,17 +3855,15 @@ export class EnsembleEditor extends withAttributes({
       to type into.
     */
     const [filter, ...groups] = this._pieceGroups();
-    this._addPanel(
-      "left",
-      panel3d(
-        {
-          width: PANEL_WIDTH,
-          maxHeight: this._spaceBelow("left"),
-          padding: 8,
-          gap: 4,
-          header: [filter as never],
-        },
-        /*
+    this._pieceListPanel = panel3d(
+      {
+        width: PANEL_WIDTH,
+        maxHeight: this._spaceBelow("left"),
+        padding: 8,
+        gap: 4,
+        header: [filter as never],
+      },
+      /*
           ENVIRONMENT AND CONTENT ARE DIFFERENT KINDS OF THING.
 
           The format already draws this line — a piece with no `mesh` is an
@@ -3885,9 +3880,9 @@ export class EnsembleEditor extends withAttributes({
           the document and still selectable, which is the whole point of
           disabling instead of deleting.
         */
-        ...(groups as never[])
-      )
+      ...(groups as never[])
     );
+    this._addPanel("left", this._pieceListPanel);
   }
 
   /**
@@ -4117,9 +4112,7 @@ export class EnsembleEditor extends withAttributes({
             ? PIECE_ROW_ICONS.stateOff
             : PIECE_ROW_ICONS.stateOn,
         kind: icon ?? this._kindIcon(piece),
-        // The table carries no selection of its own (see `_pieceTable`), so the
-        // selected piece is marked here.
-        name: piece.id === this.selection?.id ? `▸ ${shown}` : shown,
+        name: shown,
         actions: PIECE_ROW_ICONS.menu,
       };
     };
@@ -4254,16 +4247,20 @@ export class EnsembleEditor extends withAttributes({
       // seven rows scrolled inside a scrolling panel, hiding rows two deep.
       height: rows.length * 26,
       /*
-        NO `selection`. A selectable table draws a radio circle on every row,
-        and the owner read that circle as an on/off toggle that did not work
-        ("a whole bunch of things with a circle next to them"). The state
-        circle is now the only circle, and a tap is `handleActivate`.
+        SELECTED BY ROW COLOUR, not a radio (tosijs-3d 0.10.11, our #109). A
+        selectable table used to draw a radio circle on every row, which the
+        owner read as a broken on/off toggle; then a "▸ name" prefix,
+        "clumsy (took me a while to figure out what it meant)". The editor's
+        selection is passed in, since the list is rebuilt around it.
       */
+      selection: "single",
+      selectionMarker: "row",
+      selected: this.selection ? [this.selection.id] : [],
       // `null` is what `setFilter` takes for "everything"; the OPTION wants
       // it absent. Same idea, two spellings, one `??`.
       filter: this._pieceFilterPredicate() ?? undefined,
-      handleActivate: (row: TableRow) => {
-        const id = String(row.id);
+      handleSelect: ([id]: string[]) => {
+        if (!id) return;
         // Choosing an absent feature's row includes it, enabled.
         if (id.startsWith(ABSENT)) this.includeFeature(id.slice(ABSENT.length));
         else this.select(id);

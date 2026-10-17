@@ -60,9 +60,11 @@ All notable changes to this project are documented here, in
 
 - **Enabling or disabling a piece updates both panels.** The properties
   toggle and the list's circle disagreed until something else redrew them.
-- The piece list keeps the selected row in view across a rebuild (flat view;
-  tosijs-3d#110 asks for the panel API to do it properly), and its filter is
-  pinned above the scrolling list.
+- The piece list shows its selection as a **highlighted row** (tosijs-3d
+  0.10.11's `selectionMarker: 'row'`, our #109) instead of a radio or a "▸"
+  prefix, keeps the selected row in view across a rebuild with the panel's
+  own `reveal` (#110, so it works in a headset too), and pins its filter above
+  the scrolling list.
 
 - The piece list's tables no longer select rows themselves: the radio circle
   they drew read as an on/off toggle that did nothing. The selected piece is

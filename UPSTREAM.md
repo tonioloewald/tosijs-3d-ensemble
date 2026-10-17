@@ -76,8 +76,8 @@ older than its card; when they disagree, the card wins.
 | 52 | ✅ **RESOLVED (tosijs-3d@0.10.12)**: `stretch` per axis; a built [2, 1, 3] measures 18.108 with our wrapper gone — **`b3d-destroyable` resets the instance's scaling to its uniform `scale` on every render**, so a per-axis scale cannot be kept; a stretched piece lost its stretch on its first move or turn. Worked around by `scaleElement` re-applying it after each render | [#105](https://github.com/tonioloewald/tosijs-3d/issues/105) |
 | 53 | ✅ **RESOLVED (tosijs-3d@0.10.10)** — system-bar panels for an app's main chrome: several open, a declared first spot, open at start; typed keys reach a field in one | [#106](https://github.com/tonioloewald/tosijs-3d/issues/106) |
 | 54 | ✅ **RESOLVED (tosijs-3d@0.10.10)** — projected AO missed library (container) materials, so kit pieces were never occluded; our pixel test now asserts it | [#107](https://github.com/tonioloewald/tosijs-3d/issues/107) |
-| 55 | **`table` cannot highlight a selected row without its radio/checkbox marker**; the piece list marks the selected row `▸ name` meanwhile | [#109](https://github.com/tonioloewald/tosijs-3d/issues/109) |
-| 56 | **`panel3d` has no readable scroll position or reveal(widget)**; the piece list measures the DOM to keep its selection in view (flat only) | [#110](https://github.com/tonioloewald/tosijs-3d/issues/110) |
+| 55 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `selectionMarker: 'row'` — **`table` cannot highlight a selected row without its radio/checkbox marker** | [#109](https://github.com/tonioloewald/tosijs-3d/issues/109) |
+| 56 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `panel.reveal(table, table.rowBox(id))` — **`panel3d` has no readable scroll position or reveal(widget)** | [#110](https://github.com/tonioloewald/tosijs-3d/issues/110) |
 
 ### Stopgaps we own, and what retires them
 

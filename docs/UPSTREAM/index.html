@@ -28,7 +28,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=b9d9591d7bbe" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=9beceeae54d6" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <meta property="og:type" content="article" />
@@ -39,7 +39,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=297c84e97741" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
+  <tosi-doc-system docs="../docs.json?v=ea6f2d862601" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
   <article class="doc-content">
 <h1>Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -324,13 +324,33 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>51</td>
-<td><strong><code>panel3d</code>&#39;s declared return type has no <code>dispose()</code></strong>, though 0.10.8 adds one and its CHANGELOG says to call it. Worked around by a local <code>DisposablePanel</code> type</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.10">tosijs-3d@0.10.10</a>)</strong>; <code>DisposablePanel</code> is an alias of <code>Panel3d</code> — <strong><code>panel3d</code>&#39;s declared return type has no <code>dispose()</code></strong>, though 0.10.8 adds one and its CHANGELOG says to call it. Worked around by a local <code>DisposablePanel</code> type</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/104">#104</a></td>
 </tr>
 <tr>
 <td>52</td>
-<td><strong><code>b3d-destroyable</code> resets the instance&#39;s scaling to its uniform <code>scale</code> on every render</strong>, so a per-axis scale cannot be kept; a stretched piece lost its stretch on its first move or turn. Worked around by <code>scaleElement</code> re-applying it after each render</td>
+<td>✅ <strong>MOSTLY RESOLVED (<a href="mailto:tosijs-3d@0.10.10">tosijs-3d@0.10.10</a>)</strong>: a stretch survives re-renders; one applied BEFORE the instance loads is still lost, so <code>scaleElement</code>&#39;s hook stays (reported on #105) — <strong><code>b3d-destroyable</code> resets the instance&#39;s scaling to its uniform <code>scale</code> on every render</strong>, so a per-axis scale cannot be kept; a stretched piece lost its stretch on its first move or turn. Worked around by <code>scaleElement</code> re-applying it after each render</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/105">#105</a></td>
+</tr>
+<tr>
+<td>53</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.10">tosijs-3d@0.10.10</a>)</strong> — system-bar panels for an app&#39;s main chrome: several open, a declared first spot, open at start; typed keys reach a field in one</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/106">#106</a></td>
+</tr>
+<tr>
+<td>54</td>
+<td>✅ <strong>RESOLVED (<a href="mailto:tosijs-3d@0.10.10">tosijs-3d@0.10.10</a>)</strong> — projected AO missed library (container) materials, so kit pieces were never occluded; our pixel test now asserts it</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/107">#107</a></td>
+</tr>
+<tr>
+<td>55</td>
+<td><strong><code>table</code> cannot highlight a selected row without its radio/checkbox marker</strong>; the piece list marks the selected row <code>▸ name</code> meanwhile</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/109">#109</a></td>
+</tr>
+<tr>
+<td>56</td>
+<td><strong><code>panel3d</code> has no readable scroll position or reveal(widget)</strong>; the piece list measures the DOM to keep its selection in view (flat only)</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/110">#110</a></td>
 </tr>
 </tbody></table>
 <h3>Stopgaps we own, and what retires them</h3>
@@ -602,6 +622,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-p6crr838.js"></script>
+  <script type="module" src="../hydrate-efjwpq5n.js"></script>
 </body>
 </html>

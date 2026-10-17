@@ -1,5 +1,0 @@
-import{U}from"./site-ymz1rng2.js";import{q,Q}from"./site-xktd8pm8.js";import{f}from"./site-hbscgnbb.js";var i="KHR_materials_unlit";class gS{constructor(e){this.name=i,this.order=210,this._loader=e,this.enabled=this._loader.isExtensionUsed(i)}dispose(){this._loader=null}loadMaterialPropertiesAsync(e,r,s){return U.LoadExtensionAsync(e,r,this.name,async()=>await this._loadUnlitPropertiesAsync(e,r,s))}_loadUnlitPropertiesAsync(e,r,s){let o=this._loader._getOrCreateMaterialAdapter(s),a=[],t=r.pbrMetallicRoughness;if(t){if(t.baseColorFactor)o.baseColor=f.FromArray(t.baseColorFactor),o.geometryOpacity=t.baseColorFactor[3];if(t.baseColorTexture)a.push(this._loader.loadTextureInfoAsync(`${e}/baseColorTexture`,t.baseColorTexture,(l)=>{l.name=`${s.name} (Base Color)`,o.baseColorTexture=l}))}if(o.isUnlit=!0,r.doubleSided)o.backFaceCulling=!1,o.twoSidedLighting=!0;return this._loader.loadMaterialAlphaProperties(e,r,s),Promise.all(a).then(()=>{})}}var n=!1;function _S(){if(n)return;n=!0,Q(i),q(i,!0,(e)=>new gS(e))}_S();
-export{gS,_S};
-
-//# debugId=AB8D723FE12D4CC564756E2164756E21
-//# sourceMappingURL=site-b7txgn41.js.map

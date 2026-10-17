@@ -213,8 +213,8 @@ test("the AO preview is the viewer's switch and the document's look", async ({
   occlusion toggled on doesn't seem to do anything visible". The default
   method, `projected`, measured at frame-noise level on these pieces
   (tosijs-3d#107); `screen` darkened a third of the view. So the preview offers
-  the method, and this holds `screen` to a visible change. `projected` is
-  logged, not asserted, until #107 says what it should look like.
+  the method, and this holds both to a visible change: `projected` since
+  tosijs-3d 0.10.10 fixed #107.
 */
 test("the AO preview's screen method visibly darkens the scene", async ({
   page,
@@ -291,5 +291,11 @@ test("the AO preview's screen method visibly darkens the scene", async ({
   console.log(JSON.stringify({ noise, projected, screen }));
   // Measured 7.1 against noise of 1.05.
   expect(screen).toBeGreaterThan(noise * 3);
+  /*
+    PROJECTED, now asserted: tosijs-3d 0.10.10 (#107) hooks the library's
+    container materials, which it had missed, so kit pieces were never
+    occluded. Measured 3.66 against noise of 1.28 (it was 1.07).
+  */
+  expect(projected).toBeGreaterThan(noise * 2);
   expect(realErrors(errors)).toEqual([]);
 });

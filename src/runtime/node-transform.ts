@@ -90,6 +90,15 @@ export function scaleElement(
     return;
   }
   stretches.set(element, v);
+  /*
+    STILL NEEDED after tosijs-3d 0.10.10 (#105), for ONE case. #105 stopped
+    every render resetting the node, so a stretch now survives a move or a
+    turn. But a stretch set at BUILD time is set before the library instance
+    exists; when the node arrives the element writes its uniform `scale` onto
+    it, and nothing writes the stretch. Measured with this hook removed: a
+    piece authored `scale: [2, 1, 3]` rendered unstretched (6.036 wide where
+    18.108 is right). Reported on #105.
+  */
   if (!hooked.has(element)) {
     hooked.add(element);
     const render = element.render;

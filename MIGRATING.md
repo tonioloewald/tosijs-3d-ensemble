@@ -275,3 +275,16 @@ places:
   used to snap back to its uniform scale on the first edit, so an editor
   session that "fixed" that by hand may have saved a different `scale` than
   was authored; worth a look in any document edited that way.
+
+## Upgrading from 0.6 to 0.7
+
+Unreleased; this section grows with the release.
+
+- **Peer `tosijs-3d` is `^0.10.10`.** It fixes projected ambient occlusion on
+  library pieces (#107), types `panel3d`'s `dispose()` (#104), keeps a
+  per-axis scale through re-renders (#105), and adds the system panels the
+  editor's chrome is moving onto (#106).
+- **The piece list's tables no longer select rows themselves**, and singleton
+  environment features are on/off only (never deleted, duplicated or
+  renamed). Code driving the editor through its component API is unaffected;
+  `includeFeature(name)` is new.

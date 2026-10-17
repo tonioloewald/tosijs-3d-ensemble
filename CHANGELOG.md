@@ -5,6 +5,15 @@ All notable changes to this project are documented here, in
 
 ## [Unreleased]
 
+### ⚠️ Breaking
+
+- **Peer `tosijs-3d` is `^0.10.10`** (was `^0.10.9`): projected AO now
+  reaches library pieces (#107), `Panel3d` is typed with `dispose()` (#104,
+  `DisposablePanel` is now an alias of it), a per-axis scale survives
+  re-renders (#105), and the system panels the editor's chrome is moving onto
+  ship there (#106). The AO pixel test now holds `projected` to a visible
+  change as well as `screen`.
+
 ### Added
 
 - **`hostActions`** on the editor (board #3364, from Manta: "run the level and

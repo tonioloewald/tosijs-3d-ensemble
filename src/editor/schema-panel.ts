@@ -69,6 +69,7 @@ import {
   curveProgram3d,
   lightEditor3d,
 } from "tosijs-3d";
+import type { Panel3d } from "tosijs-3d";
 import {
   DEFAULT_TOOL_CELLS,
   TOOL_CELLS,
@@ -741,7 +742,7 @@ export function schemaPanel(options: SchemaPanelOptions): DisposablePanel {
           old.replaceWith(panel);
         },
       }) as never[])
-    ) as DisposablePanel;
+    );
     disposeRows = next.dispose;
     next.dispose = () => disposeRows();
     return next;
@@ -751,7 +752,7 @@ export function schemaPanel(options: SchemaPanelOptions): DisposablePanel {
 }
 
 /**
- * What `panel3d` returns since tosijs-3d 0.10.8: its `dispose()` releases its
- * rows. The declaration file does not say so yet (tosijs-3d#104).
+ * What `panel3d` returns: tosijs-3d's own `Panel3d` (0.10.10, our #104), whose
+ * `dispose()` releases its rows. The name stays because 0.6.0 exported it.
  */
-export type DisposablePanel = SVGSVGElement & { dispose(): void };
+export type DisposablePanel = Panel3d;

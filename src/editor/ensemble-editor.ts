@@ -3738,10 +3738,9 @@ export class EnsembleEditor extends withAttributes({
           ? [
               /*
                 WHICH METHOD, a view setting too (the viewer's device picks
-                it). Offered because the default, `projected`, measured at
-                frame-noise level on library pieces while `screen` darkened a
-                third of the view (tosijs-3d#107): "AO on" showed nothing you
-                could judge.
+                it): the two look different, and `screen` never runs in a
+                headset. First offered because `projected` showed nothing on
+                library pieces (tosijs-3d#107, fixed in 0.10.10).
               */
               ...(schemaWidgets({
                 schema: { properties: { ssaoMethod: AO_METHOD_SPEC() } },

@@ -26,6 +26,16 @@ All notable changes to this project are documented here, in
 - **`single`** and **`group`** on a feature registration say which of those a
   primitive is, so a consumer's own feature lands in the right place.
 
+### Fixed
+
+- **A nested object field showed as a text box reading `[object Object]`**
+  (board #3352, from Manta's `radar.boost`), and typing would have written that
+  string over the object. A `type: "object"` property with `properties` is now
+  drawn as its own fields under its title, and an edit writes the whole object
+  back with the one field changed. Anything else non-scalar (an array, an
+  object without properties) is shown read-only instead of as a destructive
+  text field.
+
 ### Changed
 
 - The piece list's tables no longer select rows themselves: the radio circle

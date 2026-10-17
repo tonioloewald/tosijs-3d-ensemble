@@ -448,3 +448,48 @@ describe("a disposed panel releases what its widgets subscribed", () => {
     expect(state.live).toBe(0);
   });
 });
+
+/*
+  A NESTED OBJECT IS ITS FIELDS, not a text box (board #3352, from Manta's
+  `radar.boost`). It rendered as one inputField reading "[object Object]",
+  and a keystroke would have written that string over the object.
+*/
+describe("a nested object field", () => {
+  const schema = {
+    properties: {
+      boost: {
+        type: "object",
+        title: "Boost",
+        properties: {
+          name: { type: "string" },
+          range: { type: "number", minimum: 0, maximum: 100, default: 60 },
+        },
+      },
+      tags: { type: "array" },
+    },
+  };
+
+  it("is drawn as its own fields, and nothing reads [object Object]", () => {
+    const fields: Array<{ value: string }> = [];
+    schemaWidgets({
+      schema,
+      values: { boost: { name: "smart", range: 60 }, tags: ["a"] },
+      fields,
+      handleChange: () => {},
+    } as never);
+    expect(fields.map((f) => f.value)).toEqual(["smart"]);
+  });
+
+  it("writes the WHOLE object back, the other fields kept", () => {
+    const fields: Array<{ insert(s: string): void }> = [];
+    const writes: Array<[string, unknown]> = [];
+    schemaWidgets({
+      schema,
+      values: { boost: { name: "smart", range: 60 } },
+      fields,
+      handleChange: (k: string, v: unknown) => writes.push([k, v]),
+    } as never);
+    fields[0]!.insert("er");
+    expect(writes.at(-1)).toEqual(["boost", { name: "smarter", range: 60 }]);
+  });
+});

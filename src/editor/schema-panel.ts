@@ -537,6 +537,62 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       continue;
     }
 
+    /*
+      A NESTED OBJECT IS A GROUP OF ITS OWN FIELDS (board #3352, from
+      Manta). A `type: "object"` property with `properties` fell through to
+      the text field below, which showed `[object Object]` and would have
+      written that STRING over the object on the first keystroke. So it is
+      drawn as its fields under its title, by this same function, and an edit
+      writes the whole object back with the one field changed. Its fields are
+      unbound: the object is one value in the document, and its parent key is
+      what changes.
+    */
+    const props = (spec as { properties?: Record<string, PropertySpec> })
+      .properties;
+    if (spec.type === "object" && props && Object.keys(props).length) {
+      const current =
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : {};
+      const merged = (k: string, v: unknown) => ({ ...current, [k]: v });
+      widgets.push(label3d({ text: label, bold: true, compact: true }));
+      widgets.push(
+        ...schemaWidgets({
+          schema: { type: "object", properties: props } as never,
+          values: current,
+          fields,
+          handleChange: (k, v) => handleChange(key, merged(k, v)),
+          ...(handleCommit
+            ? {
+                handleCommit: (k: string, v: unknown, describe?: string) =>
+                  handleCommit(key, merged(k, v), describe),
+              }
+            : {}),
+        })
+      );
+      continue;
+    }
+    /*
+      ANYTHING ELSE THAT IS NOT A SCALAR — an array, an object without
+      `properties` — is shown, not edited: a text field would turn it into a
+      string. Saying so beats a control that silently destroys the value.
+    */
+    if (
+      spec.type === "object" ||
+      spec.type === "array" ||
+      (value !== null && typeof value === "object")
+    ) {
+      widgets.push(label3d({ text: label, muted: true, compact: true }));
+      widgets.push(
+        label3d({
+          text: "(edit in the file — no control for this shape)",
+          muted: true,
+          compact: true,
+        })
+      );
+      continue;
+    }
+
     if (spec.type === "boolean") {
       widgets.push(
         toggle3d({

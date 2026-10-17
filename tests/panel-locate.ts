@@ -79,10 +79,12 @@ export const locate = (
   page: Page,
   match: string,
   how: "exact" | "endsWith" = "exact",
-  tag: "text" | "title" = "text"
+  tag: "text" | "title" = "text",
+  /** Only this panel (by title): the same text can be on two panels. */
+  inPanel?: string
 ): Promise<Located | null> =>
   page.evaluate(
-    ({ match, how, tag }) => {
+    ({ match, how, tag, inPanel }) => {
       const TITLE_BAR = 28;
       const ed = document.querySelector("tosi-ensemble-editor") as Element & {
         shadowRoot: ShadowRoot;
@@ -99,6 +101,7 @@ export const locate = (
       >) {
         const svg = p.svg;
         if (!svg) continue;
+        if (inPanel && p.title !== inPanel) continue;
         const hit = Array.from(svg.querySelectorAll(tag)).find((x) => {
           const s = (x.textContent ?? "").trim();
           return how === "exact"
@@ -150,7 +153,7 @@ export const locate = (
       }
       return null;
     },
-    { match, how, tag }
+    { match, how, tag, inPanel }
   );
 
 /**
@@ -239,3 +242,17 @@ export const hasProbe = (page: Page, probe: string) =>
         )
     );
   }, probe);
+
+/** Every <text> in one panel (by title), trimmed: what that panel shows. */
+export const panelTexts = (page: Page, title: string) =>
+  page.evaluate((title) => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      shadowRoot: ShadowRoot;
+    };
+    const p = Array.from(ed.shadowRoot.querySelectorAll("tosi-b3d-panel")).find(
+      (x) => (x as HTMLElement).title === title
+    ) as (HTMLElement & { svg: SVGSVGElement | null }) | undefined;
+    return Array.from(p?.svg?.querySelectorAll("text") ?? []).map((t) =>
+      (t.textContent ?? "").trim()
+    );
+  }, title);

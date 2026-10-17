@@ -10,6 +10,7 @@ is nothing to reach out and hold with. Everything it does is far interaction,
 which is why the ray/near split had to exist before the first tool was written.
 */
 /*{"parent":"Internals","order":2}*/
+import { pointerClaimedByPanel } from "tosijs-3d/frame-panel";
 import type { EditorPointer, EditorRay } from "./pointer.js";
 import type { Vec3 } from "../../format/types.js";
 
@@ -95,6 +96,14 @@ export class FlatPointer implements EditorPointer {
     const isTouch = (e: PointerEvent) => e.pointerType === "touch";
 
     const down = (e: PointerEvent) => {
+      /*
+        A PRESS ON A PANEL IS THE PANEL'S. With the chrome on system panels
+        drawn IN THE SCENE, a panel is part of the canvas, so this listener
+        sees presses meant for it: clicking a filter field or a caption also
+        deselected the piece (measured: selection "flagship" -> null). The
+        panel claims the event in Babylon's own listener, which runs first.
+      */
+      if (pointerClaimedByPanel(e)) return;
       move(e);
       /*
         A PRIMARY touch is the start of a fresh gesture, so the set is reset to

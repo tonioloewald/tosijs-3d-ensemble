@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { locate, panelTexts } from "./panel-locate.js";
 
 /*
   THE PIECE LIST'S FILTER, AND THE CLAIM IT WAS SHIPPED ON.
@@ -39,47 +40,40 @@ test("filtering hides rows without touching the selection", async ({
     { timeout: 60_000 }
   );
 
-  /** Which piece ids the list is currently SHOWING, and what is selected. */
-  const view = () =>
-    page.evaluate(() => {
+  /**
+   * Which piece ids the list is currently SHOWING, and what is selected.
+   * Read from the SCENE panel's own content: the properties panel shows the
+   * selected piece's name too, and a blanket scrape once reported a hidden
+   * row as shown.
+   */
+  const view = async () => {
+    const texts = await panelTexts(page, "Scene");
+    return page.evaluate((texts) => {
       const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-        shadowRoot: ShadowRoot | null;
         selection?: { id?: string } | null;
         ensemble?: { pieces?: Array<{ id: string }> };
       };
       const ids = new Set((ed.ensemble?.pieces ?? []).map((p) => p.id));
-      /*
-        SCOPED TO THE PIECE-LIST PANEL, not the whole shadow root. The
-        property panel puts the SELECTED piece's name on screen too, so a
-        blanket scrape reported `flagship` as "still shown" when the list had
-        correctly hidden it — the probe reading the answer off the wrong
-        panel, which is the same shape as the very first scene test measuring
-        the wrong document.
-      */
-      const field = Array.from(
-        ed.shadowRoot?.querySelectorAll("text") ?? []
-      ).find((t) => (t.textContent ?? "").includes("filter"));
-      let panel: Element | null = field ?? null;
-      for (let i = 0; i < 4 && panel?.parentElement; i++)
-        panel = panel.parentElement;
-      const shown = Array.from(panel?.querySelectorAll("text") ?? [])
-        .map((t) => (t.textContent ?? "").trim())
-        .filter((t) => ids.has(t));
-      return { shown, selected: ed.selection?.id ?? null };
-    });
+      return {
+        shown: texts.filter((t) => ids.has(t)),
+        selected: ed.selection?.id ?? null,
+      };
+    }, texts);
+  };
 
-  const box = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-      shadowRoot: ShadowRoot | null;
-      select: (id: string) => void;
-    };
-    ed.select("flagship");
-    const node = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? []).find(
-      (t) => (t.textContent ?? "").includes("filter")
-    );
-    const r = (node as SVGGraphicsElement | undefined)?.getBoundingClientRect();
-    return r && { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  });
+  await page.evaluate(() =>
+    (
+      document.querySelector("tosi-ensemble-editor") as Element & {
+        select: (id: string) => void;
+      }
+    ).select("flagship")
+  );
+  await page.waitForTimeout(600);
+  const filter = await locate(page, "filter…", "exact", "text", "Scene");
+  const box = filter && {
+    x: filter.x + filter.w / 2,
+    y: filter.y + filter.h / 2,
+  };
   expect(box, "no filter field on screen").toBeTruthy();
 
   const before = await view();
@@ -162,25 +156,17 @@ test("the id field renames the piece in the document", async ({ page }) => {
     { timeout: 60_000 }
   );
 
-  const box = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
-      shadowRoot: ShadowRoot | null;
-      select: (id: string) => void;
-    };
-    ed.select("flagship");
-    /*
-      The id field shows the piece's id — and so does its row in the list, on
-      the LEFT. Taking the first match clicked the ROW instead, which merely
-      re-selected the piece and sent the keystroke nowhere. The properties
-      panel is the right-hand column, so pick the rightmost.
-    */
-    const rects = Array.from(ed.shadowRoot?.querySelectorAll("text") ?? [])
-      .filter((t) => (t.textContent ?? "").trim() === "flagship")
-      .map((t) => (t as SVGGraphicsElement).getBoundingClientRect())
-      .sort((a, b) => b.x - a.x);
-    const r = rects[0];
-    return r && { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  });
+  await page.evaluate(() =>
+    (
+      document.querySelector("tosi-ensemble-editor") as Element & {
+        select: (id: string) => void;
+      }
+    ).select("flagship")
+  );
+  await page.waitForTimeout(600);
+  // The id field is in PROPERTIES; the list's row says "flagship" too.
+  const field = await locate(page, "flagship", "exact", "text", "Properties");
+  const box = field && { x: field.x + field.w / 2, y: field.y + field.h / 2 };
   expect(box, "no id field on screen").toBeTruthy();
 
   await page.mouse.click(box!.x, box!.y);

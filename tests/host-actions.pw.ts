@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { collectPageErrors, realErrors } from "./page-errors.js";
+import { reveal } from "./panel-locate.js";
 
 /*
   THE HOST'S BUTTONS (board #3364, from Manta: "run the level and see how well
@@ -41,14 +42,9 @@ test("a host action button hands the host a copy of the current document", async
     ];
   });
   await page.waitForTimeout(500);
-  const box = await page.evaluate(() => {
-    const ed = document.querySelector("tosi-ensemble-editor")!;
-    const t = Array.from(ed.shadowRoot!.querySelectorAll("text")).find(
-      (x) => (x.textContent ?? "").trim() === "Play"
-    );
-    const b = t?.getBoundingClientRect();
-    return b && { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-  });
+  // The chrome is drawn in the scene: find the button on screen.
+  const found = await reveal(page, "Play");
+  const box = found && { x: found.x + found.w / 2, y: found.y + found.h / 2 };
   expect(box, "no Play button in the editor").toBeTruthy();
   await page.mouse.click(box!.x, box!.y);
   await page.waitForTimeout(300);

@@ -241,9 +241,7 @@ test("moving a piece moves the features placed from it", async ({ page }) => {
       .mesh;
     ed.ensemble = {
       ...ed.ensemble,
-      pieces: [
-        { id: "noisy", mesh, at: [0, 0, 0], features: { sound: {} } },
-      ],
+      pieces: [{ id: "noisy", mesh, at: [0, 0, 0], features: { sound: {} } }],
     };
     await sleep(1500);
     const soundX = () =>

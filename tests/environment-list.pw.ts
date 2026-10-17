@@ -12,7 +12,11 @@ import { collectPageErrors, realErrors } from "./page-errors.js";
   and the SCENE, not of the panel: "I don't seem to be able to toggle on
   terrain" was a list that rendered fine and offered nothing.
 */
-type Piece = { id: string; enabled?: boolean; features?: Record<string, unknown> };
+type Piece = {
+  id: string;
+  enabled?: boolean;
+  features?: Record<string, unknown>;
+};
 type Ed = Element & {
   shadowRoot: ShadowRoot;
   ensemble: { pieces: Piece[] };
@@ -107,9 +111,9 @@ test("environment features are listed, included, disabled and removed from the l
   expect(
     await page.evaluate(
       () =>
-        !!(document.querySelector("tosi-ensemble-editor") as Ed).shadowRoot.querySelector(
-          "tosi-b3d-terrain"
-        )
+        !!(
+          document.querySelector("tosi-ensemble-editor") as Ed
+        ).shadowRoot.querySelector("tosi-b3d-terrain")
     )
   ).toBe(true);
 
@@ -122,7 +126,10 @@ test("environment features are listed, included, disabled and removed from the l
   await page.waitForTimeout(600);
   const disabled = await textBox(page, "Disabled");
   expect(disabled, "the circle opened no state menu").toBeTruthy();
-  await page.mouse.click(disabled!.x + disabled!.w / 2, disabled!.y + disabled!.h / 2);
+  await page.mouse.click(
+    disabled!.x + disabled!.w / 2,
+    disabled!.y + disabled!.h / 2
+  );
   await page.waitForTimeout(1500);
   const fogs = await has("fog");
   expect(fogs).toHaveLength(1);
@@ -152,9 +159,14 @@ test("environment features are listed, included, disabled and removed from the l
   // 4. A category folds.
   const objects = await reveal(page, "objects");
   expect(objects, "no 'objects' category").toBeTruthy();
-  const aMesh = (await pieces(page)).find((p) => !p.features || !Object.keys(p.features).length);
+  const aMesh = (await pieces(page)).find(
+    (p) => !p.features || !Object.keys(p.features).length
+  );
   const meshRowBefore = aMesh ? await textBox(page, aMesh.id) : null;
-  await page.mouse.click(objects!.x + objects!.w / 2, objects!.y + objects!.h / 2);
+  await page.mouse.click(
+    objects!.x + objects!.w / 2,
+    objects!.y + objects!.h / 2
+  );
   await page.waitForTimeout(800);
   if (meshRowBefore) expect(await textBox(page, aMesh!.id)).toBeNull();
 

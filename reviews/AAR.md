@@ -26,6 +26,8 @@ pattern review (practices/releasing.md step 10).
 - Cycle: doctor clean -> pre-minor GO_WITH_FOLLOWUPS (3 majors) -> fixed ->
   attest (failed under load, passed quiet) -> dry run -> tag -> approved ->
   verified.
+- Downstream: the review's unchecked manta-recon upgrade was confirmed by the
+  owner after publishing ("Manta seems happy"), not by a test run here.
 
 ## 0.5.2 — 2026-10-13
 

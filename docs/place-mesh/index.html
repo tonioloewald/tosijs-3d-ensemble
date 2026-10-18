@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Placing a piece's body — tosijs-3d-ensemble</title>
   <meta name="description" content="The instantiator gives a piece its body; features then decorate it. This is the only module that knows how a mesh reaches a tosijs-3d scene, which is why…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Placing a piece&#39;s body — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Placing a piece&#39;s body — tosijs-3d-ensemble" />
@@ -39,13 +26,13 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Placing a piece&#39;s body</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="place-mesh.ts">
+<h1 id="placing-a-pieces-body">Placing a piece&#39;s body</h1>
 <p>The instantiator gives a piece its body; features then decorate it. This is the
 only module that knows how a mesh reaches a tosijs-3d scene, which is why
 <code>buildEnsemble</code> takes it as an option — a test swaps it for a stub.</p>
-<h2><code>destroyable</code> is a DECORATOR, and now it really is one</h2>
+<h2 id="destroyable-is-a-decorator-and-now-it-really-is-one"><code>destroyable</code> is a DECORATOR, and now it really is one</h2>
 <p>Most of what an ensemble describes — a lamp post, a rock, a ground plane, a
 whole standard demo scene — can never be shot, and giving it hit points is not a
 harmless default: terrain that quietly accumulates damage and vanishes at
@@ -59,7 +46,7 @@ dodge it, and <code>destroyable</code> had to register <code>body: true</code>.<
 over. Every mesh piece is placed the same way and <code>destroyable</code> is a genuine
 decorator: it contributes hit points to a body that already exists rather than
 being the reason the body exists.</p>
-<h2>Rotation and scale: the element&#39;s, since tosijs-3d 0.8.1</h2>
+<h2 id="rotation-and-scale-the-elements-since-tosijs-3d-081">Rotation and scale: the element&#39;s, since tosijs-3d 0.8.1</h2>
 <p>For years they were not. <code>b3d-destroyable</code> forwarded only position to
 <code>library.instantiate</code>, and <code>size</code> is the placeholder cube&#39;s edge, so an
 authored <code>rot: [0, 45, 0]</code> left the footprint at 3.63 × 3.63 and <code>scale</code> 1, 2
@@ -70,7 +57,7 @@ exists. So the rotation is simply the element&#39;s attributes, and the scale go
 through <code>scaleElement</code> (<code>node-transform.ts</code>), which writes the element&#39;s
 <code>scale</code> and per-axis <code>stretch</code> (tosijs-3d 0.10.12).
 No poll is left: the element&#39;s own post-load render applies both.</p>
-<h2>Nothing to instantiate from? Draw a box.</h2>
+<h2 id="nothing-to-instantiate-from-draw-a-box">Nothing to instantiate from? Draw a box.</h2>
 <p>Without a library — or with a mesh name the library does not have — the piece
 becomes a <code>b3d-box</code> at the same spot. The ARRANGEMENT is most of what an author
 is judging, so cubes in the right places beat an empty scene.</p>
@@ -154,6 +141,6 @@ is judging, so cubes in the right places beat an empty scene.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

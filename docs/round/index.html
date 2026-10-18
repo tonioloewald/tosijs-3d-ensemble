@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Rounding what lands in the document — tosijs-3d-ensemble</title>
   <meta name="description" content="A slider reports the position of a pointer, and a pointer lands wherever the hand let it. Dragging timeOfDay wrote 20.651162790697676 into the file — a number…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Rounding what lands in the document — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Rounding what lands in the document — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Rounding what lands in the document</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="round.ts">
+<h1 id="rounding-what-lands-in-the-document">Rounding what lands in the document</h1>
 <p>A slider reports the position of a pointer, and a pointer lands wherever the
 hand let it. Dragging <code>timeOfDay</code> wrote <strong>20.651162790697676</strong> into the file —
 a number with seventeen significant figures describing a time of day to within
@@ -51,14 +38,14 @@ nothing looks wrong — it is a DOCUMENT problem, and documents are the product
 here: a file an author reads, a generator emits, a diff shows, and a person
 hand-edits. <code>&quot;timeOfDay&quot;: 20.651</code> is all of those; the other one is noise with a
 decimal point in it.</p>
-<h2>Where it goes, and why not in the slider</h2>
+<h2 id="where-it-goes-and-why-not-in-the-slider">Where it goes, and why not in the slider</h2>
 <p>At the boundary where a value enters the ensemble — <code>update</code> and
 <code>updateFeature</code> — not in the widget that raised it.</p>
 <p>Both of those are reached by more than sliders (a typed field, a drag release, a
 composite widget handing back a whole light), and a rule applied per widget is a
 rule with holes in it. Position needed it too: <code>gridSnap: 0</code> is a legal setting,
 and with snapping off a drag writes exactly what the ray hit.</p>
-<h2>Three decimals, and one exception that matters</h2>
+<h2 id="three-decimals-and-one-exception-that-matters">Three decimals, and one exception that matters</h2>
 <p>Three is a millimetre on a metre, which is finer than anything anyone is
 arranging by hand, and it reads.</p>
 <p>⚠️ <strong>But a fixed decimal count silently destroys small quantities.</strong> Terrain&#39;s
@@ -69,7 +56,7 @@ never rounds TO zero: it falls back to three significant figures, which keeps
 <code>0.0004</code> and still drops the noise.</p>
 <p><code>x-precision</code> on a property overrides the default where a field genuinely needs
 more.</p>
-<h2>A LOG-SCALED field is rounded to significant FIGURES, not decimals</h2>
+<h2 id="a-log-scaled-field-is-rounded-to-significant-figures-not-decimals">A LOG-SCALED field is rounded to significant FIGURES, not decimals</h2>
 <p>⚠️ Decimal places are a linear idea, and they are wrong for a quantity whose
 useful values span decades. Fog density runs <code>0 .. 1</code> with everything anyone
 wants below <code>0.01</code>, so three decimals turns the author&#39;s <code>0.0015</code> into <code>0.002</code>
@@ -163,6 +150,6 @@ nothing said so.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

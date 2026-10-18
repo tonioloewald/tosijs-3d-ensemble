@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Scene features — tosijs-3d-ensemble</title>
   <meta name="description" content="The primitives a tosijs-3d scene is made of, registered as ensemble features so that a whole scene — sun, sky, shadows, ground, weather — is data you load…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Scene features — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Scene features — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Scene features</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="features-scene.ts">
+<h1 id="scene-features">Scene features</h1>
 <p>The primitives a tosijs-3d scene is made of, registered as ensemble features so
 that a whole scene — sun, sky, shadows, ground, weather — is <strong>data you load</strong>
 rather than boilerplate you retype.</p>
@@ -50,7 +37,7 @@ rather than boilerplate you retype.</p>
 <span class="token function">registerSceneFeatures</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 <span class="token keyword">await</span> <span class="token function">loadEnsemble</span><span class="token punctuation">(</span><span class="token string">'/ensembles/standard-scene.json'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> scene <span class="token punctuation">}</span><span class="token punctuation">)</span>
 </code></pre>
-<h2>Each feature, in isolation and in combination</h2>
+<h2 id="each-feature-in-isolation-and-in-combination">Each feature, in isolation and in combination</h2>
 <p>The example below builds ONE scene and the fences under it assert what each
 feature put in the renderer. Isolation and combination in the same place is the
 point: a feature that works alone and breaks beside another is the failure mode
@@ -206,7 +193,7 @@ test(&#39;a second build REUSES the singletons rather than stacking them&#39;, a
 </code></pre>
 <p>That is the point of the format, and it is not a combat format: <code>describe an arrangement, consume it anywhere</code>. A fortification is one kind of ensemble; so
 is the standard demo scene, a botanical garden, or an architectural site.</p>
-<h2>A scene feature is a feature with no mesh</h2>
+<h2 id="a-scene-feature-is-a-feature-with-no-mesh">A scene feature is a feature with no mesh</h2>
 <p><code>features</code> was always an open map bound by registrations, so a piece whose body
 IS its feature needs no special case — it simply has no <code>mesh</code>:</p>
 <pre><code class="language-jsonc">{ &quot;id&quot;: &quot;sun&quot;,    &quot;at&quot;: [0, 1, 0], &quot;features&quot;: { &quot;sun&quot;: { &quot;intensity&quot;: 1 } } },
@@ -216,7 +203,7 @@ IS its feature needs no special case — it simply has no <code>mesh</code>:</p>
 <p>An unset field is its SCHEMA default, the value the editor&#39;s panel shows, not
 the element&#39;s own: <code>{ &quot;ground&quot;: {} }</code> is the 400 m checker plane the panel
 describes. See <code>effectiveConfig</code>.</p>
-<h2>Weather</h2>
+<h2 id="weather">Weather</h2>
 <p>A storm is two pieces: a <code>weatherCell</code> where the storm is (the piece&#39;s position
 is the cell&#39;s centre, and there can be many), and one <code>lightning</code> anywhere,
 which strikes under every stormy cell. <code>lightShafts</code> adds sunbeams through a
@@ -237,7 +224,7 @@ ambient occlusion, stays the viewer&#39;s (see <code>recommends</code>).</p>
 <pre><code class="language-jsonc">{ &quot;id&quot;: &quot;wind&quot;,   &quot;at&quot;: [0, 0, 0],     &quot;features&quot;: { &quot;wind&quot;: { &quot;windSpeed&quot;: 12, &quot;windBearingDeg&quot;: 90 } } },
 { &quot;id&quot;: &quot;squall&quot;, &quot;at&quot;: [700, 0, 400], &quot;features&quot;: { &quot;weatherCell&quot;: { &quot;drift&quot;: &quot;wind&quot; } } }
 </code></pre>
-<h2>Planets</h2>
+<h2 id="planets">Planets</h2>
 <p>A <code>planet</code> piece is a globe in the scene: its own world from its own seed, or
 drawn from a sphere <code>terrain</code> piece it names, so its coasts are that ground&#39;s.
 Or the other way round: a sphere terrain&#39;s <code>planet</code> names a planet piece and
@@ -251,7 +238,7 @@ source. A sphere terrain is pinned to a place on its planet with <code>lat</code
 pin and both directions of the link on the elements. The schemas, the pin and
 the links are tosijs-3d&#39;s; what is ours is that a link names a PIECE id, which
 the link phase turns into the selector the element reads.</p>
-<h2>Combat is somewhere else, on purpose</h2>
+<h2 id="combat-is-somewhere-else-on-purpose">Combat is somewhere else, on purpose</h2>
 <p><code>destroyable</code>, <code>turret</code>, <code>launcher</code>, <code>protector</code>, <code>blip</code> and <code>launchpad</code> are NOT
 here — they are a domain vocabulary in <a href="/presets-combat/" class="wikilink">presets/combat</a>, registered by a
 consumer that wants them. An earlier version shipped them as built-ins next to
@@ -337,6 +324,6 @@ format.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

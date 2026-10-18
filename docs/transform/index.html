@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>The select-and-transform tool — tosijs-3d-ensemble</title>
   <meta name="description" content="One tool. Press a piece to select it, press empty space to deselect, and drag a handle to move, turn or stretch what is selected." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="The select-and-transform tool — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="The select-and-transform tool — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>The select-and-transform tool</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="transform.ts">
+<h1 id="the-select-and-transform-tool">The select-and-transform tool</h1>
 <p><strong>One tool.</strong> Press a piece to select it, press empty space to deselect, and
 drag a handle to move, turn or stretch what is selected. Selecting and
 transforming were two tools until it became obvious they are one gesture with
@@ -83,7 +70,7 @@ at once and the grip you take says what the drag means. See
 <p>The secondary-button inversion is the one non-obvious binding, and it is worth
 it: &quot;make this taller&quot; and &quot;make this thinner without making it shorter&quot; are the
 same reach, one modifier apart.</p>
-<h2>The drag writes twice, to two different places</h2>
+<h2 id="the-drag-writes-twice-to-two-different-places">The drag writes twice, to two different places</h2>
 <ul>
 <li><strong>during</strong> the drag, to the live body, so the piece follows the hand. Which
 body — element or node — is <a href="/writing-a-transform/" class="wikilink">Writing a transform</a>&#39;s fork, and the wrong
@@ -100,7 +87,7 @@ Rebuilding costs a dispose-and-build per drag and buys exact agreement.</p>
 <p>It is safe here because the rebuild happens AFTER the gesture ended. Rebuilding
 <em>during</em> a drag would dispose the very node under the author&#39;s hand, which is
 why copy-on-drag also defers to release.</p>
-<h2>Duplicate-on-drag copies on RELEASE</h2>
+<h2 id="duplicate-on-drag-copies-on-release">Duplicate-on-drag copies on RELEASE</h2>
 <p>Cloning at the start would mean rebuilding mid-gesture to bring the copy into
 the scene, which disposes the node being dragged. Copying on release leaves the
 original where it was and puts the copy at the dragged transform — the same
@@ -185,6 +172,6 @@ outcome, without pulling the floor out from under the drag.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>&lt;tosi-ensemble&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="Load an ensemble into a scene in one line, declaratively, as a child of &lt;tosi-b3d&gt;" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="&lt;tosi-ensemble&gt; — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="&lt;tosi-ensemble&gt; — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1><code>&lt;tosi-ensemble&gt;</code></h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="ensemble-element.ts">
+<h1 id="tosi-ensemble"><code>&lt;tosi-ensemble&gt;</code></h1>
 <p>Load an ensemble into a scene <strong>in one line</strong>, declaratively, as a child of
 <code>&lt;tosi-b3d&gt;</code>:</p>
 <pre><code class="language-html">&lt;tosi-b3d&gt;
@@ -116,12 +103,12 @@ buried. Loading that stack as data means a scene reads as <em>&quot;the standard
 plus the thing I am actually showing you&quot;</em>.</p>
 <p>Ensembles compose, so a scene can name several: a lighting rig, a terrain, and
 the arrangement standing on it.</p>
-<h2>It is not a combat format</h2>
+<h2 id="it-is-not-a-combat-format">It is not a combat format</h2>
 <p>Nothing here knows what an ensemble is FOR. <code>registerSceneFeatures()</code> gives you
 sun, sky, ground, terrain, water, clouds, ambient and fog; a game that wants hit
 points registers <code>presets/combat</code> as well. A scene that never does pays nothing
 and — more to the point — never sees <code>shield</code> in a property panel.</p>
-<h2>Attributes</h2>
+<h2 id="attributes">Attributes</h2>
 <table>
 <thead>
 <tr>
@@ -142,7 +129,7 @@ and — more to the point — never sees <code>shield</code> in a property panel
 <td>where to put its local origin, <code>&quot;x y z&quot;</code>, default <code>&quot;0 0 0&quot;</code></td>
 </tr>
 </tbody></table>
-<h2>Declarative, all the way</h2>
+<h2 id="declarative-all-the-way">Declarative, all the way</h2>
 <ul>
 <li><strong>No setup call.</strong> The element registers the scene features (sun, sky,
 ground, terrain, water, weather…) itself the first time one connects, so a
@@ -155,7 +142,7 @@ response cannot overwrite it); change <code>at</code> and it rebuilds at the new
 rebuilds from the document it already holds, whether that came from <code>src</code> or
 was assigned to <code>.ensemble</code>.</li>
 </ul>
-<h2>Events</h2>
+<h2 id="events">Events</h2>
 <table>
 <thead>
 <tr>
@@ -259,6 +246,6 @@ el?.addEventListener(&#39;built&#39;, (e) =&gt; console.log(e.detail.problems))
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

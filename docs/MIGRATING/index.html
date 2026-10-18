@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Migrating manta-recon onto tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Migrating manta-recon onto tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="MIGRATING.md">
+<h1 id="migrating-manta-recon-onto-tosijs-3d-ensemble">Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
 <code>src/prefab-runtime.ts</code> are its ancestors, extracted for the reasons in
 <code>SPEC.md</code>. This is the guide for putting it back, and it is short because the
@@ -58,7 +45,7 @@ is reachable by anyone who only installed it.</p>
 symbol only 0.7.8 exports, so it could not be imported on 0.7.4–0.7.7 — see
 the changelog. Use 0.1.1 or later.</p>
 </blockquote>
-<h2>Where it stands, measured</h2>
+<h2 id="where-it-stands-measured">Where it stands, measured</h2>
 <p>Run against <code>static/prefabs/*.json</code> as they are today:</p>
 <table>
 <thead>
@@ -102,8 +89,8 @@ risk worth checking first, because a format that quietly drops a consumer&#39;s 
 cannot be adopted and would not have shown up as an error.</p>
 <p>The gate lives at <code>src/manta-mvp.test.ts</code> in this repo and re-runs the whole
 table; it skips when the sibling checkout is absent.</p>
-<h2>Four steps</h2>
-<h3>1. Migrate the files</h3>
+<h2 id="four-steps">Four steps</h2>
+<h3 id="1-migrate-the-files">1. Migrate the files</h3>
 <pre><code class="language-bash" data-highlighted><span class="token builtin class-name">cd</span> <span class="token punctuation">..</span>/tosijs-3d-ensemble
 bun bin/migrate.ts <span class="token punctuation">..</span>/manta-recon/static/prefabs/*.json          <span class="token comment"># report</span>
 bun bin/migrate.ts <span class="token parameter variable">--write</span> <span class="token punctuation">..</span>/manta-recon/static/prefabs/*.json  <span class="token comment"># apply</span>
@@ -116,7 +103,7 @@ Ids are not derived from the array index on purpose: that is the fault this
 format exists to refuse, and baking it into a file people hand-edit would make
 it permanent.</p>
 <p><code>docs/prefabs/*.json</code> appear to be copies; migrate them too or delete them.</p>
-<h3>2. Register <code>radar</code></h3>
+<h3 id="2-register-radar">2. Register <code>radar</code></h3>
 <p><code>ocean-rig</code> uses a <code>radar</code> feature nobody has registered, so <code>validate</code> warns and
 the feature does nothing at build. <strong>This should not come from us.</strong> Features are
 a registry open to consumers, and a consumer&#39;s feature is meant to be
@@ -139,7 +126,7 @@ registerFeature({
   },
 });
 </code></pre>
-<h3>3. Swap the imports</h3>
+<h3 id="3-swap-the-imports">3. Swap the imports</h3>
 <pre><code class="language-ts">// was
 import { validatePrefab, type Prefab } from &quot;./prefab&quot;;
 import { buildPrefab } from &quot;./prefab-runtime&quot;;
@@ -160,7 +147,7 @@ registerCombatPreset(); // destroyable, turret, launcher, protector, blip,
 <p>The combat preset registers exactly the roles those prefabs use — <code>structure</code>,
 <code>target</code>, <code>power</code>, <code>generator</code>, <code>shield</code>, <code>critical</code> — which is unsurprising,
 since it was written from them.</p>
-<h3>Building one</h3>
+<h3 id="building-one">Building one</h3>
 <pre><code class="language-js">import { buildEnsemble, placeMesh } from &quot;tosijs-3d-ensemble&quot;;
 
 const built = buildEnsemble(ensemble, {
@@ -203,17 +190,17 @@ emit. Filter on <code>severity === &#39;error&#39;</code> where <code>validatePr
 <li><strong><code>registerCombatPreset()</code> returns a teardown</strong>, so the vocabulary can be
 swapped rather than only added.</li>
 </ul>
-<h3>4. Delete <code>prefab.ts</code> and <code>prefab-runtime.ts</code></h3>
+<h3 id="4-delete-prefabts-and-prefab-runtimets">4. Delete <code>prefab.ts</code> and <code>prefab-runtime.ts</code></h3>
 <p>754 lines. <code>src/main.ts</code> and <code>src/prefab-editor.ts</code> are the only importers.</p>
 <p><code>prefab-editor.ts</code>, <code>bench-gizmo.ts</code> and <code>bench-view.ts</code> are a separate question
 — this package has its own editor (<code>ensembleEditor</code>) but it is not yet a
 drop-in replacement for the bench, so keep them until it is.</p>
-<h2>What &quot;done&quot; means</h2>
+<h2 id="what-done-means">What &quot;done&quot; means</h2>
 <p><code>bun test</code> in this repo, with the sibling checked out, reports all four prefabs
 validating clean and building every piece. That is milestone 1, and it is the
 proof the API is right — which is why it comes before building anything else on
 top of it.</p>
-<h2>Upgrading from 0.3 to 0.4</h2>
+<h2 id="upgrading-from-03-to-04">Upgrading from 0.3 to 0.4</h2>
 <p>Three things change underneath an existing document. None of them needs an edit
 to a well-formed file, but each can change what renders.</p>
 <ul>
@@ -238,7 +225,7 @@ stringified.</li>
 fields, and 0.4&#39;s <code>validate</code> reports no url problem in any of them, so the url
 rule does not touch them. What was NOT measured is the peer-floor change: the
 moved sun and the re-rolled seeds are visual, and need eyes on a Manta scene.</p>
-<h2>Upgrading from 0.4 to 0.5</h2>
+<h2 id="upgrading-from-04-to-05">Upgrading from 0.4 to 0.5</h2>
 <p>Three things change underneath an existing document:</p>
 <ul>
 <li><p><strong>An unset field now renders at its SCHEMA default</strong>, the value the editor&#39;s
@@ -324,7 +311,7 @@ as the default and <code>migrate()</code> removes it, so it needs nothing. A val
 unset needs nothing either.</p>
 </li>
 </ul>
-<h2>Upgrading from 0.5 to 0.6</h2>
+<h2 id="upgrading-from-05-to-06">Upgrading from 0.5 to 0.6</h2>
 <p>A document needs no change to load, but one written by 0.5&#39;s editor may say
 <code>terrain.surfaceType: &quot;plane&quot;</code>, which tosijs-3d does not have (it samples as
 a cylinder, so that is what it has always rendered). <code>migrate()</code> rewrites it
@@ -351,7 +338,7 @@ used to snap back to its uniform scale on the first edit, so an editor
 session that &quot;fixed&quot; that by hand may have saved a different <code>scale</code> than
 was authored; worth a look in any document edited that way.</li>
 </ul>
-<h2>Upgrading from 0.6 to 0.7</h2>
+<h2 id="upgrading-from-06-to-07">Upgrading from 0.6 to 0.7</h2>
 <p>Unreleased; this section grows with the release.</p>
 <ul>
 <li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.13</code>.</strong> It fixes projected ambient occlusion on
@@ -443,6 +430,6 @@ renamed). Code driving the editor through its component API is unaffected;
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

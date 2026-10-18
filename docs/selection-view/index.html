@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>The selection marker — tosijs-3d-ensemble</title>
   <meta name="description" content="A box around the selected piece, shown whenever something is selected — including when no transform is enabled, which is the whole reason it exists." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="The selection marker — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="The selection marker — tosijs-3d-ensemble" />
@@ -39,13 +26,13 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>The selection marker</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="selection-view.ts">
+<h1 id="the-selection-marker">The selection marker</h1>
 <p>A box around the selected piece, shown whenever something is selected —
 <strong>including when no transform is enabled</strong>, which is the whole reason it
 exists.</p>
-<h2>Why an outline was not enough</h2>
+<h2 id="why-an-outline-was-not-enough">Why an outline was not enough</h2>
 <p>There is a <code>HighlightLayer</code> too, and for a long time there was only that. It had
 never worked: both kinds of body hand you a <code>TransformNode</code> at the top, the
 layer takes meshes, and the call that fed it one was wrapped in a <code>catch</code>. So
@@ -57,7 +44,7 @@ want to know. A box answers that and recolours nothing.</p>
 <p>There were three axis rods through the origin as well, and they are gone: with a
 manipulator present they duplicated its shafts, and without one they were more
 clutter than information.</p>
-<h2>Quiet, but not invisible</h2>
+<h2 id="quiet-but-not-invisible">Quiet, but not invisible</h2>
 <p>The first version used <code>CreateLines</code> for the axes and a <code>wireframe</code> material for
 the box. Both render — measured: four meshes, visible, enabled, in the active
 list — and both are effectively <strong>one pixel wide</strong>, because WebGL has no line
@@ -153,6 +140,6 @@ but is not is worse than nothing.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Ensemble Editor — specification — tosijs-3d-ensemble</title>
   <meta name="description" content="Status: proposal. Written after building a working prototype inside manta-recon (src/prefab.ts, src/bench-.ts, static/prefab.html) and discovering it does not…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Ensemble Editor — specification — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Ensemble Editor — specification — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Ensemble Editor — specification</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="SPEC.md">
+<h1 id="ensemble-editor--specification">Ensemble Editor — specification</h1>
 <!--{"pin":"bottom","parent":"Project","order":1}--><p><strong>Status:</strong> proposal. Written after building a working prototype inside
 manta-recon (<code>src/prefab*.ts</code>, <code>src/bench-*.ts</code>, <code>static/prefab.html</code>) and
 discovering it does not belong there.</p>
@@ -49,7 +36,7 @@ discovering it does not belong there.</p>
 graphical <strong>editor</strong> for authoring them. They ship together from
 <code>tosijs-3d-ensemble</code>, and a game carries only the first two because the editor
 tree-shakes away.</p>
-<h2>Where each piece lives</h2>
+<h2 id="where-each-piece-lives">Where each piece lives</h2>
 <p>Three concerns, and they do <strong>not</strong> all have the same audience.</p>
 <table>
 <thead>
@@ -120,11 +107,11 @@ after all&quot;, on the grounds that <code>destroyable</code>, <code>turret</cod
 <code>launchpad</code> map onto components tosijs-3d already ships. That is true of those
 features and false in general — see Part 3&#39;s feature registry, which corrects
 it.</p>
-<h3>Not in Manta</h3>
+<h3 id="not-in-manta">Not in Manta</h3>
 <p>Manta keeps: its ensembles (<code>static/ensembles/*.json</code>), its roles, its
 scenarios, and any Manta-specific features. It deletes the format, the
 instantiator and the bench.</p>
-<h2>Naming</h2>
+<h2 id="naming">Naming</h2>
 <p>&quot;Prefab&quot; carries Unity baggage (a prefab there is a serialized <em>scene object
 with components and code</em>). What we have is smaller and stricter: <strong>data
 describing an arrangement of library meshes, with declared capabilities and
@@ -140,7 +127,7 @@ dies. The thing is <strong>staged to be encountered</strong> — so a word carry
 that performs together&quot; is describing the format accurately rather than
 decorating it. It also anticipates the <code>encounter</code> layer (open question 4): an
 ensemble is a troupe, an encounter is a performance of it.</p>
-<h3>Why not <code>assembly</code></h3>
+<h3 id="why-not-assembly">Why not <code>assembly</code></h3>
 <p>It was the working name through most of this document&#39;s life, and it is accurate
 — but on <strong>npm, &quot;assembly&quot; primes WebAssembly</strong>, not &quot;assembled from parts&quot;.
 <code>assemblyscript</code> is <em>&quot;a TypeScript-like language for WebAssembly&quot;</em>, and a
@@ -148,7 +135,7 @@ package called <code>tosijs-3d-assembly</code> sitting in a JavaScript registry 
 exactly that misread. The <code>tosijs-3d-</code> prefix mitigates it; it does not remove
 it. &quot;.NET assembly&quot; (a compiled binary) is a second, weaker collision in the same
 direction: both make the word mean <em>build output</em> rather than <em>arrangement</em>.</p>
-<h3>Alternatives considered</h3>
+<h3 id="alternatives-considered">Alternatives considered</h3>
 <table>
 <thead>
 <tr>
@@ -207,7 +194,7 @@ direction: both make the word mean <em>build output</em> rather than <em>arrange
 </tbody></table>
 <p>The rest of this document uses <strong>ensemble</strong>.</p>
 <hr>
-<h2>An ensemble is not for anything in particular</h2>
+<h2 id="an-ensemble-is-not-for-anything-in-particular">An ensemble is not for anything in particular</h2>
 <p><strong>The format has no domain, and must not acquire one.</strong> This document was
 written from a fortification brief, so an early implementation shipped the
 fortification vocabulary as built-ins: <code>power</code>/<code>shield</code>/<code>critical</code> roles, a
@@ -264,7 +251,7 @@ botanical garden never sees <code>shield</code> in a role picker.</li>
 <p>The tree-shaking test enforces the boundary in both directions: a scene-only
 import carries no combat vocabulary, and the combat preset demonstrably does.</p>
 <hr>
-<h2>Part 1 — the ensemble format</h2>
+<h2 id="part-1--the-ensemble-format">Part 1 — the ensemble format</h2>
 <p>Plain JSON. <strong>No functions, no code, no engine types.</strong> Everything must survive
 a round trip through a file, a fetch, a text editor and a generator. This is
 non-negotiable: the format has to be authorable by hand, by the editor, and by a
@@ -288,7 +275,7 @@ mission compiler.</p>
   ]
 }
 </code></pre>
-<h3>Pieces</h3>
+<h3 id="pieces">Pieces</h3>
 <pre><code class="language-jsonc">{
   &quot;id&quot;: &quot;rig&quot;, // stable handle; defaults to `${mesh}#${i}`
   &quot;mesh&quot;: &quot;Pump Station&quot;, // PUBLIC library name
@@ -315,7 +302,7 @@ mission compiler.</p>
 <p>Positions are <strong>ensemble-local</strong>, so the same ensemble works at sea level or on
 a plateau. <code>match</code> is a regex <strong>source string</strong>, compiled at load — not a
 <code>RegExp</code>, or the format stops being serializable.</p>
-<h3>Features — capabilities toggled ON a piece</h3>
+<h3 id="features--capabilities-toggled-on-a-piece">Features — capabilities toggled ON a piece</h3>
 <p>This is the central idea and the one that took longest to reach. Components are
 not separate objects; they are <strong>capabilities of an object</strong>.</p>
 <pre><code class="language-jsonc">&quot;features&quot;: {
@@ -339,13 +326,13 @@ also gives a defence a soft spot, which is a design affordance.</li>
 <li><strong>It stays serializable</strong> — every feature is a flat object of numbers,
 strings and booleans, so the editor can render it from a schema.</li>
 </ol>
-<h3>Roles — presets, not categories</h3>
+<h3 id="roles--presets-not-categories">Roles — presets, not categories</h3>
 <p><code>role</code> expands to a feature set; explicit <code>features</code> win. Roles carry <strong>intent</strong>
 (&quot;this is the power source&quot;) where features carry <strong>mechanism</strong>. A designer
 means the first; the runtime needs the second.</p>
 <p>Shipped roles: <code>structure</code> · <code>target</code> · <code>power</code> · <code>generator</code> · <code>shield</code> ·
 <code>critical</code>. <strong>Consumers must be able to define their own</strong> — see Part 3.</p>
-<h3>Links, points, zones, values</h3>
+<h3 id="links-points-zones-values">Links, points, zones, values</h3>
 <pre><code class="language-jsonc">&quot;links&quot;:  [{ &quot;from&quot;: &quot;reactor&quot;, &quot;to&quot;: &quot;projector&quot;, &quot;kind&quot;: &quot;power&quot;,
              &quot;values&quot;: { &quot;delay&quot;: 0.4, &quot;beam&quot;: true } }],
 &quot;points&quot;: [{ &quot;id&quot;: &quot;pad&quot;, &quot;at&quot;: [0,6,8], &quot;kind&quot;: &quot;spawn&quot;, &quot;facing&quot;: [0,180,0],
@@ -382,7 +369,7 @@ removes the zone.</li>
 layer to key on. Deliberately open: a closed enum needs revising every time
 the fiction grows.</li>
 </ul>
-<h3>How an ensemble meets the world — one field, four modes</h3>
+<h3 id="how-an-ensemble-meets-the-world--one-field-four-modes">How an ensemble meets the world — one field, four modes</h3>
 <p>From a conversation with manta: an engine placing an ensemble into a larger
 context needs to know <strong>what the ensemble&#39;s origin means</strong>. A bunker sits on
 ground. A dock sits on water if there is water and on the bank if there is not.
@@ -415,7 +402,7 @@ is gone. <code>placePiece</code> is already the shape: the host passes in the fu
 that puts a thing in a world, and <code>placement</code> is <em>input to that function</em>. Our
 three jobs are to carry it, validate what can be validated, and show it in the
 editor.</p>
-<h4>Why one enum rather than flags</h4>
+<h4 id="why-one-enum-rather-than-flags">Why one enum rather than flags</h4>
 <p>All four are answers to the same question — which candidate surface does the
 origin resolve against — with <code>free</code> as the &quot;none&quot; member:</p>
 <table>
@@ -457,7 +444,7 @@ unique answer: inside a carved volume several solid surfaces stack at one
 be resolved from a heightfield; <code>solid</code> needs the volumetric field and the
 author&#39;s reference height. That is the tunnels-and-caves case, and it is also
 what a multi-level building needs.</p>
-<h5>Resolution is a PHASE, and its degradation is a <code>problem</code></h5>
+<h5 id="resolution-is-a-phase-and-its-degradation-is-a-problem">Resolution is a PHASE, and its degradation is a <code>problem</code></h5>
 <p>Four constraints from manta having built this consumer-side (#7) rather than
 reasoned about it, each of which would have been got wrong here:</p>
 <ul>
@@ -485,7 +472,7 @@ evaluates it every frame. The same code has to serve the placement pass and
 the movement constraint, which rules out anything that resolves by mutating a
 built scene.</li>
 </ul>
-<h5>Analytic and physics compose rather than compete</h5>
+<h5 id="analytic-and-physics-compose-rather-than-compete">Analytic and physics compose rather than compete</h5>
 <p>The owner raised physics as an alternative. It is better read as the other half:</p>
 <table>
 <thead>
@@ -511,7 +498,7 @@ physics, the document stays deterministic and diffable, and a consumer needs no
 physics engine to load a level. Resolving physically at load would make one
 document produce slightly different worlds, which is the property a format
 exists to remove.</p>
-<h4>It is a promise about the ORIGIN, and that part is checkable</h4>
+<h4 id="it-is-a-promise-about-the-origin-and-that-part-is-checkable">It is a promise about the ORIGIN, and that part is checkable</h4>
 <p><code>placement: &#39;ground&#39;</code> asserts that the ensemble&#39;s origin is its <strong>contact
 point</strong> — otherwise &quot;sits on the ground&quot; resolves a <code>y</code> that buries half of it.
 So the field quietly fixes an origin convention that has so far been folklore,
@@ -525,7 +512,7 @@ quirk.</p>
 <p>Warning, not error: a rig with a subsea section legitimately hangs below its
 deck-level origin, and the right response is to make the author look, not to
 refuse the file.</p>
-<h4>It applies to the ROOT of a build, and to nothing else</h4>
+<h4 id="it-applies-to-the-root-of-a-build-and-to-nothing-else">It applies to the ROOT of a build, and to nothing else</h4>
 <p>A nested ensemble is placed by its parent at a local offset, and its own
 <code>placement</code> is <strong>ignored</strong>. This follows directly from nesting being a black
 box: if it applied at every level, a lamp-post nested inside a plaza would
@@ -533,13 +520,13 @@ ground-snap itself out of the plaza&#39;s frame and into the world&#39;s, and th
 failure would look like a broken offset rather than a rule nobody stated.</p>
 <p>Same for a tile, which is the same mechanism: a tiler owns the cell transform
 entirely.</p>
-<h4>Absent means unstated, and unstated behaves as <code>free</code></h4>
+<h4 id="absent-means-unstated-and-unstated-behaves-as-free">Absent means unstated, and unstated behaves as <code>free</code></h4>
 <p>Adding a field must not move any existing content, and <code>free</code> is the only value
 that changes nothing for a host that never looked. So absent and <code>free</code> produce
 the same behaviour — but they are distinguishable in the data, which is what
 lets the editor nudge an author who has not decided without inventing a fifth
 value nobody would ever write.</p>
-<h4>Orthogonal to what the ensemble is FOR</h4>
+<h4 id="orthogonal-to-what-the-ensemble-is-for">Orthogonal to what the ensemble is FOR</h4>
 <p>Tonio&#39;s point, and it is what makes this a separate field rather than more
 overloading of <code>kind</code>. An ensemble can be a place, a tileset, a library of
 parts, or a fragment somebody saved out of a selection — and any of those can
@@ -550,7 +537,7 @@ a library member is never placed in a world at all — it is expanded into
 something that is. <code>free</code> is therefore doing double duty, covering both &quot;placed,
 but relative to nothing&quot; and &quot;not placed directly at all&quot;, and those collapse
 cleanly because in both the caller holds the full transform.</p>
-<h4>The half this does NOT solve — and why its shape is not a verb</h4>
+<h4 id="the-half-this-does-not-solve--and-why-its-shape-is-not-a-verb">The half this does NOT solve — and why its shape is not a verb</h4>
 <p><code>y</code> is one of two questions a hillside asks. The other is angle, and it has
 three genuinely different answers:</p>
 <table>
@@ -580,7 +567,7 @@ removed. In the common case the placer holds the strongest opinion in the
 system, because it is the only party that knows the plan.</p>
 <p>So everything in this family is <strong>advisory</strong>. The ensemble says what it wants
 and what it can stand; the engine decides, and is right to.</p>
-<h5>Requirement and response are different fields</h5>
+<h5 id="requirement-and-response-are-different-fields">Requirement and response are different fields</h5>
 <p>Splitting them is what makes the advisory part usable rather than ignorable:</p>
 <ul>
 <li>a <strong>requirement</strong> is negotiable — &quot;I need ground within 4° of level across a
@@ -616,7 +603,7 @@ answers three questions</strong>:</p>
 <p>A verb — <code>tilt: true</code> — answers none of them. It is an instruction to one
 consumer at one moment, and the two consumers that matter most run <em>before</em>
 that moment.</p>
-<h5>It is read before the build, not during it</h5>
+<h5 id="it-is-read-before-the-build-not-during-it">It is read before the build, not during it</h5>
 <p>Site selection asks &quot;what does this need?&quot; while deciding where to put it, so
 the requirement has to be legible without instantiating anything. It is
 top-level JSON, so it already is — but that is a property worth protecting, and
@@ -627,13 +614,13 @@ built scene.</p>
 one more thing to keep in step with the content, and the content is the truth.
 The escape hatch is for when bounds lie — a crane&#39;s jib, a bridge&#39;s span, a
 cantilever that overhangs ground it does not need.</p>
-<h5>Three parties, and the author is not the loser</h5>
+<h5 id="three-parties-and-the-author-is-not-the-loser">Three parties, and the author is not the loser</h5>
 <p>Author, content, engine. The engine wins, but it can only win <em>well</em> if it
 knows what the author wanted — which is the whole argument for recording the
 preference even though it is overridable. An engine that levels the block and
 stands everything upright has made a good decision <em>because</em> it could see that
 the hut wanted to tilt and the mast did not.</p>
-<h5>Still not shipping it</h5>
+<h5 id="still-not-shipping-it">Still not shipping it</h5>
 <p>Two things are not settled enough to write, and both would be expensive to
 unsay:</p>
 <ul>
@@ -649,7 +636,7 @@ certainly&quot; is not a schema.</li>
 <p><code>placement</code> ships because it has a clean four-value answer. A partial field
 that is honest about its scope beats a complete-looking one that silently means
 &quot;upright&quot; forever.</p>
-<h4>Inserting an ensemble needs a full transform, and today it has a position</h4>
+<h4 id="inserting-an-ensemble-needs-a-full-transform-and-today-it-has-a-position">Inserting an ensemble needs a full transform, and today it has a position</h4>
 <p>Tonio: whatever an ensemble <em>declares</em>, the insertion API must let a host place
 it at an arbitrary orientation when it wants to. That is the same precedence
 rule one layer down — the engine decides — and it is currently <strong>not
@@ -664,7 +651,7 @@ for an orientation to arrive in:</p>
 <p>Position, scale, no rotation — <code>placeMesh</code> reads <code>piece.rot</code> off the piece
 itself. So adding a field to <code>BuildOptions</code> is necessary and not sufficient;
 the rotation has to reach the thing that builds a node.</p>
-<h5>Two ways, and they are not equally good</h5>
+<h5 id="two-ways-and-they-are-not-equally-good">Two ways, and they are not equally good</h5>
 <table>
 <thead>
 <tr>
@@ -697,7 +684,7 @@ and being shoved: today all of those mean rebuild.</p>
 <p>Insertion scale should be <strong>scalar</strong>, for the reason <code>ensemble.scale</code> already
 is: a non-uniform scale applied to an arrangement shears every piece that
 carries a rotation.</p>
-<h5>What B costs, and the one thing to measure first</h5>
+<h5 id="what-b-costs-and-the-one-thing-to-measure-first">What B costs, and the one thing to measure first</h5>
 <p><code>at</code> stops being world and becomes local-to-the-root, because a parented node&#39;s
 position is local. That is a change to <code>placePiece</code>&#39;s contract and therefore to
 every consumer placer, manta&#39;s included — worth doing before 1.0, not after.</p>
@@ -707,7 +694,7 @@ frame. Under a parent that write is a LOCAL write, which is exactly what B
 wants — but &quot;should be exactly right&quot; is how three transform attributes in this
 project turned out to do nothing at all while their tests passed. Measure a
 parented <code>b3d-destroyable</code> over several frames before building on it.</p>
-<h5>What an insertion rotation cannot turn</h5>
+<h5 id="what-an-insertion-rotation-cannot-turn">What an insertion rotation cannot turn</h5>
 <p>A scene primitive has no orientation. Fog, ambient life, sky and a terrain
 province are features whose body IS the world, so an ensemble containing them
 will ignore the rotation silently — rotate the standard scene and the sun does
@@ -719,7 +706,7 @@ sit within a tile — a lamp on the ceiling, a bookcase against the north wall.
 Two unrelated meanings one letter apart is a documentation bug waiting to be
 written.</p>
 </blockquote>
-<h3>Validation</h3>
+<h3 id="validation">Validation</h3>
 <p><code>validate(ensemble, knownMeshes?) → Problem[]</code> — returns problems, never throws
 (a builder shows them; a generator rejects without dying).</p>
 <p><strong>Return severity, not strings.</strong> The two consumers want different things from
@@ -739,7 +726,7 @@ is really a loading race is worse than none, because it accuses good content)</l
 entirely normal until a player spends five minutes failing to kill something</li>
 </ul>
 <hr>
-<h2>Part 2 — the editor component</h2>
+<h2 id="part-2--the-editor-component">Part 2 — the editor component</h2>
 <p>Ships as a configurable component, not an application:</p>
 <pre><code class="language-javascript" data-highlighted><span class="token function">ensembleEditor</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
   <span class="token literal-property property">libraries</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span> <span class="token literal-property property">url</span><span class="token operator">:</span> <span class="token string">"/enemies.glb"</span><span class="token punctuation">,</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"enemies"</span> <span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
@@ -753,7 +740,7 @@ entirely normal until a player spends five minutes failing to kill something</li
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<h3>Required affordances</h3>
+<h3 id="required-affordances">Required affordances</h3>
 <table>
 <thead>
 <tr>
@@ -802,15 +789,15 @@ entirely normal until a player spends five minutes failing to kill something</li
 <td>load, save, import file, export file. The component owns none of it — it calls the consumer&#39;s handlers</td>
 </tr>
 </tbody></table>
-<h3>Explicitly out of scope for v1</h3>
+<h3 id="explicitly-out-of-scope-for-v1">Explicitly out of scope for v1</h3>
 <p>Undo/redo, multi-select, snapping/alignment guides, terrain painting, nested
 ensembles. All defensible later; none required to be useful.</p>
 <hr>
-<h2>Part 3 — the schema system (the part that makes it reusable)</h2>
+<h2 id="part-3--the-schema-system-the-part-that-makes-it-reusable">Part 3 — the schema system (the part that makes it reusable)</h2>
 <p>This is what stops the editor being Manta-shaped. The editor must not know what
 <code>destroyable</code> means; it must know how to <strong>render an editor for it from a
 description</strong>.</p>
-<h3>Schemas are JSON Schema, via tosijs-schema</h3>
+<h3 id="schemas-are-json-schema-via-tosijs-schema">Schemas are JSON Schema, via tosijs-schema</h3>
 <p>Owner: <em>&quot;We should leverage tosijs-schema to define the schemas as json-schema
 extending to tjs predicates when the time comes.&quot;</em></p>
 <p><code>tosijs-schema</code>&#39;s premise is exactly the one this needs — <strong>JSON Schema →
@@ -931,7 +918,7 @@ therefore a table of <strong>widgets</strong>, not of types.</p>
   <span class="token literal-property property">points</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">spawn</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Spawn"</span><span class="token punctuation">,</span> <span class="token literal-property property">fields</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">craft</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token string">"mesh"</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
 <span class="token punctuation">}</span><span class="token punctuation">;</span>
 </code></pre>
-<h3>Field types the editor must support</h3>
+<h3 id="field-types-the-editor-must-support">Field types the editor must support</h3>
 <table>
 <thead>
 <tr>
@@ -990,7 +977,7 @@ therefore a table of <strong>widgets</strong>, not of types.</p>
 they are how an ensemble expresses <strong>internal relationships</strong> — this shield is
 fed by that reactor, this launchpad emits at that point — without the author
 typing ids.</p>
-<h3>The feature registry — open for extension</h3>
+<h3 id="the-feature-registry--open-for-extension">The feature registry — open for extension</h3>
 <p>Owner: <em>&quot;it&#39;s going to depend on tosijs-3d no matter what and a consumer should
 be able to bind properties to locally defined behaviors.&quot;</em></p>
 <p>This corrects an earlier draft that said the binding &quot;is not a consumer
@@ -1029,7 +1016,7 @@ not a cost worth engineering around. The thing worth engineering is that a
 locally-defined feature is a <strong>first-class citizen</strong>: it appears in the palette,
 gets a schema-driven property panel, participates in <code>ref</code> pick lists, and is
 saved and loaded like any other.</p>
-<h4>What the registry must give a feature</h4>
+<h4 id="what-the-registry-must-give-a-feature">What the registry must give a feature</h4>
 <table>
 <thead>
 <tr>
@@ -1090,7 +1077,7 @@ writing is <em>build → dispose → build</em>, asserting the scene&#39;s mesh,
 material counts return to where they started. A leak that a game never notices
 will eat an editing session.</p>
 </blockquote>
-<h4>Consequences for the editor</h4>
+<h4 id="consequences-for-the-editor">Consequences for the editor</h4>
 <ul>
 <li>The editor&#39;s palette of features is <strong>whatever is registered</strong>, not a hardcoded
 list. Manta&#39;s <code>zone</code>-reading escort behaviour shows up beside <code>turret</code>.</li>
@@ -1102,7 +1089,7 @@ broken.</li>
 <li>A feature registered only in the editor (a visualiser, say) is legitimate, but
 should be marked so, or an author can build something the game cannot load.</li>
 </ul>
-<h2>Part 4 — test scenarios</h2>
+<h2 id="part-4--test-scenarios">Part 4 — test scenarios</h2>
 <p>The editor must be able to <strong>run situations</strong>, not just render arrangements. An
 ensemble is a puzzle; a static render tells you nothing about whether it is
 solvable or fair.</p>
@@ -1135,7 +1122,7 @@ state rather than trusting this document — the pause fix landed in 0.7.0 and
 the shape may have moved again.</p>
 </blockquote>
 <hr>
-<h2>Part 5 — what Manta contributes back</h2>
+<h2 id="part-5--what-manta-contributes-back">Part 5 — what Manta contributes back</h2>
 <p>Working code to lift, and lessons that cost real time:</p>
 <ul>
 <li>format + validation (<code>src/prefab.ts</code>), runtime (<code>src/prefab-runtime.ts</code>),
@@ -1155,7 +1142,7 @@ than guessing names</strong></li>
 <li><strong>an editor must render content at the game&#39;s scale</strong>, or it teaches you the
 wrong thing about your own data</li>
 </ul>
-<h2>Part 6 — authoring beyond one-piece-at-a-time</h2>
+<h2 id="part-6--authoring-beyond-one-piece-at-a-time">Part 6 — authoring beyond one-piece-at-a-time</h2>
 <p>Sketched with the owner while the SVG UI backlog lands upstream. Nothing here is
 built. It is here so the format decisions each one implies get made once, and
 early, rather than four times under deadline — and because three of the four
@@ -1174,7 +1161,7 @@ which meshes are road-straight, road-corner and road-tee; the editor cannot
 guess it and should not try. That is <code>extras</code> in the glb (tosijs-3d#45), read
 as a catalogue.</li>
 </ol>
-<h3>Procedural tile sets — roads, rooms, plateaus, water</h3>
+<h3 id="procedural-tile-sets--roads-rooms-plateaus-water">Procedural tile sets — roads, rooms, plateaus, water</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;the ability to define procedural tile sets such as roads, terrain
 plateaus, and rooms… drag out a rectangle on a grid and have it turn into
@@ -1199,7 +1186,7 @@ hand-edited, which is what makes re-running it safe.</li>
 <p>The trap to avoid: <strong>do not invent a tile taxonomy in this repo</strong>. It belongs to
 whoever packs the kit, and a taxonomy invented here would be wrong for the first
 kit that did not fit it.</p>
-<h3>Placeable lights, and primitives that carry geometry</h3>
+<h3 id="placeable-lights-and-primitives-that-carry-geometry">Placeable lights, and primitives that carry geometry</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;primitives we want to have from tosijs-3d such as placeable lights
 with default geometry (that can have meshes attached).&quot;</em></p>
@@ -1237,7 +1224,7 @@ about the other, and a generator has two things to emit. Settle the curve&#39;s
 JSON shape once, wherever it lands first.</p>
 </li>
 </ul>
-<h3>Points and zones with consumer-defined types</h3>
+<h3 id="points-and-zones-with-consumer-defined-types">Points and zones with consumer-defined types</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;labeled points and zones with types and names… you might want to
 create a Carrier group formation and place locations where picket ships and
@@ -1267,7 +1254,7 @@ registry pattern as features and roles: <code>registerPointKind</code>, or a lis
 component. It must stay a suggestion, never a constraint — the moment the
 editor rejects an unknown kind, the format&#39;s openness is gone.</li>
 </ul>
-<h3>Three kinds of piece: added, applied, and only-for-looking</h3>
+<h3 id="three-kinds-of-piece-added-applied-and-only-for-looking">Three kinds of piece: added, applied, and only-for-looking</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;I want to be able to say create a base that applies a province to
 ambient terrain and then sprinkles content onto it, but it would be nice to be
@@ -1340,7 +1327,7 @@ contain arbitrary pieces (a whole scene, which is powerful and duplicates the
 format inside itself) or only environment primitives — terrain, sky, water,
 ground — which is what the case actually calls for and keeps the block from
 becoming a second ensemble with no validation of its own.</p>
-<h3>A &quot;utilities&quot; library — the palette is where you insert ANYTHING</h3>
+<h3 id="a-utilities-library--the-palette-is-where-you-insert-anything">A &quot;utilities&quot; library — the palette is where you insert ANYTHING</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;we may want a &#39;utilities&#39; library that includes things like named
 reference points and named zones and lights.&quot;</em></p>
@@ -1382,7 +1369,7 @@ it is why this is a sketch rather than a task.</p>
 geometry, so a light is an ordinary piece with a real body. Points and zones are
 the remaining case, and they are the harder one — a light at least has an
 obvious thing to draw.</p>
-<h3>Provinces: authoring onto terrain, and reshaping it</h3>
+<h3 id="provinces-authoring-onto-terrain-and-reshaping-it">Provinces: authoring onto terrain, and reshaping it</h3>
 <blockquote>
 <p><strong>Owner:</strong> <em>&quot;author things that get placed on terrain such as provinces with
 associated carve outs… a base that can be dropped onto terrain, sculpts the
@@ -1480,7 +1467,7 @@ phase after bind and link, and it is the reason to decide this early: the
 two-phase build is load-bearing and a third phase changes its contract.</p>
 </li>
 </ol>
-<h3>Moons are cosmetic, and that is a deliberate hack</h3>
+<h3 id="moons-are-cosmetic-and-that-is-a-deliberate-hack">Moons are cosmetic, and that is a deliberate hack</h3>
 <p>A <code>moon</code> piece is tosijs-3d&#39;s <code>&lt;tosi-b3d-moon&gt;</code>: a disc at a fixed place on the
 star sphere, with its phase taken from the real sun. No orbit, no period, no
 eclipses, no light, and no second sun.</p>
@@ -1496,10 +1483,10 @@ it will likely be useful for Manta and if it&#39;s a hack it&#39;s a hack. We ca
 always turn it into a deprecated interface.&quot;</em> So when the system model lands:
 deprecate <code>moon</code>, keep reading it, and have it win over nothing rather than
 over the model. Do not reopen whether to ship it.</p>
-<h2>Open questions — with recommendations</h2>
+<h2 id="open-questions--with-recommendations">Open questions — with recommendations</h2>
 <p>Answered rather than left hanging, since each affects the format and the format
 is what goes upstream first.</p>
-<h3>1. Nested ensembles — <strong>not in v1, but do not foreclose them</strong></h3>
+<h3 id="1-nested-ensembles--not-in-v1-but-do-not-foreclose-them">1. Nested ensembles — <strong>not in v1, but do not foreclose them</strong></h3>
 <p>A fortress made of rigs is obviously desirable and is a large jump: transform
 composition, id namespacing, cyclic-reference detection, and an editing story
 for &quot;edit this instance vs. edit the definition&quot; that Unity has never made
@@ -1552,7 +1539,7 @@ must be two-phase: a ref that resolves mid-splice sees half a world.</li>
 bare id. That is another reason to namespace from day one — the encounter
 format inherits whatever identity scheme this one ships with.</p>
 </blockquote>
-<h4>Nesting is a BLACK BOX, and that decides the coordinate systems</h4>
+<h4 id="nesting-is-a-black-box-and-that-decides-the-coordinate-systems">Nesting is a BLACK BOX, and that decides the coordinate systems</h4>
 <blockquote>
 <p><strong>Owner: <em>&quot;The ensemble however can be a &#39;black box&#39; inside a scene, and to do
 stuff internal to it you would switch context (drill into it) and then pop back
@@ -1614,7 +1601,7 @@ work and the widget needs no geometry changes — owner: <em>&quot;later we can 
 force local coordinate system if the user wants and the axes will still work&quot;</em>.
 The cost of keeping the option open is one gap in a shaft, which is why
 <code>handles-view.ts</code> marks it load-bearing.</p>
-<h3>2. Terrain and environment — <strong>revised: primitives you can author with</strong></h3>
+<h3 id="2-terrain-and-environment--revised-primitives-you-can-author-with">2. Terrain and environment — <strong>revised: primitives you can author with</strong></h3>
 <p>The original answer here was &quot;a different thing; give them join points&quot;: an
 ensemble sits <em>on</em> a world, a bridge <em>is</em> the world, and making terrain an
 ensemble would drag streaming, LOD and collision meshes into a format whose
@@ -1657,7 +1644,7 @@ question 1 defers (id namespacing, cycle detection, transform composition) and
 should land on top of it rather than beside it. Bridges and tunnels still meet
 the world at <strong>points</strong> (<code>kind: &quot;entrance&quot;</code>), which the original answer got
 right.</p>
-<h3>3. Multiplayer / authority — <strong>out of scope, but the format is already safe</strong></h3>
+<h3 id="3-multiplayer--authority--out-of-scope-but-the-format-is-already-safe">3. Multiplayer / authority — <strong>out of scope, but the format is already safe</strong></h3>
 <p>Nothing here needs to change. Plain JSON with <strong>stable, author-assigned ids</strong> is
 exactly what a networked authority needs to refer to &quot;that pump on that rig&quot;
 without transmitting geometry. The risk to avoid is <em>derived</em> ids — if a piece&#39;s
@@ -1665,7 +1652,7 @@ identity depends on its array index, every insertion renumbers the world.</p>
 <p><strong>Recommendation:</strong> make <code>id</code> mandatory in v1 rather than defaulting to
 <code>${mesh}#${index}</code> as the prototype does. The default is convenient and is the
 one decision here that would be genuinely expensive to reverse.</p>
-<h3>4. Missions consume ensembles — <strong>via an encounter, not directly</strong></h3>
+<h3 id="4-missions-consume-ensembles--via-an-encounter-not-directly">4. Missions consume ensembles — <strong>via an encounter, not directly</strong></h3>
 <p>This is the one I feel most strongly about. A mission should not say &quot;place
 <code>ocean-rig</code> at (140, 2, 520)&quot;. It should say &quot;there is a rig here, it is
 hostile, it is worth 3, and its pump is the objective&quot;.</p>
@@ -1686,7 +1673,7 @@ ensemble is a <em>kind of place</em>, the encounter is <em>this place, in this s
 That line also settles Part 1&#39;s <code>values</code>: <code>targetValue</code> and <code>faction</code> are
 encounter-level, and their presence on an ensemble is a <strong>default</strong>, overridable
 per encounter.</p>
-<h3>5. Which UI stack — <strong>the decision this document was making implicitly</strong></h3>
+<h3 id="5-which-ui-stack--the-decision-this-document-was-making-implicitly">5. Which UI stack — <strong>the decision this document was making implicitly</strong></h3>
 <p>Owner, mid-review: <em>&quot;It could make sense as a tosijs-3d project if it leveraged
 our svg ui work (which would allow scene editing in VR...)&quot;</em></p>
 <p>PLAN.md currently says &quot;use tosijs-ui widgets&quot;, which is a reasonable default and
@@ -1746,7 +1733,7 @@ mostly exist: <code>surface</code> (menus + draggable panels), <code>table</code
 a piece list), <code>keyboard</code> (typing without an OS), <code>popup-surface</code> (tear-off
 panels, modals), <code>gamepad-focus</code> (traversal without a pointer), <code>xr-frames</code> +
 <code>frame-panel</code> (pinning a panel where your hand is).</p>
-<h4>What B costs, honestly</h4>
+<h4 id="what-b-costs-honestly">What B costs, honestly</h4>
 <ul>
 <li><strong>No gizmo exists.</strong> <code>b3d-panel</code>&#39;s coloured axes are a debug READOUT, not a
 manipulator — a real trap, because they look exactly like Babylon&#39;s position
@@ -1760,7 +1747,7 @@ a form generator. <code>widgets3d</code> has label/slider/toggle/select/button/l
 does not have a form layer, and building one is a chunk of work that tosijs-ui
 already did.</li>
 </ul>
-<h4>The editor is the SVG UI&#39;s hardest customer, and that is a REASON</h4>
+<h4 id="the-editor-is-the-svg-uis-hardest-customer-and-that-is-a-reason">The editor is the SVG UI&#39;s hardest customer, and that is a REASON</h4>
 <p>Owner: <em>&quot;As a complex consumer of the SVG 3d ui system it would generate a lot
 of battle testing that a game won&#39;t.&quot;</em></p>
 <p>This is the argument that settles it, and it runs the opposite way to the usual
@@ -1787,7 +1774,7 @@ tosijs-ui&#39;s DOM widgets: <strong>the weakness is the point.</strong> Forms a
 thinnest area, and the editor is what would justify and shape a form layer —
 built once, in the right repo, by the consumer with the strongest opinion about
 it.</p>
-<h4>Recommendation</h4>
+<h4 id="recommendation">Recommendation</h4>
 <p><strong>Build the editor&#39;s chrome on the SVG UI (B), and keep the project separate
 anyway.</strong></p>
 <p>Splitting the two questions is the point. &quot;Which widgets&quot; and &quot;which repo&quot; got
@@ -1802,7 +1789,7 @@ authoring tool, which is precisely the &quot;a shipped game must not pay for
 authoring&quot; argument this document already makes for the format/editor split.
 The SVG UI is exported; depending on it is enough.</li>
 </ul>
-<h4>Where the FORMAT lives — reopened, and the answer changed</h4>
+<h4 id="where-the-format-lives--reopened-and-the-answer-changed">Where the FORMAT lives — reopened, and the answer changed</h4>
 <p>This document&#39;s Part 1 puts the format and instantiator in tosijs-3d. The owner&#39;s
 refinement: <em>&quot;The &#39;ensemble&#39; format could make sense as a core piece of tosijs-3d
 OR it could be a lightweight and separable import from the editor library. Maybe
@@ -1851,7 +1838,7 @@ a milestone-2 upstream dependency rather than a milestone-3 lift</strong> — be
 UI first, and try them in a headset before building anything else.</strong> If forms in
 <code>widgets3d</code> turn out to be the wrong shape, that is cheap to discover there and
 expensive to discover in milestone 3.</p>
-<h2>Suggested sequence</h2>
+<h2 id="suggested-sequence">Suggested sequence</h2>
 <ol>
 <li><strong><code>tosijs-3d-ensemble</code>, here</strong> — format types (JSON Schema via
 tosijs-schema), <code>validate()</code>, <code>buildEnsemble()</code>, the feature registry. Manta
@@ -1946,6 +1933,6 @@ bite.</li>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

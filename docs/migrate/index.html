@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Migrating a legacy prefab — tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon&#39;s prefabs predate this format and are already ensembles in every way that matters — measured, not assumed: all four build every piece, and their…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Migrating a legacy prefab — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Migrating a legacy prefab — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Migrating a legacy prefab</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="migrate.ts">
+<h1 id="migrating-a-legacy-prefab">Migrating a legacy prefab</h1>
 <p><code>manta-recon</code>&#39;s prefabs predate this format and are <strong>already ensembles in every
 way that matters</strong> — measured, not assumed: all four build every piece, and
 their <code>subsystems</code>, <code>zones</code>, <code>points</code> and piece-level <code>values</code> survive a
@@ -63,7 +50,7 @@ load/save round trip untouched. Two of the four validate and load as they stand.
 <td><code>features.destroyable.hp</code></td>
 </tr>
 </tbody></table>
-<h2>Why <code>id</code> is generated from the MESH and not the index</h2>
+<h2 id="why-id-is-generated-from-the-mesh-and-not-the-index">Why <code>id</code> is generated from the MESH and not the index</h2>
 <p>Because index-derived ids are the thing this format exists to refuse: <em>&quot;derived
 ids mean every insertion renumbers the world&quot;</em>. A migration that wrote
 <code>piece-0</code>…<code>piece-6</code> would satisfy the validator and reintroduce the fault one
@@ -71,12 +58,12 @@ layer down, permanently, in a file somebody then hand-edits.</p>
 <p><code>&quot;Dome Mystery&quot;</code> becomes <code>dome-mystery</code>; a second one becomes <code>dome-mystery-2</code>.
 Ugly in a tie, stable under insertion, and legible in a diff — which is what an
 id is for.</p>
-<h2>Idempotent, and that is the point</h2>
+<h2 id="idempotent-and-that-is-the-point">Idempotent, and that is the point</h2>
 <p>Run it twice and the second run reports no changes. A migration you cannot re-run
 is one you are afraid of, so you run it once, by hand, and never again — and the
 next legacy file gets fixed by hand too. Pieces that already have ids keep them;
 an <code>hp</code> already lifted is not lifted twice.</p>
-<h2>What it deliberately does NOT do</h2>
+<h2 id="what-it-deliberately-does-not-do">What it deliberately does NOT do</h2>
 <ul>
 <li><strong>It does not invent features.</strong> <code>ocean-rig</code> uses a <code>radar</code> feature nobody has
 registered, and that stays a validator WARNING rather than something this
@@ -167,6 +154,6 @@ tidies away data it does not understand is a migration that loses data.</li>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

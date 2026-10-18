@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>tosijs-3d-ensemble — project plan</title>
   <meta name="description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="tosijs-3d-ensemble — project plan (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="tosijs-3d-ensemble — project plan" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>tosijs-3d-ensemble — project plan</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="PLAN.md">
+<h1 id="tosijs-3d-ensemble--project-plan">tosijs-3d-ensemble — project plan</h1>
 <!--{"pin":"bottom","parent":"Project","order":2}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
 <p>An <em>ensemble</em> is a reusable, JSON-described arrangement of library meshes with
 declared capabilities and relationships — a rig, a dome facility, a floating
@@ -52,7 +39,7 @@ affordances, schema system, test scenarios, and five design questions answered
 with recommendations. This file is the <em>plan</em> — what to build, in what order,
 with what, and what &quot;done&quot; means at each step.</p>
 <hr>
-<h2>Where this sits in the ecosystem</h2>
+<h2 id="where-this-sits-in-the-ecosystem">Where this sits in the ecosystem</h2>
 <p>Three concerns, deliberately split (SPEC.md §&quot;Where each piece lives&quot;):</p>
 <table>
 <thead>
@@ -107,7 +94,7 @@ common case, and it must not pay for authoring. This project depends on
 tosijs-3d for both, which means <strong>the editor and the game call the same
 instantiator</strong>: &quot;what you author is what you get&quot; holds by construction rather
 than by discipline.</p>
-<h3>Dependencies</h3>
+<h3 id="dependencies">Dependencies</h3>
 <table>
 <thead>
 <tr>
@@ -133,7 +120,7 @@ than by discipline.</p>
 </tr>
 </tbody></table>
 <hr>
-<h2>Build it the ecosystem&#39;s way</h2>
+<h2 id="build-it-the-ecosystems-way">Build it the ecosystem&#39;s way</h2>
 <p>This is a first-class tosijs project, not a side tool. Before substantive work,
 read <code>../tosijs-coding-practices/README.md</code> (the index) and the practice doc for
 the task at hand. <code>CLAUDE.md</code> records the non-negotiables; the ones that shape
@@ -175,8 +162,8 @@ loop&quot; — unpublished dependency tarballs live in <code>../local-packages/<
 <code>PROVENANCE.md</code> and a sha256, never in a session scratchpad.</li>
 </ul>
 <hr>
-<h2>Milestones</h2>
-<h3>0a — settle the UI question first — <strong>half done</strong></h3>
+<h2 id="milestones">Milestones</h2>
+<h3 id="0a--settle-the-ui-question-first--half-done">0a — settle the UI question first — <strong>half done</strong></h3>
 <p>The piece list and a property panel are BUILT in the SVG UI and verified in a
 browser: selecting a piece through the component&#39;s API swaps the property panel
 and its sliders. <strong>The headset half has not been run</strong>, and one thing found
@@ -192,7 +179,7 @@ schema-driven property panel is a form generator.</p>
 <p><strong>Done when:</strong> you can select a piece from a list and change one number, in VR.
 If that feels wrong, question 5 answers itself and the scaffold goes to
 tosijs-ui with nothing lost. Discovering it in milestone 3 costs the panel twice.</p>
-<h3>0 — scaffold ✅ DONE</h3>
+<h3 id="0--scaffold--done">0 — scaffold ✅ DONE</h3>
 <ul>
 <li>Bun + TypeScript strict (both typechecks clean), <code>tosijs-ui/site</code> wired as the
 build/dev/doc system — no hand-rolled bundler, dev server or docs page.</li>
@@ -203,7 +190,7 @@ component and has no privileged access to anything.</li>
 <li><strong>Done:</strong> <code>bun start</code> serves it on :8032, <code>bun run build</code> produces the bundle
 and 12 static pages, <code>bun test</code> is green.</li>
 </ul>
-<h3>1 — the format + registry — <strong>mostly done</strong></h3>
+<h3 id="1--the-format--registry--mostly-done">1 — the format + registry — <strong>mostly done</strong></h3>
 <p>Importable by a game with no editor. Asserted by <code>src/tree-shaking.test.ts</code>,
 not by intention.</p>
 <p>Done: types, roles-as-presets with per-feature merge, <code>validate</code> returning
@@ -230,7 +217,7 @@ file.</li>
 with no behavioural change. That migration is the proof the API is right, and
 it should happen before the editor is built on top of it.</li>
 </ul>
-<h3>2 — inspect — <strong>started</strong></h3>
+<h3 id="2--inspect--started">2 — inspect — <strong>started</strong></h3>
 <p>Already in: the backdrop (land/aquatic, pinned to origin), placement, a first
 cut of fit-to-bounds framing, live non-blocking validation in the panel, and
 placeholder cubes when a piece&#39;s library is absent so the ARRANGEMENT still
@@ -255,7 +242,7 @@ runtime-added meshes never join a one-time list.</li>
 <li><strong>Done when:</strong> every ensemble in manta-recon renders identically to the game,
 at the same scale. Different scale = the tool teaches you the wrong thing.</li>
 </ul>
-<h3>3 — edit — <strong>in progress</strong></h3>
+<h3 id="3--edit--in-progress">3 — edit — <strong>in progress</strong></h3>
 <ul>
 <li><p><strong>A tool palette and a tool-options panel</strong>, added to this milestone after the
 fact: the palette picks the current tool and runs direct commands, and the
@@ -333,7 +320,7 @@ storage — the component calls handlers, it does not choose a backend.</p>
 is byte-comparable to a hand-written equivalent.</p>
 </li>
 </ul>
-<h3>4 — test</h3>
+<h3 id="4--test">4 — test</h3>
 <p>An ensemble is a puzzle; a static render says nothing about whether it is
 solvable or fair.</p>
 <ul>
@@ -349,7 +336,7 @@ actually scales. Real slow-motion needs <code>owner.simTime</code>/<code>simDt</
 <li><strong>Done when:</strong> you can watch idle fighters find an escort zone, and watch a
 reactor kill cascade to a shield, without leaving the page.</li>
 </ul>
-<h3>5 — ship it as a component</h3>
+<h3 id="5--ship-it-as-a-component">5 — ship it as a component</h3>
 <ul>
 <li><code>ensembleEditor({ libraries, schema, scenarios, onSave, load })</code> — configurable,
 embeddable, not an application.</li>
@@ -357,8 +344,8 @@ embeddable, not an application.</li>
 <li><strong>Done when:</strong> <code>../manta-recon</code> deletes its bench and depends on this.</li>
 </ul>
 <hr>
-<h2>Deliberate non-goals for v1</h2>
-<h3>Sketched, not scheduled — SPEC.md Part 6</h3>
+<h2 id="deliberate-non-goals-for-v1">Deliberate non-goals for v1</h2>
+<h3 id="sketched-not-scheduled--specmd-part-6">Sketched, not scheduled — SPEC.md Part 6</h3>
 <p>Four capabilities the owner outlined while the SVG UI backlog lands upstream:
 procedural tile sets, placeable lights with default geometry, points and zones
 with consumer-defined types, and provinces that reshape terrain. None is built.</p>
@@ -370,7 +357,7 @@ its vocabulary from <strong>library annotations</strong> rather than code (tosij
 gap is an editor affordance plus a consumer-supplied list of kinds. The most
 expensive is provinces, which needs a third build phase: a piece sitting &quot;on the
 ground&quot; cannot resolve its height until the terrain carve has run.</p>
-<h3>Explicitly out of scope for v1</h3>
+<h3 id="explicitly-out-of-scope-for-v1">Explicitly out of scope for v1</h3>
 <p>Named so they are decisions rather than omissions: undo/redo, <strong>multi-select</strong>
 (still out — the manipulator lands on a single selection first), alignment
 guides, terrain painting, <strong>nested ensembles</strong> (reserve
@@ -379,7 +366,7 @@ not build live instances), and the <strong>encounter layer</strong> (SPEC.md ope
 <code>ensemble</code> = what a thing IS, <code>encounter</code> = what it is DOING HERE; build it once
 there are enough ensembles for the distinction to bite).</p>
 <hr>
-<h2>Prior art</h2>
+<h2 id="prior-art">Prior art</h2>
 <p>A working prototype lives in <code>../manta-recon</code> — the editor grew inside a game
 and was extracted for the reasons above. Lift from it; do not start clean out of
 tidiness:</p>
@@ -471,6 +458,6 @@ an outcome</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

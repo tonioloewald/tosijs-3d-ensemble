@@ -67,7 +67,7 @@
     "prettier": "^2.8.8",
     "tosijs": "1.10.3",
     "tosijs-3d": "0.10.13",
-    "tosijs-ui": "^1.16.5",
+    "tosijs-ui": "^1.16.27",
     "typescript": "^5.9.3"
   },
   "releaseDoctor": {

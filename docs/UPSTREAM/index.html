@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Upstream — what we&#39;re waiting on — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Upstream — what we&#39;re waiting on — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Upstream — what we&#39;re waiting on</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="UPSTREAM.md">
+<h1 id="upstream--what-were-waiting-on">Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
 context, the workaround and the suggestion live there, self-contained for
 someone who has never seen this repo. Keeping a second copy here would drift —
@@ -53,7 +40,7 @@ when it lands, and close the issue.</p>
 as a card, tagged <code>waiting-upstream</code> while the issue is open and
 <code>fixed-upstream</code> while a workaround here still has to go. A row below can be
 older than its card; when they disagree, the card wins.</p>
-<h2>tosijs-3d</h2>
+<h2 id="tosijs-3d">tosijs-3d</h2>
 <table>
 <thead>
 <tr>
@@ -353,7 +340,7 @@ older than its card; when they disagree, the card wins.</p>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/110">#110</a></td>
 </tr>
 </tbody></table>
-<h3>Stopgaps we own, and what retires them</h3>
+<h3 id="stopgaps-we-own-and-what-retires-them">Stopgaps we own, and what retires them</h3>
 <p>Each of these is local complexity we carry <strong>because</strong> of a row above. When the
 issue lands, the workaround goes — a stopgap that outlives its reason is a fork
 nobody declared. One has already been collected: see the struck-through row.</p>
@@ -450,7 +437,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 | <del>Re-mounting the skybox when a starfield key changes</del> — <strong>gone in 0.8.4</strong> (tosijs-3d#88)
 | The <code>moon</code> feature&#39;s hand-written ranges (tosijs-3d#93)
 | Deferring the piece rename past the keystroke — <code>renameLater</code> (tosijs-3d#94)</p>
-<h2>tosijs</h2>
+<h2 id="tosijs">tosijs</h2>
 <table>
 <thead>
 <tr>
@@ -480,7 +467,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td><a href="https://github.com/tonioloewald/tosijs/issues/38">#38</a></td>
 </tr>
 </tbody></table>
-<h2>haltija</h2>
+<h2 id="haltija">haltija</h2>
 <table>
 <thead>
 <tr>
@@ -495,7 +482,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td><a href="https://github.com/tonioloewald/haltija/issues/41">#41</a></td>
 </tr>
 </tbody></table>
-<h2>tosijs-ui</h2>
+<h2 id="tosijs-ui">tosijs-ui</h2>
 <table>
 <thead>
 <tr>
@@ -535,7 +522,7 @@ nobody declared. One has already been collected: see the struck-through row.</p>
 <td><a href="https://github.com/tonioloewald/tosijs-ui/issues/229">#229</a></td>
 </tr>
 </tbody></table>
-<h3>Not filed, deliberately</h3>
+<h3 id="not-filed-deliberately">Not filed, deliberately</h3>
 <p><strong><code>prefab</code> means three things.</strong> tosijs-3d exports <code>prefab</code> for a registered
 <code>(ctx) =&gt; Element[]</code> factory (wrecks, debris, spawns); Unity means a serialized
 scene object with code; Manta&#39;s <code>prefab.ts</code> meant our format&#39;s ancestor. Not a
@@ -622,6 +609,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

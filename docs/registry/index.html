@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>The feature registry — tosijs-3d-ensemble</title>
   <meta name="description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="The feature registry — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="The feature registry — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>The feature registry</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="registry.ts">
+<h1 id="the-feature-registry">The feature registry</h1>
 <p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
 format open: a consumer&#39;s feature is indistinguishable from a shipped one in the
 file, in the editor&#39;s palette, in <code>ref</code> pick lists, and in save/load.</p>
@@ -65,7 +52,7 @@ file, in the editor&#39;s palette, in <code>ref</code> pick lists, and in save/l
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span>
 </code></pre>
-<h2>A field your feature FETCHES must say so</h2>
+<h2 id="a-field-your-feature-fetches-must-say-so">A field your feature FETCHES must say so</h2>
 <p>Mark it <code>format: &#39;uri-reference&#39;</code> — standard JSON Schema — and list any
 non-url values it also accepts in <code>x-keywords</code>:</p>
 <pre><code class="language-typescript" data-highlighted>properties<span class="token operator">:</span> <span class="token punctuation">{</span>
@@ -78,7 +65,7 @@ your element never receives a url the rule refused — or anything that is not a
 string. An UNMARKED field is not checked: the rule cannot know a string is
 fetched unless the schema says it is. That is how <code>sound.url</code>, a built-in,
 went unchecked until 0.4.0&#39;s review.</p>
-<h2><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
+<h2 id="bind-and-link-are-two-phases-and-that-is-not-a-style-preference"><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
 <p>A <code>protector</code> that resolves its power source during <code>bind</code> works only if the
 reactor happened to bind first — so the same ensemble behaves differently
 depending on the order pieces appear in the file, and reordering them in the
@@ -89,18 +76,18 @@ intermittent content problem, not a lifecycle one.</p>
 <code>ctx.piecesByRole</code> and zone lookups are legal. Same shape as tosijs-3d&#39;s
 scene-listener contract, for the same reason: a thing that reaches for its
 neighbours cannot run while the neighbours are still arriving.</p>
-<h2>Rebuilding must be idempotent</h2>
+<h2 id="rebuilding-must-be-idempotent">Rebuilding must be idempotent</h2>
 <p>The editor rebuilds an ensemble on <strong>every edit</strong> — hundreds of times a session
 where a game does it once. <code>onDispose</code> is necessary and not sufficient; the test
 worth writing is <em>build → dispose → build</em>, asserting the scene&#39;s mesh, observer
 and material counts return to where they started. A leak a game never notices
 will eat an editing session.</p>
-<h2>Guard your per-frame work</h2>
+<h2 id="guard-your-per-frame-work">Guard your per-frame work</h2>
 <p>A throw inside a Babylon render observer kills the render loop <strong>permanently</strong> —
 <code>notifyObservers</code> has no isolation and the loop does not re-queue, so the page
 goes black with no error where anyone would look. A <code>bind</code>/<code>link</code> that registers
 per-frame work must guard itself.</p>
-<h2>Links are a registry too</h2>
+<h2 id="links-are-a-registry-too">Links are a registry too</h2>
 <p><code>buildEnsemble</code> documented a link phase that wires <code>ensemble.links</code>, and the
 runtime never read them: an ensemble with chain reactions built cleanly,
 reported no problems, and did nothing. Found by the first consumer with links,
@@ -202,6 +189,6 @@ it. A link handler owns the link, gets both ends, and disposes once.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>Editor pointers — tosijs-3d-ensemble</title>
   <meta name="description" content="A tool is written once and driven by a mouse or by a hand. That is the whole point of this file: nothing downstream of it may name a mouse, a click, a screen" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Editor pointers — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="Editor pointers — tosijs-3d-ensemble" />
@@ -39,9 +26,9 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>Editor pointers</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="pointer.ts">
+<h1 id="editor-pointers">Editor pointers</h1>
 <p>A tool is written <strong>once</strong> and driven by a mouse or by a hand. That is the whole
 point of this file: nothing downstream of it may name a mouse, a click, a screen
 coordinate or a DOM event.</p>
@@ -49,7 +36,7 @@ coordinate or a DOM event.</p>
 contract bakes mouse assumptions into every tool, and each one has to be found
 and removed later. So the contract is XR-shaped from the start and the flat
 pointer is simply its first implementation.</p>
-<h2>What a pointer is</h2>
+<h2 id="what-a-pointer-is">What a pointer is</h2>
 <pre><code class="language-typescript" data-highlighted><span class="token keyword">interface</span> <span class="token class-name">EditorPointer</span> <span class="token punctuation">{</span>
   <span class="token function">ray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> EditorRay <span class="token operator">|</span> <span class="token keyword">null</span>   <span class="token comment">// far interaction: point at a thing</span>
   <span class="token function">grip</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> Vec3 <span class="token operator">|</span> <span class="token keyword">null</span>       <span class="token comment">// near interaction: reach out and hold it</span>
@@ -61,7 +48,7 @@ pointer is simply its first implementation.</p>
 directly, and anything out of reach is grabbed by pointing. An ensemble is
 routinely larger than arm&#39;s reach, so near-grab alone would mean flying the
 world around to edit it; ray alone throws away the thing a headset is for.</p>
-<h2>Hands are symmetric until they aren&#39;t</h2>
+<h2 id="hands-are-symmetric-until-they-arent">Hands are symmetric until they aren&#39;t</h2>
 <p>There is no fixed &quot;right hand is the tool&quot;. Whichever pointer starts a gesture
 is its PRIMARY, and whatever else is present becomes the helper <strong>for that
 gesture</strong>. That is what makes two-handed actions expressible later — dragging an
@@ -147,6 +134,6 @@ left/right special case in every tool.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

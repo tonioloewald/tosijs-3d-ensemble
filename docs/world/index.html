@@ -1,20 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- NB: the body is NOT hidden until hydration. It used to be (body opacity 0 +
-       a 4s safety-net timeout), because an undefined custom element is
-       display:inline, so the pre-rendered page stacked as bare text and hydration
-       reflowed the whole thing. The cost was a blank screen for as long as the
-       bundle took — ~4.5s on a cheap phone, for content already in the HTML. The
-       tosi-doc-system:not(:defined) rules in the stylesheet now lay the static page
-       out as though the chrome were there, so hydration only ADDS the chrome and
-       nothing moves. Paint immediately; don't hide readable content. -->
-  <!-- Theme, applied BEFORE first paint. Now that we paint the static page rather
-       than hiding it, a dark-mode reader would otherwise get a flash of the light
-       theme until the bundle lands and sets body.darkmode. CSS alone can't do this:
-       an explicit theme choice lives in localStorage. Mirrors applyThemePrefs()
-       (doc-system.ts) — keep the two in step. Fails safe: any error leaves the
-       light default, exactly as before. -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
@@ -24,13 +12,12 @@
       if (p.highContrast) document.documentElement.classList.add('high-contrast')
     } catch (e) {}
   </script>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=64227f0828f4" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=461b6fb2bc7e" data-tosi-doc-system />
   <title>The world preset — tosijs-3d-ensemble</title>
   <meta name="description" content="Doors, locks, spinners and triggers — the vocabulary a place needs, as opposed to a battle. Opt in the way you opt into combat" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="The world preset — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="The world preset — tosijs-3d-ensemble" />
@@ -39,16 +26,16 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;}}">
-  <article class="doc-content">
-<h1>The world preset</h1>
+  <tosi-doc-system docs="../docs.json?v=ca3fa9b3101d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="world.ts">
+<h1 id="the-world-preset">The world preset</h1>
 <p>Doors, locks, spinners and triggers — the vocabulary a <strong>place</strong> needs,
 as opposed to a battle. Opt in the way you opt into combat:</p>
 <pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> registerWorldPreset <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble/presets/world'</span>
 
 <span class="token function">registerWorldPreset</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 </code></pre>
-<h2>Why these are here and not upstream, yet</h2>
+<h2 id="why-these-are-here-and-not-upstream-yet">Why these are here and not upstream, yet</h2>
 <p>tosijs-3d has <code>b3d-trigger</code> (a proximity sphere) and <code>b3d-sound</code>, and nothing
 else on this list. There is no way for a player to <strong>touch</strong> a mesh at all:
 <code>b3d-button</code> is a floating Babylon GUI widget, not world geometry you can reach
@@ -58,7 +45,7 @@ and they are <strong>candidates for promotion</strong> — see <code>UPSTREAM.md
 here first means they get designed against real content instead of in the
 abstract, which is the same argument that put the ensemble format here rather
 than in the framework.</p>
-<h2><code>interactive</code> is the substrate</h2>
+<h2 id="interactive-is-the-substrate"><code>interactive</code> is the substrate</h2>
 <p>Everything you can operate composes on one feature. A door is not special-cased
 input; it is a thing with <code>interactive</code> that happens to swing.</p>
 <pre><code class="language-jsonc">{
@@ -155,6 +142,6 @@ a <code>RegExp</code> does not survive <code>JSON.stringify</code>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-m9529kfp.js"></script>
+  <script type="module" src="../hydrate-v5vgyjcq.js"></script>
 </body>
 </html>

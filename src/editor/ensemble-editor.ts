@@ -74,6 +74,7 @@ import {
   b3dPanel,
   row3d,
   iconBar3d,
+  picker3d,
   select3d,
   euler3d,
   foldSections,
@@ -105,6 +106,7 @@ import {
 } from "./tools/tool-registry.js";
 import { isSingle, registerEditorTools, uniqueId } from "./tools/built-in.js";
 import { slugify } from "../format/migrate.js";
+import type { EnsembleStore, StoreEntry, StoreRevision } from "./store.js";
 import { registerTransformTool, transformsOf } from "./tools/transform.js";
 import { createHandles } from "./handles-view.js";
 import { createHistory } from "./history.js";
@@ -713,6 +715,7 @@ export class EnsembleEditor extends withAttributes({
 
     this._snapshot = structuredClone(this._ensemble);
     this._snapshotJson = json;
+    this._syncDirty();
 
     /*
       NEVER the chrome. A bound widget is already showing its own value, and
@@ -962,6 +965,187 @@ export class EnsembleEditor extends withAttributes({
   }
   private _hostActions: HostAction[] = [];
 
+  /**
+   * WHERE DOCUMENTS LIVE, as the host defines it (board #3363; see
+   * `store.ts`). JS-only, like `handleSave`. With one, the Ensemble panel
+   * offers Open, Save, Save as and History; without, a local draft and a
+   * download, as before.
+   */
+  /**
+   * The store an editor uses when its host gives it none: set once by a site
+   * for every editor on it (ours does, on the dev server).
+   */
+  static defaultStore: EnsembleStore | null = null;
+
+  get store(): EnsembleStore | null {
+    return this._store_;
+  }
+  set store(next: EnsembleStore | null) {
+    this._store_ = next;
+    this._storeEntries = [];
+    this._storeHistory = [];
+    if (next) void this._refreshStore();
+    else if (this.isConnected) this._renderChrome();
+  }
+  private _store_: EnsembleStore | null = null;
+  /** The store's id of the open document, or null when it has none. */
+  private _storeId: string | null = null;
+  /** The document as last opened or saved, to tell whether it changed. */
+  private _savedJson: string | null = null;
+  private _storeEntries: StoreEntry[] = [];
+  private _storeHistory: StoreRevision[] = [];
+  private _saveAsName = "";
+
+  /** The Ensemble panel's title: marked while the document has unsaved changes. */
+  private _fileTitle(): string {
+    return this.dirty ? "Ensemble •" : "Ensemble";
+  }
+
+  /*
+    THE DIRTY MARK IS THE PANEL'S TITLE, updated after every edit without a
+    chrome render: most edits deliberately skip one (it would steal the
+    focus mid-typing), so a mark drawn in the panel's content went stale.
+  */
+  private _syncDirty(): void {
+    const el = this._systemPanels.get("file");
+    const title = this._fileTitle();
+    if (el && el.title !== title) el.title = title;
+  }
+
+  /** Has the document changed since it was opened from or saved to the store? */
+  get dirty(): boolean {
+    return (
+      this._savedJson !== null &&
+      JSON.stringify(this._ensemble) !== this._savedJson
+    );
+  }
+
+  private async _refreshStore(): Promise<void> {
+    const store = this._store_;
+    if (!store) return;
+    /*
+      RE-RENDER ONLY ON A CHANGE. Every chrome render swaps each panel's
+      content, which reopens it, and a click that lands mid-swap is lost: an
+      unconditional render here made host-actions.pw.ts fail 1 run in 4.
+    */
+    const before = JSON.stringify([this._storeEntries, this._storeHistory]);
+    try {
+      this._storeEntries = await store.list();
+      this._storeHistory =
+        this._storeId && store.history
+          ? await store.history(this._storeId)
+          : [];
+    } catch (error) {
+      this._storeEntries = [];
+      this._storeHistory = [];
+      this.dispatchEvent(new CustomEvent("error", { detail: { error } }));
+    }
+    const after = JSON.stringify([this._storeEntries, this._storeHistory]);
+    if (this.isConnected && after !== before) this._renderChrome();
+  }
+
+  /** Open a document from the store by its id. */
+  async openFromStore(id: string): Promise<void> {
+    if (!this._store_) return;
+    const doc = await this._store_.read(id);
+    this.ensemble = doc;
+    this._storeId = id;
+    this._savedJson = JSON.stringify(this._ensemble);
+    await this._refreshStore();
+  }
+
+  /**
+   * Save to the store: back to the document's own id, or to `id` (Save as).
+   * Rejects, and dispatches `error`, if the store refuses; the document is
+   * then still dirty, which is the truth.
+   */
+  async saveToStore(id?: string): Promise<void> {
+    const store = this._store_;
+    const target = id ?? this._storeId;
+    if (!store || !target) return;
+    try {
+      const result = await store.write(target, structuredClone(this._ensemble));
+      this._storeId = (result && result.id) || target;
+      this._savedJson = JSON.stringify(this._ensemble);
+    } catch (error) {
+      this.dispatchEvent(new CustomEvent("error", { detail: { error } }));
+      throw error;
+    } finally {
+      await this._refreshStore();
+    }
+  }
+
+  /** Open an earlier version of the open document (unsaved until you save). */
+  async openRevision(revision: string): Promise<void> {
+    const store = this._store_;
+    if (!store?.readRevision || !this._storeId) return;
+    const id = this._storeId;
+    const doc = await store.readRevision(id, revision);
+    this.ensemble = doc;
+    this._storeId = id;
+    await this._refreshStore();
+  }
+
+  /** The Ensemble panel's store rows (none without a store). */
+  private _storeRows(): unknown[] {
+    if (!this._store_) return [];
+    const rows: unknown[] = [
+      picker3d({
+        label: "Open",
+        value: this._storeId ?? "",
+        placeholder: "a saved ensemble…",
+        options: this._storeEntries.map((e) => ({
+          value: e.id,
+          label: e.name ?? e.id,
+        })),
+        handleChange: (id: string) => void this.openFromStore(id),
+      }),
+    ];
+    if (this._storeId)
+      rows.push(
+        button3d({
+          label: "Save",
+          handleClick: () => void this.saveToStore().catch(() => {}),
+        })
+      );
+    const saveAs = ui.inputField({
+      value: this._saveAsName,
+      placeholder: "save as…",
+      handleChange: (text: string) => {
+        this._saveAsName = text;
+      },
+    });
+    rows.push(
+      row3d(
+        { weights: [3, 2], gap: 6 },
+        this._collectField(saveAs) as never,
+        button3d({
+          label: "Save as",
+          handleClick: () => {
+            const name = this._saveAsName.trim();
+            if (name) void this.saveToStore(name).catch(() => {});
+          },
+        })
+      )
+    );
+    if (this._storeHistory.length)
+      rows.push(
+        picker3d({
+          label: "History",
+          value: "",
+          placeholder: `${this._storeHistory.length} versions`,
+          options: this._storeHistory.map((h) => ({
+            value: h.revision,
+            label: `${h.at ?? ""} ${
+              h.message ?? h.revision.slice(0, 7)
+            }`.trim(),
+          })),
+          handleChange: (revision: string) => void this.openRevision(revision),
+        })
+      );
+    return rows;
+  }
+
   private _built: BuiltEnsemble | null = null;
   private _hub = new PointerHub();
   private _pointer: FlatPointer | null = null;
@@ -1011,6 +1195,8 @@ export class EnsembleEditor extends withAttributes({
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (!this._store_ && EnsembleEditor.defaultStore)
+      this.store = EnsembleEditor.defaultStore;
     // Scene primitives only. The editor does not assume a domain — a host that
     // wants hit points registers the combat preset itself.
     registerSceneFeatures({ keepExisting: true });
@@ -1452,6 +1638,7 @@ export class EnsembleEditor extends withAttributes({
     */
     this._markRecorded();
     this._store.tosi.touch();
+    this._syncDirty();
 
     /*
       A DRAG RELEASE HAS NOTHING TO REBUILD.
@@ -3725,7 +3912,7 @@ export class EnsembleEditor extends withAttributes({
   private _renderFilePanel(): void {
     this._addPanel(
       "left",
-      { key: "file", icon: PANEL_ICONS.file, title: "Ensemble" },
+      { key: "file", icon: PANEL_ICONS.file, title: this._fileTitle() },
       panel3d(
         { width: PANEL_WIDTH, padding: 8, gap: 4 },
         // Into the keyboard group — see `_renderChrome`. Ungrouped, this was
@@ -3738,21 +3925,17 @@ export class EnsembleEditor extends withAttributes({
           })
         ) as never,
         /*
-          TWO BUTTONS, UNTIL THERE ARE MENUS.
-
-          Saving to a browser slot and opening one both work — `saveLocal`,
-          `openSaved` and `savedEnsembles` are here and tested — but each needs
-          a LIST, and the only list control available is `select3d`, which is a
-          stepper first and a menu second: "the save button only saves to file
-          AFAICT, it doesn't show more than one option". Four half-working
-          controls are worse than two that do exactly what they say.
-
-          When an icon grid can open a menu (tosijs-3d#59) these become two
-          icons with a menu apiece, and the slots come back.
+          FILES: New, Download and Open file… always; with a host STORE
+          (`editor.store`, board #3363) also Open from it, Save back to the
+          document it came from, Save as, and History when it keeps versions.
+          The lists are tosijs-3d's `picker3d`, a popup list with a filter.
+          (This comment used to say the only list control was a stepper; that
+          had stopped being true some time before.)
         */
         button3d({ label: "New", handleClick: () => this.newEnsemble() }),
         button3d({ label: "Download", handleClick: () => this.saveFile() }),
         button3d({ label: "Open file…", handleClick: () => this.openFile() }),
+        ...(this._storeRows() as never[]),
         ...this._hostActions.map((action) =>
           button3d({
             label: action.label,

@@ -130,4 +130,11 @@ export { TosiEnsemble, ensemble } from "./runtime/ensemble-element.js";
 // ── The editor: an author's tool ────────────────────────────────────────────
 export { EnsembleEditor, ensembleEditor } from "./editor/ensemble-editor.js";
 export type { HostAction } from "./editor/ensemble-editor.js";
+export { dataClientStore } from "./editor/store.js";
+export type {
+  DataClientLike,
+  EnsembleStore,
+  StoreEntry,
+  StoreRevision,
+} from "./editor/store.js";
 export type { Backdrop } from "./editor/ensemble-editor.js";

@@ -16,6 +16,17 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **Open and save through a store** (board #3363, from Manta). `editor.store`
+  takes an `EnsembleStore` (list, read, write, and optionally history and
+  read-a-revision); the Ensemble panel then offers Open, Save, Save as and
+  History, and its title reads "Ensemble •" while there are unsaved changes.
+  `dataClientStore(dataClient, { dir })` adapts tosijs-ui's dev-server data
+  store (`editableData`, tosijs-ui 1.16.25+) without depending on tosijs-ui;
+  `EnsembleEditor.defaultStore` gives every editor on a site one store. This
+  site's editor saves `static/ensembles` on the dev server
+  (`tests/store.pw.ts` saves as a scratch file with real clicks and reads the
+  disk). Versioning (`commit: true`) is the store's, and is off here.
+
 - **Colours are picked, not typed.** A `format: "color"` field is tosijs-3d's
   `colorPicker3d`: a swatch that opens the HSV(A) picker with presets and
   saved swatches. It had been a hex text field "until there is a picker",
@@ -72,6 +83,10 @@ All notable changes to this project are documented here, in
   text field.
 
 ### Changed
+
+- **tosijs-ui ^1.16.27** (dev): tunnel and preview-gate security fixes, and
+  `bun run build` hands the build to a running dev server instead of racing
+  it.
 
 - **Enabling or disabling a piece updates both panels.** The properties
   toggle and the list's circle disagreed until something else redrew them.

@@ -1,0 +1,153 @@
+/*#
+# Where the editor opens and saves
+
+The component owns no persistence (SPEC): it hands documents to a host. A
+**store** is the host's answer to "where do ensembles live". Give the editor
+one and its Ensemble panel gains **Open** (the store's documents), **Save**
+(back to the document it came from), **Save as**, and **History** when the
+store keeps versions. Without one, the editor keeps a local draft and offers
+a download, as before.
+
+```ts
+interface EnsembleStore {
+  list(): Promise<Array<{ id: string; name?: string; updated?: string }>>;
+  read(id: string): Promise<Ensemble>;
+  write(id: string, ensemble: Ensemble): Promise<{ id: string; revision?: string } | void>;
+  history?(id: string): Promise<Array<{ revision: string; at?: string; author?: string; message?: string }>>;
+  readRevision?(id: string, revision: string): Promise<Ensemble>;
+}
+```
+
+An `id` is the store's own address: a path on a dev server, a document id in a
+service. Two backends were in view when this was designed (board #3363, from
+Manta): a dev server writing the project's files, versioned by git, and a
+service (service-compris) holding documents with role-gated writes. Both fit.
+
+## The dev server's data store
+
+tosijs-ui's dev server can let a page save the project's data files
+(`editableData` in `site.config.ts`, tosijs-ui 1.16.25+), and its
+`tosijs-ui/doc-system/data-client` module talks to it. `dataClientStore`
+adapts that module; pass it in, so this package does not depend on tosijs-ui:
+
+```ts
+import * as dataClient from "tosijs-ui/doc-system/data-client";
+import { dataClientStore } from "tosijs-3d-ensemble";
+
+editor.store = dataClientStore(dataClient, { dir: "static/ensembles" });
+```
+
+Saving is gated as source editing is: this machine, an edit session over the
+tunnel, or a LAN you named. A static host answers the endpoint with a page,
+so `list()` rejects there and a host can leave the store off.
+*/
+/*{"parent":"Editor","order":9}*/
+import type { Ensemble } from "../format/types.js";
+
+/** One document a store can open. */
+export interface StoreEntry {
+  /** The store's address for it: a path, a document id. */
+  id: string;
+  /** What to call it, when the id is not a good name. */
+  name?: string;
+  /** When it last changed, as the store reports it. */
+  updated?: string;
+}
+
+/** One saved version of a document. */
+export interface StoreRevision {
+  revision: string;
+  at?: string;
+  author?: string;
+  message?: string;
+}
+
+/** Where ensembles live, as the host defines it. */
+export interface EnsembleStore {
+  list(): Promise<StoreEntry[]>;
+  read(id: string): Promise<Ensemble>;
+  write(
+    id: string,
+    ensemble: Ensemble
+  ): Promise<{ id: string; revision?: string } | void>;
+  history?(id: string): Promise<StoreRevision[]>;
+  readRevision?(id: string, revision: string): Promise<Ensemble>;
+}
+
+/** What `dataClientStore` needs of tosijs-ui's `data-client` module. */
+export interface DataClientLike {
+  listData(): Promise<{
+    files: Array<{ file: string; size: number; modified: string }>;
+  }>;
+  readData(
+    file: string,
+    options: { at?: string; json: true }
+  ): Promise<unknown>;
+  saveData(
+    file: string,
+    content: unknown
+  ): Promise<{ commit?: string | null; commitError?: string }>;
+  dataHistory?(
+    file: string
+  ): Promise<
+    Array<{ commit: string; date: string; author: string; subject: string }>
+  >;
+}
+
+/**
+ * A store over tosijs-ui's dev-server data endpoint, limited to one folder of
+ * `.json` files. A save that wrote the file but failed to commit is REPORTED
+ * (it rejects), not passed off as a clean save.
+ */
+export function dataClientStore(
+  client: DataClientLike,
+  { dir = "static/ensembles" }: { dir?: string } = {}
+): EnsembleStore {
+  const prefix = dir.replace(/\/+$/, "") + "/";
+  const inDir = (file: string) =>
+    file.startsWith(prefix) && file.endsWith(".json");
+  const pathOf = (id: string) =>
+    id.startsWith(prefix) ? id : prefix + id.replace(/^\/+/, "");
+  return {
+    async list() {
+      const { files } = await client.listData();
+      return files
+        .filter((f) => inDir(f.file))
+        .map((f) => ({
+          id: f.file,
+          name: f.file.slice(prefix.length).replace(/\.json$/, ""),
+          updated: f.modified,
+        }));
+    },
+    async read(id) {
+      return (await client.readData(pathOf(id), { json: true })) as Ensemble;
+    },
+    async write(id, ensemble) {
+      const file = pathOf(id.endsWith(".json") ? id : `${id}.json`);
+      const result = await client.saveData(file, ensemble);
+      if (result.commitError)
+        throw new Error(
+          `saved ${file}, but not committed: ${result.commitError}`
+        );
+      return { id: file, revision: result.commit ?? undefined };
+    },
+    ...(client.dataHistory
+      ? {
+          async history(id: string) {
+            return (await client.dataHistory!(pathOf(id))).map((h) => ({
+              revision: h.commit,
+              at: h.date,
+              author: h.author,
+              message: h.subject,
+            }));
+          },
+          async readRevision(id: string, revision: string) {
+            return (await client.readData(pathOf(id), {
+              at: revision,
+              json: true,
+            })) as Ensemble;
+          },
+        }
+      : {}),
+  };
+}

@@ -8,6 +8,7 @@
 // made a doc page able to go full-screen and keep the global nav; a bespoke
 // page bypassed that nav and quietly drifted from the rest of the site.
 
+import * as dataClient from "tosijs-ui/doc-system/data-client";
 import "tosijs-ui"; // the tosi-* element family (NOT the doc system — see below)
 /*
   ⚠️ `<tosi-example>` IS A SEPARATE IMPORT, and without it every executable
@@ -71,3 +72,22 @@ for (const el of document.querySelectorAll("tosi-doc-system")) {
     "tosijs-3d-ensemble/presets/combat": combat,
   };
 }
+
+/*
+  OPEN AND SAVE ON THE DEV SERVER (board #3363). tosijs-ui's dev server lets
+  this page save `static/ensembles` (`editableData` in site.config.ts), and
+  every editor on the site gets that store. On a static host the endpoint
+  answers with a page, `list()` rejects, and the editors keep their local
+  draft and download.
+*/
+const devStore = ensemble.dataClientStore(dataClient, {
+  dir: "static/ensembles",
+});
+devStore
+  .list()
+  .then(() => {
+    ensemble.EnsembleEditor.defaultStore = devStore;
+    for (const ed of document.querySelectorAll("tosi-ensemble-editor"))
+      (ed as unknown as { store: unknown }).store ??= devStore;
+  })
+  .catch(() => {});

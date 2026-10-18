@@ -38,4 +38,5 @@
 
 <!-- toc -->
 - [Saving and loading ensembles](/storage/)
+- [Where the editor opens and saves](/store/)
 <!-- /toc -->

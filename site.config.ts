@@ -67,6 +67,12 @@ export default defineSiteConfig({
   bundleEntry: "./demo/site.ts",
   staticDirs: ["static"],
   /*
+    The editor page may save ensembles here (tosijs-ui 1.16.25+, board #3363),
+    gated as source editing is. Not `commit: true` yet: every save would be a
+    commit in THIS repo, which the owner should switch on knowingly.
+  */
+  editableData: { dirs: ["static/ensembles"] },
+  /*
     `||`, not `??`: `PORT=` (set but empty) means unset, not port 0 — `??`
     passes the empty string through to `Number('') === 0`. Env-aware so the
     Playwright scene lane can run on its own port without killing the

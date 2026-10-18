@@ -16,6 +16,15 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **The editor's chrome is tosijs-3d's standard system panels** (#106, #111),
+  drawn in the scene in flat view as in a headset (owner's choice). Each
+  panel (Tools, Ensemble, Scene, the tool's options, Properties) has a button
+  on the system bar and a compact title bar to move or close it; the columns
+  re-stack as a panel grows, and a panel you drag stays where you put it.
+  The Tools and Select panels are icon rows with the captions as tooltips
+  (#112). A press on a panel no longer reaches the editor's tools, which had
+  deselected the piece.
+
 - **`hostActions`** on the editor (board #3364, from Manta: "run the level and
   see how well it plays"): the host's own buttons in the file panel, each
   handed a copy of the current document, unsaved edits included.

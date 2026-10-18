@@ -4431,7 +4431,27 @@ export class EnsembleEditor extends withAttributes({
 
   private _renderProperties(): void {
     const selected = this.selection;
-    if (!selected) return;
+    /*
+      NOTHING SELECTED IS STILL A PANEL. Drawing no Properties panel left its
+      system panel holding the last piece's content, closed or not by
+      timing: the re-parent lane counted 79 meshes on some trips and 80 on
+      others. A panel that is always there also keeps the column still.
+    */
+    if (!selected) {
+      this._addPanel(
+        "right",
+        {
+          key: "properties",
+          icon: PANEL_ICONS.properties,
+          title: "Properties",
+        },
+        panel3d(
+          { width: PANEL_WIDTH, padding: 10, gap: 6 },
+          label3d({ text: "Nothing selected", muted: true })
+        )
+      );
+      return;
+    }
     /*
       ONE ROW PER VECTOR, not three stacked fields.
 

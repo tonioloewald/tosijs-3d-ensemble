@@ -3319,14 +3319,17 @@ export class EnsembleEditor extends withAttributes({
         iconGrid3d({
           mode: "radio",
           selected: current,
-          // TWO columns, not four. A caption forces a narrow column, and at
-          // four "Delete" and "Duplicate" ran into each other — a label that
-          // collides with its neighbour is worse than no label, because it
-          // reads as a different word.
-          columns: 2,
+          /*
+            ICONS, CAPTIONS AS TOOLTIPS (owner: "the tools panel could be
+            much smaller (one or two rows) and the captions could be
+            tooltips"; tosijs-3d 0.10.13's `title`, our #112). With no
+            caption to collide, the tools fit one row and the commands
+            another.
+          */
+          columns: Math.max(tools.length, 4),
           items: tools.map((tool) => ({
             icon: tool.icon ?? "square",
-            label: tool.label,
+            title: tool.label,
           })),
           handleSelect: ([index]) => {
             const picked = tools[index ?? 0];
@@ -3335,10 +3338,10 @@ export class EnsembleEditor extends withAttributes({
         }) as never,
         iconGrid3d({
           mode: "buttons",
-          columns: 2,
+          columns: Math.max(commands.length, 4),
           items: commands.map((command) => ({
             icon: command.icon ?? "square",
-            label: command.label,
+            title: command.label,
             // A command that cannot run says so by being greyed, rather than by
             // running and doing nothing.
             disabled: command.enabled?.(ctx) === false,
@@ -4913,10 +4916,18 @@ export class EnsembleEditor extends withAttributes({
         exclusive: "off",
         open: true,
       }) as B3dPanel;
-      el.screenAnchor = { [side]: 8, top } as never;
       this._systemPanels.set(slot.key, el);
       (this._scene as unknown as HTMLElement).append(el);
     }
+    /*
+      RE-STACKED EVERY RENDER, top-down from the content heights. A panel's
+      spot is its current `screenAnchor` until someone drags it (tosijs-3d
+      0.10.13), so a panel that grew pushes the ones below it down instead of
+      covering them. Covering was not just untidy: the panel drawn on top
+      takes the clicks, so turning the AO preview on left its new sliders
+      under the Scene panel and dead (tosijs-3d#115's investigation).
+    */
+    if (el) el.screenAnchor = { [side]: 8, top } as never;
     if (el) {
       if (el.title !== slot.title) el.title = slot.title;
       if (el.icon !== slot.icon) el.icon = slot.icon;

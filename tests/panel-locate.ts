@@ -6,14 +6,13 @@ import type { Page } from "@playwright/test";
   Since the editor's chrome moved onto tosijs-3d system panels drawn IN THE
   SCENE (flat-ui "scene", owner's choice), a panel's content SVG is drawn into
   a texture and is not in the document: a <text> has no on-screen box, and a
-  test cannot find a row to click. tosijs-3d#113 asks for a way to map panel
-  content to the screen. Until then this derives it from two facts:
+  test cannot find a row to click. Two steps:
 
   - WHERE IN ITS PANEL: the content SVG is attached for a moment off-screen,
     at its own size, and the node's box is read relative to the SVG's;
-  - WHERE THE PANEL IS: flat, a system panel sits at its `screenAnchor`
-    (pixels, inside the canvas), under its 28 px title bar, at 1:1 scale.
-    These tests never drag a panel, so the anchor is where it is.
+  - WHERE THAT IS ON SCREEN: the panel element's own `contentToClient`
+    (tosijs-3d 0.10.13, our #113), through the plane as drawn. This used to
+    be guessed from the anchor plus a 28 px title bar.
 */
 export interface Located {
   x: number;
@@ -35,9 +34,9 @@ export interface Located {
 }
 
 /*
-  SCROLL A PANEL by its own `scrollBy`. A person would use the wheel, but
-  over an in-scene panel the wheel zooms the camera (tosijs-3d#114), and
-  scrolling is not what these tests are about.
+  SCROLL A PANEL by its own `scrollBy`. The wheel works over an in-scene
+  panel since tosijs-3d 0.10.13 (#114; before that it zoomed the camera),
+  but scrolling is not what these tests are about.
 */
 export const scrollPanel = (page: Page, title: string, dy: number) =>
   page.evaluate(
@@ -71,32 +70,49 @@ export const reveal = async (
   return locate(page, match, how, tag);
 };
 
+/** `locateOnce`, retried briefly while the panel is reopening after a swap. */
+export const locate = async (
+  page: Page,
+  match: string,
+  how: "exact" | "endsWith" = "exact",
+  tag: "text" | "title" = "text",
+  inPanel?: string
+): Promise<Located | null> => {
+  for (let i = 0; i < 20; i++) {
+    const r = await locateOnce(page, match, how, tag, inPanel);
+    if (r !== "unmapped") return r;
+    await page.waitForTimeout(100);
+  }
+  return null;
+};
+
 /**
  * Find the first <text> whose content matches (or, with `tag: "title"`, the
  * element whose <title> does: an icon), in any of the editor's system panels.
  */
-export const locate = (
+const locateOnce = (
   page: Page,
   match: string,
   how: "exact" | "endsWith" = "exact",
   tag: "text" | "title" = "text",
   /** Only this panel (by title): the same text can be on two panels. */
   inPanel?: string
-): Promise<Located | null> =>
+): Promise<Located | "unmapped" | null> =>
   page.evaluate(
     ({ match, how, tag, inPanel }) => {
-      const TITLE_BAR = 28;
       const ed = document.querySelector("tosi-ensemble-editor") as Element & {
         shadowRoot: ShadowRoot;
       };
-      const b3d = ed.shadowRoot.querySelector("tosi-b3d") as HTMLElement;
-      const canvas = b3d.getBoundingClientRect();
       for (const p of Array.from(
         ed.shadowRoot.querySelectorAll("tosi-b3d-panel")
       ) as Array<
         HTMLElement & {
           svg: SVGSVGElement | null;
-          screenAnchor: { left?: number; right?: number; top?: number } | null;
+          contentToClient(
+            x: number,
+            y: number
+          ): { x: number; y: number } | null;
+          clientRect(): DOMRect | null;
         }
       >) {
         const svg = p.svg;
@@ -130,23 +146,28 @@ export const locate = (
           w: b.width,
           h: b.height,
         };
-        const a = p.screenAnchor ?? {};
-        const width = s.width;
-        const left =
-          canvas.x +
-          (a.left !== undefined
-            ? a.left
-            : canvas.width - (a.right ?? 0) - width);
-        const top = canvas.y + (a.top ?? 0) + TITLE_BAR;
+        // Content units -> client pixels, through the drawn plane
+        // (tosijs-3d 0.10.13, our #113): drag, scale and title bar included.
+        const k = (svg.viewBox.baseVal.width || s.width) / s.width;
+        const at = p.contentToClient(local.x * k, local.y * k);
+        const end = p.contentToClient(
+          (local.x + local.w) * k,
+          (local.y + local.h) * k
+        );
+        const box = p.clientRect();
+        // Found, but not mappable THIS moment: a content swap reopens the
+        // panel, and while it does the panel answers null. Say so, so the
+        // caller can wait, rather than reporting "not there".
+        if (!at || !end || !box) return "unmapped" as const;
         return {
-          x: left + local.x,
-          y: top + local.y,
-          w: local.w,
-          h: local.h,
-          panelX: left,
-          panelRight: left + width,
+          x: at.x,
+          y: at.y,
+          w: end.x - at.x,
+          h: end.y - at.y,
+          panelX: box.x,
+          panelRight: box.x + box.width,
           inside: local.y >= 0 && local.y + local.h <= vbH,
-          panel: { x: left + width / 2, y: top + vbH / 2 },
+          panel: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
           title: p.title,
           offCentre: local.y + local.h / 2 - vbH / 2,
         };
@@ -170,19 +191,19 @@ export const sliderTrack = (
 ): Promise<{ x: number; y: number; width: number } | null> =>
   page.evaluate(
     ({ captionPrefix, fraction, probe }) => {
-      const TITLE_BAR = 28;
       const ed = document.querySelector("tosi-ensemble-editor") as Element & {
         shadowRoot: ShadowRoot;
       };
-      const canvas = (
-        ed.shadowRoot.querySelector("tosi-b3d") as HTMLElement
-      ).getBoundingClientRect();
       for (const p of Array.from(
         ed.shadowRoot.querySelectorAll("tosi-b3d-panel")
       ) as Array<
         HTMLElement & {
           svg: SVGSVGElement | null;
-          screenAnchor: { left?: number; right?: number; top?: number } | null;
+          contentToClient(
+            x: number,
+            y: number
+          ): { x: number; y: number } | null;
+          clientRect(): DOMRect | null;
         }
       >) {
         const svg = p.svg;
@@ -212,16 +233,15 @@ export const sliderTrack = (
         else svg.remove();
         holder.remove();
         if (!bar) return null;
-        const a = p.screenAnchor ?? {};
-        const left =
-          canvas.x +
-          (a.left !== undefined
-            ? a.left
-            : canvas.width - (a.right ?? 0) - s.width);
-        const top = canvas.y + (a.top ?? 0) + TITLE_BAR;
+        const k = (svg.viewBox.baseVal.width || s.width) / s.width;
+        const at = p.contentToClient(
+          (bar.x - s.x + bar.width * fraction) * k,
+          (bar.y - s.y + bar.height / 2) * k
+        );
+        if (!at) return null;
         return {
-          x: left + (bar.x - s.x) + bar.width * fraction,
-          y: top + (bar.y - s.y) + bar.height / 2,
+          x: at.x,
+          y: at.y,
           width: bar.width,
         };
       }

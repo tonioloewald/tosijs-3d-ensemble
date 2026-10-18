@@ -431,10 +431,11 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       widgets.push(
         iconGrid3d({
           mode: "checkbox",
-          items: TOOL_CELLS as unknown as Array<{
-            icon: string;
-            label?: string;
-          }>,
+          // Captions as tooltips (owner: compact panels; tosijs-3d#112):
+          // one icon row.
+          items: (
+            TOOL_CELLS as unknown as Array<{ icon: string; label?: string }>
+          ).map((c) => ({ icon: c.icon, title: c.label })),
           selected: (values[key] as number[]) ?? DEFAULT_TOOL_CELLS,
           columns: 4,
           // The rule lives in the tool, not here — the grid asks what SHOULD

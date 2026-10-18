@@ -58,6 +58,7 @@ you open is remembered. The sky is the reason: 30 fields in one column before.
 /*{"parent":"Internals","order":7}*/
 import {
   foldSections,
+  colorPicker3d,
   iconGrid3d,
   label3d,
   panel3d,
@@ -676,26 +677,35 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       Read-only is at least honest, which is why this was never urgent. It is
       still a panel that shows you a setting and refuses to let you change it.
 
-      ⚠️ A COLOUR DESERVES BETTER THAN A HEX FIELD, and there is nothing to
-      give it: tosijs-3d has no colour control at all (`lightEditor3d` sidesteps
-      it with a hue slider, and `FieldType` is
-      `text | number | integer | email | url | tel`). Its OWN `skyboxSchema()`
-      declares four `format: 'color'` properties its widget set cannot edit,
-      which is the ask, filed rather than hand-rolled — a widget belongs to its
-      owner. `x-widget: "color"` is preserved here so the picker drops in
-      without touching a schema.
+      A COLOUR IS tosijs-3d's `colorPicker3d`: one row with a swatch, which
+      opens the HSV(A) picker with presets and saved swatches. This comment
+      used to say tosijs-3d had no colour control and offered a hex text
+      field instead, long after the picker shipped; the owner caught it
+      ("We do have a color picker! It was a showcase"). An EMPTY colour means
+      "the element's own" (a planet's `seaShallow` from its `world`), so it
+      is shown, not invented: the picker opens at white, and only a pick
+      writes.
     */
     const isColor = spec["x-widget"] === "color" || spec.format === "color";
-    widgets.push(
-      label3d({
-        text: `${label}${isColor ? " (hex)" : ""}`,
-        muted: true,
-        compact: true,
-      })
-    );
+    if (isColor) {
+      const shown = value === undefined || value === null ? "" : String(value);
+      widgets.push(
+        colorPicker3d({
+          label,
+          value: shown || "#ffffff",
+          // A colour from a schema may carry alpha (`rgba(…)`): offer it.
+          alpha: true,
+          // Commit-only: a live write per drag would rebuild the scene on
+          // every pointer move, as the composite widgets above note.
+          handleCommit: (hex: string) => commit(key, hex),
+        }) as never
+      );
+      continue;
+    }
+    widgets.push(label3d({ text: label, muted: true, compact: true }));
     const field = ui.inputField({
       value: value === undefined || value === null ? "" : String(value),
-      placeholder: isColor ? "#rrggbb" : "—",
+      placeholder: "—",
       handleChange: (next: string) => handleChange(key, next),
     });
     fields?.push(field);

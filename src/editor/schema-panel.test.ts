@@ -127,14 +127,20 @@ describe("a schema dispatches to the right widget", () => {
     expect(field).toContain("isValid");
   });
 
-  it("a colour is the same field, until there is a picker to give it", () => {
-    // tosijs-3d has no colour control at all — filed as tosijs-3d#72. The
-    // annotation is preserved so a picker drops in without touching a schema.
-    const [, field] = widgetsFor(
+  it("a colour is tosijs-3d's colour picker, one row", () => {
+    /*
+      `colorPicker3d`: a swatch that opens the HSV(A) picker. This test once
+      asserted the hex TEXT field "until there is a picker to give it", and
+      went on passing long after the picker shipped (tosijs-3d#72 and later),
+      so nothing prompted the switch until the owner said so.
+    */
+    const built = widgetsFor(
       { sunColor: { type: "string", format: "color" } },
       { sunColor: "#eeeeff" }
     );
-    expect(field).toContain("commit");
+    expect(built).toHaveLength(1);
+    expect(built[0]).toContain("open");
+    expect(built[0]).toContain("setValue");
   });
 
   it("an UNRECOGNISED spec still renders something you can edit", () => {

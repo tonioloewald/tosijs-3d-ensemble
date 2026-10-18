@@ -16,6 +16,12 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **Colours are picked, not typed.** A `format: "color"` field is tosijs-3d's
+  `colorPicker3d`: a swatch that opens the HSV(A) picker with presets and
+  saved swatches. It had been a hex text field "until there is a picker",
+  long after the picker shipped. `tests/color-picker.pw.ts` picks one with
+  real clicks.
+
 - **The editor's chrome is tosijs-3d's standard system panels** (#106, #111),
   drawn in the scene in flat view as in a headset (owner's choice). Each
   panel (Tools, Ensemble, Scene, the tool's options, Properties) has a button

@@ -60,6 +60,7 @@ const ADOPTED = [
   ["cloudDeck", "cloudDeck"],
   ["moon", "moon"],
   ["sound", "sound"],
+  ["effect", "effect"],
   ["weatherCell", "weatherCell"],
   ["lightning", "lightning"],
   ["lightShafts", "lightShafts"],

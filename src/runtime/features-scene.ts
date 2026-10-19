@@ -270,6 +270,7 @@ import {
   b3dReflections,
   b3dSkybox,
   b3dSound,
+  b3dEffect,
   b3dSun,
   b3dTerrain,
   b3dWater,
@@ -1341,6 +1342,47 @@ function registerSceneFeaturesNow(): void {
     */
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dSound({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
+  });
+
+  /*
+    AN EFFECT: particles, a light and a sound on one clock (tosijs-3d 0.10.16),
+    placed like a sound is, because "the vent smokes" is a fact about where
+    the vent is. The schema is upstream's `effectSchema()` (tosijs-3d#118,
+    ours); what is ours is the curation and one default.
+
+    ⚠️ NOT `recipe`, yet. A recipe can carry a particle `texture` and a sound
+    `url`, both FETCHED, and upstream's schema does not mark them
+    (`format: 'uri-reference'`, tosijs-3d#120), so `validate` could not hold
+    them to the https rule every other fetched field here is held to. Until
+    it does, `recipe` is not in `x-accepts` and a document's recipe is
+    dropped with the other undeclared keys. Presets only.
+  */
+  registerFeature({
+    name: "effect",
+    icon: "🌋",
+    primitive: true,
+    update: updateAttrs,
+    marker: true,
+    schema: {
+      type: "object",
+      title: "Effect",
+      "x-accepts": acceptsOf("effect").filter((k) => k !== "recipe"),
+      "x-fetched": fetchedOf("effect"),
+      properties: pick(
+        "effect",
+        ["preset", "activity", "scale", "ground", "autoplay"],
+        {
+          /*
+            Upstream's "" plays nothing, which is right for an element a page
+            fills in later and wrong for a piece someone just placed: it
+            would be a marker with no effect, and look broken.
+          */
+          preset: { default: "volcano" },
+        }
+      ),
+    },
+    bind: (_piece, cfg, ctx) =>
+      add(ctx, b3dEffect({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
   });
 
   registerFeature({

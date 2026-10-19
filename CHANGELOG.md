@@ -5,6 +5,15 @@ All notable changes to this project are documented here, in
 
 ## [Unreleased]
 
+### Added
+
+- **An `effect` feature**: tosijs-3d's effects (volcano, geyser, bubbles,
+  black smoker, splash, explosion, fireball, sparks) as a placed piece, with
+  `preset`, `activity`, `scale`, `ground` and `autoplay` from upstream's
+  `effectSchema()`. Presets only for now: an effect `recipe` can fetch
+  images and sounds that upstream's schema does not yet mark as fetched
+  (tosijs-3d#120), so a document's `recipe` is not passed to the element.
+
 ### Changed
 
 - **Peer `tosijs-3d` is `^0.10.17`.** The editor's in-scene panels no longer

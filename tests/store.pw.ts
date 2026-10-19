@@ -279,3 +279,99 @@ test("Save back to the same document clears the dirty mark", async ({
   });
   expect(titles).toEqual({ edited: "Ensemble •", saved: "Ensemble" });
 });
+
+/*
+  A DOCUMENT OPENED BY URL IS THE STORE'S DOCUMENT TOO (board #3417, from
+  Manta): `<tosi-ensemble-editor src>` plus a store that holds that same
+  file. Save writes back to it, `loaded` says when it arrived, and a store
+  given AFTER the load still links, with an edit made before it unsaved.
+*/
+test("a document loaded by url saves back to its store entry", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d"),
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(3000);
+  await page.route("**/rig-under-test.json", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ name: "rig", pieces: [] }),
+    })
+  );
+  const r = await page.evaluate(async () => {
+    type Ed = Element & {
+      store: unknown;
+      dirty: boolean;
+      load(url: string): Promise<void>;
+      saveToStore(id?: string): Promise<void>;
+      edit(d: string, m: (e: { name: string }) => void): void;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    const writes: string[] = [];
+    const store = {
+      list: async () => [{ id: "store/rig-under-test.json" }],
+      read: async () => ({ name: "rig", pieces: [] }),
+      write: async (id: string) => {
+        writes.push(id);
+        return { id };
+      },
+      idFor: (src: string) =>
+        src.endsWith("/rig-under-test.json")
+          ? "store/rig-under-test.json"
+          : null,
+    };
+    // 1. Store first, then the load.
+    ed.store = store;
+    const events: unknown[] = [];
+    ed.addEventListener("loaded", (e) =>
+      events.push((e as CustomEvent).detail)
+    );
+    await ed.load("/rig-under-test.json");
+    const cleanAfterLoad = !ed.dirty;
+    ed.edit("rename", (e) => {
+      e.name = "rig 2";
+    });
+    const dirtyAfterEdit = ed.dirty;
+    await ed.saveToStore();
+    const cleanAfterSave = !ed.dirty;
+
+    // 2. The load first, an edit, THEN the store (Manta's order).
+    ed.store = null;
+    await ed.load("/rig-under-test.json");
+    ed.edit("rename", (e) => {
+      e.name = "rig 3";
+    });
+    ed.store = store;
+    const dirtyWhenLinked = ed.dirty;
+    await ed.saveToStore();
+    return {
+      events,
+      cleanAfterLoad,
+      dirtyAfterEdit,
+      cleanAfterSave,
+      dirtyWhenLinked,
+      writes,
+    };
+  });
+  expect(r.events[0]).toEqual({
+    src: "/rig-under-test.json",
+    storeId: "store/rig-under-test.json",
+  });
+  expect(r.cleanAfterLoad).toBe(true);
+  expect(r.dirtyAfterEdit).toBe(true);
+  expect(r.cleanAfterSave).toBe(true);
+  expect(r.dirtyWhenLinked, "an edit before the store linked was lost").toBe(
+    true
+  );
+  expect(r.writes).toEqual([
+    "store/rig-under-test.json",
+    "store/rig-under-test.json",
+  ]);
+});

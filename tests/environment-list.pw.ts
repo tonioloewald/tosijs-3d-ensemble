@@ -34,6 +34,9 @@ type Ed = Element & {
   row's leading state circle: the first column, 24 px wide, past the panel's
   8 px padding.
 */
+/** How long a state may take to show after a click (see the first poll). */
+const SETTLE = 60_000;
+
 const withCircle = (b: Located | null) =>
   b && { ...b, circleX: b.panelX + 8 + 12 };
 const textBox = async (page: Page, label: string) =>
@@ -59,7 +62,7 @@ const pieces = (page: Page) =>
 test("environment features are listed, added from a heading, and toggled on and off", async ({
   page,
 }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   await page.setViewportSize({ width: 1400, height: 1300 });
   const errors = collectPageErrors(page);
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
@@ -83,9 +86,20 @@ test("environment features are listed, added from a heading, and toggled on and 
   const plus = await addIcon(page, "terrain");
   expect(plus, "no add icon on the terrain heading").toBeTruthy();
   await page.mouse.click(plus!.x + plus!.w / 2, plus!.y + plus!.h / 2);
-  await page.waitForTimeout(2000);
+  /*
+    POLLED, never a fixed wait. In-scene panels take a press on a RENDERED
+    frame, and headless software WebGL on a loaded machine has measured
+    ~1 fps: a click landed 8-14 s later (2026-10-20), so a fixed 1.5 s read
+    failed while the editor was working. Sampling THROUGH the interval
+    waits as long as it takes, and still fails if the state never comes.
+  */
+  await expect
+    .poll(async () => (await has("terrain")).length, {
+      message: "the (+) added no terrain",
+      timeout: SETTLE,
+    })
+    .toBe(1);
   const added = await has("terrain");
-  expect(added, "the (+) added no terrain").toHaveLength(1);
   // Sea level at the insert height (owner: "WAY below sea level" otherwise).
   expect(added[0]!.features!.terrain).toEqual({ center: true });
   // ...and the list kept the new, selected row in view rather than
@@ -109,32 +123,32 @@ test("environment features are listed, added from a heading, and toggled on and 
     take 15-25 s.
   */
   await page.mouse.click(row!.circleX, row!.y + row!.h / 2);
-  await page.waitForTimeout(1500);
-  expect(
-    (await has("terrain"))[0]!.enabled,
-    "the circle did not disable it"
-  ).toBe(false);
+  await expect
+    .poll(async () => (await has("terrain"))[0]!.enabled, {
+      message: "the circle did not disable it",
+      timeout: SETTLE,
+    })
+    .toBe(false);
 
   // 2. A one-per-scene row's circle is a TOGGLE, not a menu (owner: "I don't
   //    think we need the toggle to spawn a menu if more vertical also
   //    does"). Fog is absent: a tap turns it on, adding it.
   expect(await has("fog")).toHaveLength(0);
-  const tapCircle = async (row: string) => {
+  // The fog's state as one word: absent, on or off.
+  const fogState = async () => {
+    const f = await has("fog");
+    return f.length === 0 ? "absent" : f[0]!.enabled === false ? "off" : "on";
+  };
+  const tapCircle = async (row: string, expected: string, message: string) => {
     const r = await reveal(page, row);
     expect(r, `no '${row}' row`).toBeTruthy();
     await page.mouse.click(r!.circleX, r!.y + r!.h / 2);
-    await page.waitForTimeout(1500);
+    await expect.poll(fogState, { message, timeout: SETTLE }).toBe(expected);
   };
-  await tapCircle("fog");
-  let fogs = await has("fog");
-  expect(fogs, "tapping fog's circle did not turn it on").toHaveLength(1);
-  expect(fogs[0]!.enabled).not.toBe(false);
+  await tapCircle("fog", "on", "tapping fog's circle did not turn it on");
   // Turning fog on selected it; its row is highlighted, still named "fog".
-  await tapCircle("fog");
-  fogs = await has("fog");
-  expect(fogs[0]!.enabled, "the second tap did not turn fog off").toBe(false);
-  await tapCircle("fog");
-  expect((await has("fog"))[0]!.enabled).not.toBe(false);
+  await tapCircle("fog", "off", "the second tap did not turn fog off");
+  await tapCircle("fog", "on", "the third tap did not turn fog back on");
   // Off is never gone: a singleton is on or off (owner, 2026-10-17).
   expect(await has("fog")).toHaveLength(1);
 
@@ -152,8 +166,13 @@ test("environment features are listed, added from a heading, and toggled on and 
     objects!.x + objects!.w / 2,
     objects!.y + objects!.h / 2
   );
-  await page.waitForTimeout(800);
-  if (meshRowBefore) expect(await textBox(page, aMesh!.id)).toBeNull();
+  if (meshRowBefore)
+    await expect
+      .poll(async () => await textBox(page, aMesh!.id), {
+        message: "the folded category still shows its rows",
+        timeout: SETTLE,
+      })
+      .toBeNull();
 
   expect(realErrors(errors)).toEqual([]);
 });

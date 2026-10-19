@@ -24,6 +24,13 @@ All notable changes to this project are documented here, in
   its `terrain` names. Fields upstream works out from others (a crater's
   radius from the volcano's) stay out of the document and show their worked
   out value in the panel.
+- **A document opened by `src` saves back to its store entry** (board
+  #3417, from Manta). A store's optional `idFor(src)` maps the page url to
+  its own id; `dataClientStore` implements it for same-origin urls in its
+  folder (`servedAt`, default `dir` without `static/`). Save then writes the
+  file the page opened instead of doing nothing, and a store given after
+  the load still links, with earlier edits marked unsaved. The editor
+  fires `loaded` (`{ src, storeId }`) when a load lands.
 - **Sliders name their stops** (`x-stops`, through tosijs-3d 0.10.18's
   `slider3d({ stops })`): an effect's activity reads "0.50 semi-active".
 - **`x-data` on a feature schema**: structured data a feature accepts and the

@@ -22,7 +22,21 @@ test("a host action button hands the host a copy of the current document", async
       )?.shadowRoot?.querySelector("tosi-b3d"),
     { timeout: 60_000 }
   );
-  await page.waitForTimeout(2000);
+  /*
+    The page's OWN document first. An edit made while its `src` is still
+    loading is replaced when the load lands (1 run in 5 under load,
+    2026-10-20), and the host then gets pirate-cove, not the edit.
+  */
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      ).ensemble?.name === "pirate-cove",
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(1000);
   await page.evaluate(() => {
     const ed = document.querySelector("tosi-ensemble-editor") as Element & {
       hostActions: unknown;

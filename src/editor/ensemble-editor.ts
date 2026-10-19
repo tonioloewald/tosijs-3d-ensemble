@@ -557,6 +557,7 @@ export class EnsembleEditor extends withAttributes({
     */
     this._storeId = null;
     this._savedJson = null;
+    this._loaded = null;
     this._selected = value.pieces[0]?.id ?? null;
     // A NEW arrangement earns a new view. An edit to the current one does not —
     // see the note in `rebuild`.
@@ -1000,12 +1001,36 @@ export class EnsembleEditor extends withAttributes({
     this._store_ = next;
     this._storeEntries = [];
     this._storeHistory = [];
+    // A store given AFTER `src` loaded still finds the document (#3417).
+    this._linkLoaded();
     if (next) void this._refreshStore();
     else if (this.isConnected) this._renderChrome();
   }
   private _store_: EnsembleStore | null = null;
   /** The store's id of the open document, or null when it has none. */
   private _storeId: string | null = null;
+  /** The url `load()` last opened, and the document as it arrived. */
+  private _loaded: { url: string; json: string } | null = null;
+
+  /**
+   * A DOCUMENT OPENED BY `src` IS THE STORE'S DOCUMENT TOO, when the store
+   * can say so (board #3417, from Manta). Manta's pages open
+   * `<tosi-ensemble-editor src="/assemblies/ocean-rig.json">` and give it a
+   * store over `static/assemblies`, which holds that same file; without
+   * this the open document had no store id, Save did nothing, and the
+   * author retyped the name into Save as. The store's optional `idFor` maps
+   * the url; the document AS IT ARRIVED is the saved copy, so an edit made
+   * before the store was linked still reads as unsaved.
+   */
+  private _linkLoaded(): void {
+    const store = this._store_;
+    if (this._storeId || !this._loaded || !store?.idFor) return;
+    const id = store.idFor(this._loaded.url);
+    if (!id) return;
+    this._storeId = id;
+    this._savedJson = this._loaded.json;
+    this._syncDirty();
+  }
   /** The document as last opened or saved, to tell whether it changed. */
   private _savedJson: string | null = null;
   private _storeEntries: StoreEntry[] = [];
@@ -1985,6 +2010,18 @@ export class EnsembleEditor extends withAttributes({
     }
     if (generation !== this._loadGeneration) return; // superseded while mounting
     this.ensemble = data;
+    this._loaded = { url, json: JSON.stringify(this._ensemble) };
+    this._linkLoaded();
+    if (this._storeId) void this._refreshStore();
+    /*
+      `loaded`, so a host (or a test) can wait for the document rather than
+      a duration: until now only `error` said anything about a load.
+    */
+    this.dispatchEvent(
+      new CustomEvent("loaded", {
+        detail: { src: url, storeId: this._storeId },
+      })
+    );
     // Belt and braces: `mountLibraries` waits, but a library mounted by some
     // other path — or one that resolves after this build — still has to land.
     void this._rebuildWhenLibraryReady();
@@ -3189,6 +3226,7 @@ export class EnsembleEditor extends withAttributes({
     // store document that was open (0.7.0 review M2).
     this._storeId = null;
     this._savedJson = null;
+    this._loaded = null;
     this._syncSelection();
     this._syncDirty();
   }

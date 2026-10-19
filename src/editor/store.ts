@@ -72,6 +72,12 @@ export interface EnsembleStore {
   ): Promise<{ id: string; revision?: string } | void>;
   history?(id: string): Promise<StoreRevision[]>;
   readRevision?(id: string, revision: string): Promise<Ensemble>;
+  /**
+   * The store's id for a document the editor opened by URL (`src`), or
+   * null when that URL is not one of the store's. Lets Save write back to a
+   * document a page opened by attribute (#3417).
+   */
+  idFor?(src: string): string | null;
 }
 
 /** What `dataClientStore` needs of tosijs-ui's `data-client` module. */
@@ -101,9 +107,25 @@ export interface DataClientLike {
  */
 export function dataClientStore(
   client: DataClientLike,
-  { dir = "static/ensembles" }: { dir?: string } = {}
+  {
+    dir = "static/ensembles",
+    servedAt,
+  }: {
+    dir?: string;
+    /**
+     * Where the page serves `dir`, for `idFor`. tosijs-ui's site serves
+     * `static/` at the root, so the default is `dir` without it:
+     * `static/ensembles` is at `/ensembles/`.
+     */
+    servedAt?: string;
+  } = {}
 ): EnsembleStore {
   const prefix = dir.replace(/\/+$/, "") + "/";
+  const served =
+    "/" +
+    (servedAt ?? prefix.replace(/^static\//, ""))
+      .replace(/^\/+/, "")
+      .replace(/\/*$/, "/");
   const inDir = (file: string) =>
     file.startsWith(prefix) && file.endsWith(".json");
   /*
@@ -124,6 +146,38 @@ export function dataClientStore(
     return prefix + rest;
   };
   return {
+    idFor(src) {
+      /*
+        SAME ORIGIN ONLY. A document fetched from another host that happens
+        to share a path (`https://elsewhere/ensembles/x.json`) is not this
+        store's `x.json`, and linking it would let Save write that host's
+        document over the local file.
+      */
+      // A page with an opaque origin (`about:blank`) still takes relative urls.
+      const href = (globalThis as { location?: { href?: string } }).location
+        ?.href;
+      const base =
+        href && /^https?:/.test(href) ? href : "https://page.invalid/";
+      let url: URL;
+      try {
+        url = new URL(src, base);
+      } catch {
+        return null;
+      }
+      if (url.origin !== new URL(base).origin) return null;
+      let path: string;
+      try {
+        path = decodeURIComponent(url.pathname);
+      } catch {
+        return null;
+      }
+      if (!path.startsWith(served) || !path.endsWith(".json")) return null;
+      try {
+        return pathOf(path.slice(served.length));
+      } catch {
+        return null; // outside the folder: not this store's document
+      }
+    },
     async list() {
       const { files } = await client.listData();
       return files

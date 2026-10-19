@@ -99,3 +99,36 @@ describe("dataClientStore keeps to its folder itself", () => {
     });
   }
 });
+
+describe("dataClientStore.idFor maps a page url to the store's id (#3417)", () => {
+  const store = dataClientStore(fake().client);
+  it("a relative or same-origin url in the served folder is the store's", () => {
+    expect(store.idFor!("/ensembles/cove.json")).toBe(
+      "static/ensembles/cove.json"
+    );
+    expect(store.idFor!("/ensembles/sub/rig.json?v=2#x")).toBe(
+      "static/ensembles/sub/rig.json"
+    );
+  });
+  it("anything else is not: other folders, other hosts, escapes, non-json", () => {
+    for (const src of [
+      "/levels/cove.json",
+      "https://elsewhere.example/ensembles/cove.json",
+      "//elsewhere.example/ensembles/cove.json",
+      "/ensembles/../levels/x.json",
+      "/ensembles/%2e%2e/levels/x.json",
+      "/ensembles/notes.txt",
+      "/ensembles/",
+    ])
+      expect(store.idFor!(src), src).toBeNull();
+  });
+  it("follows servedAt when the folder is served elsewhere", () => {
+    const manta = dataClientStore(fake().client, {
+      dir: "static/assemblies",
+      servedAt: "/assemblies",
+    });
+    expect(manta.idFor!("/assemblies/ocean-rig.json")).toBe(
+      "static/assemblies/ocean-rig.json"
+    );
+  });
+});

@@ -3,6 +3,27 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.7.0 — 2026-10-19
+
+- Went well: the editor chrome moved onto tosijs-3d's in-scene system panels.
+  Twelve upstream asks (tosijs-3d #104–#116) were filed and shipped in time to
+  adopt; the release needed 0.10.14. The two review majors were fixed with
+  tests that fail without them: M1, a nested-object edit dropped earlier
+  siblings; M2, Save wrote over the document the user had left.
+- Didn't: I claimed there was no colour picker and no dropdown before
+  checking; the owner corrected me. I filed and then retracted tosijs-3d#108
+  after misreading a quaternion rotation as no rotation. CI went red once
+  because UPSTREAM.md changed and docs/ was not rebuilt (that is a memory rule).
+- Surprised: two problems I first read as upstream were ours. Panels
+  overlapped because of our own layout, not a hit-test bug. The still-sky
+  probe measured the ground and passed vacuously.
+- Friction: dev servers sharing the build tree contaminated the falsification
+  runs. During attestation, the doc corpus reported features-scene.ts "did not
+  finish within 45s" under the load of 29 WebGL lanes. It was a timeout with
+  no failed test, and it does not reproduce unloaded (#3172 pattern).
+- Cycle: pre-minor review -> GO_WITH_FOLLOWUPS (M1, M2 fixed; #3392–#3394
+  filed) -> attest -> dry run -> publish -> verify_only green.
+
 ## 0.6.0 — 2026-10-17
 
 - Went well: tosijs-3d 0.10.8/0.10.9 retired six stopgaps (planet schema,

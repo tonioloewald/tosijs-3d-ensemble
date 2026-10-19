@@ -70,7 +70,11 @@ export const reveal = async (
   return locate(page, match, how, tag);
 };
 
-/** `locateOnce`, retried briefly while the panel is reopening after a swap. */
+/**
+ * Locate, once. There is no retry: since tosijs-3d 0.10.14 a content swap
+ * happens in place (#111 follow-up), so `contentToClient` does not go null
+ * mid-swap, and a null here is a real failure.
+ */
 export const locate = async (
   page: Page,
   match: string,
@@ -78,12 +82,8 @@ export const locate = async (
   tag: "text" | "title" = "text",
   inPanel?: string
 ): Promise<Located | null> => {
-  for (let i = 0; i < 20; i++) {
-    const r = await locateOnce(page, match, how, tag, inPanel);
-    if (r !== "unmapped") return r;
-    await page.waitForTimeout(100);
-  }
-  return null;
+  const r = await locateOnce(page, match, how, tag, inPanel);
+  return r === "unmapped" ? null : r;
 };
 
 /**
@@ -155,9 +155,7 @@ const locateOnce = (
           (local.y + local.h) * k
         );
         const box = p.clientRect();
-        // Found, but not mappable THIS moment: a content swap reopens the
-        // panel, and while it does the panel answers null. Say so, so the
-        // caller can wait, rather than reporting "not there".
+        // Found, but not mapped (the panel is closed, or in a headset).
         if (!at || !end || !box) return "unmapped" as const;
         return {
           x: at.x,

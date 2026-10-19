@@ -280,7 +280,7 @@ places:
 
 Unreleased; this section grows with the release.
 
-- **Peer `tosijs-3d` is `^0.10.13`.** It fixes projected ambient occlusion on
+- **Peer `tosijs-3d` is `^0.10.14`.** It fixes projected ambient occlusion on
   library pieces (#107), types `panel3d`'s `dispose()` (#104), gives a piece
   a per-axis `stretch` (#105), and adds the system panels the
   editor's chrome is moving onto (#106).

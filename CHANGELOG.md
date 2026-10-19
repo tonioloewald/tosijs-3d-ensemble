@@ -15,6 +15,15 @@ All notable changes to this project are documented here, in
   https rule as every other url in a document: a recipe with a refused url
   is refused whole and reported at the url's own path. Inline SVG markup
   loads nothing and is fine.
+- **Landforms: `volcano`, `crater`, `pad`, `gulley`, `cover`** as pieces
+  that shape a terrain (tosijs-3d's landform factories; schemas from its
+  `landformSchemas`, tosijs-3d#119). A volcano carries its own province
+  (the caldera's glow) and its own vent: an effect the terrain places on the
+  crater, as busy as the volcano's `activity`. Move the piece and the cone,
+  glow and smoke move with it. A landform shapes every terrain, or the one
+  its `terrain` names. Fields upstream works out from others (a crater's
+  radius from the volcano's) stay out of the document and show their worked
+  out value in the panel.
 - **Sliders name their stops** (`x-stops`, through tosijs-3d 0.10.18's
   `slider3d({ stops })`): an effect's activity reads "0.50 semi-active".
 - **`x-data` on a feature schema**: structured data a feature accepts and the

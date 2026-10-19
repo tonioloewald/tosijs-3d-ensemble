@@ -276,6 +276,10 @@ import {
   b3dWater,
 } from "tosijs-3d";
 import { registerFeature, registeredFeatures } from "../format/registry.js";
+import {
+  applyLandforms,
+  registerLandformFeatures,
+} from "./features-landform.js";
 import type { FeatureContext, SceneElement } from "../format/registry.js";
 
 const num = (min: number, max: number, def?: number, unit?: string) => ({
@@ -861,6 +865,7 @@ export function registerSceneFeatures(
 
 function registerSceneFeaturesNow(): void {
   registered = true;
+  registerLandformFeatures();
 
   registerFeature({
     name: "light",
@@ -1364,7 +1369,7 @@ function registerSceneFeaturesNow(): void {
   */
   registerFeature({
     name: "effect",
-    icon: "🌋",
+    icon: "✨",
     primitive: true,
     update: updateAttrs,
     marker: true,
@@ -1588,8 +1593,12 @@ function registerSceneFeaturesNow(): void {
       recordLink(element, cfg.planet);
       return element;
     },
-    link: (handle, ctx) =>
-      linkToPiece(handle, ctx, "terrain", "planet", "planet"),
+    link: (handle, ctx) => {
+      linkToPiece(handle, ctx, "terrain", "planet", "planet");
+      // Volcanoes, craters, pads … placed as their own pieces shape this
+      // ground, and a volcano's vent smokes on it (features-landform.ts).
+      if (applyLandforms(handle, ctx)) regenerateWhenReady(handle, ctx);
+    },
   });
 
   registerFeature({

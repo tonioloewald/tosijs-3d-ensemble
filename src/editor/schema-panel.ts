@@ -149,6 +149,8 @@ export interface PropertySpec {
   "x-scale"?: "linear" | "log" | "log2";
   /** Named values on the track (an effect's dormant / erupting). */
   "x-stops"?: Array<{ value: number; label: string }>;
+  /** Worked out from another field when unset (a crater from a radius). */
+  "x-derived"?: { from: string; scale: number };
   /**
    * A log slider whose handle CATCHES at zero, rather than approaching it
    * asymptotically and never arriving.
@@ -462,7 +464,24 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
     const picker = Array.isArray(spec.enum) && spec.enum.length > 0;
     const unit = rawUnit && !picker ? ` (${rawUnit})` : "";
     const label = `${spec.title ?? key}${unit}`;
-    const value = values[key] ?? spec.default;
+    /*
+      A DERIVED field (`x-derived: { from, scale }`, tosijs-3d#119) has no
+      default on purpose: left out of the document, upstream works it out
+      from its source (a volcano's crater is `radius × 0.22`), and keeps
+      following it. Shown as that number, never written until moved.
+    */
+    const derived = spec["x-derived"];
+    const derivedValue = derived
+      ? Number(
+          values[derived.from] ??
+            (properties[derived.from] as { default?: unknown } | undefined)
+              ?.default
+        ) * derived.scale
+      : undefined;
+    const value =
+      values[key] ??
+      spec.default ??
+      (Number.isFinite(derivedValue) ? derivedValue : undefined);
     /*
       ⚠️ BIND ONLY WHAT THE DOCUMENT ACTUALLY HAS.
 

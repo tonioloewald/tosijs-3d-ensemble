@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=b15dfec8fee7" data-tosi-doc-system />
+  <title>Landforms — tosijs-3d-ensemble</title>
+  <meta name="description" content="A landform is a shaped place on a terrain: a volcano, an impact crater, a flat construction pad, a gulley, a raised cover for a tunnel." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Landforms — tosijs-3d-ensemble (markdown)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Landforms — tosijs-3d-ensemble" />
+  <meta property="og:description" content="A landform is a shaped place on a terrain: a volcano, an impact crater, a flat construction pad, a gulley, a raised cover for a tunnel." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=6bce8ca76d0f" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="features-landform.ts">
+<h1 id="landforms">Landforms</h1>
+<p>A <strong>landform</strong> is a shaped place on a terrain: a volcano, an impact crater, a
+flat construction pad, a gulley, a raised cover for a tunnel. Each is a piece,
+placed like a lamp is, and it shapes the ground under it. A volcano also
+carries its own <strong>province</strong> (the glow of its caldera and flanks) and its own
+<strong>vent</strong>: an <code>effect</code> the terrain places on the crater, as busy as the
+volcano&#39;s <code>activity</code> says. Move the volcano and the cone, the glow and the
+smoke move together.</p>
+<pre><code class="language-json" data-highlighted><span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"fuji"</span><span class="token punctuation">,</span>
+  <span class="token property">"at"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">400</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">-900</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"features"</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token property">"volcano"</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token property">"radius"</span><span class="token operator">:</span> <span class="token number">420</span><span class="token punctuation">,</span> <span class="token property">"height"</span><span class="token operator">:</span> <span class="token number">260</span><span class="token punctuation">,</span> <span class="token property">"activity"</span><span class="token operator">:</span> <span class="token number">0.5</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The piece&#39;s <code>x</code> and <code>z</code> are the landform&#39;s centre; its height is not used
+(a landform is a change to the ground, which has its own height). The rest is
+tosijs-3d&#39;s own schema for the factory (<code>landformSchemas</code>, tosijs-3d#119,
+ours). A field such as a volcano&#39;s <code>craterRadius</code> that upstream works out from
+another (<code>radius × 0.22</code>) is left out of the document until an author sets
+it, so it keeps following its source; the panel shows the number it works out
+to.</p>
+<p>A landform applies to every terrain in the ensemble, or only to the one whose
+piece id its <code>terrain</code> names. The terrain composes all of them (in document
+order, each seeing the ground the previous one left), merges their provinces
+by max, gathers their vents, and regenerates.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+      <li><a class="doc-link" href="../store/">Where the editor opens and saves</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../features/">Features</a></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link current" href="../features-landform/" aria-current="page">Landforms</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="../recommendations/">Scene recommendations</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate-ca6tdt7k.js"></script>
+</body>
+</html>

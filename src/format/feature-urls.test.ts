@@ -272,6 +272,11 @@ const FREE_TEXT: Record<string, string> = {
     "a piece id in this document (the terrain it is drawn from)",
   "terrain.planet":
     "a piece id in this document (the planet it is the ground of)",
+  "volcano.terrain": "a piece id in this document (the terrain it shapes)",
+  "crater.terrain": "a piece id in this document (the terrain it shapes)",
+  "pad.terrain": "a piece id in this document (the terrain it shapes)",
+  "gulley.terrain": "a piece id in this document (the terrain it shapes)",
+  "cover.terrain": "a piece id in this document (the terrain it shapes)",
   "planet.atmosphereColor": "a CSS colour that may carry alpha, 'rgba(…)'",
   "planet.bandColors": "a gas giant's band colours, a list of CSS colours",
 };

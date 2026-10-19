@@ -8,6 +8,7 @@ true by construction rather than by discipline.
 - [Building an ensemble](/build/)
 - [<tosi-ensemble>](/ensemble-element/)
 - [Scene features](/features-scene/)
+- [Landforms](/features-landform/)
 - [Scene floorplan — visual regression without pixels](/scene-floorplan/)
 - [Writing a transform to a node](/node-transform/)
 - [Scene recommendations](/recommendations/)

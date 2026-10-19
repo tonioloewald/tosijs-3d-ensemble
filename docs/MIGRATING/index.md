@@ -295,7 +295,8 @@ places:
 
 ## Upgrading from 0.7.0 to 0.7.1
 
-- **Peer `tosijs-3d` is `^0.10.16`.** Nothing in a document or in the
+- **Peer `tosijs-3d` is `^0.10.17`.** Nothing in a document or in the
   editor's API changes. 0.10.15 stops system panels blinking when they
   rebuild, which the editor does on every edit, and adds panning to the
-  default view controls. 0.10.16 adds effects and `effectRecipeSchema()`.
+  default view controls. 0.10.16 adds effects and `effectRecipeSchema()`;
+  0.10.17 adds `effectSchema()` for the effect element.

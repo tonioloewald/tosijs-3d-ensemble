@@ -7,7 +7,7 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
-- **Peer `tosijs-3d` is `^0.10.16`.** The editor's in-scene panels no longer
+- **Peer `tosijs-3d` is `^0.10.17`.** The editor's in-scene panels no longer
   blink when they rebuild (0.10.15 swaps content into the same plane).
 
 ### Fixed

@@ -79,7 +79,7 @@ older than its card; when they disagree, the card wins.
 | 55 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `selectionMarker: 'row'` — **`table` cannot highlight a selected row without its radio/checkbox marker** | [#109](https://github.com/tonioloewald/tosijs-3d/issues/109) |
 | 56 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `panel.reveal(table, table.rowBox(id))` — **`panel3d` has no readable scroll position or reveal(widget)** | [#110](https://github.com/tonioloewald/tosijs-3d/issues/110) |
 | 57 | **No way to locate a panel's content NODE on screen** (`contentToClient` maps points only); `tests/panel-locate.ts` measures nodes by attaching the content SVG off-screen | [#117](https://github.com/tonioloewald/tosijs-3d/issues/117) |
-| 58 | **`<tosi-b3d-effect>`'s attributes have no schema** (`preset`, `activity`, `scale`, `ground`): `effectRecipeSchema()` covers a recipe, not the element, so an `effect` feature here would have to type its ranges by hand. Waiting on it rather than doing that | [#118](https://github.com/tonioloewald/tosijs-3d/issues/118) |
+| 58 | **`<tosi-b3d-effect>`'s attributes have no schema** (`preset`, `activity`, `scale`, `ground`): `effectRecipeSchema()` covers a recipe, not the element, so an `effect` feature here would have to type its ranges by hand. Shipped in 0.10.17 as `effectSchema()` | [#118](https://github.com/tonioloewald/tosijs-3d/issues/118) |
 
 ### Stopgaps we own, and what retires them
 

@@ -317,3 +317,64 @@ describe("no built-in fetched field is unmarked", () => {
     ).toEqual(["insecure-feature-url /pieces/0/features/sound/url"]);
   });
 });
+
+/*
+  URLS INSIDE AN EFFECT RECIPE. A recipe's particle `texture` and sound `url`
+  are fetched (tosijs-3d#120 marks them). They are found by walking the
+  recipe against UPSTREAM's schema, not by field names known here, so these
+  run against the real `effectSchema()`.
+*/
+describe("urls inside an effect recipe", () => {
+  const recipe = (texture: unknown, url?: unknown) => ({
+    version: 1,
+    layers: [
+      { kind: "particles", texture },
+      ...(url === undefined ? [] : [{ kind: "sound", url }]),
+    ],
+  });
+  const recipeCodes = (r: unknown) =>
+    codes(withFeature("effect", { preset: "geyser", recipe: r }));
+
+  it("https, relative and inline SVG markup are fine", () => {
+    for (const t of [
+      "https://cdn.example/spark.png",
+      "/sprites/spark.svg",
+      "<svg xmlns='http://www.w3.org/2000/svg'><circle r='4'/></svg>",
+      "  <svg></svg>",
+    ])
+      expect(recipeCodes(recipe(t, "https://cdn.example/hiss.ogg"))).toEqual(
+        []
+      );
+  });
+
+  it("an http texture is an error at its own path", () => {
+    expect(recipeCodes(recipe("http://cdn.example/x.png"))).toEqual([
+      "insecure-feature-url /pieces/0/features/effect/recipe/layers/0/texture",
+    ]);
+  });
+
+  it("a foreign scheme in a sound url, however disguised, is an error", () => {
+    for (const u of [
+      "javascript:alert(1)",
+      "java\nscript:alert(1)",
+      "//evil.example/x",
+    ])
+      expect(
+        recipeCodes(recipe("https://ok.example/x.png", u)).map(
+          (c) => c.split(" ")[1]
+        )
+      ).toEqual(["/pieces/0/features/effect/recipe/layers/1/url"]);
+  });
+
+  it("a recipe with a refused url is refused whole; a clean one passes", () => {
+    const reg = featureRegistration("effect");
+    const bad = declaredConfig(reg, {
+      preset: "geyser",
+      recipe: recipe("http://cdn.example/x.png"),
+    });
+    expect(bad.recipe).toBeNull();
+    expect(bad.preset).toBe("geyser");
+    const good = recipe("https://cdn.example/x.png");
+    expect(declaredConfig(reg, { recipe: good }).recipe).toEqual(good);
+  });
+});

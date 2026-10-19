@@ -76,7 +76,7 @@ per-frame work must guard itself.
 */
 /*{"parent":"Format","order":3}*/
 import type { Ensemble, Link, Piece, Vec3 } from "./types.js";
-import { fetchedValueProblem } from "./url-policy.js";
+import { deepFetchedProblems, fetchedValueProblem } from "./url-policy.js";
 
 /** The scene element (`<tosi-b3d>`), structurally typed so the format layer
  *  does not import the framework. */
@@ -397,6 +397,25 @@ export function fetchedKeys(
   return out;
 }
 
+/**
+ * STRUCTURED DATA a feature accepts and does not show: `x-data: { key: schema }`
+ * on its schema, resolved against the schema's own `$defs`. An effect's
+ * `recipe` is the first: a document may carry one, the panel has no form for
+ * it, and the fetched strings inside it are found by walking this schema
+ * (`deepFetchedProblems`), so they meet the same rule as a top-level url.
+ */
+export function dataProblems(
+  registration: { schema?: FeatureSchema } | undefined,
+  key: string,
+  value: unknown
+): ReturnType<typeof deepFetchedProblems> {
+  const schema = registration?.schema as
+    | (FeatureSchema & { "x-data"?: Record<string, unknown> })
+    | undefined;
+  const spec = schema?.["x-data"]?.[key];
+  return spec ? deepFetchedProblems(spec, value, schema) : [];
+}
+
 export function declaredConfig(
   registration: { schema?: FeatureSchema } | undefined,
   cfg: Record<string, unknown>
@@ -417,7 +436,10 @@ export function declaredConfig(
     const keywords = fetched.get(key);
     return !!keywords && fetchedValueProblem(cfg[key], keywords) !== null;
   };
-  if (!allowed && fetched.size === 0) return cfg;
+  const hasData = !!(
+    registration?.schema as { "x-data"?: unknown } | undefined
+  )?.["x-data"];
+  if (!allowed && fetched.size === 0 && !hasData) return cfg;
   let changed = false;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(cfg)) {
@@ -434,6 +456,16 @@ export function declaredConfig(
     */
     if (refused(key)) {
       out[key] = "";
+      changed = true;
+      continue;
+    }
+    /*
+      Structured data with a refused url inside is refused WHOLE: a recipe
+      minus one texture is not the recipe the author made, and null is what
+      the element reads as "none" (the preset plays). Reported by `validate`.
+    */
+    if (dataProblems(registration, key, cfg[key]).length) {
+      out[key] = null;
       changed = true;
       continue;
     }

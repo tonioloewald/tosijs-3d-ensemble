@@ -131,3 +131,125 @@ export function fetchedValueProblem(
     }, not a url string — refused rather than guessed at, because the element would stringify it and fetch the result`,
   };
 }
+
+/** A fetched value inside structured data, and where it is. */
+export interface DeepUrlProblem extends UrlProblem {
+  /** JSON-pointer path below the field, `""` for the field itself. */
+  path: string;
+}
+
+type Node = Record<string, unknown>;
+
+/**
+ * FETCHED STRINGS INSIDE STRUCTURED DATA, found by the data's own schema.
+ *
+ * A top-level field is fetched when its schema says `format:
+ * 'uri-reference'`. An effect `recipe` is an object whose layers carry a
+ * particle `texture` and a sound `url` (tosijs-3d#120, ours), so the same
+ * rule has to reach INTO it. This walks a value against its schema, never
+ * against field names it knows: `$ref` into the root's `$defs`, `properties`,
+ * `items`, and `anyOf` / `oneOf` / `allOf`.
+ *
+ * Unions err STRICT. Where a value could be more than one branch (a layer is
+ * `oneOf` by kind), every branch is followed, so a string that ANY branch
+ * says is fetched is held to the rule. A STRING meeting an `anyOf` of forms
+ * is the exception that needs telling apart: a particle `texture` is a URI
+ * or inline SVG markup (`x-inline`), split by `pattern`, and markup is drawn
+ * as an image and fetches nothing. A string matching no form is refused.
+ */
+export function deepFetchedProblems(
+  schema: unknown,
+  value: unknown,
+  root: unknown = schema
+): DeepUrlProblem[] {
+  const out: DeepUrlProblem[] = [];
+  const defs = ((root as Node)?.$defs ?? {}) as Record<string, unknown>;
+  const resolve = (s: unknown, seen = 0): Node | null => {
+    if (!s || typeof s !== "object" || seen > 16) return null;
+    const ref = (s as Node).$ref;
+    if (typeof ref === "string" && ref.startsWith("#/$defs/")) {
+      const target = defs[ref.slice("#/$defs/".length)];
+      return target
+        ? resolve({ ...(target as Node), ...omitRef(s as Node) }, seen + 1)
+        : (s as Node);
+    }
+    return s as Node;
+  };
+  const matches = (branch: Node, text: string): boolean => {
+    const own =
+      typeof branch.pattern === "string"
+        ? new RegExp(branch.pattern).test(text)
+        : true;
+    const not = branch.not as Node | undefined;
+    const negated =
+      not && typeof not.pattern === "string"
+        ? !new RegExp(not.pattern).test(text)
+        : true;
+    return own && negated;
+  };
+  const walk = (
+    raw: unknown,
+    v: unknown,
+    path: string,
+    depth: number
+  ): void => {
+    const s = resolve(raw);
+    if (!s || depth > 32 || v === undefined || v === null) return;
+    if (s.format === "uri-reference") {
+      const problem = fetchedValueProblem(
+        v,
+        new Set((s["x-keywords"] as string[]) ?? [])
+      );
+      if (problem) out.push({ ...problem, path });
+    }
+    const union = [
+      ...((s.anyOf as unknown[]) ?? []),
+      ...((s.oneOf as unknown[]) ?? []),
+    ]
+      .map((b) => resolve(b))
+      .filter((b): b is Node => !!b);
+    if (typeof v === "string" && union.length) {
+      const forms = union.filter(
+        (b) =>
+          b.pattern !== undefined ||
+          b.not !== undefined ||
+          b.format !== undefined ||
+          b["x-inline"] !== undefined
+      );
+      if (forms.length) {
+        const chosen = forms.find((b) => matches(b, v));
+        if (!chosen)
+          out.push({
+            path,
+            code: "unsupported-feature-url",
+            message: `"${v.slice(
+              0,
+              40
+            )}" is none of the forms this field takes`,
+          });
+        else if (!chosen["x-inline"]) walk(chosen, v, path, depth + 1);
+        return;
+      }
+    }
+    for (const b of [...union, ...((s.allOf as unknown[]) ?? [])])
+      walk(b, v, path, depth + 1);
+    if (Array.isArray(v) && s.items)
+      v.forEach((item, i) => walk(s.items, item, `${path}/${i}`, depth + 1));
+    else if (v && typeof v === "object" && !Array.isArray(v) && s.properties) {
+      const props = s.properties as Record<string, unknown>;
+      for (const [k, child] of Object.entries(v as Node))
+        if (props[k]) walk(props[k], child, `${path}/${k}`, depth + 1);
+    }
+  };
+  walk(schema, value, "", 0);
+  // A union walks one value down several branches; say each problem once.
+  const seen = new Set<string>();
+  return out.filter(
+    (p) => !seen.has(p.path + p.code) && !!seen.add(p.path + p.code)
+  );
+}
+
+const omitRef = (s: Node): Node => {
+  const { $ref: _ref, ...rest } = s;
+  return rest;
+};

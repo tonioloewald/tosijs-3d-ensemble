@@ -10,9 +10,16 @@ All notable changes to this project are documented here, in
 - **An `effect` feature**: tosijs-3d's effects (volcano, geyser, bubbles,
   black smoker, splash, explosion, fireball, sparks) as a placed piece, with
   `preset`, `activity`, `scale`, `ground` and `autoplay` from upstream's
-  `effectSchema()`. Presets only for now: an effect `recipe` can fetch
-  images and sounds that upstream's schema does not yet mark as fetched
-  (tosijs-3d#120), so a document's `recipe` is not passed to the element.
+  `effectSchema()`. Your own effect goes in `recipe` (as tosijs-3d's effect
+  tool saves it). The images and sounds a recipe loads are held to the same
+  https rule as every other url in a document: a recipe with a refused url
+  is refused whole and reported at the url's own path. Inline SVG markup
+  loads nothing and is fine.
+- **Sliders name their stops** (`x-stops`, through tosijs-3d 0.10.18's
+  `slider3d({ stops })`): an effect's activity reads "0.50 semi-active".
+- **`x-data` on a feature schema**: structured data a feature accepts and the
+  panel does not show, with the urls inside it found by walking its schema
+  (`deepFetchedProblems`), never by field names.
 
 ### Changed
 

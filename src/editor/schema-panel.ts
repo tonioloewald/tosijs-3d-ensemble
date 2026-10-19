@@ -147,6 +147,8 @@ export interface PropertySpec {
    * tightened linear range. `x-zero-stop` ends that split — see below.
    */
   "x-scale"?: "linear" | "log" | "log2";
+  /** Named values on the track (an effect's dormant / erupting). */
+  "x-stops"?: Array<{ value: number; label: string }>;
   /**
    * A log slider whose handle CATCHES at zero, rather than approaching it
    * asymptotically and never arriving.
@@ -667,6 +669,9 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
           // A shaded band where the useful values live; the handle still
           // reaches min and max (tosijs-3d#83, ours).
           ...(spec["x-useful"] ? { useful: spec["x-useful"] } : {}),
+          // Named values, straight through (tosijs-3d#121, ours): a tick, a
+          // detent, and the name beside the number while it is on one.
+          ...(spec["x-stops"] ? { stops: spec["x-stops"] } : {}),
           handleChange: (v: number) => handleChange(key, v),
         })
       );

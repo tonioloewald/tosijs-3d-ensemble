@@ -380,6 +380,12 @@ const fetchedOf = (
  * pick, and sections left empty. Upstream owns the grouping, as it owns the
  * ranges — the sky's own section table that stood here for a day is gone.
  */
+/** The effect element's `recipe` property and the `$defs` it refers to. */
+const effectRecipeSpec = (): unknown =>
+  sceneSchemas.effect().properties.recipe;
+const effectDefs = (): unknown =>
+  (sceneSchemas.effect() as { $defs?: unknown }).$defs;
+
 const sectionsOf = (name: keyof typeof sceneSchemas): unknown =>
   (sceneSchemas[name]() as { "x-sections"?: unknown })["x-sections"];
 
@@ -1350,12 +1356,12 @@ function registerSceneFeaturesNow(): void {
     the vent is. The schema is upstream's `effectSchema()` (tosijs-3d#118,
     ours); what is ours is the curation and one default.
 
-    ⚠️ NOT `recipe`, yet. A recipe can carry a particle `texture` and a sound
-    `url`, both FETCHED, and upstream's schema does not mark them
-    (`format: 'uri-reference'`, tosijs-3d#120), so `validate` could not hold
-    them to the https rule every other fetched field here is held to. Until
-    it does, `recipe` is not in `x-accepts` and a document's recipe is
-    dropped with the other undeclared keys. Presets only.
+    A `recipe` (your own effect, from tosijs-3d's effect tool) is accepted
+    as DATA (`x-data`): the panel has no form for it, and the particle
+    `texture` and sound `url` inside it are FETCHED. Upstream marks them
+    (tosijs-3d#120, ours), and `deepFetchedProblems` walks the recipe by
+    that schema, so a recipe with an http or foreign-scheme url is refused
+    whole, as a top-level url would be. Inline SVG markup fetches nothing.
   */
   registerFeature({
     name: "effect",
@@ -1366,8 +1372,10 @@ function registerSceneFeaturesNow(): void {
     schema: {
       type: "object",
       title: "Effect",
-      "x-accepts": acceptsOf("effect").filter((k) => k !== "recipe"),
+      "x-accepts": acceptsOf("effect"),
       "x-fetched": fetchedOf("effect"),
+      "x-data": { recipe: effectRecipeSpec() },
+      $defs: effectDefs(),
       properties: pick(
         "effect",
         ["preset", "activity", "scale", "ground", "autoplay"],

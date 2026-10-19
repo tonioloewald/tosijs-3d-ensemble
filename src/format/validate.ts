@@ -31,7 +31,12 @@ message **on the field** rather than in a list at the bottom of the screen.
 */
 /*{"parent":"Format","order":2}*/
 import { featuresOf, roleFeatures } from "./roles.js";
-import { acceptedKeys, featureRegistration, fetchedKeys } from "./registry.js";
+import {
+  acceptedKeys,
+  dataProblems,
+  featureRegistration,
+  fetchedKeys,
+} from "./registry.js";
 import { fetchedValueProblem, urlProblem } from "./url-policy.js";
 import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
@@ -431,6 +436,13 @@ export function validate(
           for (const [key, value] of Object.entries(
             cfg as Record<string, unknown>
           )) {
+            for (const problem of dataProblems(registration, key, value))
+              add(
+                "error",
+                problem.code,
+                `${problem.message} (refused: the whole ${key} is ignored)`,
+                `${at}/features/${name}/${key}${problem.path}`
+              );
             const keywords = fetched.get(key);
             if (!keywords) continue;
             const problem = fetchedValueProblem(value, keywords);

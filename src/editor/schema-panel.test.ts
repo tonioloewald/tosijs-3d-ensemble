@@ -486,6 +486,35 @@ describe("a nested object field", () => {
     expect(fields.map((f) => f.value)).toEqual(["smart"]);
   });
 
+  it("keeps an earlier sibling edit when a second is made (0.7.0 review M1)", () => {
+    /*
+      The merge spread the object as it was when the panel was BUILT, and a
+      value write does not rebuild the panel, so editing `name` and then
+      `label` wrote the old name back: silent loss in the case #3352 fixed.
+    */
+    const fields: Array<{ insert(s: string): void }> = [];
+    const writes: Array<[string, unknown]> = [];
+    schemaWidgets({
+      schema: {
+        properties: {
+          boost: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              label: { type: "string" },
+            },
+          },
+        },
+      },
+      values: { boost: { name: "a", label: "b" } },
+      fields,
+      handleChange: (k: string, v: unknown) => writes.push([k, v]),
+    } as never);
+    fields[0]!.insert("X");
+    fields[1]!.insert("Y");
+    expect(writes.at(-1)).toEqual(["boost", { name: "aX", label: "bY" }]);
+  });
+
   it("writes the WHOLE object back, the other fields kept", () => {
     const fields: Array<{ insert(s: string): void }> = [];
     const writes: Array<[string, unknown]> = [];

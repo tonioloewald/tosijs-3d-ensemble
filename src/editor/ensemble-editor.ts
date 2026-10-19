@@ -541,6 +541,14 @@ export class EnsembleEditor extends withAttributes({
   }
   set ensemble(value: Ensemble) {
     this._ensemble = value;
+    /*
+      A NEW DOCUMENT HAS NO STORE ID until something says otherwise. Kept,
+      Save wrote the new document over the one that was open before (0.7.0
+      review M2), New and Open file included. `openFromStore` and
+      `openRevision` set them again straight after this.
+    */
+    this._storeId = null;
+    this._savedJson = null;
     this._selected = value.pieces[0]?.id ?? null;
     // A NEW arrangement earns a new view. An edit to the current one does not —
     // see the note in `rebuild`.
@@ -3156,7 +3164,12 @@ export class EnsembleEditor extends withAttributes({
       delete ensemble.preview;
     });
     this._selected = null;
+    // A new document, made by an edit rather than the setter: it is not the
+    // store document that was open (0.7.0 review M2).
+    this._storeId = null;
+    this._savedJson = null;
     this._syncSelection();
+    this._syncDirty();
   }
 
   savedEnsembles(): string[] {
@@ -3711,10 +3724,15 @@ export class EnsembleEditor extends withAttributes({
    * palette does not hold a list of names.
    */
   private _utilities(): Array<{ name: string; icon: string }> {
-    return registeredFeatures()
-      .filter((feature) => feature.primitive)
-      .map((feature) => ({ name: feature.name, icon: feature.icon ?? "▪️" }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return (
+      registeredFeatures()
+        // NOT a one-per-scene feature: the environment list turns those on
+        // and off, and the shelf inserting a second sun or fog made a piece
+        // nothing could delete (0.7.0 review).
+        .filter((feature) => feature.primitive && !feature.single)
+        .map((feature) => ({ name: feature.name, icon: feature.icon ?? "▪️" }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
   }
 
   /**

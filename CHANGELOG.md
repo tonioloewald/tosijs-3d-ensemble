@@ -7,11 +7,16 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
+- **The editor's chrome is tosijs-3d system panels drawn in the scene**, no
+  longer SVG overlays in its shadow root. A page that styled or positioned
+  them (`.ensemble-editor-chrome`) has nothing left to style; `hideChrome`
+  still removes them.
+
 - **Peer `tosijs-3d` is `^0.10.14`** (was `^0.10.9`): projected AO now
   reaches library pieces (#107), `Panel3d` is typed with `dispose()` (#104,
   `DisposablePanel` is now an alias of it), a per-axis scale is the element's
   own `stretch` (#105; our render wrapper is gone), a system panel's content
-  is swapped in place so no click is lost mid-swap (0.10.14), and the system panels the editor's chrome is moving onto
+  is swapped in place so no click is lost mid-swap (0.10.14), and the system panels the editor's chrome is on
   ship there (#106). The AO pixel test now holds `projected` to a visible
   change as well as `screen`.
 
@@ -97,9 +102,6 @@ All notable changes to this project are documented here, in
   own `reveal` (#110, so it works in a headset too), and pins its filter above
   the scrolling list.
 
-- The piece list's tables no longer select rows themselves: the radio circle
-  they drew read as an on/off toggle that did nothing. The selected piece is
-  marked "▸ id".
 
 ## [0.6.0] — 2026-10-16
 

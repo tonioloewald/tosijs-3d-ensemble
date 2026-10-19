@@ -106,8 +106,23 @@ export function dataClientStore(
   const prefix = dir.replace(/\/+$/, "") + "/";
   const inDir = (file: string) =>
     file.startsWith(prefix) && file.endsWith(".json");
-  const pathOf = (id: string) =>
-    id.startsWith(prefix) ? id : prefix + id.replace(/^\/+/, "");
+  /*
+    FAILS CLOSED, without asking the server: an id that escapes the folder
+    (`..`, `.`, empty or doubled segments, a leading `/`) is refused here.
+    It used to be prefixed and sent, and only tosijs-ui's own check stopped
+    `../levels/x` (0.7.0 review).
+  */
+  const pathOf = (id: string) => {
+    const rest = id.startsWith(prefix) ? id.slice(prefix.length) : id;
+    const parts = rest.split("/");
+    if (
+      !rest ||
+      rest.startsWith("/") ||
+      parts.some((p) => p === "" || p === "." || p === "..")
+    )
+      throw new Error(`not a document in ${prefix}: ${JSON.stringify(id)}`);
+    return prefix + rest;
+  };
   return {
     async list() {
       const { files } = await client.listData();
@@ -123,7 +138,9 @@ export function dataClientStore(
       return (await client.readData(pathOf(id), { json: true })) as Ensemble;
     },
     async write(id, ensemble) {
-      const file = pathOf(id.endsWith(".json") ? id : `${id}.json`);
+      // Checked BEFORE the extension: `""` + ".json" would pass as a name.
+      const path = pathOf(id);
+      const file = path.endsWith(".json") ? path : `${path}.json`;
       const result = await client.saveData(file, ensemble);
       if (result.commitError)
         throw new Error(

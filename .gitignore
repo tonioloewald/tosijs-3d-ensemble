@@ -68,3 +68,5 @@ playwright-report/
 # stale `passed: 6, failed: 0` standing in for a gate that no longer runs is
 # worse than no file — see tosijs-ui#158.
 .browser-tests.json
+# Firebase CLI deploy cache
+.firebase/

@@ -553,11 +553,20 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
     const props = (spec as { properties?: Record<string, PropertySpec> })
       .properties;
     if (spec.type === "object" && props && Object.keys(props).length) {
-      const current =
+      /*
+        CURRENT, not as built: a value write does not rebuild the panel, so
+        merging into the object captured at build time wrote an earlier
+        sibling's edit back to its old value (0.7.0 review M1). Each write
+        moves `current` on.
+      */
+      let current =
         value && typeof value === "object" && !Array.isArray(value)
-          ? (value as Record<string, unknown>)
+          ? { ...(value as Record<string, unknown>) }
           : {};
-      const merged = (k: string, v: unknown) => ({ ...current, [k]: v });
+      const merged = (k: string, v: unknown) => {
+        current = { ...current, [k]: v };
+        return current;
+      };
       widgets.push(label3d({ text: label, bold: true, compact: true }));
       widgets.push(
         ...schemaWidgets({

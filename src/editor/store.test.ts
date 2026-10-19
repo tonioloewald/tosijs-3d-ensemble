@@ -82,3 +82,20 @@ describe("dataClientStore", () => {
     expect(bare.history).toBeUndefined();
   });
 });
+
+describe("dataClientStore keeps to its folder itself", () => {
+  /*
+    0.7.0 review: only `list()` enforced the folder. `write('../levels/x')`
+    sent `static/ensembles/../levels/x.json`, and only the dev server's own
+    check refused it. The adapter now fails closed without asking the server.
+  */
+  for (const id of ["../levels/x", "/etc/x", "a/../../b", "", "./x", "a//b"]) {
+    it(`refuses ${JSON.stringify(id)} without calling the server`, async () => {
+      const { client, saved } = fake();
+      const store = dataClientStore(client);
+      await expect(store.write(id, { pieces: [] } as never)).rejects.toThrow();
+      await expect(store.read(id)).rejects.toThrow();
+      expect(saved).toEqual([]);
+    });
+  }
+});

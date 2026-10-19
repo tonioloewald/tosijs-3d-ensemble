@@ -12,6 +12,12 @@ import { locate } from "./panel-locate.js";
   (`static/` is a watched path).
 */
 const SCRATCH = "static/ensembles/zz-store-test.json";
+// The dev server mirrors static/ into docs/: clean both, pass or fail.
+const MIRROR = "docs/ensembles/zz-store-test.json";
+test.afterEach(() => {
+  rmSync(SCRATCH, { force: true });
+  rmSync(MIRROR, { force: true });
+});
 
 test("open from the store, edit, and save as a new file", async ({ page }) => {
   test.setTimeout(180_000);
@@ -92,4 +98,53 @@ test("open from the store, edit, and save as a new file", async ({ page }) => {
 
   rmSync(SCRATCH, { force: true });
   expect(realErrors(errors)).toEqual([]);
+});
+
+/*
+  SAVE NEVER WRITES OVER THE DOCUMENT YOU LEFT (0.7.0 review M2). The editor
+  kept the store id of the last document it opened through New, Open file
+  and a plain `ensemble =`, so Save wrote the new document over the old
+  file. A fake store records every write.
+*/
+test("after New or another document, Save does not overwrite the store document", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d"),
+    { timeout: 60_000 }
+  );
+  const writes = await page.evaluate(async () => {
+    type Ed = Element & {
+      store: unknown;
+      openFromStore(id: string): Promise<void>;
+      saveToStore(id?: string): Promise<void>;
+      newEnsemble(): void;
+      ensemble: unknown;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    const written: string[] = [];
+    ed.store = {
+      list: async () => [{ id: "harbour.json" }],
+      read: async () => ({ name: "harbour", pieces: [] }),
+      write: async (id: string) => {
+        written.push(id);
+        return { id };
+      },
+    };
+    await ed.openFromStore("harbour.json");
+    ed.newEnsemble();
+    await ed.saveToStore();
+    await ed.openFromStore("harbour.json");
+    ed.ensemble = { name: "other", pieces: [] };
+    await ed.saveToStore();
+    return written;
+  });
+  expect(writes, "Save wrote over the store document that was left").toEqual(
+    []
+  );
 });

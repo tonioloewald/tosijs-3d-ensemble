@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=9a30fae69976" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=e5471f114de4" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Upstream — what we&#39;re waiting on — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=3f42d6047705" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=c89f0fed5c39" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="UPSTREAM.md">
 <h1 id="upstream--what-were-waiting-on">Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -344,6 +344,11 @@ older than its card; when they disagree, the card wins.</p>
 <td><strong>No way to locate a panel&#39;s content NODE on screen</strong> (<code>contentToClient</code> maps points only); <code>tests/panel-locate.ts</code> measures nodes by attaching the content SVG off-screen</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/117">#117</a></td>
 </tr>
+<tr>
+<td>58</td>
+<td><strong><code>&lt;tosi-b3d-effect&gt;</code>&#39;s attributes have no schema</strong> (<code>preset</code>, <code>activity</code>, <code>scale</code>, <code>ground</code>): <code>effectRecipeSchema()</code> covers a recipe, not the element, so an <code>effect</code> feature here would have to type its ranges by hand. Waiting on it rather than doing that</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/118">#118</a></td>
+</tr>
 </tbody></table>
 <h3 id="stopgaps-we-own-and-what-retires-them">Stopgaps we own, and what retires them</h3>
 <p>Each of these is local complexity we carry <strong>because</strong> of a row above. When the
@@ -615,6 +620,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-9c2yjyxv.js"></script>
+  <script type="module" src="../hydrate-3w02jsvy.js"></script>
 </body>
 </html>

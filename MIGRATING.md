@@ -292,3 +292,10 @@ places:
   (`.ensemble-editor-chrome`) has nothing left to style; `hideChrome` still
   removes them. The editor gains `store` / `EnsembleEditor.defaultStore`
   (open and save through a host store) and `hostActions`.
+
+## Upgrading from 0.7.0 to 0.7.1
+
+- **Peer `tosijs-3d` is `^0.10.16`.** Nothing in a document or in the
+  editor's API changes. 0.10.15 stops system panels blinking when they
+  rebuild, which the editor does on every edit, and adds panning to the
+  default view controls. 0.10.16 adds effects and `effectRecipeSchema()`.

@@ -540,6 +540,14 @@ export class EnsembleEditor extends withAttributes({
     return this._ensemble;
   }
   set ensemble(value: Ensemble) {
+    /*
+      ANY document handed over SUPERSEDES a load still in flight. Only other
+      loads advanced the generation, so the page's own `src` fetch landed
+      over a document opened from the store (and, since M2, dropped its
+      store id). `load()` assigns through here after its own checks, so this
+      bump costs it nothing.
+    */
+    this._loadGeneration++;
     this._ensemble = value;
     /*
       A NEW DOCUMENT HAS NO STORE ID until something says otherwise. Kept,
@@ -1055,10 +1063,14 @@ export class EnsembleEditor extends withAttributes({
   /** Open a document from the store by its id. */
   async openFromStore(id: string): Promise<void> {
     if (!this._store_) return;
+    // Claims the generation BEFORE the read: a later open or load wins.
+    const generation = ++this._loadGeneration;
     const doc = await this._store_.read(id);
+    if (generation !== this._loadGeneration) return;
     this.ensemble = doc;
     this._storeId = id;
     this._savedJson = JSON.stringify(this._ensemble);
+    this._syncDirty();
     await this._refreshStore();
   }
 
@@ -1075,6 +1087,12 @@ export class EnsembleEditor extends withAttributes({
       const result = await store.write(target, structuredClone(this._ensemble));
       this._storeId = (result && result.id) || target;
       this._savedJson = JSON.stringify(this._ensemble);
+      /*
+        The title says so HERE. It used to wait for `_refreshStore` to see the
+        store's list change and re-render, which a Save back to the same file
+        never does: the "•" outlived every Save.
+      */
+      this._syncDirty();
     } catch (error) {
       this.dispatchEvent(new CustomEvent("error", { detail: { error } }));
       throw error;
@@ -1088,7 +1106,9 @@ export class EnsembleEditor extends withAttributes({
     const store = this._store_;
     if (!store?.readRevision || !this._storeId) return;
     const id = this._storeId;
+    const generation = ++this._loadGeneration;
     const doc = await store.readRevision(id, revision);
+    if (generation !== this._loadGeneration) return;
     this.ensemble = doc;
     this._storeId = id;
     await this._refreshStore();
@@ -3154,6 +3174,7 @@ export class EnsembleEditor extends withAttributes({
    * re-adding a library first. `name` resets, because Download names the file.
    */
   newEnsemble(): void {
+    this._loadGeneration++; // a pending load must not land over the new one
     this.edit("new ensemble", (ensemble) => {
       ensemble.name = "untitled";
       ensemble.pieces.length = 0;

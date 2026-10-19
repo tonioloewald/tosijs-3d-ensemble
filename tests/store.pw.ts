@@ -148,3 +148,133 @@ test("after New or another document, Save does not overwrite the store document"
     []
   );
 });
+
+/*
+  A LOAD STILL IN FLIGHT NEVER LANDS OVER A DOCUMENT OPENED AFTER IT. The
+  page's own `src` fetch, still pending, landed after `openFromStore` and
+  replaced the store document, which (since M2) also dropped its store id:
+  the next edit never read as dirty. Found adopting tosijs-3d 0.10.16, whose
+  timing made it 1 run in 5. `load()` had a generation counter that only
+  other loads advanced. Held here deterministically: a load made slow on
+  purpose, then each explicit way of changing the document.
+*/
+test("a slow load does not land over a document opened after it", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d"),
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(3000);
+  await page.route("**/slow-load.json", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ name: "late", pieces: [] }),
+    });
+  });
+  const results = await page.evaluate(async () => {
+    type Ed = Element & {
+      store: unknown;
+      ensemble: { name: string; pieces: unknown[] };
+      dirty: boolean;
+      load(url: string): Promise<void>;
+      openFromStore(id: string): Promise<void>;
+      newEnsemble(): void;
+      edit(d: string, m: (e: { name: string }) => void): void;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    ed.store = {
+      list: async () => [{ id: "harbour.json" }],
+      read: async () => ({ name: "harbour", pieces: [] }),
+      write: async (id: string) => ({ id }),
+    };
+    const out: Record<string, string> = {};
+    const ways: Record<string, () => Promise<void> | void> = {
+      openFromStore: () => ed.openFromStore("harbour.json"),
+      setter: () => {
+        ed.ensemble = { name: "assigned", pieces: [] };
+      },
+      newEnsemble: () => ed.newEnsemble(),
+    };
+    for (const [way, act] of Object.entries(ways)) {
+      const slow = ed.load("/slow-load.json").catch(() => {});
+      await act();
+      const name = ed.ensemble.name;
+      await slow;
+      await new Promise((r) => setTimeout(r, 300));
+      out[way] = ed.ensemble.name === name ? "kept" : `replaced by ${ed.ensemble.name}`;
+    }
+    // And the store binding survives, so an edit reads as dirty.
+    const slow = ed.load("/slow-load.json").catch(() => {});
+    await ed.openFromStore("harbour.json");
+    await slow;
+    ed.edit("rename", (e) => {
+      e.name = "harbour 2";
+    });
+    out.dirty = String(ed.dirty);
+    return out;
+  });
+  expect(results).toEqual({
+    openFromStore: "kept",
+    setter: "kept",
+    newEnsemble: "kept",
+    dirty: "true",
+  });
+});
+
+/*
+  SAVE CLEARS THE "•" ITSELF. The title was synced only when `_refreshStore`
+  saw the store's LIST change, which a Save back to the same file never does,
+  so the dot outlived every Save; Save as passed only when the new file showed
+  up in the listing in time (found adopting tosijs-3d 0.10.16, 4 runs in 4).
+  A store whose list never changes holds the plain Save.
+*/
+test("Save back to the same document clears the dirty mark", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d"),
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(3000);
+  const titles = await page.evaluate(async () => {
+    type Ed = Element & {
+      store: unknown;
+      shadowRoot: ShadowRoot;
+      openFromStore(id: string): Promise<void>;
+      saveToStore(id?: string): Promise<void>;
+      edit(d: string, m: (e: { name: string }) => void): void;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    ed.store = {
+      list: async () => [{ id: "harbour.json" }],
+      read: async () => ({ name: "harbour", pieces: [] }),
+      write: async (id: string) => ({ id }),
+    };
+    const title = () =>
+      (
+        Array.from(ed.shadowRoot.querySelectorAll("tosi-b3d-panel")).find((p) =>
+          (p as HTMLElement).title.startsWith("Ensemble")
+        ) as HTMLElement | undefined
+      )?.title;
+    await ed.openFromStore("harbour.json");
+    ed.edit("rename", (e) => {
+      e.name = "harbour 2";
+    });
+    const edited = title();
+    await ed.saveToStore();
+    return { edited, saved: title() };
+  });
+  expect(titles).toEqual({ edited: "Ensemble •", saved: "Ensemble" });
+});

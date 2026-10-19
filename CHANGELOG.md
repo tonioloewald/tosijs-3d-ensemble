@@ -3,6 +3,25 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Changed
+
+- **Peer `tosijs-3d` is `^0.10.16`.** The editor's in-scene panels no longer
+  blink when they rebuild (0.10.15 swaps content into the same plane).
+
+### Fixed
+
+- **A load still in flight no longer lands over a document opened after
+  it.** The page's own `src` fetch could finish after **Open** from the
+  store, `ensemble =` or **New**, and replace that document. After Open it
+  also dropped the store binding, so later edits never showed as unsaved.
+  `load()` was the only path that claimed a generation; every way of
+  changing the document does now.
+- **Save clears the unsaved mark (•).** The title updated only when the
+  store's file list changed, which a Save back to the same file never does,
+  so the mark stayed after every Save.
+
 ## [0.7.0] — 2026-10-19
 
 ### ⚠️ Breaking

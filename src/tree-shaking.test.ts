@@ -30,7 +30,9 @@ const bundle = async (entry: string) => {
 
 /** Markers unique to the editor. Any survivor means a game ships the tool. */
 const EDITOR_MARKERS = [
-  "ensemble-editor-chrome",
+  // A storage key only the editor has. (Was `ensemble-editor-chrome`, the
+  // overlay panels' class, until the chrome moved onto system panels.)
+  "tosi-ensemble-editor:ao-method",
   "tosi-ensemble-editor",
   "panel3d",
 ];

@@ -1174,10 +1174,6 @@ export class EnsembleEditor extends withAttributes({
       height: "100%",
     },
     "tosi-b3d": { display: "block", width: "100%", height: "100%" },
-    "svg.ensemble-editor-chrome": {
-      position: "absolute",
-      pointerEvents: "auto",
-    },
   };
 
   /*

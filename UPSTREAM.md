@@ -78,6 +78,7 @@ older than its card; when they disagree, the card wins.
 | 54 | ✅ **RESOLVED (tosijs-3d@0.10.10)** — projected AO missed library (container) materials, so kit pieces were never occluded; our pixel test now asserts it | [#107](https://github.com/tonioloewald/tosijs-3d/issues/107) |
 | 55 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `selectionMarker: 'row'` — **`table` cannot highlight a selected row without its radio/checkbox marker** | [#109](https://github.com/tonioloewald/tosijs-3d/issues/109) |
 | 56 | ✅ **RESOLVED (tosijs-3d@0.10.11)**: `panel.reveal(table, table.rowBox(id))` — **`panel3d` has no readable scroll position or reveal(widget)** | [#110](https://github.com/tonioloewald/tosijs-3d/issues/110) |
+| 57 | **No way to locate a panel's content NODE on screen** (`contentToClient` maps points only); `tests/panel-locate.ts` measures nodes by attaching the content SVG off-screen | [#117](https://github.com/tonioloewald/tosijs-3d/issues/117) |
 
 ### Stopgaps we own, and what retires them
 

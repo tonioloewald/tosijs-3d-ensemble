@@ -381,8 +381,7 @@ const fetchedOf = (
  * ranges — the sky's own section table that stood here for a day is gone.
  */
 /** The effect element's `recipe` property and the `$defs` it refers to. */
-const effectRecipeSpec = (): unknown =>
-  sceneSchemas.effect().properties.recipe;
+const effectRecipeSpec = (): unknown => sceneSchemas.effect().properties.recipe;
 const effectDefs = (): unknown =>
   (sceneSchemas.effect() as { $defs?: unknown }).$defs;
 

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=000d2f2ff8f2" data-tosi-doc-system />
+  <title>Writing a transform to a node — tosijs-3d-ensemble</title>
+  <meta name="description" content="Rotation and scale, written onto the Babylon node itself, in the RUNTIME layer because both the instantiator and the editor need them and the dependency may…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Writing a transform to a node — tosijs-3d-ensemble (markdown)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Writing a transform to a node — tosijs-3d-ensemble" />
+  <meta property="og:description" content="Rotation and scale, written onto the Babylon node itself, in the RUNTIME layer because both the instantiator and the editor need them and the dependency may…" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=95a12edea3cc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="node-transform.ts">
+<h1 id="writing-a-transform-to-a-node">Writing a transform to a node</h1>
+<p>Rotation and scale, written onto the Babylon node itself, in the RUNTIME layer
+because both the instantiator and the editor need them and the dependency may
+only point one way: the editor may import the runtime, never the reverse.
+Putting these in <code>transform-write.ts</code> — where they belong by subject — would
+drag the whole editor into a game&#39;s bundle, which <code>tree-shaking.test.ts</code> exists
+to prevent.</p>
+<h2 id="rotation-is-the-elements-scale-is-the-elements-when-it-can-be">Rotation is the element&#39;s; scale is the element&#39;s when it can be</h2>
+<p>For years a library-backed piece could be neither turned nor scaled through its
+element: <code>b3d-destroyable</code> forwarded only position to <code>library.instantiate</code>,
+and <code>size</code> is the placeholder cube&#39;s edge. We wrote both onto the node. tosijs-3d
+0.8.1 fixed both (#47, #48), so:</p>
+<ul>
+<li><strong>rotation</strong> is the element&#39;s <code>rx</code>/<code>ry</code>/<code>rz</code> (DEGREES), full stop. It
+forwards them, and re-renders once its node exists.</li>
+<li><strong>a uniform scale</strong> is the element&#39;s <code>scale</code>.</li>
+<li><strong>a non-uniform scale</strong> (the format&#39;s <code>Vec3</code>) is the element&#39;s <code>stretch</code>,
+per axis, times <code>scale</code> (tosijs-3d 0.10.12, #105). Before that we wrote it
+to the node, and the element reset the node on every render, so a stretch
+was wiped by the next move or turn, and one set at build time was lost when
+the instance arrived; a render wrapper re-applied it. Both are measured in
+<code>tests/library-transform.pw.ts</code> on rendered footprints (a built [2, 1, 3]
+is 18.108 wide), now with no wrapper.</li>
+</ul>
+<p>A plain node (no element) has nothing managing it, so <code>applyScale</code> writes it
+directly; the editor&#39;s node path rotates it directly too.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+      <li><a class="doc-link" href="../store/">Where the editor opens and saves</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details open><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link current" href="../node-transform/" aria-current="page">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="../recommendations/">Scene recommendations</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate-abkfg8jy.js"></script>
+</body>
+</html>

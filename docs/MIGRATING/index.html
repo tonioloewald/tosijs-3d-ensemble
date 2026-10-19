@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=c66e8deb23f3" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=9b648005fd46" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="MIGRATING.md">
 <h1 id="migrating-manta-recon-onto-tosijs-3d-ensemble">Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -339,7 +339,6 @@ session that &quot;fixed&quot; that by hand may have saved a different <code>sca
 was authored; worth a look in any document edited that way.</li>
 </ul>
 <h2 id="upgrading-from-06-to-07">Upgrading from 0.6 to 0.7</h2>
-<p>Unreleased; this section grows with the release.</p>
 <ul>
 <li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.14</code>.</strong> It fixes projected ambient occlusion on
 library pieces (#107), types <code>panel3d</code>&#39;s <code>dispose()</code> (#104), gives a piece
@@ -349,6 +348,12 @@ editor&#39;s chrome is moving onto (#106).</li>
 environment features are on/off only (never deleted, duplicated or
 renamed). Code driving the editor through its component API is unaffected;
 <code>includeFeature(name)</code> is new.</li>
+<li><strong>The editor&#39;s panels are tosijs-3d system panels, drawn in the scene</strong>,
+with buttons on the scene&#39;s system bar. They are no longer SVG overlays in
+the editor&#39;s shadow root, so a page that styled or positioned them
+(<code>.ensemble-editor-chrome</code>) has nothing left to style; <code>hideChrome</code> still
+removes them. The editor gains <code>store</code> / <code>EnsembleEditor.defaultStore</code>
+(open and save through a host store) and <code>hostActions</code>.</li>
 </ul>
 
   </article>

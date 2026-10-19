@@ -278,8 +278,6 @@ places:
 
 ## Upgrading from 0.6 to 0.7
 
-Unreleased; this section grows with the release.
-
 - **Peer `tosijs-3d` is `^0.10.14`.** It fixes projected ambient occlusion on
   library pieces (#107), types `panel3d`'s `dispose()` (#104), gives a piece
   a per-axis `stretch` (#105), and adds the system panels the
@@ -288,3 +286,9 @@ Unreleased; this section grows with the release.
   environment features are on/off only (never deleted, duplicated or
   renamed). Code driving the editor through its component API is unaffected;
   `includeFeature(name)` is new.
+- **The editor's panels are tosijs-3d system panels, drawn in the scene**,
+  with buttons on the scene's system bar. They are no longer SVG overlays in
+  the editor's shadow root, so a page that styled or positioned them
+  (`.ensemble-editor-chrome`) has nothing left to style; `hideChrome` still
+  removes them. The editor gains `store` / `EnsembleEditor.defaultStore`
+  (open and save through a host store) and `hostActions`.

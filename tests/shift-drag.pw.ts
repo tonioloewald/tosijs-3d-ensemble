@@ -51,9 +51,7 @@ test("a shift-drag on empty sky does not move the camera AND a piece", async ({
     });
 
   // The canvas centre, a little up: open ground or sky, no panel.
-  const box = (await page
-    .locator("tosi-ensemble-editor")
-    .boundingBox())!;
+  const box = (await page.locator("tosi-ensemble-editor").boundingBox())!;
   const x = box.x + box.width / 2;
   const y = box.y + box.height * 0.3;
 
@@ -92,7 +90,11 @@ test("a shift-drag on empty sky does not move the camera AND a piece", async ({
     console.log(tool, { panned, orbited, edited });
     expect(
       [panned, orbited, edited].filter(Boolean).length,
-      `${tool}: one shift-drag did ${JSON.stringify({ panned, orbited, edited })}`
+      `${tool}: one shift-drag did ${JSON.stringify({
+        panned,
+        orbited,
+        edited,
+      })}`
     ).toBeLessThanOrEqual(1);
   }
   expect(realErrors(errors)).toEqual([]);
@@ -128,8 +130,9 @@ test("a shift-drag on a scale grip scales without panning", async ({
     if (!piece) return null;
     ed.setTool("select");
     // Scale grips are off by default: light the scale cell (3) alone.
-    (ed as unknown as { setToolOption(k: string, v: unknown): void })
-      .setToolOption("cells", [3]);
+    (
+      ed as unknown as { setToolOption(k: string, v: unknown): void }
+    ).setToolOption("cells", [3]);
     ed.select(piece.id);
     return piece.id;
   });

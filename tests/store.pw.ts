@@ -208,7 +208,8 @@ test("a slow load does not land over a document opened after it", async ({
       const name = ed.ensemble.name;
       await slow;
       await new Promise((r) => setTimeout(r, 300));
-      out[way] = ed.ensemble.name === name ? "kept" : `replaced by ${ed.ensemble.name}`;
+      out[way] =
+        ed.ensemble.name === name ? "kept" : `replaced by ${ed.ensemble.name}`;
     }
     // And the store binding survives, so an edit reads as dirty.
     const slow = ed.load("/slow-load.json").catch(() => {});

@@ -27,8 +27,9 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
-- **Peer `tosijs-3d` is `^0.10.19`**, whose rig and effect tools mount in a
-  host's scene (tosijs-3d#122).
+- **Peer `tosijs-3d` is `^0.10.20`**, whose rig and effect tools mount in a
+  host's scene (tosijs-3d#122), and whose inline-SVG effect pictures no
+  longer throw after a rebuild (tosijs-3d#124).
 
 ## [0.8.0] — 2026-10-20
 

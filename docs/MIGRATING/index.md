@@ -315,6 +315,7 @@ places:
 
 ## Upgrading from 0.8.0 to 0.8.1
 
-- **Peer `tosijs-3d` is `^0.10.19`.** Nothing in a document or the
+- **Peer `tosijs-3d` is `^0.10.20`.** Nothing in a document or the
   editor's API changes. 0.10.19 makes its rig and effect tools mountable in
-  a host's scene (tosijs-3d#122), which the editor builds on.
+  a host's scene (tosijs-3d#122), which the editor builds on; 0.10.20 fixes
+  its inline-SVG effect pictures throwing after a rebuild (tosijs-3d#124).

@@ -1,5 +1,0 @@
-import{He,jt,Ma}from"./site-3hrxh888.js";import{Qt}from"./site-phrx5rwy.js";import{o}from"./site-300ftf42.js";class Um extends He{constructor(e){super(e);this.delayIndex=this.registerDataInput("delayIndex",Qt)}_execute(e,i){let r=jt(this.delayIndex.getValue(e));if(r<0||isNaN(r)||!isFinite(r))return this._reportError(e,"Invalid delay index");let a=e._getGlobalContextVariable("pendingDelays",[]),l=a[r];if(l)l.dispose(),delete a[r],e._setGlobalContextVariable("pendingDelays",a);Ma(e,r),this.out._activateSignal(e)}getClassName(){return"FlowGraphCancelDelayBlock"}}var t=!1;function Wm(){if(t)return;t=!0,o("FlowGraphCancelDelayBlock",Um)}Wm();
-export{Um,Wm};
-
-//# debugId=076353FF0334237564756E2164756E21
-//# sourceMappingURL=site-cjsk3v7w.js.map

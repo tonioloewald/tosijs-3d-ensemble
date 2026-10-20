@@ -3,6 +3,13 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Changed
+
+- **Peer `tosijs-3d` is `^0.10.19`**, whose rig and effect tools mount in a
+  host's scene (tosijs-3d#122).
+
 ## [0.8.0] — 2026-10-20
 
 ### ⚠️ Breaking

@@ -312,3 +312,9 @@ places:
 - **A store may implement `idFor(src)`** so a document opened by `src`
   saves back to its entry; `dataClientStore` does. Nothing to do unless
   you wrote your own store.
+
+## Upgrading from 0.8.0 to 0.8.1
+
+- **Peer `tosijs-3d` is `^0.10.19`.** Nothing in a document or the
+  editor's API changes. 0.10.19 makes its rig and effect tools mountable in
+  a host's scene (tosijs-3d#122), which the editor builds on.

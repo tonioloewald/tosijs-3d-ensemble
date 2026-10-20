@@ -3,6 +3,29 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.8.0 — 2026-10-20
+
+- Went well: nested ensembles landed end to end (flatten at load, drill in
+  and pop out) on SPEC's design, with transforms checked against Babylon's
+  own parenting. tosijs-3d turned five asks into releases within the day
+  (#118-#122: effect, landform and recipe schemas, slider stops, embeddable
+  tools). The pre-minor review found 7 majors and no blockers; all were fixed
+  with tests that fail without them, including a fan-out bomb that made
+  335,922 fetches for 7 documents (now 7).
+- Didn't: the publish waited 60 minutes for npm approval, then timed out and
+  reported SUCCESS with nothing published (an approval sent too early). Read
+  the stage log, not the run's colour. I also spent hours on timing and
+  machine-load theories for lost clicks that one elementFromPoint call
+  settled: the doc site's test widget (tosijs-ui#233).
+- Surprised: another project (SFB) running CPU-GL sims pushed load to ~30,
+  which made headless WebGL run at ~1 fps; and `bun test` loses 3 tests when
+  the dev server rebuilds docs/ during the run (632 with it stopped).
+- Friction: stash/checkout under a running dev server deleted parts of docs/
+  (restored from git). Stop the dev server before touching the tree.
+- Cycle: pre-minor review -> GO_WITH_FOLLOWUPS (7 majors fixed; #3423-#3430
+  filed; no re-review, none was a blocker) -> attest (41 + 1) -> dry run ->
+  publish (approval timed out once) -> verify_only green.
+
 ## 0.7.0 — 2026-10-19
 
 - Went well: the editor chrome moved onto tosijs-3d's in-scene system panels.

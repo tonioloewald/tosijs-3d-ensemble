@@ -84,6 +84,7 @@ older than its card; when they disagree, the card wins.
 | 60 | **`effectRecipeSchema()` does not mark its fetched fields** (particle `texture`, sound `url`), so the `effect` feature cannot accept a `recipe` under the https rule | [#120](https://github.com/tonioloewald/tosijs-3d/issues/120) |
 | 61 | **`slider3d` cannot show labelled stops** (`x-stops`: an effect's dormant / semi-active / erupting) | [#121](https://github.com/tonioloewald/tosijs-3d/issues/121) |
 | 62 | **tosijs-ui's doc-system `button.test-widget` is fixed over page content and takes clicks**: a click on the Scene list's last row hit it 3 runs in 4 (tests hide it) | [tosijs-ui#233](https://github.com/tonioloewald/tosijs-ui/issues/233) |
+| 63 | **rig-tool and effect-tool are not embeddable**: each makes its own scene, has no change event, and owns its files. Ensemble would host them on a `figure` / `effect` piece and save through its store | [#122](https://github.com/tonioloewald/tosijs-3d/issues/122) |
 
 ### Stopgaps we own, and what retires them
 

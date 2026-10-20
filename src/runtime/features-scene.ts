@@ -1574,6 +1574,8 @@ function registerSceneFeaturesNow(): void {
             description:
               "The id of a planet piece: this ground takes that globe's sea, coasts and mountain ranges, and follows it when it changes. A sphere terrain only. (Or link the other way: a planet's own `terrain`.)",
             "x-requires": { surfaceType: "sphere" },
+            // Rewritten with the piece when it is nested (format/nest.ts).
+            "x-piece-ref": true,
           },
         }
       ),
@@ -2007,6 +2009,7 @@ function registerSceneFeaturesNow(): void {
       ),
       // A PIECE id in the document, where upstream's is a selector.
       terrain: {
+        "x-piece-ref": true,
         title: "Drawn from terrain",
         description:
           "The id of a sphere terrain piece: the globe takes that ground's shape and climate, again whenever it changes. Empty: the planet is its own world. (Or link the other way: a terrain's own `planet`.)",

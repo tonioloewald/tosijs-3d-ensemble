@@ -7,6 +7,21 @@ All notable changes to this project are documented here, in
 
 ### Added
 
+- **Nested ensembles** (board #3362, from Manta). A piece with
+  `"ensemble": "/assemblies/ocean-rig.json"` (or a bare name, `ocean-rig`)
+  in place of `mesh` places a whole ensemble. It is spliced in when the
+  parent builds: ids become paths (`rig-a/pump`), and so do the child's
+  links, points, zones and feature fields that name a piece (`x-piece-ref`),
+  so a child's reference never resolves against a same-named piece in the
+  parent. Transforms compose (checked against Babylon's own parenting with a
+  rotation, an offset and a scale at once), libraries merge (a clashing name
+  is renamed for the child), and every load re-reads the child, so fixing a
+  rig fixes every level that uses it. A loop (`nested-cycle`), more than 8
+  levels (`nested-too-deep`) and a child that failed to load
+  (`nested-missing`) are reported, never a hang. A nested url is fetched,
+  so it meets the https rule. `loadEnsemble` and `<tosi-ensemble>` load the
+  children; `collectNested` and `flattenEnsemble` are exported for hosts
+  that build themselves.
 - **An `effect` feature**: tosijs-3d's effects (volcano, geyser, bubbles,
   black smoker, splash, explosion, fireball, sparks) as a placed piece, with
   `preset`, `activity`, `scale`, `ground` and `autoplay` from upstream's

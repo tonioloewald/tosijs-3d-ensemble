@@ -207,12 +207,11 @@ export interface Piece {
    */
   enabled?: boolean;
   /**
-   * Nested ensemble by name, INSTEAD of `mesh`.
-   *
-   * The shape is reserved so that ids, links and the encounter layer are built
-   * for it from day one; **the loader does not flatten yet** and `validate`
-   * reports it. See PLAN.md's non-goals — recursion is the intended end state,
-   * flattening at load is how it arrives without live instances.
+   * A nested ensemble, INSTEAD of `mesh`: a url (`/assemblies/rig.json`,
+   * relative to this document) or a bare name (`rig`, meaning `rig.json`
+   * beside it). Spliced in when the parent builds, with ids as paths
+   * (`rig-a/pump`) and this piece's `at` / `rot` / `scale` placing the whole
+   * child. See [[Nested ensembles]] (`format/nest.ts`).
    */
   ensemble?: string;
   at: Vec3;

@@ -44,7 +44,7 @@ export interface UrlProblem {
 
 export function urlProblem(
   url: string,
-  what: "library" | "feature" = "library"
+  what: "library" | "feature" | "nested" = "library"
 ): UrlProblem | null {
   // Fail closed: a url field that holds something else is refused, not
   // stringified and hoped about (`new URL(["http://x"])` fetches http://x).

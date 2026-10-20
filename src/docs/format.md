@@ -15,4 +15,5 @@ botanic garden and a lighting rig. Anything domain-specific rides in `features`,
 - [Scale, uniform or per axis](/scale/)
 - [Rounding what lands in the document](/round/)
 - [Migrating a legacy prefab](/migrate/)
+- [Nested ensembles](/nest/)
 <!-- /toc -->

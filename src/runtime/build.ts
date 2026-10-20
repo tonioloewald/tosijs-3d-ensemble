@@ -50,6 +50,13 @@ import {
 import { scaleVector, uniformScale } from "../format/scale.js";
 import { validate } from "../format/validate.js";
 import {
+  flattenEnsemble,
+  MAX_NESTING_DEPTH,
+  nestedRefs,
+  nestedUrl,
+} from "../format/nest.js";
+import { urlProblem } from "../format/url-policy.js";
+import {
   libraryNames,
   meshesByLibrary,
   mountLibraries,
@@ -62,6 +69,15 @@ import type { Ensemble, Piece, Vec3 } from "../format/types.js";
 export interface BuildOptions {
   /** The `<tosi-b3d>` element to append into. */
   scene: SceneElement;
+  /**
+   * The nested ensembles this one uses, loaded: `collectNested` fetches
+   * them (`loadEnsemble` does it for you). Keyed by `nestedUrl(ref, base)`.
+   * A nested piece whose child is not here contributes nothing and is
+   * reported (`nested-missing`). See [[Nested ensembles]].
+   */
+  nested?: ReadonlyMap<string, Ensemble>;
+  /** The url this ensemble was loaded from, for its relative nested refs. */
+  base?: string;
   /** Where the ensemble's local origin sits in the world. Default `[0,0,0]`. */
   origin?: Vec3;
   /**
@@ -180,9 +196,18 @@ export interface BuiltEnsemble {
  * silently absent. A generator that wants to refuse checks `problems` itself.
  */
 export function buildEnsemble(
-  ensemble: Ensemble,
+  authored: Ensemble,
   opts: BuildOptions
 ): BuiltEnsemble {
+  /*
+    NESTED ENSEMBLES ARE SPLICED IN FIRST, so everything below (validation,
+    the two phases, links) sees one flat document with path ids, and a
+    child's link can only resolve inside the child (format/nest.ts).
+  */
+  const flat = flattenEnsemble(authored, opts.nested ?? new Map(), {
+    base: opts.base,
+  });
+  const ensemble = flat.ensemble;
   const {
     scene,
     origin = [0, 0, 0] as Vec3,
@@ -203,10 +228,13 @@ export function buildEnsemble(
     measured the silence. We pass `libraries` only so the message can name the
     ones that did not answer.
   */
-  const problems = validate(
-    ensemble,
-    checkable ? { meshes: known, libraries } : { libraries }
-  );
+  const problems = [
+    ...flat.problems,
+    ...validate(
+      ensemble,
+      checkable ? { meshes: known, libraries } : { libraries }
+    ),
+  ];
   const ensembleScale = ensemble.scale ?? 1;
   const pieces = new Map<string, BuiltPiece>();
   const disposers: Array<() => void> = [];
@@ -595,17 +623,69 @@ export async function fetchEnsembleData(url: string): Promise<Ensemble> {
   return body as Ensemble;
 }
 
+/**
+ * Fetch every ensemble `root` nests, all the way down, into a map
+ * `buildEnsemble` takes as `nested`. A url the policy refuses is not
+ * fetched; a cycle or a chain deeper than `MAX_NESTING_DEPTH` is not
+ * followed; a child that fails to load is left out. `flattenEnsemble`
+ * reports each of those, so this one never throws for them.
+ */
+export async function collectNested(
+  root: Ensemble,
+  {
+    base,
+    fetchDocument = fetchEnsembleData,
+    into = new Map<string, Ensemble>(),
+  }: {
+    base?: string;
+    fetchDocument?: (url: string) => Promise<Ensemble>;
+    /** A cache to fill (and to skip what it already holds). */
+    into?: Map<string, Ensemble>;
+  } = {}
+): Promise<Map<string, Ensemble>> {
+  const walk = async (
+    doc: Ensemble,
+    docBase: string | undefined,
+    chain: string[]
+  ): Promise<void> => {
+    await Promise.all(
+      nestedRefs(doc).map(async (ref) => {
+        const key = nestedUrl(ref, docBase);
+        if (chain.includes(key) || chain.length >= MAX_NESTING_DEPTH) return;
+        if (urlProblem(key, "nested")) return;
+        let child = into.get(key);
+        if (!child) {
+          try {
+            child = await fetchDocument(key);
+          } catch {
+            return;
+          }
+          into.set(key, child);
+        }
+        await walk(child, key, [...chain, key]);
+      })
+    );
+  };
+  await walk(root, base, base ? [base] : []);
+  return into;
+}
+
 export async function loadEnsemble(
   url: string,
   opts: BuildOptions
 ): Promise<BuiltEnsemble> {
   const ensemble = await fetchEnsembleData(url);
+  // Its nested ensembles too, all the way down, before anything builds.
+  const nested = await collectNested(ensemble, { base: url });
   /*
     MOUNT WHAT THE FILE ASKS FOR, then build. This is what makes an ensemble
     loadable anywhere: the consumer supplies a scene, and the content declares
     its own dependencies rather than relying on the caller to have mounted the
-    right libraries first.
+    right libraries first. The FLAT document's, so a child's kits mount too.
   */
-  await mountLibraries(ensemble, opts.scene);
-  return buildEnsemble(ensemble, opts);
+  await mountLibraries(
+    flattenEnsemble(ensemble, nested, { base: url }).ensemble,
+    opts.scene
+  );
+  return buildEnsemble(ensemble, { ...opts, nested, base: url });
 }

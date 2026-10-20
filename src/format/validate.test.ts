@@ -214,13 +214,23 @@ describe("validate", () => {
     expect(codes(e, { checkRegistry: false })).toEqual(["bad-subsystem-match"]);
   });
 
-  it("reports a nested ensemble instead of silently ignoring it", () => {
-    const e = minimal({
-      pieces: [{ id: "a", ensemble: "ocean-rig", at: [0, 0, 0] }],
+  it("accepts a nested ensemble by name or https url, and refuses http", () => {
+    const ok = minimal({
+      pieces: [
+        { id: "a", ensemble: "ocean-rig", at: [0, 0, 0] },
+        { id: "b", ensemble: "/assemblies/rig.json", at: [0, 0, 0] },
+        { id: "c", ensemble: "https://cdn.example/rig.json", at: [0, 0, 0] },
+      ],
     });
-    expect(codes(e, { checkRegistry: false })).toContain(
-      "nested-not-supported"
-    );
+    expect(codes(ok, { checkRegistry: false })).toEqual([]);
+    const bad = minimal({
+      pieces: [
+        { id: "a", ensemble: "http://cdn.example/rig.json", at: [0, 0, 0] },
+      ],
+    });
+    expect(codes(bad, { checkRegistry: false })).toEqual([
+      "insecure-nested-url",
+    ]);
   });
 
   it("warns rather than errors on unregistered features, so a host can register late", () => {

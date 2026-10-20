@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../doc-system.css?v=5ebc296e6293" data-tosi-doc-system />
+  <title>Nested ensembles — tosijs-3d-ensemble</title>
+  <meta name="description" content="A piece can be a whole ensemble: &quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot; in place of mesh. A level made of rigs, a fortress made of towers, a plaza with lamp…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="Nested ensembles — tosijs-3d-ensemble (markdown)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="Nested ensembles — tosijs-3d-ensemble" />
+  <meta property="og:description" content="A piece can be a whole ensemble: &quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot; in place of mesh. A level made of rigs, a fortress made of towers, a plaza with lamp…" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="../favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="../docs.json?v=7b821060b264" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="nest.ts">
+<h1 id="nested-ensembles">Nested ensembles</h1>
+<p>A piece can be a whole ensemble: <code>&quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot;</code>
+in place of <code>mesh</code>. A level made of rigs, a fortress made of towers, a plaza
+with lamp posts that are themselves arrangements.</p>
+<pre><code class="language-json" data-highlighted><span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"rig-a"</span><span class="token punctuation">,</span> <span class="token property">"ensemble"</span><span class="token operator">:</span> <span class="token string">"/assemblies/ocean-rig.json"</span><span class="token punctuation">,</span> <span class="token property">"at"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">120</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">-40</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token property">"rot"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">30</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span> <span class="token punctuation">}</span>
+</code></pre>
+<h2 id="flattened-when-it-loads">Flattened when it loads</h2>
+<p>A nested ensemble is spliced into its parent when the parent is built: the
+child&#39;s pieces become the parent&#39;s, with ids that are PATHS (<code>rig-a/pump</code>),
+placed by the nesting piece&#39;s <code>at</code>, <code>rot</code> and <code>scale</code>. Every load re-reads
+the child, so fixing the rig fixes every level that uses it. What this does
+not give you yet is a per-instance override (&quot;this level&#39;s rig, with the
+pump moved&quot;); that is a later step.</p>
+<p>What happens to the child, in order:</p>
+<ul>
+<li><strong>Ids</strong> become <code>&lt;nesting id&gt;/&lt;child id&gt;</code>, and so does everything in the
+child that names a piece: its links (<code>from</code>, <code>to</code>), and any feature field
+that holds a piece id (marked <code>x-piece-ref</code> in its schema, such as a
+planet&#39;s <code>terrain</code>). A child&#39;s link from <code>reactor</code> to <code>projector</code> becomes
+<code>rig-a/reactor</code> → <code>rig-a/projector</code>, and can never resolve against a
+same-named piece in the parent.</li>
+<li><strong>Transforms</strong> compose: the child&#39;s whole arrangement (its own <code>scale</code>
+included) is placed under the nesting piece, so a child piece&#39;s world
+position is <code>at + rot · (scale ⊙ child position)</code>, its rotation the two
+rotations composed, and its scale the two multiplied. A parent stretched
+unevenly holding a child piece that is turned would need a shear, which
+no piece can hold; the scale along the child&#39;s own axes is kept and a
+<code>nested-shear</code> warning says so.</li>
+<li><strong>Its own points and zones</strong> move into the parent, placed the same way,
+with path ids. <strong>Its libraries</strong> join the parent&#39;s; one whose name the
+parent already uses for a different file is renamed <code>&lt;nesting id&gt;/&lt;name&gt;</code>
+for the child&#39;s pieces.</li>
+<li><strong>Ignored:</strong> the child&#39;s <code>preview</code> (scenery for its author), its
+<code>placement</code> (the parent places it), its <code>recommends</code> (the outer scene&#39;s).</li>
+<li>A nesting piece that is <strong>disabled</strong> contributes nothing.</li>
+</ul>
+<h2 id="what-it-refuses">What it refuses</h2>
+<p>A chain that comes back to itself (A nests B nests A) is reported as
+<code>nested-cycle</code>, naming the loop, and not followed. Deeper than
+<code>MAX_NESTING_DEPTH</code> (8) is <code>nested-too-deep</code>. A child that could not be
+loaded is <code>nested-missing</code>, and its piece contributes nothing.</p>
+<h2 id="names-and-urls">Names and urls</h2>
+<p><code>ensemble</code> is a url (<code>/assemblies/ocean-rig.json</code>, <code>./tower.json</code>), relative
+to the document that names it, or a bare name (<code>ocean-rig</code>), which means
+<code>ocean-rig.json</code> beside that document. A nested url is FETCHED, so it meets
+the same https rule as a library.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
+      <li><a class="doc-link" href="../store/">Where the editor opens and saves</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="../history/">Undo</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../features/">Features</a></li>
+    <li><details open><summary><a class="doc-link" href="../format/">Format</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="../validate/">Validation</a></li>
+      <li><a class="doc-link" href="../registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="../roles/">Roles</a></li>
+      <li><a class="doc-link" href="../index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="../scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
+      <li><a class="doc-link current" href="../nest/" aria-current="page">Nested ensembles</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="../handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="../handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="../selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="../selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="../beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="../schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="../transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
+    </ul>
+    </details></li>
+    <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../world/">The world preset</a></li>
+      <li><a class="doc-link" href="../combat/">The combat preset</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul>
+    </details></li>
+    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
+    <ul>
+      <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="../features-landform/">Landforms</a></li>
+      <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="../recommendations/">Scene recommendations</a></li>
+    </ul>
+    </details></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="../hydrate-gb3h0b3h.js"></script>
+</body>
+</html>

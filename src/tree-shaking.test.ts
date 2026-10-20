@@ -126,7 +126,11 @@ describe("tree-shaking", () => {
     kernel 2.2 → 2.8 kB with nothing reporting it; the 0.4.0 review found it by
     hand. The growth is justified (the url policy, `fetchedKeys`, the cloud
     deck, moons, the wider sky and terrain picks) and recorded in the
-    changelog. Measured history: 8.5 kB when written (0.3.0 era), 9.28 kB at 0.4.0.
+    changelog. Measured history: 8.5 kB when written (0.3.0 era), 9.28 kB at 0.4.0,
+    11.25 kB at 0.7.0, 12.55 kB with effects, landforms and recipe url checks,
+    14.55 kB with nested ensembles (flattening, transform maths, the loader:
+    all of it is what a game that loads a level of rigs runs). Ceiling raised
+    14 → 16 kB for that, 2026-10-20.
   */
   it("a game's bundle stays about the size a game's bundle should be", async () => {
     const code = await bundle("./src/__fixtures__/game-import.ts");
@@ -139,7 +143,7 @@ describe("tree-shaking", () => {
     */
     console.log(`game entry: ${(gzipped / 1024).toFixed(2)} kB gz`);
     expect(gzipped).toBeGreaterThan(4_000);
-    expect(gzipped).toBeLessThan(14_000);
+    expect(gzipped).toBeLessThan(16_000);
   });
 
   it("a runtime placer DOES import the engine (the check can fail)", async () => {

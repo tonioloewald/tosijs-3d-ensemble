@@ -129,7 +129,8 @@ el?.addEventListener('built', (e) => console.log(e.detail.problems))
 */
 /*{"parent":"Runtime","order":2}*/
 import { withAttributes } from "tosijs";
-import { buildEnsemble, fetchEnsembleData } from "./build.js";
+import { buildEnsemble, collectNested, fetchEnsembleData } from "./build.js";
+import { flattenEnsemble, nestedRefs } from "../format/nest.js";
 import { placeMesh } from "./place-mesh.js";
 import { mountLibraries } from "./libraries.js";
 import { registerSceneFeatures } from "./features-scene.js";
@@ -158,6 +159,8 @@ export class TosiEnsemble extends withAttributes({
     // Assigning a document is a newer request than any fetch in flight, so
     // that fetch must not overwrite it when it lands.
     this._loads++;
+    // Not from a url: its relative nested refs are the page's.
+    this._base = undefined;
     this._setData(value);
   }
 
@@ -232,14 +235,30 @@ export class TosiEnsemble extends withAttributes({
     const ticket = ++this._builds;
     const data = this._data;
     const scene = this.closest("tosi-b3d") as SceneElement | null;
-    if (!data?.libraries?.length || !scene) {
+    const nests = !!data && nestedRefs(data).length > 0;
+    if ((!data?.libraries?.length && !nests) || !scene) {
       this._rebuild();
       return;
     }
-    void mountLibraries(data, scene).then(() => {
+    /*
+      NESTED ENSEMBLES load first (cached here across rebuilds), then the
+      FLAT document's libraries mount, so a child's kits are in the scene
+      before its pieces build. See [[Nested ensembles]].
+    */
+    void (async () => {
+      if (nests)
+        await collectNested(data, { base: this._base, into: this._nested });
+      await mountLibraries(
+        flattenEnsemble(data, this._nested, { base: this._base }).ensemble,
+        scene
+      );
       if (ticket === this._builds && this._data === data) this._rebuild();
-    });
+    })();
   }
+  /** Nested ensembles this element has loaded, by `nestedUrl`. */
+  private _nested = new Map<string, EnsembleData>();
+  /** The url the document came from, for its relative nested refs. */
+  private _base: string | undefined;
 
   override disconnectedCallback(): void {
     this._built?.dispose();
@@ -258,6 +277,7 @@ export class TosiEnsemble extends withAttributes({
     try {
       const data = await fetchEnsembleData(url);
       if (ticket !== this._loads) return;
+      this._base = url;
       // Libraries are mounted by `_mountAndBuild`, on this path and every
       // other: a page needs to know nothing about the content beyond its
       // address.
@@ -287,6 +307,8 @@ export class TosiEnsemble extends withAttributes({
     const [x = 0, y = 0, z = 0] = this.at.split(/[\s,]+/).map(Number);
     this._built = buildEnsemble(this._data, {
       scene,
+      nested: this._nested,
+      base: this._base,
       origin: [x, y, z] as Vec3,
       library: this.library,
       placePiece: placeMesh,

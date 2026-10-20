@@ -92,7 +92,14 @@ export type { Migration, Change } from "./format/migrate.js";
 export type { Problem, Severity, ValidateOptions } from "./format/validate.js";
 
 // ── The instantiator: needs tosijs-3d, needs no UI ──────────────────────────
-export { buildEnsemble, loadEnsemble } from "./runtime/build.js";
+export { buildEnsemble, loadEnsemble, collectNested } from "./runtime/build.js";
+export {
+  flattenEnsemble,
+  nestedUrl,
+  nestedRefs,
+  MAX_NESTING_DEPTH,
+} from "./format/nest.js";
+export type { Flattened, FlattenOptions } from "./format/nest.js";
 export type {
   BuildOptions,
   BuiltEnsemble,

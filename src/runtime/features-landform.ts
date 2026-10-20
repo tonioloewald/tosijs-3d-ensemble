@@ -120,6 +120,7 @@ function landformSchema(kind: keyof typeof KINDS): Spec {
   }
   properties.terrain = {
     type: "string",
+    "x-piece-ref": true,
     title: "On terrain",
     description:
       "The id of the terrain piece this shapes. Empty: every terrain in the ensemble.",

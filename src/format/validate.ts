@@ -38,6 +38,7 @@ import {
   fetchedKeys,
 } from "./registry.js";
 import { fetchedValueProblem, urlProblem } from "./url-policy.js";
+import { nestedUrl } from "./nest.js";
 import type { Ensemble, Piece, Point, Vec3, Zone } from "./types.js";
 
 export type Severity = "error" | "warning";
@@ -324,12 +325,20 @@ export function validate(
     }
 
     if (p.ensemble) {
-      add(
-        "error",
-        "nested-not-supported",
-        `piece "${p.id}" nests ensemble "${p.ensemble}" — the loader does not flatten yet`,
-        `${at}/ensemble`
-      );
+      /*
+        A NESTED ENSEMBLE IS FETCHED (format/nest.ts), so its url meets the
+        library rule: a shared document cannot point a reader at http. A bare
+        name (`ocean-rig`) is relative and always passes.
+      */
+      const problem =
+        typeof p.ensemble === "string"
+          ? urlProblem(nestedUrl(p.ensemble), "nested")
+          : {
+              code: "unsupported-nested-url",
+              message: "ensemble is not a string",
+            };
+      if (problem)
+        add("error", problem.code, problem.message, `${at}/ensemble`);
     } else if (!p.mesh) {
       // A piece with no mesh is legitimate when a feature IS its body — an
       // environment primitive (terrain, water, clouds, a medium layer) stands

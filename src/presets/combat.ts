@@ -276,6 +276,7 @@ export function registerCombatPreset(): () => void {
         source: {
           type: "string",
           "x-widget": "ref",
+          "x-piece-ref": true,
           "x-roles": ["power", "generator"],
           description: "the piece whose destruction drops this field",
         },

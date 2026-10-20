@@ -84,7 +84,11 @@ import {
   ui,
   vector3d,
   sceneSchemas,
+  effectPreset,
 } from "tosijs-3d";
+import type { EffectRecipe } from "tosijs-3d";
+import { mountEffectTool } from "tosijs-3d/effect-tool";
+import type { EffectToolHandle } from "tosijs-3d/effect-tool";
 import { Quaternion, Ray, TransformNode, Vector3 } from "@babylonjs/core";
 import {
   buildEnsemble,
@@ -586,6 +590,7 @@ export class EnsembleEditor extends withAttributes({
     this._contexts = [];
     this._nested = new Map();
     this._nestedSaved = new Map();
+    this.closeEffect();
     this._nestedTried = "";
     this._selected = value.pieces[0]?.id ?? null;
     // A NEW arrangement earns a new view. An edit to the current one does not —
@@ -1954,6 +1959,7 @@ export class EnsembleEditor extends withAttributes({
   }
 
   override disconnectedCallback(): void {
+    this.closeEffect();
     /*
       LET GO OF EVERYTHING MODULE-LEVEL THAT HOLDS THE CHROME.
 
@@ -2769,6 +2775,7 @@ export class EnsembleEditor extends withAttributes({
    * Save writing its own file. `popOut()` comes back.
    */
   drillIn(id: string): boolean {
+    this.closeEffect();
     const piece = this._ensemble.pieces.find((p) => p.id === id);
     if (!piece?.ensemble) return false;
     const url = nestedUrl(piece.ensemble, this._loaded?.url);
@@ -2815,6 +2822,7 @@ export class EnsembleEditor extends withAttributes({
    * not) is what the parent now builds, so you can check it where it is used.
    */
   popOut(): boolean {
+    this.closeEffect();
     const outer = this._contexts.pop();
     if (!outer) return false;
     this._nested.set(outer.url, structuredClone(this._ensemble));
@@ -2829,6 +2837,116 @@ export class EnsembleEditor extends withAttributes({
     this.rebuild();
     this._syncDirty();
     return true;
+  }
+
+  /*
+    EDITING AN EFFECT IN PLACE (tosijs-3d#122, ours). tosijs-3d's effect
+    tool is mounted in THIS scene, on the piece, with this editor's camera
+    and no stage or files of its own: you tune an effect where it stands, in
+    the scene's light. Its `commit` (one per finished gesture) writes the
+    recipe into the document as one undo step; its own `change` per frame
+    writes nothing. While it is open the piece's own effect is set aside, so
+    one effect plays, not two.
+  */
+  private _effectTool: {
+    id: string;
+    handle: EffectToolHandle;
+    node: TransformNode;
+  } | null = null;
+
+  /** The effect piece being edited, or null. */
+  get editingEffect(): string | null {
+    return this._effectTool?.id ?? null;
+  }
+
+  /** Open the effect tool on a piece with an `effect` feature. */
+  editEffect(id: string): boolean {
+    this.closeEffect();
+    const piece = this._ensemble.pieces.find((p) => p.id === id);
+    const cfg = piece?.features?.effect as
+      | { preset?: string; recipe?: unknown }
+      | undefined;
+    const scene = (this._scene as unknown as { scene?: unknown } | null)
+      ?.scene as { activeCamera?: unknown } | undefined;
+    if (!piece || !cfg || !scene || !this._scene) return false;
+    const recipe =
+      (cfg.recipe as EffectRecipe | undefined) ??
+      (cfg.preset ? effectPreset(cfg.preset) : undefined);
+    const node = new TransformNode(`effect-edit:${id}`, scene as never);
+    const built = this._built?.pieces.get(id);
+    const at = built
+      ? this._liveOrigin(built)
+      : (piece.at.map((v) => v * (this._ensemble.scale ?? 1)) as Vec3);
+    node.position.set(at[0], at[1], at[2]);
+    const camera = scene.activeCamera as { getClassName?: () => string };
+    const handle = mountEffectTool(this._scene, {
+      ...(recipe ? { recipe: structuredClone(recipe) } : {}),
+      target: node,
+      files: false,
+      stage: false,
+      hosted: true,
+      ...(camera?.getClassName?.() === "ArcRotateCamera"
+        ? { camera: camera as never }
+        : {}),
+    });
+    handle.addEventListener("commit", (event) => {
+      const next = (event as CustomEvent<{ recipe: EffectRecipe }>).detail
+        ?.recipe;
+      if (next) this._commitEffect(id, next);
+    });
+    this._effectTool = { id, handle, node };
+    this._setAsideEditedEffect();
+    this._renderChrome();
+    return true;
+  }
+
+  /** Close the effect tool, if open; the piece's own effect plays again. */
+  closeEffect(): void {
+    const tool = this._effectTool;
+    if (!tool) return;
+    this._effectTool = null;
+    tool.handle.unmount();
+    tool.node.dispose();
+    if (this.isConnected) this.rebuild();
+  }
+
+  private _commitEffect(id: string, recipe: EffectRecipe): void {
+    this.edit("edit effect", (ensemble) => {
+      const piece = ensemble.pieces.find((p) => p.id === id);
+      const cfg = piece?.features?.effect as Record<string, unknown> | undefined;
+      if (cfg) cfg.recipe = structuredClone(recipe);
+    });
+  }
+
+  /**
+   * After a build: set the edited piece's own effect aside, close the tool
+   * if its piece has gone, and hand it the document's recipe when that
+   * changed under it (an undo).
+   */
+  private _syncEffectTool(): void {
+    const tool = this._effectTool;
+    if (!tool) return;
+    const piece = this._ensemble.pieces.find((p) => p.id === tool.id);
+    const cfg = piece?.features?.effect as { recipe?: unknown } | undefined;
+    if (!cfg) {
+      this.closeEffect();
+      return;
+    }
+    this._setAsideEditedEffect();
+    if (
+      cfg.recipe &&
+      JSON.stringify(cfg.recipe) !== JSON.stringify(tool.handle.api.recipe)
+    )
+      tool.handle.api.recipe = structuredClone(cfg.recipe) as EffectRecipe;
+  }
+
+  private _setAsideEditedEffect(): void {
+    const id = this._effectTool?.id;
+    if (!id) return;
+    const element = this._built?.pieces.get(id)?.handles.get("effect") as
+      | HTMLElement
+      | undefined;
+    element?.remove();
   }
 
   /**
@@ -2860,6 +2978,7 @@ export class EnsembleEditor extends withAttributes({
     });
     this._anchorNests();
     this._loadMissingNests();
+    this._syncEffectTool();
     this._buildPreview();
     /*
       Reap AFTER the build, never between dispose and build.
@@ -3087,6 +3206,8 @@ export class EnsembleEditor extends withAttributes({
    * nothing IS selecting; it does not get its own half-implemented path.
    */
   select(id: string | null): void {
+    // The effect tool edits one piece: choosing another closes it.
+    if (this._effectTool && this._effectTool.id !== id) this.closeEffect();
     this._selected = id;
     this._syncSelection();
     this._syncHandles();
@@ -5154,6 +5275,19 @@ export class EnsembleEditor extends withAttributes({
       fields.push(
         label3d({ text: "scale", muted: true, compact: true }),
         scale
+      );
+    }
+    // An EFFECT is tuned where it stands, with tosijs-3d's effect tool.
+    if (selected.features?.effect) {
+      const open = this._effectTool?.id === selected.id;
+      fields.push(
+        button3d({
+          label: open ? "Done editing effect" : "Edit effect ✨",
+          handleClick: () => {
+            if (open) this.closeEffect();
+            else this.editEffect(selected.id);
+          },
+        })
       );
     }
     /*

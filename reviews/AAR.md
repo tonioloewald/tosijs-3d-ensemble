@@ -3,6 +3,25 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.8.1 — 2026-10-20
+
+- Went well: tosijs-3d turned #122 (embeddable tools) and #124 (a 0.10.19
+  regression our effect test caught, 3/3) into releases the same day, and the
+  effect tool is hosted on an effect piece. Seven of eight 0.8.0 follow-ups
+  closed, including nine dead doc links nothing had ever reported.
+- Didn't: release-doctor's first run failed because I ran browser tests and
+  edited files while it ran: they shared its port-8039 server, and the dev
+  server rewrote docs/. Rerun alone it was clean. Never run anything beside
+  release-doctor or release:attest.
+- Surprised: the hosted effect tool echoes a NORMALISED recipe, so comparing
+  it with the document's restarted the effect on every sync; track what the
+  document last said instead.
+- Friction: approval reached npm in time on this one (I said when it was
+  staged, after 0.8.0's timed out).
+- Cycle: always-on fast review -> GO_WITH_FOLLOWUPS (1 major fixed, 6 minors
+  #3437-#3442) -> release-doctor clean (second run) -> attest (42 + 1) ->
+  publish -> verify_only green.
+
 ## 0.8.0 — 2026-10-20
 
 - Went well: nested ensembles landed end to end (flatten at load, drill in

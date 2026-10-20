@@ -83,9 +83,6 @@ test("drill into a nested rig, edit it, save it, pop out and see it in both plac
       : route.fulfill({ status: 404, body: "missing" });
   });
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
-  await page.addStyleTag({
-    content: "button.test-widget { display: none !important; }",
-  });
   await page.waitForFunction(
     () =>
       (

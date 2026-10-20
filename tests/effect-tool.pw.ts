@@ -37,9 +37,6 @@ test("Edit effect mounts the tool in place, commits into the document, and close
   await page.setViewportSize({ width: 1400, height: 1100 });
   const errors = collectPageErrors(page);
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
-  await page.addStyleTag({
-    content: "button.test-widget { display: none !important; }",
-  });
   await page.waitForFunction(
     () =>
       (

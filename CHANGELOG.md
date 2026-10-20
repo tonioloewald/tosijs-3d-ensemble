@@ -3,6 +3,15 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Changed
+
+- **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar
+  (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
+  dangling wikilink now fails the doc build (tosijs-ui#234, ours).
+- **Peer `tosijs` is `^1.10.9`.**
+
 ## [0.8.1] — 2026-10-20
 
 ### Added

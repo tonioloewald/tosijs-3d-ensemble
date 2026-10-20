@@ -83,11 +83,11 @@ older than its card; when they disagree, the card wins.
 | 59 | **Landform options have no schema** (`volcano`, `impactCrater`, `pad`, `gulley`, `cover`): a volcano province piece (with its own vent effect) cannot be authored without inventing ranges | [#119](https://github.com/tonioloewald/tosijs-3d/issues/119) |
 | 60 | **`effectRecipeSchema()` does not mark its fetched fields** (particle `texture`, sound `url`), so the `effect` feature cannot accept a `recipe` under the https rule | [#120](https://github.com/tonioloewald/tosijs-3d/issues/120) |
 | 61 | **`slider3d` cannot show labelled stops** (`x-stops`: an effect's dormant / semi-active / erupting) | [#121](https://github.com/tonioloewald/tosijs-3d/issues/121) |
-| 62 | **tosijs-ui's doc-system `button.test-widget` is fixed over page content and takes clicks**: a click on the Scene list's last row hit it 3 runs in 4 (tests hide it) | [tosijs-ui#233](https://github.com/tonioloewald/tosijs-ui/issues/233) |
+| 62 | **tosijs-ui's doc-system `button.test-widget` is fixed over page content and takes clicks**: a click on the Scene list's last row hit it 3 runs in 4; fixed in 1.16.29 (the widget is in the header bar), workaround removed, 4/4 | [tosijs-ui#233](https://github.com/tonioloewald/tosijs-ui/issues/233) |
 | 63 | **rig-tool and effect-tool are not embeddable**: each makes its own scene, has no change event, and owns its files. Shipped in 0.10.19; the effect tool is hosted on an effect piece | [#122](https://github.com/tonioloewald/tosijs-3d/issues/122) |
 | 64 | **No element applies a rig recipe at runtime** (a character loaded, recipe applied, clip playing): ensemble's `figure` piece needs one, with `figureSchema()`, rather than owning skeleton loading itself | [#123](https://github.com/tonioloewald/tosijs-3d/issues/123) |
 | 65 | **0.10.19 regression: an SVG effect picture's `onload` throws on a texture released before it loaded** (`clearRect` of null): `tests/effect.pw.ts` "a clean recipe plays" failed 3/3; fixed in 0.10.20 (6/6 after) | [#124](https://github.com/tonioloewald/tosijs-3d/issues/124) |
-| 66 | **tosijs-ui: a `[[wikilink]]` to a missing page builds silently**, and titles are slugified rather than resolved (9 dead links here, now fixed) | [tosijs-ui#234](https://github.com/tonioloewald/tosijs-ui/issues/234) |
+| 66 | **tosijs-ui: a `[[wikilink]]` to a missing page builds silently**, and titles are slugified rather than resolved (9 dead links here, fixed); fixed in 1.16.29 (titles resolve, the build names a dangling one) | [tosijs-ui#234](https://github.com/tonioloewald/tosijs-ui/issues/234) |
 
 ### Stopgaps we own, and what retires them
 

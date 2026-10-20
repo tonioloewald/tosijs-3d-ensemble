@@ -66,17 +66,6 @@ test("environment features are listed, added from a heading, and toggled on and 
   await page.setViewportSize({ width: 1400, height: 1300 });
   const errors = collectPageErrors(page);
   await page.goto("/editor/", { waitUntil: "domcontentloaded" });
-  /*
-    THE DOC SITE'S TEST BUTTON SITS ON THE EDITOR. tosijs-ui's
-    `button.test-widget` is fixed at the bottom left (23, 1254, 62 × 36 at
-    this size), takes the pointer, and is right where the Scene list ends
-    once it is long: a click on the new terrain's circle landed on it
-    ("Running") 3 runs in 4 (2026-10-20, elementFromPoint). Hidden here;
-    the overlap is filed upstream.
-  */
-  await page.addStyleTag({
-    content: "button.test-widget { display: none !important; }",
-  });
   await page.waitForFunction(
     () =>
       !!(

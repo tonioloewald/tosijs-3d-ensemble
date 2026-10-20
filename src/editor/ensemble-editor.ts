@@ -776,6 +776,9 @@ export class EnsembleEditor extends withAttributes({
       left unbound, so it travels the explicit `updateFeature` path instead.
     */
     if (!applied) this.rebuild({ chrome: false });
+    // An in-place edit (a preset, an undo) can change what the open effect
+    // tool should be playing; a rebuild syncs it there, this syncs it here.
+    else this._syncEffectTool();
   }
 
   /**
@@ -1782,6 +1785,7 @@ export class EnsembleEditor extends withAttributes({
       be live").
     */
     if (this._applyFeatureUpdates(before)) {
+      this._syncEffectTool();
       if (options?.chrome !== false) this._renderChrome();
       return;
     }
@@ -2895,6 +2899,8 @@ export class EnsembleEditor extends withAttributes({
     id: string;
     handle: EffectToolHandle;
     node: TransformNode;
+    /** What the DOCUMENT last said the effect is (the tool echoes a normalised copy). */
+    synced: string;
   } | null = null;
 
   /** The effect piece being edited, or null. */
@@ -2935,9 +2941,16 @@ export class EnsembleEditor extends withAttributes({
     handle.addEventListener("commit", (event) => {
       const next = (event as CustomEvent<{ recipe: EffectRecipe }>).detail
         ?.recipe;
-      if (next) this._commitEffect(id, next);
+      if (!next) return;
+      if (this._effectTool) this._effectTool.synced = JSON.stringify(next);
+      this._commitEffect(id, next);
     });
-    this._effectTool = { id, handle, node };
+    this._effectTool = {
+      id,
+      handle,
+      node,
+      synced: JSON.stringify(recipe ?? null),
+    };
     this._setAsideEditedEffect();
     this._renderChrome();
     return true;
@@ -2972,17 +2985,29 @@ export class EnsembleEditor extends withAttributes({
     const tool = this._effectTool;
     if (!tool) return;
     const piece = this._ensemble.pieces.find((p) => p.id === tool.id);
-    const cfg = piece?.features?.effect as { recipe?: unknown } | undefined;
+    const cfg = piece?.features?.effect as
+      | { recipe?: unknown; preset?: string }
+      | undefined;
     if (!cfg) {
       this.closeEffect();
       return;
     }
     this._setAsideEditedEffect();
-    if (
-      cfg.recipe &&
-      JSON.stringify(cfg.recipe) !== JSON.stringify(tool.handle.api.recipe)
-    )
-      tool.handle.api.recipe = structuredClone(cfg.recipe) as EffectRecipe;
+    /*
+      THE TOOL PLAYS WHAT THE DOCUMENT SAYS: its recipe, or else its
+      preset's (as `editEffect` starts it). Only the recipe was pushed, so
+      undoing the first commit (back to a preset) left the tool on the undone
+      recipe, and its next commit wrote it back; a preset changed with the
+      tool open was ignored (0.8.1 review).
+    */
+    const wanted =
+      (cfg.recipe as EffectRecipe | undefined) ??
+      (cfg.preset ? effectPreset(cfg.preset) : undefined);
+    const now = JSON.stringify(wanted ?? null);
+    if (wanted && now !== tool.synced) {
+      tool.synced = now;
+      tool.handle.api.recipe = structuredClone(wanted);
+    }
   }
 
   private _setAsideEditedEffect(): void {

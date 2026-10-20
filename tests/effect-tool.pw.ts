@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { EFFECT_PRESETS } from "tosijs-3d/effect-presets";
 import { collectPageErrors, realErrors } from "./page-errors.js";
 import { reveal } from "./panel-locate.js";
 
@@ -108,7 +109,8 @@ test("Edit effect mounts the tool in place, commits into the document, and close
   await expect
     .poll(async () => (await state()).alive, {
       message: "the hosted tool plays nothing",
-      timeout: 30_000,
+      // Software WebGL on a loaded machine runs at ~1 fps (2026-10-20).
+      timeout: 60_000,
     })
     .toBeGreaterThan(0);
   expect(
@@ -132,12 +134,54 @@ test("Edit effect mounts the tool in place, commits into the document, and close
     const handle = ed._effectTool!.handle;
     const recipe = structuredClone(handle.api.recipe) as { name?: string };
     recipe.name = "my geyser";
+    // What the real tool holds when it commits: its own working recipe.
+    handle.api.recipe = recipe;
     handle.dispatchEvent(new CustomEvent("commit", { detail: { recipe } }));
     const saved = ed.ensemble.pieces.find((p) => p.id === "vent")!.features!
       .effect!.recipe as { name?: string } | undefined;
     return { name: saved?.name, undo: ed.canUndo() };
   });
   expect(committed).toEqual({ name: "my geyser", undo: true });
+
+  // 0.8.1 review major: UNDO the first commit with the tool open. The
+  // document goes back to the preset, so the TOOL must too; it kept the
+  // undone recipe, and the next commit wrote it back.
+  const undone = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    ed.undo();
+    const cfg = ed.ensemble.pieces.find((p) => p.id === "vent")!.features!
+      .effect!;
+    return {
+      docRecipe: cfg.recipe ?? null,
+      tool: JSON.stringify(ed._effectTool!.handle.api.recipe),
+    };
+  });
+  expect(undone.docRecipe).toBeNull();
+  // The tool hands back a NORMALISED copy, so compare what identifies it.
+  expect(JSON.parse(undone.tool).name).toBe(EFFECT_PRESETS.geyser!.name);
+  expect(JSON.parse(undone.tool).layers.length).toBe(
+    EFFECT_PRESETS.geyser!.layers.length
+  );
+  // And a PRESET changed with the tool open is what the tool plays.
+  const switched = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      edit(
+        d: string,
+        m: (e: {
+          pieces: Array<{
+            id: string;
+            features?: Record<string, Record<string, unknown>>;
+          }>;
+        }) => void
+      ): void;
+    };
+    ed.edit("preset", (e) => {
+      e.pieces.find((p) => p.id === "vent")!.features!.effect!.preset =
+        "sparks";
+    });
+    return JSON.stringify(ed._effectTool!.handle.api.recipe);
+  });
+  expect(JSON.parse(switched).name).toBe(EFFECT_PRESETS.sparks!.name);
   expect(
     (await state()).pieceEffects,
     "a commit brought the piece's effect back beside the tool"
@@ -153,6 +197,15 @@ test("Edit effect mounts the tool in place, commits into the document, and close
   const after = await state();
   expect(after.camera, "the camera was not put back").toEqual(before.camera);
   expect(after.pieceEffects).toBe(1);
-  expect(after.recipe).toBe(true);
+  // The commit was undone and the preset switched: the document says sparks.
+  expect(after.recipe).toBe(false);
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          document.querySelector("tosi-ensemble-editor") as Ed
+        ).ensemble.pieces.find((p) => p.id === "vent")!.features!.effect!.preset
+    )
+  ).toBe("sparks");
   expect(realErrors(errors)).toEqual([]);
 });

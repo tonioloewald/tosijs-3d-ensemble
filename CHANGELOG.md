@@ -10,8 +10,10 @@ All notable changes to this project are documented here, in
 - **Edit an effect in place.** An effect piece's Properties have **Edit
   effect ✨**, which opens tosijs-3d's effect tool in the editor's own
   scene, on the piece, in the scene's light (tosijs-3d#122). Each finished
-  gesture writes the recipe into the document as one undo step; while the
-  tool is open the piece's own effect is set aside so one plays, not two.
+  gesture writes the recipe into the document as one undo step (and an
+  undo, or a preset changed, while it is open is what it then plays);
+  while the tool is open the piece's own effect is set aside so one plays,
+  not two.
   **Done** (or choosing another piece) closes it and puts the camera back.
 
 ### Fixed

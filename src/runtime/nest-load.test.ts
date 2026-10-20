@@ -96,3 +96,28 @@ describe("collectNested never fetches what the url rule refuses", () => {
     expect(codes.filter((c) => c.endsWith("nested-url")).length).toBe(5);
   });
 });
+
+describe("a load flattens once (#3424)", () => {
+  it("buildEnsemble uses a flattened result given for the same document, and ignores one for another", async () => {
+    const { buildEnsemble } = await import("./build.js");
+    const doc: Ensemble = { name: "d", pieces: [] };
+    const scene = {
+      appendChild() {},
+      querySelectorAll: () => [],
+    } as never;
+    const marker = {
+      ensemble: { name: "from-cache", pieces: [] },
+      problems: [],
+    };
+    const used = buildEnsemble(doc, {
+      scene,
+      flattened: { ...marker, from: doc },
+    });
+    expect(used.ensemble.name).toBe("from-cache");
+    const ignored = buildEnsemble(doc, {
+      scene,
+      flattened: { ...marker, from: { name: "other", pieces: [] } },
+    });
+    expect(ignored.ensemble.name).toBe("d");
+  });
+});

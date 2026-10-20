@@ -131,6 +131,7 @@ el?.addEventListener('built', (e) => console.log(e.detail.problems))
 import { withAttributes } from "tosijs";
 import { buildEnsemble, collectNested, fetchEnsembleData } from "./build.js";
 import { flattenEnsemble, nestedRefs } from "../format/nest.js";
+import type { Flattened } from "../format/nest.js";
 import { placeMesh } from "./place-mesh.js";
 import { mountLibraries } from "./libraries.js";
 import { registerSceneFeatures } from "./features-scene.js";
@@ -249,10 +250,12 @@ export class TosiEnsemble extends withAttributes({
     void (async () => {
       if (nests)
         await collectNested(data, { base: this._base, into: this._nested });
-      await mountLibraries(
-        flattenEnsemble(data, this._nested, { base: this._base }).ensemble,
-        scene
-      );
+      // Kept, so the build does not flatten it again (#3424).
+      this._flattened = {
+        ...flattenEnsemble(data, this._nested, { base: this._base }),
+        from: data,
+      };
+      await mountLibraries(this._flattened.ensemble, scene);
       if (ticket === this._builds && this._data === data) this._rebuild();
     })();
   }
@@ -260,6 +263,8 @@ export class TosiEnsemble extends withAttributes({
   private _nested = new Map<string, EnsembleData>();
   /** The url the document came from, for its relative nested refs. */
   private _base: string | undefined;
+  /** The last flattening of the document, for the build to reuse. */
+  private _flattened: (Flattened & { from: EnsembleData }) | null = null;
 
   override disconnectedCallback(): void {
     this._built?.dispose();
@@ -312,6 +317,9 @@ export class TosiEnsemble extends withAttributes({
       scene,
       nested: this._nested,
       base: this._base,
+      ...(this._flattened?.from === this._data
+        ? { flattened: this._flattened }
+        : {}),
       origin: [x, y, z] as Vec3,
       library: this.library,
       placePiece: placeMesh,

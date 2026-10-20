@@ -49,6 +49,7 @@ import {
 } from "../format/registry.js";
 import { scaleVector, uniformScale } from "../format/scale.js";
 import { validate } from "../format/validate.js";
+import type { Flattened } from "../format/nest.js";
 import {
   flattenEnsemble,
   MAX_NESTED_DOCUMENTS,
@@ -79,6 +80,12 @@ export interface BuildOptions {
   nested?: ReadonlyMap<string, Ensemble>;
   /** The url this ensemble was loaded from, for its relative nested refs. */
   base?: string;
+  /**
+   * `flattenEnsemble`'s result for THIS document, when the caller already has
+   * it (to mount the flat document's libraries first): the build uses it
+   * instead of flattening again. Ignored unless it is for this document.
+   */
+  flattened?: Flattened & { from: Ensemble };
   /** Where the ensemble's local origin sits in the world. Default `[0,0,0]`. */
   origin?: Vec3;
   /**
@@ -205,9 +212,12 @@ export function buildEnsemble(
     the two phases, links) sees one flat document with path ids, and a
     child's link can only resolve inside the child (format/nest.ts).
   */
-  const flat = flattenEnsemble(authored, opts.nested ?? new Map(), {
-    base: opts.base,
-  });
+  const flat =
+    opts.flattened?.from === authored
+      ? opts.flattened
+      : flattenEnsemble(authored, opts.nested ?? new Map(), {
+          base: opts.base,
+        });
   const ensemble = flat.ensemble;
   const {
     scene,
@@ -705,9 +715,10 @@ export async function loadEnsemble(
     its own dependencies rather than relying on the caller to have mounted the
     right libraries first. The FLAT document's, so a child's kits mount too.
   */
-  await mountLibraries(
-    flattenEnsemble(ensemble, nested, { base: url }).ensemble,
-    opts.scene
-  );
-  return buildEnsemble(ensemble, { ...opts, nested, base: url });
+  const flattened = {
+    ...flattenEnsemble(ensemble, nested, { base: url }),
+    from: ensemble,
+  };
+  await mountLibraries(flattened.ensemble, opts.scene);
+  return buildEnsemble(ensemble, { ...opts, nested, base: url, flattened });
 }

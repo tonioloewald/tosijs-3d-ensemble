@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=8daacff49286" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=7626d7f5e090" data-tosi-doc-system />
   <title>Scene features — tosijs-3d-ensemble</title>
   <meta name="description" content="The primitives a tosijs-3d scene is made of, registered as ensemble features so that a whole scene — sun, sky, shadows, ground, weather — is data you load…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Scene features — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=bf05bc054a94" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=f31d8b7e3aa8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="features-scene.ts">
 <h1 id="scene-features">Scene features</h1>
 <p>The primitives a tosijs-3d scene is made of, registered as ensemble features so
@@ -238,9 +238,26 @@ source. A sphere terrain is pinned to a place on its planet with <code>lat</code
 pin and both directions of the link on the elements. The schemas, the pin and
 the links are tosijs-3d&#39;s; what is ours is that a link names a PIECE id, which
 the link phase turns into the selector the element reads.</p>
+<h2 id="effects">Effects</h2>
+<p>An <code>effect</code> piece plays one of tosijs-3d&#39;s effects where it stands:
+particles, a light and a sound on one clock (<code>volcano</code>, <code>geyser</code>, <code>bubbles</code>,
+<code>black smoker</code>, <code>splash</code>, <code>explosion</code>, <code>fireball</code>, <code>sparks</code>). <code>activity</code>
+names its stops (<code>dormant</code> 0.15, <code>semi-active</code> 0.5, <code>erupting</code> 1; -1 is the
+recipe&#39;s own), <code>scale</code> grows it from a vent to a crater, and <code>ground</code> sits
+it on the terrain below.</p>
+<pre><code class="language-jsonc">{ &quot;id&quot;: &quot;vent&quot;, &quot;at&quot;: [12, 0, -4], &quot;features&quot;: { &quot;effect&quot;: { &quot;preset&quot;: &quot;geyser&quot;, &quot;activity&quot;: 0.5 } } }
+</code></pre>
+<p>Your own effect goes in <code>recipe</code>, as tosijs-3d&#39;s effect tool saves it, and
+plays instead of the preset. In the editor, <strong>Edit effect ✨</strong> opens that tool
+on the piece and writes the recipe for you. A recipe can load its own images
+and sounds; each url in it is held to the same https rule as every other url
+in a document (found by walking upstream&#39;s schema), and a recipe with a
+refused url is refused whole. Inline SVG markup loads nothing and is fine.</p>
+<p>A <strong>volcano</strong> landform (see <a href="/features-landform/" class="wikilink">Landforms</a>) brings its own vent
+effect, so a volcano piece needs no separate effect piece.</p>
 <h2 id="combat-is-somewhere-else-on-purpose">Combat is somewhere else, on purpose</h2>
 <p><code>destroyable</code>, <code>turret</code>, <code>launcher</code>, <code>protector</code>, <code>blip</code> and <code>launchpad</code> are NOT
-here — they are a domain vocabulary in <a href="/presets-combat/" class="wikilink">presets/combat</a>, registered by a
+here — they are a domain vocabulary in <a href="/combat/" class="wikilink">presets/combat</a>, registered by a
 consumer that wants them. An earlier version shipped them as built-ins next to
 <code>terrain</code> and <code>water</code>, which quietly made every consumer&#39;s scene format a combat
 format.</p>
@@ -328,6 +345,6 @@ format.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-k09n9d86.js"></script>
+  <script type="module" src="../hydrate-hc64agck.js"></script>
 </body>
 </html>

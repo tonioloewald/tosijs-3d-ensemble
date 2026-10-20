@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=8daacff49286" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=7626d7f5e090" data-tosi-doc-system />
   <title>Nested ensembles — tosijs-3d-ensemble</title>
   <meta name="description" content="A piece can be a whole ensemble: &quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot; in place of mesh. A level made of rigs, a fortress made of towers, a plaza with lamp…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Nested ensembles — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=bf05bc054a94" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=f31d8b7e3aa8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="nest.ts">
 <h1 id="nested-ensembles">Nested ensembles</h1>
 <p>A piece can be a whole ensemble: <code>&quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot;</code>
@@ -62,7 +62,14 @@ parent already uses for a different file is renamed <code>&lt;nesting id&gt;/&lt
 for the child&#39;s pieces.</li>
 <li><strong>Ignored:</strong> the child&#39;s <code>preview</code> (scenery for its author), its
 <code>placement</code> (the parent places it), its <code>recommends</code> (the outer scene&#39;s).</li>
+<li><strong>On the nesting piece itself</strong>, only <code>id</code>, <code>at</code>, <code>rot</code>, <code>scale</code> and
+<code>enabled</code> mean anything. Its <code>features</code> are ignored with a
+<code>nested-features-ignored</code> warning; a <code>mesh</code> beside <code>ensemble</code> is an error
+(<code>validate</code>); a <code>role</code> or <code>library</code> on it does nothing.</li>
 <li>A nesting piece that is <strong>disabled</strong> contributes nothing.</li>
+<li><strong>Links into a child</strong> name the child&#39;s piece by its path (<code>rig-a/reactor</code>),
+from the parent&#39;s own <code>links</code> or from a sibling child&#39;s. The nesting piece
+itself (<code>rig-a</code>) is not a piece once flattened, so a link to it dangles.</li>
 </ul>
 <h2 id="loading-it">Loading it</h2>
 <p><code>loadEnsemble(url, …)</code> and <code>&lt;tosi-ensemble src&gt;</code> fetch every nested
@@ -184,6 +191,6 @@ the same https rule as a library.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-k09n9d86.js"></script>
+  <script type="module" src="../hydrate-hc64agck.js"></script>
 </body>
 </html>

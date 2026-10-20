@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=8daacff49286" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=7626d7f5e090" data-tosi-doc-system />
   <title>Upstream — what we're waiting on — tosijs-3d-ensemble</title>
   <meta name="description" content="An index, not a record. The issues on the owning repo are the record: the context, the workaround and the suggestion live there, self-contained for someone who…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Upstream — what we&#39;re waiting on — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=bf05bc054a94" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=f31d8b7e3aa8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="UPSTREAM.md">
 <h1 id="upstream--what-were-waiting-on">Upstream — what we&#39;re waiting on</h1>
 <!--{"pin":"bottom","parent":"Project","order":3}--><p><strong>An index, not a record.</strong> The issues on the owning repo are the record: the
@@ -371,8 +371,23 @@ older than its card; when they disagree, the card wins.</p>
 </tr>
 <tr>
 <td>63</td>
-<td><strong>rig-tool and effect-tool are not embeddable</strong>: each makes its own scene, has no change event, and owns its files. Ensemble would host them on a <code>figure</code> / <code>effect</code> piece and save through its store</td>
+<td><strong>rig-tool and effect-tool are not embeddable</strong>: each makes its own scene, has no change event, and owns its files. Shipped in 0.10.19; the effect tool is hosted on an effect piece</td>
 <td><a href="https://github.com/tonioloewald/tosijs-3d/issues/122">#122</a></td>
+</tr>
+<tr>
+<td>64</td>
+<td><strong>No element applies a rig recipe at runtime</strong> (a character loaded, recipe applied, clip playing): ensemble&#39;s <code>figure</code> piece needs one, with <code>figureSchema()</code>, rather than owning skeleton loading itself</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/123">#123</a></td>
+</tr>
+<tr>
+<td>65</td>
+<td><strong>0.10.19 regression: an SVG effect picture&#39;s <code>onload</code> throws on a texture released before it loaded</strong> (<code>clearRect</code> of null): <code>tests/effect.pw.ts</code> &quot;a clean recipe plays&quot; fails 3/3; holds ensemble&#39;s next release</td>
+<td><a href="https://github.com/tonioloewald/tosijs-3d/issues/124">#124</a></td>
+</tr>
+<tr>
+<td>66</td>
+<td><strong>tosijs-ui: a <code>[[wikilink]]</code> to a missing page builds silently</strong>, and titles are slugified rather than resolved (9 dead links here, now fixed)</td>
+<td><a href="https://github.com/tonioloewald/tosijs-ui/issues/234">tosijs-ui#234</a></td>
 </tr>
 </tbody></table>
 <h3 id="stopgaps-we-own-and-what-retires-them">Stopgaps we own, and what retires them</h3>
@@ -648,6 +663,6 @@ that is why this project&#39;s word is <strong>ensemble</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-k09n9d86.js"></script>
+  <script type="module" src="../hydrate-hc64agck.js"></script>
 </body>
 </html>

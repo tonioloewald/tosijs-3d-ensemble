@@ -460,3 +460,46 @@ describe("a child's relative urls are its own (0.8.0 review lead)", () => {
     ).toBe("/assemblies/sounds/hum.mp3");
   });
 });
+
+describe("urls INSIDE a nested child's structured data are its own (#3428)", () => {
+  it("rebases an effect recipe's texture and sound url; inline SVG is left as it is", () => {
+    const svg = "<svg xmlns='http://www.w3.org/2000/svg'/>";
+    const { ensemble } = flattenEnsemble(
+      {
+        name: "level",
+        pieces: [{ id: "r", ensemble: "/assemblies/rig.json", at: [0, 0, 0] }],
+      },
+      new Map([
+        [
+          "/assemblies/rig.json",
+          child([
+            {
+              id: "fx",
+              at: [0, 0, 0],
+              features: {
+                effect: {
+                  recipe: {
+                    version: 1,
+                    layers: [
+                      { kind: "particles", texture: "sprites/spark.png" },
+                      { kind: "particles", texture: svg },
+                      { kind: "sound", url: "sounds/hiss.ogg" },
+                    ],
+                  },
+                },
+              },
+            },
+          ]),
+        ],
+      ])
+    );
+    const layers = (
+      ensemble.pieces.find((p) => p.id === "r/fx")!.features!.effect as {
+        recipe: { layers: Array<{ texture?: string; url?: string }> };
+      }
+    ).recipe.layers;
+    expect(layers[0]!.texture).toBe("/assemblies/sprites/spark.png");
+    expect(layers[1]!.texture).toBe(svg);
+    expect(layers[2]!.url).toBe("/assemblies/sounds/hiss.ogg");
+  });
+});

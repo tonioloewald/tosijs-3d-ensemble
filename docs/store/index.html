@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=8daacff49286" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=7626d7f5e090" data-tosi-doc-system />
   <title>Where the editor opens and saves — tosijs-3d-ensemble</title>
   <meta name="description" content="The component owns no persistence (SPEC): it hands documents to a host. A store is the host&#39;s answer to &quot;where do ensembles live&quot;." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Where the editor opens and saves — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=bf05bc054a94" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=f31d8b7e3aa8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="store.ts">
 <h1 id="where-the-editor-opens-and-saves">Where the editor opens and saves</h1>
 <p>The component owns no persistence (SPEC): it hands documents to a host. A
@@ -41,8 +41,14 @@ a download, as before.</p>
   write(id: string, ensemble: Ensemble): Promise&lt;{ id: string; revision?: string } | void&gt;;
   history?(id: string): Promise&lt;Array&lt;{ revision: string; at?: string; author?: string; message?: string }&gt;&gt;;
   readRevision?(id: string, revision: string): Promise&lt;Ensemble&gt;;
+  idFor?(src: string): string | null;
 }
 </code></pre>
+<p><code>idFor</code> maps a page url to the store&#39;s id, so a document opened by
+<code>&lt;tosi-ensemble-editor src=&quot;…&quot;&gt;</code> (or a nested ensemble opened with <strong>Open
+inside</strong>) saves back to its entry instead of needing Save as. The editor
+fires <code>loaded</code> (<code>{ src, storeId }</code>) when a load lands, and <code>error</code> when one
+fails.</p>
 <p>An <code>id</code> is the store&#39;s own address: a path on a dev server, a document id in a
 service. Two backends were in view when this was designed (board #3363, from
 Manta): a dev server writing the project&#39;s files, versioned by git, and a
@@ -56,6 +62,12 @@ adapts that module; pass it in, so this package does not depend on tosijs-ui:</p
 import { dataClientStore } from &quot;tosijs-3d-ensemble&quot;;
 
 editor.store = dataClientStore(dataClient, { dir: &quot;static/ensembles&quot; });
+</code></pre>
+<p>Its <code>idFor</code> takes same-origin urls in that folder and nothing else (a
+document from another host is never saved over a local file). tosijs-ui&#39;s
+site serves <code>static/</code> at the root, so <code>static/ensembles</code> is at <code>/ensembles/</code>;
+pass <code>servedAt</code> when your folder is served somewhere else:</p>
+<pre><code class="language-ts">dataClientStore(dataClient, { dir: &quot;static/assemblies&quot;, servedAt: &quot;/assemblies&quot; });
 </code></pre>
 <p>Saving is gated as source editing is: this machine, an edit session over the
 tunnel, or a LAN you named. A static host answers the endpoint with a page,
@@ -144,6 +156,6 @@ so <code>list()</code> rejects there and a host can leave the store off.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-k09n9d86.js"></script>
+  <script type="module" src="../hydrate-hc64agck.js"></script>
 </body>
 </html>

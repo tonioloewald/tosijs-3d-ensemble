@@ -2668,6 +2668,7 @@ export class EnsembleEditor extends withAttributes({
     }).ensemble;
     const prefix = `${piece.id}/`;
     const children = flat.pieces.filter((p) => p.id.startsWith(prefix));
+    this._nestBoundsCache = null; // the children move: measure them again
     if (children.some((c) => hasFeatures(c) || c.role)) return false;
     const bodies = children.map((c) => built.pieces.get(c.id));
     if (bodies.some((b) => !b || (!b.element && !b.node))) return false;
@@ -2692,6 +2693,48 @@ export class EnsembleEditor extends withAttributes({
       }
     );
     return true;
+  }
+
+  /**
+   * A nested piece's box, measured over its children ONCE per build (or per
+   * in-place move) and carried by its anchor after that (#3423: this walked
+   * every child's hierarchy every frame). Not cached while it measures
+   * nothing, so children still loading are picked up when they arrive.
+   */
+  private _nestBoundsCache: {
+    built: unknown;
+    id: string;
+    bounds: { min: XYZ; max: XYZ };
+    at: XYZ;
+  } | null = null;
+
+  private _nestBounds(
+    built: { piece: Piece },
+    root: { getAbsolutePosition?: () => XYZ } | null
+  ): { min: XYZ; max: XYZ } | undefined {
+    const now = root?.getAbsolutePosition?.();
+    if (!now) return undefined;
+    let cache = this._nestBoundsCache;
+    if (!cache || cache.built !== built || cache.id !== built.piece.id) {
+      const bounds = this._unionBounds(this._nestBodies(built.piece.id));
+      if (!bounds) return undefined;
+      cache = this._nestBoundsCache = {
+        built,
+        id: built.piece.id,
+        bounds,
+        at: { x: now.x, y: now.y, z: now.z },
+      };
+    }
+    const d = {
+      x: now.x - cache.at.x,
+      y: now.y - cache.at.y,
+      z: now.z - cache.at.z,
+    };
+    const { min, max } = cache.bounds;
+    return {
+      min: { x: min.x + d.x, y: min.y + d.y, z: min.z + d.z },
+      max: { x: max.x + d.x, y: max.y + d.y, z: max.z + d.z },
+    };
   }
 
   /** World bounds enclosing several bodies, or undefined when none has any. */
@@ -3286,7 +3329,7 @@ export class EnsembleEditor extends withAttributes({
     root?.computeWorldMatrix?.(true);
     // A NESTED piece's box encloses its children (its body is an empty anchor).
     const bounds = built.piece.ensemble
-      ? this._unionBounds(this._nestBodies(built.piece.id))
+      ? this._nestBounds(built, root)
       : root?.getHierarchyBoundingVectors?.();
     const here = this._liveOrigin(built);
     if (!bounds) {

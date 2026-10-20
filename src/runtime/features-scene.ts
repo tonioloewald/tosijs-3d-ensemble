@@ -239,10 +239,33 @@ pin and both directions of the link on the elements. The schemas, the pin and
 the links are tosijs-3d's; what is ours is that a link names a PIECE id, which
 the link phase turns into the selector the element reads.
 
+## Effects
+
+An `effect` piece plays one of tosijs-3d's effects where it stands:
+particles, a light and a sound on one clock (`volcano`, `geyser`, `bubbles`,
+`black smoker`, `splash`, `explosion`, `fireball`, `sparks`). `activity`
+names its stops (`dormant` 0.15, `semi-active` 0.5, `erupting` 1; -1 is the
+recipe's own), `scale` grows it from a vent to a crater, and `ground` sits
+it on the terrain below.
+
+```jsonc
+{ "id": "vent", "at": [12, 0, -4], "features": { "effect": { "preset": "geyser", "activity": 0.5 } } }
+```
+
+Your own effect goes in `recipe`, as tosijs-3d's effect tool saves it, and
+plays instead of the preset. In the editor, **Edit effect ✨** opens that tool
+on the piece and writes the recipe for you. A recipe can load its own images
+and sounds; each url in it is held to the same https rule as every other url
+in a document (found by walking upstream's schema), and a recipe with a
+refused url is refused whole. Inline SVG markup loads nothing and is fine.
+
+A **volcano** landform (see [[features-landform|Landforms]]) brings its own vent
+effect, so a volcano piece needs no separate effect piece.
+
 ## Combat is somewhere else, on purpose
 
 `destroyable`, `turret`, `launcher`, `protector`, `blip` and `launchpad` are NOT
-here — they are a domain vocabulary in [[presets/combat]], registered by a
+here — they are a domain vocabulary in [[combat|presets/combat]], registered by a
 consumer that wants them. An earlier version shipped them as built-ins next to
 `terrain` and `water`, which quietly made every consumer's scene format a combat
 format.

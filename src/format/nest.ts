@@ -39,7 +39,14 @@ What happens to the child, in order:
   for the child's pieces.
 - **Ignored:** the child's `preview` (scenery for its author), its
   `placement` (the parent places it), its `recommends` (the outer scene's).
+- **On the nesting piece itself**, only `id`, `at`, `rot`, `scale` and
+  `enabled` mean anything. Its `features` are ignored with a
+  `nested-features-ignored` warning; a `mesh` beside `ensemble` is an error
+  (`validate`); a `role` or `library` on it does nothing.
 - A nesting piece that is **disabled** contributes nothing.
+- **Links into a child** name the child's piece by its path (`rig-a/reactor`),
+  from the parent's own `links` or from a sibling child's. The nesting piece
+  itself (`rig-a`) is not a piece once flattened, so a link to it dangles.
 
 ## Loading it
 
@@ -101,7 +108,7 @@ import type {
   Zone,
 } from "./types.js";
 import { narrowScale, scaleVector } from "./scale.js";
-import { urlProblem } from "./url-policy.js";
+import { rewriteFetched, urlProblem } from "./url-policy.js";
 import type { Problem } from "./validate.js";
 
 /** How deep ensembles may nest before the loader stops following them. */
@@ -488,7 +495,12 @@ export function flattenEnsemble(
               if (!cfg || typeof cfg !== "object") return [name, cfg];
               const refs = pieceRefKeys(name);
               const fetched = fetchedKeys(featureRegistration(name));
-              if (!refs.length && !fetched.size) return [name, cfg];
+              const hasData = !!(
+                featureRegistration(name)?.schema as
+                  | { "x-data"?: unknown }
+                  | undefined
+              )?.["x-data"];
+              if (!refs.length && !fetched.size && !hasData) return [name, cfg];
               const copy = { ...(cfg as Record<string, unknown>) };
               for (const key of refs)
                 if (typeof copy[key] === "string" && copy[key])
@@ -500,6 +512,20 @@ export function flattenEnsemble(
                   !keywords.has(copy[key] as string)
                 )
                   copy[key] = rebase(copy[key] as string, base);
+              // ...and so is one inside structured data (a recipe, #3428).
+              const schema = featureRegistration(name)?.schema as
+                | { "x-data"?: Record<string, unknown> }
+                | undefined;
+              for (const [key, spec] of Object.entries(
+                schema?.["x-data"] ?? {}
+              ))
+                if (copy[key] !== undefined)
+                  copy[key] = rewriteFetched(
+                    spec,
+                    copy[key],
+                    (url) => rebase(url, base),
+                    schema
+                  );
               return [name, copy];
             })
           )

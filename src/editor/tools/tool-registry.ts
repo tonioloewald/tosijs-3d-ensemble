@@ -2,7 +2,7 @@
 # Tools and commands
 
 The editor's palette is **whatever is registered**, not a hardcoded list —
-deliberately the same shape as [[The feature registry]], so a consumer can add a
+deliberately the same shape as [[registry|The feature registry]], so a consumer can add a
 tool to the editor exactly the way it adds a feature to the format.
 
 Two kinds of thing live in the palette, because two kinds of thing belong there:

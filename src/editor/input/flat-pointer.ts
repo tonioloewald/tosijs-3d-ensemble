@@ -1,7 +1,7 @@
 /*#
 # The flat pointer
 
-Mouse, trackpad, pen and touch, adapted to [[Editor pointers]]. **This file is an
+Mouse, trackpad, pen and touch, adapted to [[pointer|Editor pointers]]. **This file is an
 ADAPTER** — it is allowed to know about DOM events precisely so that nothing
 above it has to.
 

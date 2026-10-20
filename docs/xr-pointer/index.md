@@ -1,6 +1,6 @@
 # The XR pointer
 
-A WebXR controller adapted to [[Editor pointers]]. Like the flat pointer this is
+A WebXR controller adapted to [[pointer|Editor pointers]]. Like the flat pointer this is
 an **adapter**: it knows about controllers so that no tool has to.
 
 Written now, not later, and not stubbed. A stub would compile and let a tool

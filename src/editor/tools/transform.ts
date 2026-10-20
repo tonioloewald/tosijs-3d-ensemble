@@ -11,7 +11,7 @@ Which transforms are offered is a **setting**, not a mode: `translate`, `rotate`
 and `scale` are independent toggles, all **off** by default. Off is a pure
 selection tool with no widget in the way; on, every enabled affordance is drawn
 at once and the grip you take says what the drag means. See
-[[Manipulator handles]] for why that beats a mode switch, and what it costs.
+[[handles-view|Manipulator handles]] for why that beats a mode switch, and what it costs.
 
 | grip | drag |
 |---|---|
@@ -28,7 +28,7 @@ same reach, one modifier apart.
 ## The drag writes twice, to two different places
 
 - **during** the drag, to the live body, so the piece follows the hand. Which
-  body — element or node — is [[Writing a transform]]'s fork, and the wrong
+  body — element or node — is [[transform-write|Writing a transform]]'s fork, and the wrong
   branch fails silently rather than erroring.
 - **on release**, to the ensemble JSON, snapped. The JSON is the truth; the
   scene is a view of it.

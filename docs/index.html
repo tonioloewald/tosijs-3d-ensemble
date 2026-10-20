@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="doc-system.css?v=8daacff49286" data-tosi-doc-system />
+  <link rel="stylesheet" href="doc-system.css?v=7626d7f5e090" data-tosi-doc-system />
   <title>tosijs-3d-ensemble</title>
   <meta name="description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
   <link rel="alternate" type="text/markdown" href="index.md" title="tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="docs.json?v=bf05bc054a94" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="docs.json?v=f31d8b7e3aa8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="README.md">
 <h1 id="tosijs-3d-ensemble">tosijs-3d-ensemble</h1>
 <!--{"pin":"top","order":1}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
@@ -69,15 +69,23 @@ preview.append(
   })
 );
 </code></pre>
-<p><strong>Status:</strong> the format, validation, the registry and the instantiator are built and
-tested; the editor is a working scaffold on the doc site. See <code>PLAN.md</code> for what
-is done and what is next.</p>
+<p><strong>Status:</strong> the format, validation, the registry and the instantiator are
+built and tested, nested ensembles included; the editor is in use on the doc
+site, <a href="https://ensemble.tosijs.net">ensemble.tosijs.net</a> (try it at
+<a href="https://ensemble.tosijs.net/editor/">/editor/</a>). Its browser behaviour is
+tested in real Chromium at every release.</p>
+<p>On the site (these pages are not in the npm package):</p>
 <ul>
-<li><strong><code>PLAN.md</code></strong> — what to build, in what order, and what &quot;done&quot; means.</li>
-<li><strong><code>SPEC.md</code></strong> — the specification: format, editor affordances, schema system,
-test scenarios, and five design questions answered.</li>
-<li><strong><code>UPSTREAM.md</code></strong> — gaps in tosijs-3d this project needs closed.</li>
-<li><strong><code>CLAUDE.md</code></strong> / <strong><code>AGENTS.md</code></strong> — agent guidance; read the ecosystem practices first.</li>
+<li><strong><a href="https://ensemble.tosijs.net/PLAN/">Plan</a></strong>: what to build, in what order,
+and what &quot;done&quot; means.</li>
+<li><strong><a href="https://ensemble.tosijs.net/SPEC/">Spec</a></strong>: the specification, including
+the design questions it answers.</li>
+<li><strong><a href="https://ensemble.tosijs.net/nest/">Nested ensembles</a></strong>: a piece that is a
+whole ensemble.</li>
+<li><strong><a href="https://ensemble.tosijs.net/UPSTREAM/">Upstream</a></strong>: what this project asked
+of tosijs-3d, and what it got.</li>
+<li>In the repository: <code>CLAUDE.md</code> / <code>AGENTS.md</code>, agent guidance (read the
+ecosystem practices first).</li>
 </ul>
 <h2 id="one-package-tree-shakeable">One package, tree-shakeable</h2>
 <p>The format, the instantiator and the editor ship as <strong>one package</strong>. A game
@@ -208,6 +216,6 @@ before being extracted. <code>PLAN.md</code> §&quot;Prior art&quot; lists what 
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="hydrate-k09n9d86.js"></script>
+  <script type="module" src="hydrate-hc64agck.js"></script>
 </body>
 </html>

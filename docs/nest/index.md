@@ -38,7 +38,14 @@ What happens to the child, in order:
   for the child's pieces.
 - **Ignored:** the child's `preview` (scenery for its author), its
   `placement` (the parent places it), its `recommends` (the outer scene's).
+- **On the nesting piece itself**, only `id`, `at`, `rot`, `scale` and
+  `enabled` mean anything. Its `features` are ignored with a
+  `nested-features-ignored` warning; a `mesh` beside `ensemble` is an error
+  (`validate`); a `role` or `library` on it does nothing.
 - A nesting piece that is **disabled** contributes nothing.
+- **Links into a child** name the child's piece by its path (`rig-a/reactor`),
+  from the parent's own `links` or from a sibling child's. The nesting piece
+  itself (`rig-a`) is not a piece once flattened, so a link to it dangles.
 
 ## Loading it
 

@@ -50,15 +50,24 @@ preview.append(
 );
 ```
 
-**Status:** the format, validation, the registry and the instantiator are built and
-tested; the editor is a working scaffold on the doc site. See `PLAN.md` for what
-is done and what is next.
+**Status:** the format, validation, the registry and the instantiator are
+built and tested, nested ensembles included; the editor is in use on the doc
+site, [ensemble.tosijs.net](https://ensemble.tosijs.net) (try it at
+[/editor/](https://ensemble.tosijs.net/editor/)). Its browser behaviour is
+tested in real Chromium at every release.
 
-- **`PLAN.md`** — what to build, in what order, and what "done" means.
-- **`SPEC.md`** — the specification: format, editor affordances, schema system,
-  test scenarios, and five design questions answered.
-- **`UPSTREAM.md`** — gaps in tosijs-3d this project needs closed.
-- **`CLAUDE.md`** / **`AGENTS.md`** — agent guidance; read the ecosystem practices first.
+On the site (these pages are not in the npm package):
+
+- **[Plan](https://ensemble.tosijs.net/PLAN/)**: what to build, in what order,
+  and what "done" means.
+- **[Spec](https://ensemble.tosijs.net/SPEC/)**: the specification, including
+  the design questions it answers.
+- **[Nested ensembles](https://ensemble.tosijs.net/nest/)**: a piece that is a
+  whole ensemble.
+- **[Upstream](https://ensemble.tosijs.net/UPSTREAM/)**: what this project asked
+  of tosijs-3d, and what it got.
+- In the repository: `CLAUDE.md` / `AGENTS.md`, agent guidance (read the
+  ecosystem practices first).
 
 ## One package, tree-shakeable
 

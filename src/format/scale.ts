@@ -8,7 +8,7 @@ These are the two functions that let everything else stop caring which it got.
 ## Why per-axis at all
 
 Because the manipulator offers per-axis scale grips, and a control that quietly
-collapses to uniform is the [[The built-in tools]] version of a slider that does
+collapses to uniform is the [[built-in|The built-in tools]] version of a slider that does
 nothing. Once the widget can stretch one axis, the format has to be able to hold
 the result or the drag is a lie that survives until you reload.
 

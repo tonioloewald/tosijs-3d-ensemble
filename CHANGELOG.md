@@ -14,6 +14,17 @@ All notable changes to this project are documented here, in
   tool is open the piece's own effect is set aside so one plays, not two.
   **Done** (or choosing another piece) closes it and puts the camera back.
 
+### Fixed
+
+- **A nested child's recipe urls are its own** (#3428): a texture or sound
+  inside an effect `recipe` in a nested ensemble is relative to that
+  ensemble's url, as its libraries and other fetched urls already were.
+- **Nine dead links in the docs**: wikilinks written as page titles
+  (`[[The feature registry]]`) went to pages that do not exist (tosijs-ui
+  slugifies the text; tosijs-ui#234).
+- The selection box of a nested piece is measured once per build, not every
+  frame (#3423).
+
 ### Changed
 
 - **Peer `tosijs-3d` is `^0.10.19`**, whose rig and effect tools mount in a

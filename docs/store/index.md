@@ -14,8 +14,15 @@ interface EnsembleStore {
   write(id: string, ensemble: Ensemble): Promise<{ id: string; revision?: string } | void>;
   history?(id: string): Promise<Array<{ revision: string; at?: string; author?: string; message?: string }>>;
   readRevision?(id: string, revision: string): Promise<Ensemble>;
+  idFor?(src: string): string | null;
 }
 ```
+
+`idFor` maps a page url to the store's id, so a document opened by
+`<tosi-ensemble-editor src="…">` (or a nested ensemble opened with **Open
+inside**) saves back to its entry instead of needing Save as. The editor
+fires `loaded` (`{ src, storeId }`) when a load lands, and `error` when one
+fails.
 
 An `id` is the store's own address: a path on a dev server, a document id in a
 service. Two backends were in view when this was designed (board #3363, from
@@ -34,6 +41,15 @@ import * as dataClient from "tosijs-ui/doc-system/data-client";
 import { dataClientStore } from "tosijs-3d-ensemble";
 
 editor.store = dataClientStore(dataClient, { dir: "static/ensembles" });
+```
+
+Its `idFor` takes same-origin urls in that folder and nothing else (a
+document from another host is never saved over a local file). tosijs-ui's
+site serves `static/` at the root, so `static/ensembles` is at `/ensembles/`;
+pass `servedAt` when your folder is served somewhere else:
+
+```ts
+dataClientStore(dataClient, { dir: "static/assemblies", servedAt: "/assemblies" });
 ```
 
 Saving is gated as source editing is: this machine, an edit session over the

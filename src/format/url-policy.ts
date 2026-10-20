@@ -253,3 +253,88 @@ const omitRef = (s: Node): Node => {
   const { $ref: _ref, ...rest } = s;
   return rest;
 };
+
+/**
+ * `value` with every FETCHED string in it passed through `fn`, found by the
+ * same schema walk as `deepFetchedProblems` (and the same rule for telling a
+ * uri from inline markup). Copy on write: `value` is not changed. A nested
+ * child's recipe uses this to rebase its relative urls onto the child's own.
+ */
+export function rewriteFetched(
+  schema: unknown,
+  value: unknown,
+  fn: (url: string) => string,
+  root: unknown = schema
+): unknown {
+  const defs = ((root as Node)?.$defs ?? {}) as Record<string, unknown>;
+  const resolve = (s: unknown, seen = 0): Node | null => {
+    if (!s || typeof s !== "object" || seen > 16) return null;
+    const ref = (s as Node).$ref;
+    if (typeof ref === "string" && ref.startsWith("#/$defs/")) {
+      const target = defs[ref.slice("#/$defs/".length)];
+      return target
+        ? resolve({ ...(target as Node), ...omitRef(s as Node) }, seen + 1)
+        : (s as Node);
+    }
+    return s as Node;
+  };
+  const matches = (branch: Node, text: string): boolean => {
+    const own =
+      typeof branch.pattern === "string"
+        ? new RegExp(branch.pattern).test(text)
+        : true;
+    const not = branch.not as Node | undefined;
+    const negated =
+      not && typeof not.pattern === "string"
+        ? !new RegExp(not.pattern).test(text)
+        : true;
+    return own && negated;
+  };
+  const walk = (raw: unknown, v: unknown, depth: number): unknown => {
+    const s = resolve(raw);
+    if (!s || depth > 32 || v === undefined || v === null) return v;
+    const union = [
+      ...((s.anyOf as unknown[]) ?? []),
+      ...((s.oneOf as unknown[]) ?? []),
+    ]
+      .map((b) => resolve(b))
+      .filter((b): b is Node => !!b);
+    if (typeof v === "string") {
+      if (s.format === "uri-reference") return fn(v);
+      const forms = union.filter(
+        (b) =>
+          b.pattern !== undefined ||
+          b.not !== undefined ||
+          b.format !== undefined ||
+          b["x-inline"] !== undefined
+      );
+      const chosen = forms.find((b) => matches(b, v));
+      if (chosen && !chosen["x-inline"] && chosen.format === "uri-reference")
+        return fn(v);
+      return v;
+    }
+    let out: unknown = v;
+    for (const b of [...union, ...((s.allOf as unknown[]) ?? [])])
+      out = walk(b, out, depth + 1);
+    if (Array.isArray(out) && s.items) {
+      const items = out.map((item) => walk(s.items, item, depth + 1));
+      if (items.some((item, i) => item !== (out as unknown[])[i])) out = items;
+    } else if (
+      out &&
+      typeof out === "object" &&
+      !Array.isArray(out) &&
+      s.properties
+    ) {
+      const props = s.properties as Record<string, unknown>;
+      let copy: Node | null = null;
+      for (const [k, child] of Object.entries(out as Node)) {
+        if (!props[k]) continue;
+        const next = walk(props[k], child, depth + 1);
+        if (next !== child) (copy ??= { ...(out as Node) })[k] = next;
+      }
+      if (copy) out = copy;
+    }
+    return out;
+  };
+  return walk(schema, value, 0);
+}

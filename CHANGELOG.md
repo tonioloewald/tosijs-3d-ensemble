@@ -22,6 +22,15 @@ All notable changes to this project are documented here, in
   so it meets the https rule. `loadEnsemble` and `<tosi-ensemble>` load the
   children; `collectNested` and `flattenEnsemble` are exported for hosts
   that build themselves.
+- **Drill in and pop out, in the editor.** A nested ensemble is one piece
+  from outside: a click anywhere inside it selects it, and it moves, turns
+  and scales as a whole (the children follow when the edit lands). Its
+  Properties name the ensemble and offer **Open inside ⤵**, which makes the
+  child the document: its own undo history, its own store entry (through
+  `idFor`), and Save writing its own file. A breadcrumb shows where you are,
+  and **⤴ Back** returns to the parent, rebuilt with the child as you left
+  it, saved or not, so you can check the change where it is used. Lamps and
+  other marked features inside a nested ensemble show their beacons.
 - **An `effect` feature**: tosijs-3d's effects (volcano, geyser, bubbles,
   black smoker, splash, explosion, fireball, sparks) as a placed piece, with
   `preset`, `activity`, `scale`, `ground` and `autoplay` from upstream's

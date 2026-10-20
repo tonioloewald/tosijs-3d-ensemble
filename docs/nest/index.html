@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=5ebc296e6293" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=ca6e8b3562aa" data-tosi-doc-system />
   <title>Nested ensembles — tosijs-3d-ensemble</title>
   <meta name="description" content="A piece can be a whole ensemble: &quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot; in place of mesh. A level made of rigs, a fortress made of towers, a plaza with lamp…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Nested ensembles — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=7b821060b264" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=29924f150cb3" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="nest.ts">
 <h1 id="nested-ensembles">Nested ensembles</h1>
 <p>A piece can be a whole ensemble: <code>&quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot;</code>
@@ -64,6 +64,12 @@ for the child&#39;s pieces.</li>
 <code>placement</code> (the parent places it), its <code>recommends</code> (the outer scene&#39;s).</li>
 <li>A nesting piece that is <strong>disabled</strong> contributes nothing.</li>
 </ul>
+<h2 id="in-the-editor">In the editor</h2>
+<p>From outside, a nested ensemble is one piece (SPEC: &quot;a black box inside a
+scene&quot;): a click anywhere inside it selects it, and it moves, turns and
+scales as a whole. <strong>Open inside</strong> (in its Properties) makes the child the
+document, with its own history and its own file; <strong>Back</strong> returns to the
+parent, rebuilt with the child as you left it.</p>
 <h2 id="what-it-refuses">What it refuses</h2>
 <p>A chain that comes back to itself (A nests B nests A) is reported as
 <code>nested-cycle</code>, naming the loop, and not followed. Deeper than
@@ -158,6 +164,6 @@ the same https rule as a library.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-gb3h0b3h.js"></script>
+  <script type="module" src="../hydrate-0a9xm1aq.js"></script>
 </body>
 </html>

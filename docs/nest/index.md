@@ -40,6 +40,14 @@ What happens to the child, in order:
   `placement` (the parent places it), its `recommends` (the outer scene's).
 - A nesting piece that is **disabled** contributes nothing.
 
+## In the editor
+
+From outside, a nested ensemble is one piece (SPEC: "a black box inside a
+scene"): a click anywhere inside it selects it, and it moves, turns and
+scales as a whole. **Open inside** (in its Properties) makes the child the
+document, with its own history and its own file; **Back** returns to the
+parent, rebuilt with the child as you left it.
+
 ## What it refuses
 
 A chain that comes back to itself (A nests B nests A) is reported as

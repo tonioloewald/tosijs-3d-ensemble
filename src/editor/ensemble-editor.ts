@@ -85,8 +85,13 @@ import {
   vector3d,
   sceneSchemas,
 } from "tosijs-3d";
-import { Quaternion, Ray, Vector3 } from "@babylonjs/core";
-import { buildEnsemble, fetchEnsembleData } from "../runtime/build.js";
+import { Quaternion, Ray, TransformNode, Vector3 } from "@babylonjs/core";
+import {
+  buildEnsemble,
+  collectNested,
+  fetchEnsembleData,
+} from "../runtime/build.js";
+import { flattenEnsemble, nestedRefs, nestedUrl } from "../format/nest.js";
 import { reapUnclaimedSingletons } from "../runtime/features-scene.js";
 import {
   libraryCatalogue,
@@ -802,6 +807,9 @@ export class EnsembleEditor extends withAttributes({
         // turret's mount, a trigger's volume, a door's rest pose), and a body
         // write cannot move it: rebuild (0.6.0 review M2).
         if (hasFeatures(piece)) return false;
+        // A nested piece's body is a stand-in: its CHILDREN must move, and
+        // only a rebuild re-places them (format/nest.ts).
+        if (piece.ensemble) return false;
         const body = built.pieces.get(piece.id);
         if (!body || (!body.element && !body.node)) return false;
         const transform: Transform = {};
@@ -1493,6 +1501,14 @@ export class EnsembleEditor extends withAttributes({
     for (const [mesh, id] of this._beacons?.index() ?? []) {
       this._index.set(mesh, id);
     }
+    /*
+      A NESTED ENSEMBLE IS A BLACK BOX (SPEC: "to do stuff internal to it you
+      would switch context"): a hit anywhere inside `rig-a/post/bulb`
+      selects `rig-a`. Drill in to reach the bulb. After the beacons, which
+      are bodies too, so a nested lamp's beacon selects its nesting piece.
+    */
+    for (const [node, id] of this._index)
+      this._index.set(node, this._topLevelId(id));
     return pickPiece(
       scene as never,
       this._index,
@@ -1732,7 +1748,7 @@ export class EnsembleEditor extends withAttributes({
     this.rebuild({ chrome: options?.chrome });
   }
 
-  private readonly _history = createHistory<Ensemble>(
+  private _history = createHistory<Ensemble>(
     (e) => structuredClone(e),
     HISTORY_LIMIT
   );
@@ -2519,6 +2535,216 @@ export class EnsembleEditor extends withAttributes({
 
   private _backdrop = new Map<string, SceneElement>();
 
+  /*
+    NESTED ENSEMBLES IN THE EDITOR (board #3362, SPEC "Nesting is a BLACK
+    BOX"). A nested piece is one piece from outside: picked, selected, moved,
+    turned and scaled as a whole. To touch its insides you DRILL IN, which
+    makes the child the document (its own file, history and store entry) until
+    you POP OUT, when the parent is rebuilt with the child as you left it,
+    saved or not, so you can check it works where it is used.
+  */
+  /** Nested ensembles loaded for this document and below, by `nestedUrl`. */
+  private _nested = new Map<string, Ensemble>();
+  /** The refs a load was last attempted for, so a failing one is not refetched on every edit. */
+  private _nestedTried = "";
+  /** Stand-in bodies for nested pieces (see `_anchorNests`). */
+  private _nestAnchors: TransformNode[] = [];
+  /** The documents drilled out of, innermost last. */
+  private _contexts: Array<{
+    ensemble: Ensemble;
+    history: ReturnType<typeof createHistory<Ensemble>>;
+    storeId: string | null;
+    savedJson: string | null;
+    loaded: { url: string; json: string } | null;
+    selected: string | null;
+    /** The nested piece drilled into, and the child's url. */
+    via: string;
+    url: string;
+  }> = [];
+
+  /** The top-level piece a built (possibly nested) piece belongs to. */
+  private _topLevelId(id: string): string {
+    if (!id.includes("/")) return id;
+    for (const piece of this._ensemble.pieces)
+      if (piece.ensemble && id.startsWith(`${piece.id}/`)) return piece.id;
+    return id;
+  }
+
+  /**
+   * A body for each nested piece. It has none of its own (its children are
+   * the pieces), and the handles, the drag maths and the selection box all
+   * work on a body: an invisible node at the piece's transform stands in.
+   * Edits to a nested piece rebuild (`_applyFeatureUpdates`), which moves
+   * the children with it.
+   */
+  private _anchorNests(): void {
+    for (const anchor of this._nestAnchors) anchor.dispose();
+    this._nestAnchors = [];
+    const scene = (this._scene as unknown as { scene?: unknown } | null)?.scene;
+    const built = this._built;
+    if (!scene || !built) return;
+    const ensembleScale = this._ensemble.scale ?? 1;
+    for (const piece of this._ensemble.pieces) {
+      if (!piece.ensemble || piece.enabled === false) continue;
+      const node = new TransformNode(`nest:${piece.id}`, scene as never);
+      const at = piece.at.map((v) => v * ensembleScale) as Vec3;
+      writeTransform(
+        { element: null, node },
+        { at, rot: piece.rot ?? [0, 0, 0], scale: piece.scale ?? 1 }
+      );
+      this._nestAnchors.push(node);
+      const scale3 = scaleVector(piece.scale).map(
+        (v) => v * ensembleScale
+      ) as Vec3;
+      built.pieces.set(piece.id, {
+        piece,
+        at,
+        scale: Math.max(...scale3),
+        scale3,
+        element: null,
+        node,
+        handles: new Map(),
+      });
+    }
+  }
+
+  /** World bounds enclosing several bodies, or undefined when none has any. */
+  private _unionBounds(bodies: unknown[]): { min: XYZ; max: XYZ } | undefined {
+    let out: { min: XYZ; max: XYZ } | undefined;
+    for (const body of bodies) {
+      const b = body as {
+        computeWorldMatrix?: (f: boolean) => void;
+        getHierarchyBoundingVectors?: () => { min: XYZ; max: XYZ };
+      };
+      b.computeWorldMatrix?.(true);
+      const v = b.getHierarchyBoundingVectors?.();
+      if (!v || !Number.isFinite(v.min.x) || !Number.isFinite(v.max.x))
+        continue;
+      out = out
+        ? {
+            min: {
+              x: Math.min(out.min.x, v.min.x),
+              y: Math.min(out.min.y, v.min.y),
+              z: Math.min(out.min.z, v.min.z),
+            },
+            max: {
+              x: Math.max(out.max.x, v.max.x),
+              y: Math.max(out.max.y, v.max.y),
+              z: Math.max(out.max.z, v.max.z),
+            },
+          }
+        : { min: { ...v.min }, max: { ...v.max } };
+    }
+    return out;
+  }
+
+  /** The built pieces inside a nested piece (for its selection box). */
+  private _nestBodies(id: string): unknown[] {
+    const bodies: unknown[] = [];
+    for (const [key, built] of this._built?.pieces ?? [])
+      if (key.startsWith(`${id}/`))
+        bodies.push(
+          (built.element as { mesh?: unknown } | null)?.mesh ?? built.node
+        );
+    return bodies.filter(Boolean);
+  }
+
+  /**
+   * Fetch the nested ensembles the document names and has not loaded, then
+   * rebuild. Only when the set of refs changed since the last attempt, so a
+   * ref that cannot load is not refetched on every edit.
+   */
+  private _loadMissingNests(): void {
+    const built = this._built;
+    if (!built?.problems.some((p) => p.code === "nested-missing")) return;
+    const base = this._loaded?.url;
+    const doc = this._ensemble;
+    const tried = JSON.stringify([base, nestedRefs(doc).sort()]);
+    if (tried === this._nestedTried) return;
+    this._nestedTried = tried;
+    const before = this._nested.size;
+    void (async () => {
+      await collectNested(doc, { base, into: this._nested });
+      if (this._scene)
+        await mountLibraries(
+          flattenEnsemble(doc, this._nested, { base }).ensemble,
+          this._scene
+        );
+      if (this._nested.size > before && this.isConnected) this.rebuild();
+    })();
+  }
+
+  /** Where the editor is: the outermost document's name, then each piece drilled into. */
+  get nestPath(): string[] {
+    const outermost = this._contexts[0]?.ensemble ?? this._ensemble;
+    return [outermost.name ?? "untitled", ...this._contexts.map((c) => c.via)];
+  }
+
+  /**
+   * Edit the ensemble a nested piece places: it becomes the document, with
+   * its own history, its own store entry (when the store knows its url) and
+   * Save writing its own file. `popOut()` comes back.
+   */
+  drillIn(id: string): boolean {
+    const piece = this._ensemble.pieces.find((p) => p.id === id);
+    if (!piece?.ensemble) return false;
+    const url = nestedUrl(piece.ensemble, this._loaded?.url);
+    const child = this._nested.get(url);
+    if (!child) return false;
+    this._contexts.push({
+      ensemble: this._ensemble,
+      history: this._history,
+      storeId: this._storeId,
+      savedJson: this._savedJson,
+      loaded: this._loaded,
+      selected: this._selected,
+      via: id,
+      url,
+    });
+    /*
+      What the setter does, in the order this needs: the child's URL is set
+      BEFORE the build, so the child's own relative refs resolve against it
+      (through the setter, the build ran with no url and resolved them
+      against the page).
+    */
+    this._history = createHistory<Ensemble>(
+      (e) => structuredClone(e),
+      HISTORY_LIMIT
+    );
+    this._loadGeneration++;
+    this._ensemble = structuredClone(child);
+    this._storeId = null;
+    this._savedJson = null;
+    this._loaded = { url, json: JSON.stringify(child) };
+    this._selected = this._ensemble.pieces[0]?.id ?? null;
+    this._needsFraming = true;
+    this._linkLoaded();
+    this.rebuild();
+    this._syncDirty();
+    return true;
+  }
+
+  /**
+   * Back to the document drilled out of. The child as you left it (saved or
+   * not) is what the parent now builds, so you can check it where it is used.
+   */
+  popOut(): boolean {
+    const outer = this._contexts.pop();
+    if (!outer) return false;
+    this._nested.set(outer.url, structuredClone(this._ensemble));
+    this._ensemble = outer.ensemble;
+    this._history = outer.history;
+    this._storeId = outer.storeId;
+    this._savedJson = outer.savedJson;
+    this._loaded = outer.loaded;
+    this._selected = outer.via;
+    this._loadGeneration++;
+    this._needsFraming = true;
+    this.rebuild();
+    this._syncDirty();
+    return true;
+  }
+
   /**
    * Rebuild the scene from the ensemble.
    *
@@ -2542,8 +2768,12 @@ export class EnsembleEditor extends withAttributes({
       scene: this._scene,
       library: this.library,
       placePiece: placeMesh,
+      nested: this._nested,
+      base: this._loaded?.url,
       ...(this._meshNames() ? { meshes: this._meshNames()! } : {}),
     });
+    this._anchorNests();
+    this._loadMissingNests();
     this._buildPreview();
     /*
       Reap AFTER the build, never between dispose and build.
@@ -2845,7 +3075,10 @@ export class EnsembleEditor extends withAttributes({
       computeWorldMatrix?: (force: boolean) => void;
     } | null;
     root?.computeWorldMatrix?.(true);
-    const bounds = root?.getHierarchyBoundingVectors?.();
+    // A NESTED piece's box encloses its children (its body is an empty anchor).
+    const bounds = built.piece.ensemble
+      ? this._unionBounds(this._nestBodies(built.piece.id))
+      : root?.getHierarchyBoundingVectors?.();
     const here = this._liveOrigin(built);
     if (!bounds) {
       /*
@@ -4005,6 +4238,25 @@ export class EnsembleEditor extends withAttributes({
           (This comment used to say the only list control was a stepper; that
           had stopped being true some time before.)
         */
+        // Drilled into a nested ensemble: where, and the way back out.
+        ...(this._contexts.length
+          ? [
+              label3d({
+                text: this.nestPath.join(" › "),
+                muted: true,
+                compact: true,
+              }),
+              button3d({
+                label: `⤴ Back to ${
+                  this._contexts[this._contexts.length - 1]!.ensemble.name ??
+                  "the parent"
+                }`,
+                handleClick: () => {
+                  this.popOut();
+                },
+              }),
+            ]
+          : []),
         button3d({ label: "New", handleClick: () => this.newEnsemble() }),
         button3d({ label: "Download", handleClick: () => this.saveFile() }),
         button3d({ label: "Open file…", handleClick: () => this.openFile() }),
@@ -4274,7 +4526,9 @@ export class EnsembleEditor extends withAttributes({
     const scene = (this._scene as unknown as { scene?: unknown })?.scene;
     if (!scene) return;
     const wanted: Beacon[] = [];
-    for (const piece of this._ensemble.pieces) {
+    // What was BUILT, so a lamp inside a nested ensemble has its marker too;
+    // picking it selects the nesting piece (see the black box in `_pick`).
+    for (const piece of this._built?.ensemble.pieces ?? this._ensemble.pieces) {
       if (piece.enabled === false) continue;
       const marked = Object.keys(piece.features ?? {}).some(
         (name) => featureRegistration(name)?.marker
@@ -4313,6 +4567,8 @@ export class EnsembleEditor extends withAttributes({
    * not an explosion.
    */
   private _kindIcon(piece: Piece): string {
+    // A nested ensemble: a box of boxes, distinct from one mesh's 📦.
+    if (piece.ensemble) return "🗃️";
     if (piece.mesh) return "📦";
     const names = Object.keys(piece.features ?? {});
     const registrations = names
@@ -4769,7 +5025,8 @@ export class EnsembleEditor extends withAttributes({
       label3d({ text: "position", muted: true, compact: true }),
       position,
     ];
-    if (selected.mesh) {
+    // A nested ensemble turns and scales as one piece, like a mesh.
+    if (selected.mesh || selected.ensemble) {
       const rot = selected.rot ?? [0, 0, 0];
       const rotation = euler3d({
         value: { x: rot[0], y: rot[1], z: rot[2] },
@@ -4817,6 +5074,25 @@ export class EnsembleEditor extends withAttributes({
       fields.push(
         label3d({ text: "scale", muted: true, compact: true }),
         scale
+      );
+    }
+    /*
+      A NESTED ENSEMBLE says which, and opens: its insides are edited inside
+      it (SPEC: "switch context (drill into it) and then pop back out").
+    */
+    if (selected.ensemble) {
+      const loaded = this._nested.has(
+        nestedUrl(selected.ensemble, this._loaded?.url)
+      );
+      fields.push(
+        label3d({ text: "ensemble", muted: true, compact: true }),
+        label3d({ text: selected.ensemble, compact: true }),
+        button3d({
+          label: loaded ? "Open inside ⤵" : "Loading…",
+          handleClick: () => {
+            this.drillIn(selected.id);
+          },
+        })
       );
     }
     /*

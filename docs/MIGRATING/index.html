@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=29924f150cb3" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=2970f5b07ce0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="MIGRATING.md">
 <h1 id="migrating-manta-recon-onto-tosijs-3d-ensemble">Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -355,14 +355,25 @@ the editor&#39;s shadow root, so a page that styled or positioned them
 removes them. The editor gains <code>store</code> / <code>EnsembleEditor.defaultStore</code>
 (open and save through a host store) and <code>hostActions</code>.</li>
 </ul>
-<h2 id="upgrading-from-070-to-071">Upgrading from 0.7.0 to 0.7.1</h2>
+<h2 id="upgrading-from-07-to-08">Upgrading from 0.7 to 0.8</h2>
 <ul>
-<li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.18</code>.</strong> Nothing in a document or in the
-editor&#39;s API changes. 0.10.15 stops system panels blinking when they
-rebuild, which the editor does on every edit, and adds panning to the
-default view controls. 0.10.16 adds effects and <code>effectRecipeSchema()</code>;
-0.10.17 adds <code>effectSchema()</code> for the effect element; 0.10.18 adds
-landform schemas and slider stops.</li>
+<li><strong>Peer <code>tosijs-3d</code> is <code>^0.10.18</code>.</strong> 0.10.15 stops system panels blinking
+when they rebuild, which the editor does on every edit, and adds panning
+to the default view controls. 0.10.16 adds effects and
+<code>effectRecipeSchema()</code>; 0.10.17 adds <code>effectSchema()</code> for the effect
+element; 0.10.18 adds landform schemas and slider stops.</li>
+<li><strong>Nested ensembles build.</strong> A piece with <code>&quot;ensemble&quot;: &quot;&lt;url or name&gt;&quot;</code>
+is loaded and spliced in when its parent builds, with path ids
+(<code>rig-a/pump</code>). If you nested by hand before (a host that fetched a child
+and placed it itself, as Manta&#39;s missions did), you can let the document
+say it instead. A code that matched <code>nested-not-supported</code> will not see
+it again; match <code>nested-missing</code>, <code>nested-cycle</code> or <code>nested-too-deep</code>.</li>
+<li><strong><code>BuiltEnsemble.ensemble</code> is what was built</strong>, the flattened document.
+Code that compared it with the authored document by identity only
+differs when the document nests.</li>
+<li><strong>A store may implement <code>idFor(src)</code></strong> so a document opened by <code>src</code>
+saves back to its entry; <code>dataClientStore</code> does. Nothing to do unless
+you wrote your own store.</li>
 </ul>
 
   </article>

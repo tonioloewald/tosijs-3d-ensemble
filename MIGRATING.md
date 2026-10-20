@@ -293,11 +293,22 @@ places:
   removes them. The editor gains `store` / `EnsembleEditor.defaultStore`
   (open and save through a host store) and `hostActions`.
 
-## Upgrading from 0.7.0 to 0.7.1
+## Upgrading from 0.7 to 0.8
 
-- **Peer `tosijs-3d` is `^0.10.18`.** Nothing in a document or in the
-  editor's API changes. 0.10.15 stops system panels blinking when they
-  rebuild, which the editor does on every edit, and adds panning to the
-  default view controls. 0.10.16 adds effects and `effectRecipeSchema()`;
-  0.10.17 adds `effectSchema()` for the effect element; 0.10.18 adds
-  landform schemas and slider stops.
+- **Peer `tosijs-3d` is `^0.10.18`.** 0.10.15 stops system panels blinking
+  when they rebuild, which the editor does on every edit, and adds panning
+  to the default view controls. 0.10.16 adds effects and
+  `effectRecipeSchema()`; 0.10.17 adds `effectSchema()` for the effect
+  element; 0.10.18 adds landform schemas and slider stops.
+- **Nested ensembles build.** A piece with `"ensemble": "<url or name>"`
+  is loaded and spliced in when its parent builds, with path ids
+  (`rig-a/pump`). If you nested by hand before (a host that fetched a child
+  and placed it itself, as Manta's missions did), you can let the document
+  say it instead. A code that matched `nested-not-supported` will not see
+  it again; match `nested-missing`, `nested-cycle` or `nested-too-deep`.
+- **`BuiltEnsemble.ensemble` is what was built**, the flattened document.
+  Code that compared it with the authored document by identity only
+  differs when the document nests.
+- **A store may implement `idFor(src)`** so a document opened by `src`
+  saves back to its entry; `dataClientStore` does. Nothing to do unless
+  you wrote your own store.

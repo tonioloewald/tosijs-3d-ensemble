@@ -3,7 +3,18 @@
 All notable changes to this project are documented here, in
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [0.8.0] — 2026-10-20
+
+### ⚠️ Breaking
+
+- **Peer `tosijs-3d` is `^0.10.18`** (effects, landform schemas, slider
+  stops, recipe url marks).
+- **A nested piece builds.** A document with `"ensemble": …` pieces used
+  to fail validation (`nested-not-supported`) and build nothing for them;
+  it now loads the child and builds its pieces. That code is gone.
+- **`BuiltEnsemble.ensemble` is the FLATTENED document** (with nested
+  pieces spliced in, path ids), which is what was built. For a document
+  without nesting it is the same object as before.
 
 ### Added
 

@@ -140,6 +140,7 @@ import {
   effectiveConfig,
   featureRegistration,
   insertPosition,
+  pieceRefKeys,
   registeredFeatures,
 } from "../format/registry.js";
 import type { EditorRay } from "./input/pointer.js";
@@ -545,6 +546,20 @@ export class EnsembleEditor extends withAttributes({
     return this._ensemble;
   }
   set ensemble(value: Ensemble) {
+    this._setDocument(value, null);
+  }
+
+  /**
+   * Make `value` the document. `loaded` is the url it came from and its
+   * text as it arrived, set BEFORE the build so its nested refs resolve
+   * against that url (0.8.0 review M1: through the setter, `load()` built
+   * with no url, resolved them against the page, and a reload of the same
+   * document lost its nested pieces).
+   */
+  private _setDocument(
+    value: Ensemble,
+    loaded: { url: string; json: string } | null
+  ): void {
     /*
       ANY document handed over SUPERSEDES a load still in flight. Only other
       loads advanced the generation, so the page's own `src` fetch landed
@@ -562,7 +577,16 @@ export class EnsembleEditor extends withAttributes({
     */
     this._storeId = null;
     this._savedJson = null;
-    this._loaded = null;
+    this._loaded = loaded;
+    /*
+      A NEW DOCUMENT IS NOT INSIDE ANYTHING (0.8.0 review M3): opening one
+      while drilled in left the stack, and Back then put it in as the child.
+      And its nested ensembles are read again: every load re-reads them.
+    */
+    this._contexts = [];
+    this._nested = new Map();
+    this._nestedSaved = new Map();
+    this._nestedTried = "";
     this._selected = value.pieces[0]?.id ?? null;
     // A NEW arrangement earns a new view. An edit to the current one does not —
     // see the note in `rebuild`.
@@ -807,9 +831,17 @@ export class EnsembleEditor extends withAttributes({
         // turret's mount, a trigger's volume, a door's rest pose), and a body
         // write cannot move it: rebuild (0.6.0 review M2).
         if (hasFeatures(piece)) return false;
-        // A nested piece's body is a stand-in: its CHILDREN must move, and
-        // only a rebuild re-places them (format/nest.ts).
-        if (piece.ensemble) return false;
+        /*
+          A NESTED piece's body is a stand-in: its CHILDREN must move. Written
+          in place when none of them carries a feature (0.8.0 review: this
+          rebuilt the scene on every scrub step, the old "rotation isn't
+          live" regression); otherwise rebuilt, as any feature piece is.
+        */
+        if (piece.ensemble) {
+          if (!this._moveNestInPlace(piece)) return false;
+          transformed = true;
+          continue;
+        }
         const body = built.pieces.get(piece.id);
         if (!body || (!body.element && !body.node)) return false;
         const transform: Transform = {};
@@ -1120,6 +1152,9 @@ export class EnsembleEditor extends withAttributes({
       const result = await store.write(target, structuredClone(this._ensemble));
       this._storeId = (result && result.id) || target;
       this._savedJson = JSON.stringify(this._ensemble);
+      // Inside a nested ensemble: this is now its saved state (M2).
+      if (this._contexts.length && this._loaded)
+        this._nestedSaved.set(this._loaded.url, this._savedJson);
       /*
         The title says so HERE. It used to wait for `_refreshStore` to see the
         store's list change and re-render, which a Save back to the same file
@@ -2025,8 +2060,7 @@ export class EnsembleEditor extends withAttributes({
       await mountLibraries(data, this._scene);
     }
     if (generation !== this._loadGeneration) return; // superseded while mounting
-    this.ensemble = data;
-    this._loaded = { url, json: JSON.stringify(this._ensemble) };
+    this._setDocument(data, { url, json: JSON.stringify(data) });
     this._linkLoaded();
     if (this._storeId) void this._refreshStore();
     /*
@@ -2545,6 +2579,12 @@ export class EnsembleEditor extends withAttributes({
   */
   /** Nested ensembles loaded for this document and below, by `nestedUrl`. */
   private _nested = new Map<string, Ensemble>();
+  /**
+   * Each nested document as last LOADED or SAVED, by url (0.8.0 review M2).
+   * The cache above holds the working copy, edits included; this is what
+   * "unsaved" is measured against when you open it again.
+   */
+  private _nestedSaved = new Map<string, string>();
   /** The refs a load was last attempted for, so a failing one is not refetched on every edit. */
   private _nestedTried = "";
   /** Stand-in bodies for nested pieces (see `_anchorNests`). */
@@ -2608,6 +2648,46 @@ export class EnsembleEditor extends withAttributes({
     }
   }
 
+  /**
+   * Re-place a nested piece's children where its new transform puts them,
+   * without a rebuild. False when that cannot be done honestly (a child with
+   * a feature placed itself at bind, or a body is missing): rebuild instead.
+   */
+  private _moveNestInPlace(piece: Piece): boolean {
+    const built = this._built;
+    const anchor = built?.pieces.get(piece.id);
+    if (!built || !anchor?.node) return false;
+    const flat = flattenEnsemble(this._ensemble, this._nested, {
+      base: this._loaded?.url,
+    }).ensemble;
+    const prefix = `${piece.id}/`;
+    const children = flat.pieces.filter((p) => p.id.startsWith(prefix));
+    if (children.some((c) => hasFeatures(c) || c.role)) return false;
+    const bodies = children.map((c) => built.pieces.get(c.id));
+    if (bodies.some((b) => !b || (!b.element && !b.node))) return false;
+    const k = this._ensemble.scale ?? 1;
+    children.forEach((c, i) => {
+      const body = bodies[i]!;
+      writeTransform(
+        { element: body.element as never, node: body.node },
+        {
+          at: c.at.map((v) => v * k) as Vec3,
+          rot: c.rot ?? [0, 0, 0],
+          scale: c.scale ?? 1,
+        }
+      );
+    });
+    writeTransform(
+      { element: null, node: anchor.node },
+      {
+        at: piece.at.map((v) => v * k) as Vec3,
+        rot: piece.rot ?? [0, 0, 0],
+        scale: piece.scale ?? 1,
+      }
+    );
+    return true;
+  }
+
   /** World bounds enclosing several bodies, or undefined when none has any. */
   private _unionBounds(bodies: unknown[]): { min: XYZ; max: XYZ } | undefined {
     let out: { min: XYZ; max: XYZ } | undefined;
@@ -2664,7 +2744,10 @@ export class EnsembleEditor extends withAttributes({
     this._nestedTried = tried;
     const before = this._nested.size;
     void (async () => {
+      const had = new Set(this._nested.keys());
       await collectNested(doc, { base, into: this._nested });
+      for (const [url, child] of this._nested)
+        if (!had.has(url)) this._nestedSaved.set(url, JSON.stringify(child));
       if (this._scene)
         await mountLibraries(
           flattenEnsemble(doc, this._nested, { base }).ensemble,
@@ -2715,7 +2798,10 @@ export class EnsembleEditor extends withAttributes({
     this._ensemble = structuredClone(child);
     this._storeId = null;
     this._savedJson = null;
-    this._loaded = { url, json: JSON.stringify(child) };
+    this._loaded = {
+      url,
+      json: this._nestedSaved.get(url) ?? JSON.stringify(child),
+    };
     this._selected = this._ensemble.pieces[0]?.id ?? null;
     this._needsFraming = true;
     this._linkLoaded();
@@ -3321,8 +3407,9 @@ export class EnsembleEditor extends withAttributes({
    * Two reference sites, and BOTH are declared rather than guessed:
    *
    * - `links[].from` / `links[].to`, which the format defines outright
-   * - any feature field whose schema says `"x-widget": "ref"`, which is how
-   *   `protector.source` says "this string is a piece id". A consumer's
+   * - any feature field `pieceRefKeys` names (`"x-piece-ref": true` or
+   *   `"x-widget": "ref"`), which is how `protector.source` says "this
+   *   string is a piece id". A consumer's
    *   feature gets this for free by marking its own field, which is the same
    *   registry property that gives it an icon and a panel.
    *
@@ -3345,16 +3432,8 @@ export class EnsembleEditor extends withAttributes({
 
     const refFields = (piece: Piece): Array<[string, string]> => {
       const out: Array<[string, string]> = [];
-      for (const [feature, cfg] of Object.entries(piece.features ?? {})) {
-        const props = (
-          featureRegistration(feature)?.schema as
-            | { properties?: Record<string, { "x-widget"?: string }> }
-            | undefined
-        )?.properties;
-        for (const [key, spec] of Object.entries(props ?? {})) {
-          if (spec?.["x-widget"] === "ref") out.push([feature, key]);
-        }
-      }
+      for (const feature of Object.keys(piece.features ?? {}))
+        for (const key of pieceRefKeys(feature)) out.push([feature, key]);
       return out;
     };
 
@@ -3445,6 +3524,7 @@ export class EnsembleEditor extends withAttributes({
    */
   newEnsemble(): void {
     this._loadGeneration++; // a pending load must not land over the new one
+    this._contexts = []; // a new document is not inside anything (M3)
     this.edit("new ensemble", (ensemble) => {
       ensemble.name = "untitled";
       ensemble.pieces.length = 0;

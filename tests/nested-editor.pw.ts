@@ -234,3 +234,245 @@ test("drill into a nested rig, edit it, save it, pop out and see it in both plac
   expect(await lightAt(page, "rig-b/deck")).toEqual([-6, 4, 0]);
   expect(realErrors(errors)).toEqual([]);
 });
+
+/*
+  0.8.0 review majors, the editor's nested state:
+  M1 loading the same nested document twice keeps its nested pieces (the
+     setter built before the url was known, so refs resolved against the page);
+  M2 Back with unsaved changes, then Open inside again: still unsaved;
+  M3 opening another document while drilled in clears the drill stack.
+*/
+test("reload, re-drill and open-while-inside keep the nested state honest", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  const requested: string[] = [];
+  await page.route("**/nest-edit/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace(
+      /^.*\/nest-edit\//,
+      ""
+    );
+    requested.push(path);
+    const body = FILES[path];
+    return body
+      ? route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify(body),
+        })
+      : route.fulfill({ status: 404, body: "missing" });
+  });
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(1500);
+  const has = (id: string) =>
+    page.evaluate(
+      (id) =>
+        !!(
+          document.querySelector("tosi-ensemble-editor") as Element & {
+            _built?: { pieces: Map<string, unknown> };
+          }
+        )._built?.pieces.has(id),
+      id
+    );
+
+  // M1: load, then load the SAME url again.
+  await page.evaluate(async () => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    ed.store = {
+      list: async () => [],
+      read: async () => ({ name: "x", pieces: [] }),
+      write: async (id: string) => ({ id }),
+      idFor: (src: string) =>
+        src.endsWith("/nest-edit/kit/rig.json") ? "store/rig.json" : null,
+    };
+    await ed.load("/nest-edit/level.json");
+  });
+  await expect.poll(() => has("rig-a/deck"), { timeout: 30_000 }).toBe(true);
+  await page.evaluate(async () => {
+    await (document.querySelector("tosi-ensemble-editor") as Ed).load(
+      "/nest-edit/level.json"
+    );
+  });
+  await expect
+    .poll(() => has("rig-a/deck"), {
+      message: "reloading the same document lost its nested pieces",
+      timeout: 30_000,
+    })
+    .toBe(true);
+  expect(
+    requested.filter((r) => !r.startsWith("level") && !r.startsWith("kit/")),
+    "a nested ref was fetched against the page"
+  ).toEqual([]);
+
+  // M2: drill in, edit, Back WITHOUT saving, drill in again: still unsaved.
+  const dirtyAgain = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      drillIn(id: string): boolean;
+      popOut(): boolean;
+    };
+    ed.drillIn("rig-a");
+    ed.update("deck", { at: [0, 7, 0] });
+    const first = ed.dirty;
+    ed.popOut();
+    ed.drillIn("rig-a");
+    return {
+      first,
+      again: ed.dirty,
+      deck: ed.ensemble.pieces.find((p) => p.id === "deck")!.at,
+    };
+  });
+  expect(dirtyAgain).toEqual({ first: true, again: true, deck: [0, 7, 0] });
+
+  // M3: open another document while inside: the drill stack goes.
+  const after = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      popOut(): boolean;
+    };
+    ed.ensemble = { name: "other", pieces: [] } as never;
+    return { path: ed.nestPath, back: ed.popOut(), name: ed.ensemble.name };
+  });
+  expect(after).toEqual({ path: ["other"], back: false, name: "other" });
+});
+
+/*
+  0.8.0 review: scrubbing a nested piece's transform REBUILT THE SCENE every
+  step (the old "rotation isn't live" regression, back for nested pieces).
+  Children without features are now written in place, like any plain piece:
+  12 rotation steps, no rebuild, and a child's node really turned.
+*/
+const KIT = "https://cdn.tosijs.net/kenney/libraries/pirate-kit.glb";
+const MESH_FILES: Record<string, unknown> = {
+  "level.json": {
+    name: "level",
+    libraries: [{ name: "pirate", url: KIT }],
+    pieces: [{ id: "rig-a", ensemble: "kit/rig.json", at: [0, 0, 0] }],
+  },
+  "kit/rig.json": {
+    name: "rig",
+    libraries: [{ name: "pirate", url: KIT }],
+    pieces: [
+      { id: "deck", mesh: "structure-platform-dock", at: [3, 0, 0] },
+      { id: "sand", mesh: "patch-sand", at: [-3, 0, 0] },
+    ],
+  },
+};
+
+test("scrubbing a nested piece's rotation moves its children live, without rebuilding", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  await page.route("**/nest-mesh/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace(
+      /^.*\/nest-mesh\//,
+      ""
+    );
+    const body = MESH_FILES[path];
+    return body
+      ? route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify(body),
+        })
+      : route.fulfill({ status: 404, body: "missing" });
+  });
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(1500);
+  await page.evaluate(async () => {
+    await (document.querySelector("tosi-ensemble-editor") as Ed).load(
+      "/nest-mesh/level.json"
+    );
+  });
+  type Body = {
+    element?: {
+      mesh?: {
+        computeWorldMatrix(f: boolean): void;
+        forward: { x: number; z: number };
+      };
+    } | null;
+    node?: {
+      computeWorldMatrix(f: boolean): void;
+      forward: { x: number; z: number };
+    } | null;
+  };
+  const facing = () =>
+    page.evaluate(() => {
+      const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+        _built?: { pieces: Map<string, Body> };
+      };
+      const b = ed._built?.pieces.get("rig-a/deck");
+      const n = b?.element?.mesh ?? b?.node;
+      if (!n) return null;
+      n.computeWorldMatrix(true);
+      return Math.round((Math.atan2(n.forward.x, n.forward.z) * 180) / Math.PI);
+    });
+  await expect.poll(facing, { timeout: 60_000 }).not.toBeNull();
+  await page.waitForTimeout(1500);
+  const before = await facing();
+
+  const rebuilds = await page.evaluate(async () => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      rebuild(o?: unknown): void;
+    };
+    let count = 0;
+    const real = ed.rebuild.bind(ed);
+    ed.rebuild = (o?: unknown) => {
+      count++;
+      real(o);
+    };
+    for (let deg = 0; deg <= 90; deg += 7.5) {
+      ed.update("rig-a", { rot: [0, deg, 0] });
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+    }
+    ed.rebuild = real;
+    return count;
+  });
+  await page.waitForTimeout(500);
+  const after = await facing();
+  console.log(JSON.stringify({ before, after, rebuilds }));
+  expect(rebuilds, "scrubbing a nested piece rebuilt the scene").toBe(0);
+  expect(Math.abs(((after! - before! + 540) % 360) - 180)).toBe(90);
+  // ...and it MOVED with the turn: (3, 0, 0) turned 90° about y is (0, 0, -3).
+  const where = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Element & {
+      _built?: {
+        pieces: Map<
+          string,
+          {
+            element?: {
+              mesh?: {
+                getAbsolutePosition(): { x: number; y: number; z: number };
+              };
+            } | null;
+            node?: {
+              getAbsolutePosition(): { x: number; y: number; z: number };
+            } | null;
+          }
+        >;
+      };
+    };
+    const b = ed._built!.pieces.get("rig-a/deck")!;
+    const p = (b.element?.mesh ?? b.node)!.getAbsolutePosition();
+    return [p.x, p.y, p.z].map((v) => Math.round(v * 100) / 100);
+  });
+  expect(where).toEqual([0, 0, -3]);
+});

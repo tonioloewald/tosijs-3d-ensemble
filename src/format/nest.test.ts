@@ -352,6 +352,8 @@ describe("flattenEnsemble refuses what it cannot follow", () => {
     expect(problems.map((p) => `${p.severity} ${p.code}`)).toEqual([
       "warning nested-missing",
     ]);
+    // It says how to fix it, not only that a file is missing (0.8.0 review).
+    expect(problems[0]!.message).toContain("collectNested");
   });
 
   it("a document with nothing nested is returned as it is", () => {
@@ -375,5 +377,86 @@ describe("nestedUrl", () => {
       )
     ).toBe("https://h.example/assemblies/ocean-rig.json");
     expect(nestedUrl("ocean-rig")).toBe("ocean-rig.json");
+  });
+});
+
+describe("one rule for piece references (0.8.0 review)", () => {
+  it("a consumer field marked only x-widget: ref is prefixed when nested", async () => {
+    const { registerFeature, unregisterFeature } = await import(
+      "./registry.js"
+    );
+    registerFeature({
+      name: "zz-follows",
+      schema: {
+        type: "object",
+        properties: { target: { type: "string", "x-widget": "ref" } },
+      },
+      bind: () => null,
+    });
+    try {
+      const { ensemble } = flattenEnsemble(
+        { name: "p", pieces: [{ id: "n", ensemble: "c.json", at: [0, 0, 0] }] },
+        new Map([
+          [
+            "c.json",
+            child([
+              { id: "leader", mesh: "box", at: [0, 0, 0] },
+              {
+                id: "follower",
+                at: [0, 0, 0],
+                features: { "zz-follows": { target: "leader" } },
+              },
+            ]),
+          ],
+        ])
+      );
+      expect(
+        (
+          ensemble.pieces.find((p) => p.id === "n/follower")!.features![
+            "zz-follows"
+          ] as { target: string }
+        ).target
+      ).toBe("n/leader");
+    } finally {
+      unregisterFeature("zz-follows");
+    }
+  });
+});
+
+describe("a child's relative urls are its own (0.8.0 review lead)", () => {
+  it("rebases libraries and fetched feature urls onto the child's url", () => {
+    const { ensemble } = flattenEnsemble(
+      {
+        name: "level",
+        pieces: [{ id: "r", ensemble: "/assemblies/rig.json", at: [0, 0, 0] }],
+      },
+      new Map([
+        [
+          "/assemblies/rig.json",
+          child(
+            [
+              { id: "hull", library: "kit", mesh: "box", at: [0, 0, 0] },
+              {
+                id: "hum",
+                at: [0, 0, 0],
+                features: { sound: { url: "sounds/hum.mp3" } },
+              },
+            ],
+            { libraries: [{ name: "kit", url: "./rig.glb" }] }
+          ),
+        ],
+      ]),
+      { base: "/levels/one.json" }
+    );
+    expect(ensemble.libraries).toEqual([
+      { name: "kit", url: "/assemblies/rig.glb" },
+    ]);
+    expect(
+      (
+        ensemble.pieces.find((p) => p.id === "r/hum")!.features!.sound as {
+          url: string;
+        }
+      ).url
+    ).toBe("/assemblies/sounds/hum.mp3");
   });
 });

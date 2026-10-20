@@ -21,8 +21,8 @@ What happens to the child, in order:
 
 - **Ids** become `<nesting id>/<child id>`, and so does everything in the
   child that names a piece: its links (`from`, `to`), and any feature field
-  that holds a piece id (marked `x-piece-ref` in its schema, such as a
-  planet's `terrain`). A child's link from `reactor` to `projector` becomes
+  that holds a piece id (marked `x-piece-ref` or `x-widget: "ref"` in its
+  schema, such as a planet's `terrain`; see `pieceRefKeys`). A child's link from `reactor` to `projector` becomes
   `rig-a/reactor` → `rig-a/projector`, and can never resolve against a
   same-named piece in the parent.
 - **Transforms** compose: the child's whole arrangement (its own `scale`
@@ -39,6 +39,32 @@ What happens to the child, in order:
 - **Ignored:** the child's `preview` (scenery for its author), its
   `placement` (the parent places it), its `recommends` (the outer scene's).
 - A nesting piece that is **disabled** contributes nothing.
+
+## Loading it
+
+`loadEnsemble(url, …)` and `<tosi-ensemble src>` fetch every nested
+ensemble before they build; there is nothing to do. A host that builds a
+document itself fetches them first and passes them in, with the url the
+document came from (its relative refs are relative to it):
+
+```js
+import { buildEnsemble, collectNested, placeMesh } from 'tosijs-3d-ensemble'
+
+const nested = await collectNested(doc, { base: url })
+buildEnsemble(doc, { scene, placePiece: placeMesh, nested, base: url })
+```
+
+Without `nested`, each nested piece is reported `nested-missing` and builds
+nothing. A document assigned in code (`element.ensemble = doc`) has no url,
+so its relative refs resolve against the page.
+
+`collectNested` fetches each url once (a child used by many pieces, at many
+levels, is one request), follows at most `MAX_NESTING_DEPTH` levels and
+`MAX_NESTED_DOCUMENTS` documents, and never fetches a url the https rule
+refuses. A flattened document past `MAX_FLAT_PIECES` (5000) is cut off and
+reported `nested-too-large`: a few small documents nesting each other many
+times over multiply, and a shared document must not be able to hand a
+reader a million pieces.
 
 ## In the editor
 

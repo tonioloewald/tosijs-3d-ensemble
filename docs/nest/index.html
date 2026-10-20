@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=ca6e8b3562aa" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=65458b70495b" data-tosi-doc-system />
   <title>Nested ensembles — tosijs-3d-ensemble</title>
   <meta name="description" content="A piece can be a whole ensemble: &quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot; in place of mesh. A level made of rigs, a fortress made of towers, a plaza with lamp…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="Nested ensembles — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=2970f5b07ce0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=abe497c98e75" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="nest.ts">
 <h1 id="nested-ensembles">Nested ensembles</h1>
 <p>A piece can be a whole ensemble: <code>&quot;ensemble&quot;: &quot;/assemblies/ocean-rig.json&quot;</code>
@@ -45,8 +45,8 @@ pump moved&quot;); that is a later step.</p>
 <ul>
 <li><strong>Ids</strong> become <code>&lt;nesting id&gt;/&lt;child id&gt;</code>, and so does everything in the
 child that names a piece: its links (<code>from</code>, <code>to</code>), and any feature field
-that holds a piece id (marked <code>x-piece-ref</code> in its schema, such as a
-planet&#39;s <code>terrain</code>). A child&#39;s link from <code>reactor</code> to <code>projector</code> becomes
+that holds a piece id (marked <code>x-piece-ref</code> or <code>x-widget: &quot;ref&quot;</code> in its
+schema, such as a planet&#39;s <code>terrain</code>; see <code>pieceRefKeys</code>). A child&#39;s link from <code>reactor</code> to <code>projector</code> becomes
 <code>rig-a/reactor</code> → <code>rig-a/projector</code>, and can never resolve against a
 same-named piece in the parent.</li>
 <li><strong>Transforms</strong> compose: the child&#39;s whole arrangement (its own <code>scale</code>
@@ -64,6 +64,26 @@ for the child&#39;s pieces.</li>
 <code>placement</code> (the parent places it), its <code>recommends</code> (the outer scene&#39;s).</li>
 <li>A nesting piece that is <strong>disabled</strong> contributes nothing.</li>
 </ul>
+<h2 id="loading-it">Loading it</h2>
+<p><code>loadEnsemble(url, …)</code> and <code>&lt;tosi-ensemble src&gt;</code> fetch every nested
+ensemble before they build; there is nothing to do. A host that builds a
+document itself fetches them first and passes them in, with the url the
+document came from (its relative refs are relative to it):</p>
+<pre><code class="language-js">import { buildEnsemble, collectNested, placeMesh } from &#39;tosijs-3d-ensemble&#39;
+
+const nested = await collectNested(doc, { base: url })
+buildEnsemble(doc, { scene, placePiece: placeMesh, nested, base: url })
+</code></pre>
+<p>Without <code>nested</code>, each nested piece is reported <code>nested-missing</code> and builds
+nothing. A document assigned in code (<code>element.ensemble = doc</code>) has no url,
+so its relative refs resolve against the page.</p>
+<p><code>collectNested</code> fetches each url once (a child used by many pieces, at many
+levels, is one request), follows at most <code>MAX_NESTING_DEPTH</code> levels and
+<code>MAX_NESTED_DOCUMENTS</code> documents, and never fetches a url the https rule
+refuses. A flattened document past <code>MAX_FLAT_PIECES</code> (5000) is cut off and
+reported <code>nested-too-large</code>: a few small documents nesting each other many
+times over multiply, and a shared document must not be able to hand a
+reader a million pieces.</p>
 <h2 id="in-the-editor">In the editor</h2>
 <p>From outside, a nested ensemble is one piece (SPEC: &quot;a black box inside a
 scene&quot;): a click anywhere inside it selects it, and it moves, turns and
@@ -164,6 +184,6 @@ the same https rule as a library.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-0a9xm1aq.js"></script>
+  <script type="module" src="../hydrate-rj5kqha7.js"></script>
 </body>
 </html>

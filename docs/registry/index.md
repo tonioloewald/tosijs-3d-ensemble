@@ -44,6 +44,33 @@ string. An UNMARKED field is not checked: the rule cannot know a string is
 fetched unless the schema says it is. That is how `sound.url`, a built-in,
 went unchecked until 0.4.0's review.
 
+Structured data a feature accepts but the panel has no form for (an effect's
+`recipe`) is declared in `x-data: { key: schema }`, and the urls inside it
+are found by walking that schema (`deepFetchedProblems`): mark them the same
+way, `format: 'uri-reference'`, wherever they sit.
+
+## A field that holds a PIECE ID must say so
+
+Mark it `'x-piece-ref': true` (or `'x-widget': 'ref'`, which also gives it
+the panel's piece picker):
+
+```typescript
+properties: {
+  target: { type: 'string', 'x-piece-ref': true },
+}
+```
+
+Then renaming the piece it names re-points it, and nesting its ensemble
+inside another prefixes it (`rig-a/leader`), so it never resolves against a
+same-named piece in the parent. An unmarked id is left as written in both
+cases: the format does not guess which strings are ids. `pieceRefKeys`
+answers which fields are.
+
+## A slider can name its stops
+
+`'x-stops': [{ value: 0.5, label: 'semi-active' }, …]` on a number draws a
+tick and a name at each, and the handle catches on them.
+
 ## `bind` and `link` are two phases, and that is not a style preference
 
 A `protector` that resolves its power source during `bind` works only if the

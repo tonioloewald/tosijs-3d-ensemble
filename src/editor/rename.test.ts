@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { registerCombatPreset } from "../presets/combat.js";
-import { featureRegistration } from "../format/registry.js";
+import { pieceRefKeys } from "../format/registry.js";
+import { registerSceneFeatures } from "../runtime/features-scene.js";
 
 /*
   RENAMING A PIECE IS A GRAPH EDIT.
@@ -11,23 +12,17 @@ import { featureRegistration } from "../format/registry.js";
   the rule it follows, without needing a browser to do it.
 */
 
-/** The rule `EnsembleEditor.renamePiece` applies, in isolation. */
+/**
+ * The rule `EnsembleEditor.renamePiece` applies: the registry's own
+ * `pieceRefKeys`, not a copy of it (a copy here pinned a rule the editor
+ * had stopped following, 0.8.0 review).
+ */
 const refFields = (
   features: Record<string, unknown>
-): Array<[string, string]> => {
-  const out: Array<[string, string]> = [];
-  for (const feature of Object.keys(features)) {
-    const props = (
-      featureRegistration(feature)?.schema as
-        | { properties?: Record<string, { "x-widget"?: string }> }
-        | undefined
-    )?.properties;
-    for (const [key, spec] of Object.entries(props ?? {})) {
-      if (spec?.["x-widget"] === "ref") out.push([feature, key]);
-    }
-  }
-  return out;
-};
+): Array<[string, string]> =>
+  Object.keys(features).flatMap((feature) =>
+    pieceRefKeys(feature).map((key) => [feature, key] as [string, string])
+  );
 
 /*
   PUT IT BACK. The registry is global and the suite shares a process, so
@@ -42,6 +37,14 @@ beforeAll(() => {
 afterAll(() => dropCombat());
 
 describe("which fields hold a piece id", () => {
+  it("finds the x-piece-ref links too: planet ↔ terrain, a landform's terrain", () => {
+    // These were marked only for nesting, so a rename left them dangling.
+    registerSceneFeatures();
+    expect(refFields({ terrain: {} })).toEqual([["terrain", "planet"]]);
+    expect(refFields({ planet: {} })).toEqual([["planet", "terrain"]]);
+    expect(refFields({ volcano: {} })).toEqual([["volcano", "terrain"]]);
+  });
+
   it("finds a reference field by its declared widget", () => {
     // `protector.source` is the built-in case, and the reason the rule is
     // declarative: nothing about the NAME `source` says it is an id.

@@ -8,7 +8,7 @@ All notable changes to this project are documented here, in
 ### ⚠️ Breaking
 
 - **Peer `tosijs-3d` is `^0.10.18`** (effects, landform schemas, slider
-  stops, recipe url marks).
+  stops, recipe url marks; and 0.10.15's panels that no longer blink).
 - **A nested piece builds.** A document with `"ensemble": …` pieces used
   to fail validation (`nested-not-supported`) and build nothing for them;
   it now loads the child and builds its pieces. That code is gone.
@@ -74,8 +74,12 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
-- **Peer `tosijs-3d` is `^0.10.18`.** The editor's in-scene panels no longer
-  blink when they rebuild (0.10.15 swaps content into the same plane).
+- **The editor's in-scene panels no longer blink** when they rebuild
+  (tosijs-3d 0.10.15 swaps content into the same plane; peer bump above).
+- **A game's bundle grew 11.25 → 14.6 kB gz** (measured by
+  `tree-shaking.test.ts`, whose ceiling went 14 → 16 kB): effects,
+  landforms, the recipe url walk, and nested-ensemble loading and transform
+  maths, all of which a game that loads such a document runs.
 
 ### Fixed
 

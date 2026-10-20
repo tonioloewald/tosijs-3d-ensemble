@@ -158,9 +158,11 @@ Done: types, roles-as-presets with per-feature merge, `validate` returning
 **environment primitives** (`terrain`, `water`, `clouds`, `ambient`, `fog`) as
 features with no mesh — see SPEC.md open question 2.
 
+Done since: nested-ensemble flattening at load, and drill in / pop out in the
+editor (0.8.0, `format/nest.ts`).
+
 Not done: JSON Schema via tosijs-schema for the format itself (feature schemas
-are already JSON Schema), nested-ensemble flattening (`validate` reports it
-rather than half-doing it), and the manta-recon migration below.
+are already JSON Schema), and the manta-recon migration below.
 
 - JSON Schema for `ensemble`, `piece`, `feature`, `link`, `point`, `zone` via
   tosijs-schema — types and validation from one source (SPEC.md §Part 3).

@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=ca6e8b3562aa" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=65458b70495b" data-tosi-doc-system />
   <title>The feature registry — tosijs-3d-ensemble</title>
   <meta name="description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
   <link rel="alternate" type="text/markdown" href="index.md" title="The feature registry — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=2970f5b07ce0" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=abe497c98e75" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="registry.ts">
 <h1 id="the-feature-registry">The feature registry</h1>
 <p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
@@ -65,6 +65,25 @@ your element never receives a url the rule refused — or anything that is not a
 string. An UNMARKED field is not checked: the rule cannot know a string is
 fetched unless the schema says it is. That is how <code>sound.url</code>, a built-in,
 went unchecked until 0.4.0&#39;s review.</p>
+<p>Structured data a feature accepts but the panel has no form for (an effect&#39;s
+<code>recipe</code>) is declared in <code>x-data: { key: schema }</code>, and the urls inside it
+are found by walking that schema (<code>deepFetchedProblems</code>): mark them the same
+way, <code>format: &#39;uri-reference&#39;</code>, wherever they sit.</p>
+<h2 id="a-field-that-holds-a-piece-id-must-say-so">A field that holds a PIECE ID must say so</h2>
+<p>Mark it <code>&#39;x-piece-ref&#39;: true</code> (or <code>&#39;x-widget&#39;: &#39;ref&#39;</code>, which also gives it
+the panel&#39;s piece picker):</p>
+<pre><code class="language-typescript" data-highlighted>properties<span class="token operator">:</span> <span class="token punctuation">{</span>
+  target<span class="token operator">:</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'string'</span><span class="token punctuation">,</span> <span class="token string-property property">'x-piece-ref'</span><span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Then renaming the piece it names re-points it, and nesting its ensemble
+inside another prefixes it (<code>rig-a/leader</code>), so it never resolves against a
+same-named piece in the parent. An unmarked id is left as written in both
+cases: the format does not guess which strings are ids. <code>pieceRefKeys</code>
+answers which fields are.</p>
+<h2 id="a-slider-can-name-its-stops">A slider can name its stops</h2>
+<p><code>&#39;x-stops&#39;: [{ value: 0.5, label: &#39;semi-active&#39; }, …]</code> on a number draws a
+tick and a name at each, and the handle catches on them.</p>
 <h2 id="bind-and-link-are-two-phases-and-that-is-not-a-style-preference"><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
 <p>A <code>protector</code> that resolves its power source during <code>bind</code> works only if the
 reactor happened to bind first — so the same ensemble behaves differently
@@ -193,6 +212,6 @@ it. A link handler owns the link, gets both ends, and disposes once.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-0a9xm1aq.js"></script>
+  <script type="module" src="../hydrate-rj5kqha7.js"></script>
 </body>
 </html>

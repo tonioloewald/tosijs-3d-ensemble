@@ -22,8 +22,8 @@ What happens to the child, in order:
 
 - **Ids** become `<nesting id>/<child id>`, and so does everything in the
   child that names a piece: its links (`from`, `to`), and any feature field
-  that holds a piece id (marked `x-piece-ref` in its schema, such as a
-  planet's `terrain`). A child's link from `reactor` to `projector` becomes
+  that holds a piece id (marked `x-piece-ref` or `x-widget: "ref"` in its
+  schema, such as a planet's `terrain`; see `pieceRefKeys`). A child's link from `reactor` to `projector` becomes
   `rig-a/reactor` → `rig-a/projector`, and can never resolve against a
   same-named piece in the parent.
 - **Transforms** compose: the child's whole arrangement (its own `scale`
@@ -40,6 +40,32 @@ What happens to the child, in order:
 - **Ignored:** the child's `preview` (scenery for its author), its
   `placement` (the parent places it), its `recommends` (the outer scene's).
 - A nesting piece that is **disabled** contributes nothing.
+
+## Loading it
+
+`loadEnsemble(url, …)` and `<tosi-ensemble src>` fetch every nested
+ensemble before they build; there is nothing to do. A host that builds a
+document itself fetches them first and passes them in, with the url the
+document came from (its relative refs are relative to it):
+
+```js
+import { buildEnsemble, collectNested, placeMesh } from 'tosijs-3d-ensemble'
+
+const nested = await collectNested(doc, { base: url })
+buildEnsemble(doc, { scene, placePiece: placeMesh, nested, base: url })
+```
+
+Without `nested`, each nested piece is reported `nested-missing` and builds
+nothing. A document assigned in code (`element.ensemble = doc`) has no url,
+so its relative refs resolve against the page.
+
+`collectNested` fetches each url once (a child used by many pieces, at many
+levels, is one request), follows at most `MAX_NESTING_DEPTH` levels and
+`MAX_NESTED_DOCUMENTS` documents, and never fetches a url the https rule
+refuses. A flattened document past `MAX_FLAT_PIECES` (5000) is cut off and
+reported `nested-too-large`: a few small documents nesting each other many
+times over multiply, and a shared document must not be able to hand a
+reader a million pieces.
 
 ## In the editor
 
@@ -64,7 +90,7 @@ to the document that names it, or a bare name (`ocean-rig`), which means
 the same https rule as a library.
 */
 /*{"parent":"Format","order":9}*/
-import { featureRegistration } from "./registry.js";
+import { featureRegistration, fetchedKeys, pieceRefKeys } from "./registry.js";
 import type {
   Ensemble,
   Euler,
@@ -80,6 +106,15 @@ import type { Problem } from "./validate.js";
 
 /** How deep ensembles may nest before the loader stops following them. */
 export const MAX_NESTING_DEPTH = 8;
+/**
+ * How many pieces a flattened document may have. Past it the rest is
+ * refused (`nested-too-large`): a few small documents nesting each other
+ * several times over multiply, and a shared document must not be able to
+ * hand a reader a million pieces (0.8.0 review).
+ */
+export const MAX_FLAT_PIECES = 5000;
+/** How many distinct documents one load may fetch. */
+export const MAX_NESTED_DOCUMENTS = 64;
 
 /**
  * Where a nested ensemble lives, as a key the children map uses: `ref`
@@ -88,7 +123,16 @@ export const MAX_NESTING_DEPTH = 8;
  * relative (the page resolves it when it fetches).
  */
 export function nestedUrl(ref: string, base?: string): string {
-  const path = /[/.]/.test(ref) ? ref : `${ref}.json`;
+  return resolveAgainst(/[/.]/.test(ref) ? ref : `${ref}.json`, base);
+}
+
+/**
+ * `path` resolved against `base` (the url of the document that holds it),
+ * kept relative when `base` is relative, so the loader and the flattener
+ * agree on every key. A nested child's own libraries and fetched urls are
+ * relative to the CHILD, and this is how they are rebased.
+ */
+export function resolveAgainst(path: string, base?: string): string {
   if (!base) return path;
   try {
     return new URL(path, base).href;
@@ -184,6 +228,12 @@ const isIdentity = (m: M3, eps = 1e-9): boolean =>
     row.every((v, j) => Math.abs(v - (i === j ? 1 : 0)) < eps)
   );
 
+/** A relative url, rebased onto the document it came from; others as they are. */
+const rebase = (url: string, base: string | undefined): string =>
+  !url || !base || /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(url)
+    ? url
+    : resolveAgainst(url, base);
+
 /** A placement: where a child arrangement's origin goes, and how. */
 interface Frame {
   at: Vec3;
@@ -249,18 +299,6 @@ const isAxisAligned = (m: M3, eps = 1e-9): boolean =>
 
 /* ---- the splice ---- */
 
-/** Feature fields that hold a piece id, by feature: from `x-piece-ref`. */
-function pieceRefKeys(feature: string): string[] {
-  const props = (
-    featureRegistration(feature)?.schema as {
-      properties?: Record<string, { "x-piece-ref"?: boolean }>;
-    }
-  )?.properties;
-  return Object.entries(props ?? {})
-    .filter(([, spec]) => spec?.["x-piece-ref"])
-    .map(([key]) => key);
-}
-
 /**
  * Splice every nested ensemble into its parent, recursively. `children` maps
  * `nestedUrl(ref, base)` to the loaded child; a ref it does not hold is
@@ -273,6 +311,23 @@ export function flattenEnsemble(
 ): Flattened {
   const problems: Problem[] = [];
   if (!root.pieces.some((p) => p.ensemble)) return { ensemble: root, problems };
+  // Every splice step counts, nesting ones included, so the WORK is bounded
+  // as well as the output.
+  let spliced = 0;
+  let refused = false;
+  const full = (at: string): boolean => {
+    if (spliced < MAX_FLAT_PIECES) return false;
+    if (!refused) {
+      refused = true;
+      problems.push({
+        severity: "error",
+        code: "nested-too-large",
+        message: `nested ensembles expand past ${MAX_FLAT_PIECES} pieces; the rest are left out`,
+        path: at,
+      });
+    }
+    return true;
+  };
 
   const libraries: LibraryRef[] = [...(root.libraries ?? [])];
   const links = [...(root.links ?? [])];
@@ -280,7 +335,13 @@ export function flattenEnsemble(
   const zones: Zone[] = [...(root.zones ?? [])];
 
   /** A child's library name in the flat document (renamed on a clash). */
-  const adoptLibrary = (lib: LibraryRef, prefix: string): string => {
+  const adoptLibrary = (
+    authored: LibraryRef,
+    prefix: string,
+    base: string | undefined
+  ): string => {
+    // Relative to the CHILD's url, not the page (0.8.0 review).
+    const lib = { ...authored, url: rebase(authored.url, base) };
     const same = libraries.find((l) => l.name === lib.name);
     if (!same) {
       libraries.push(lib);
@@ -316,10 +377,12 @@ export function flattenEnsemble(
     const libraryName = new Map<string, string>();
     if (prefix)
       for (const lib of doc.libraries ?? [])
-        libraryName.set(lib.name, adoptLibrary(lib, prefix));
+        libraryName.set(lib.name, adoptLibrary(lib, prefix, base));
 
     doc.pieces.forEach((piece, index) => {
       const at = `${path}/pieces/${index}`;
+      if (prefix && full(at)) return;
+      if (prefix || piece.ensemble) spliced++;
       if (piece.ensemble) {
         if (piece.enabled === false) return;
         const key = nestedUrl(piece.ensemble, base);
@@ -362,7 +425,7 @@ export function flattenEnsemble(
             code: "nested-missing",
             message: `"${id(piece.id)}" nests ${
               piece.ensemble
-            }, which is not loaded; it contributes nothing`,
+            }, which is not loaded; it contributes nothing (pass the loaded children to buildEnsemble as \`nested\`, from \`await collectNested(doc, { base })\`)`,
             path: `${at}/ensemble`,
           });
           return;
@@ -424,11 +487,19 @@ export function flattenEnsemble(
             Object.entries(piece.features).map(([name, cfg]) => {
               if (!cfg || typeof cfg !== "object") return [name, cfg];
               const refs = pieceRefKeys(name);
-              if (!refs.length) return [name, cfg];
+              const fetched = fetchedKeys(featureRegistration(name));
+              if (!refs.length && !fetched.size) return [name, cfg];
               const copy = { ...(cfg as Record<string, unknown>) };
               for (const key of refs)
                 if (typeof copy[key] === "string" && copy[key])
                   copy[key] = id(copy[key] as string);
+              // A fetched url is relative to the child too (not a keyword).
+              for (const [key, keywords] of fetched)
+                if (
+                  typeof copy[key] === "string" &&
+                  !keywords.has(copy[key] as string)
+                )
+                  copy[key] = rebase(copy[key] as string, base);
               return [name, copy];
             })
           )

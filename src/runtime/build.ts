@@ -51,6 +51,7 @@ import { scaleVector, uniformScale } from "../format/scale.js";
 import { validate } from "../format/validate.js";
 import {
   flattenEnsemble,
+  MAX_NESTED_DOCUMENTS,
   MAX_NESTING_DEPTH,
   nestedRefs,
   nestedUrl,
@@ -643,30 +644,51 @@ export async function collectNested(
     into?: Map<string, Ensemble>;
   } = {}
 ): Promise<Map<string, Ensemble>> {
+  /*
+    EACH URL ONCE (0.8.0 review). This walked every PATH, so a child shared
+    by k pieces at each of d levels was fetched k^d times (measured: 6
+    documents, 55,986 fetches): a shared document could make a reader's
+    browser hammer any https host. Now a url is walked once, a fetch in
+    flight is shared, and a cycle is simply a url already walked.
+  */
+  const walked = new Set<string>(base ? [base] : []);
+  const inflight = new Map<string, Promise<Ensemble | undefined>>();
+  const fetchOnce = (key: string): Promise<Ensemble | undefined> => {
+    const held = into.get(key);
+    if (held) return Promise.resolve(held);
+    let pending = inflight.get(key);
+    if (!pending) {
+      pending = fetchDocument(key).then(
+        (doc) => {
+          into.set(key, doc);
+          return doc;
+        },
+        () => undefined
+      );
+      inflight.set(key, pending);
+    }
+    return pending;
+  };
   const walk = async (
     doc: Ensemble,
     docBase: string | undefined,
-    chain: string[]
+    depth: number
   ): Promise<void> => {
+    if (depth >= MAX_NESTING_DEPTH) return;
+    const keys = [
+      ...new Set(nestedRefs(doc).map((ref) => nestedUrl(ref, docBase))),
+    ];
     await Promise.all(
-      nestedRefs(doc).map(async (ref) => {
-        const key = nestedUrl(ref, docBase);
-        if (chain.includes(key) || chain.length >= MAX_NESTING_DEPTH) return;
-        if (urlProblem(key, "nested")) return;
-        let child = into.get(key);
-        if (!child) {
-          try {
-            child = await fetchDocument(key);
-          } catch {
-            return;
-          }
-          into.set(key, child);
-        }
-        await walk(child, key, [...chain, key]);
+      keys.map(async (key) => {
+        if (walked.has(key) || urlProblem(key, "nested")) return;
+        if (walked.size >= MAX_NESTED_DOCUMENTS) return;
+        walked.add(key);
+        const child = await fetchOnce(key);
+        if (child) await walk(child, key, depth + 1);
       })
     );
   };
-  await walk(root, base, base ? [base] : []);
+  await walk(root, base, 0);
   return into;
 }
 

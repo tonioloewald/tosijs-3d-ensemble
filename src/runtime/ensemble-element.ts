@@ -161,6 +161,7 @@ export class TosiEnsemble extends withAttributes({
     this._loads++;
     // Not from a url: its relative nested refs are the page's.
     this._base = undefined;
+    this._nested = new Map();
     this._setData(value);
   }
 
@@ -278,6 +279,8 @@ export class TosiEnsemble extends withAttributes({
       const data = await fetchEnsembleData(url);
       if (ticket !== this._loads) return;
       this._base = url;
+      // Every load re-reads its nested ensembles (0.8.0 review).
+      this._nested = new Map();
       // Libraries are mounted by `_mountAndBuild`, on this path and every
       // other: a page needs to know nothing about the content beyond its
       // address.

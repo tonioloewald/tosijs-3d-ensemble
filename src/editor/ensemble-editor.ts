@@ -2913,7 +2913,9 @@ export class EnsembleEditor extends withAttributes({
   private _commitEffect(id: string, recipe: EffectRecipe): void {
     this.edit("edit effect", (ensemble) => {
       const piece = ensemble.pieces.find((p) => p.id === id);
-      const cfg = piece?.features?.effect as Record<string, unknown> | undefined;
+      const cfg = piece?.features?.effect as
+        | Record<string, unknown>
+        | undefined;
       if (cfg) cfg.recipe = structuredClone(recipe);
     });
   }

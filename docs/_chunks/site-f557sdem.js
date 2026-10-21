@@ -1,5 +1,0 @@
-import{ci}from"./site-dkd9tveg.js";import{Di,N}from"./site-jw81twe3.js";import{o}from"./site-mkftt73g.js";var r="sceneTick";class eg extends ci{constructor(){super();this.type="SceneBeforeRender",this.timeSinceStart=this.registerDataOutput("timeSinceStart",N),this.deltaTime=this.registerDataOutput("deltaTime",N),this.eventRef=this.registerDataOutput("event",Di)}_updateOutputs(e){this.eventRef.setValue(e.getEventReference(r),e)}_preparePendingTasks(e){}_executeEvent(e,t){return this.timeSinceStart.setValue(t.timeSinceStart,e),this.deltaTime.setValue(t.deltaTime,e),this.eventRef.setValue(e.getEventReference(r),e),this._execute(e),!0}_cancelPendingTasks(e){}getClassName(){return"FlowGraphSceneTickEventBlock"}}var i=!1;function tg(){if(i)return;i=!0,o("FlowGraphSceneTickEventBlock",eg)}tg();
-export{eg,tg};
-
-//# debugId=595F722AD502B78364756E2164756E21
-//# sourceMappingURL=site-f557sdem.js.map

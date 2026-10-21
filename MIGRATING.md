@@ -319,3 +319,10 @@ places:
   editor's API changes. 0.10.19 makes its rig and effect tools mountable in
   a host's scene (tosijs-3d#122), which the editor builds on; 0.10.20 fixes
   its inline-SVG effect pictures throwing after a rebuild (tosijs-3d#124).
+
+## Upgrading from 0.8 to 0.9
+
+- **Peer `tosijs-3d` is `^0.11.2`.** tosijs-3d 0.11 removed nothing; its
+  behaviour changes are in its own Migration.md (system panels from code,
+  the glass gamepad, headset stick clicks). Nothing in a document or in
+  ensemble's API changes.

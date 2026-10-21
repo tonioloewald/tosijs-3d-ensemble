@@ -11,6 +11,9 @@ All notable changes to this project are documented here, in
   (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
   dangling wikilink now fails the doc build (tosijs-ui#234, ours).
 - **Peer `tosijs` is `^1.10.9`.**
+- **Peer `tosijs-3d` is `^0.11.2`** (0.11 removed nothing).
+- **tosijs-ui ^1.16.31** (dev): per-device edit passes for the tunnel
+  (board #3450), so this workspace stays editable after the next edit link.
 
 ## [0.8.1] — 2026-10-20
 

@@ -192,3 +192,92 @@ test("a planet and its terrain are one world, from either side", async ({
 
   expect(realErrors(errors)).toEqual([]);
 });
+
+/*
+  CLEARING A FIELD THE PRESET WROTE PUTS THE PRESET'S VALUE BACK (board
+  #3356). `ocean` is written by a planet's `world` preset, so it has no
+  default to fall back on (`x-apply-default: false`): removing it from the
+  document updated nothing, and the planet kept the author's last value.
+  Such a removal now rebinds the feature, which applies the preset again.
+*/
+test("clearing a preset-written planet field restores the preset's value", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  type Ed = Element & {
+    ensemble: {
+      pieces: Array<{
+        id: string;
+        features?: Record<string, Record<string, unknown>>;
+      }>;
+    };
+    edit(d: string, m: (e: Ed["ensemble"]) => void): void;
+    _built: {
+      pieces: Map<string, { handles: Map<string, Record<string, unknown>> }>;
+    };
+  };
+  const ocean = () =>
+    page.evaluate(() => {
+      const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+      return ed._built?.pieces.get("globe")?.handles.get("planet")?.ocean as
+        | number
+        | undefined;
+    });
+  await page.evaluate(() => {
+    (
+      document.querySelector("tosi-ensemble-editor") as unknown as {
+        ensemble: unknown;
+      }
+    ).ensemble = {
+      name: "worlds",
+      pieces: [
+        { id: "sun", at: [-0.6, 0.5, -0.3], features: { sun: {} } },
+        {
+          id: "globe",
+          at: [0, 20, 0],
+          features: { planet: { world: "earth", radius: 20 } },
+        },
+      ],
+    };
+  });
+  await expect.poll(ocean, { timeout: 30_000 }).not.toBeUndefined();
+  await page.waitForTimeout(1000);
+  const preset = await ocean();
+
+  await page.evaluate(() => {
+    (document.querySelector("tosi-ensemble-editor") as Ed).edit(
+      "ocean",
+      (e) => {
+        e.pieces.find((p) => p.id === "globe")!.features!.planet!.ocean = 0.123;
+      }
+    );
+  });
+  await expect.poll(ocean, { timeout: 30_000 }).toBe(0.123);
+
+  await page.evaluate(() => {
+    (document.querySelector("tosi-ensemble-editor") as Ed).edit(
+      "clear ocean",
+      (e) => {
+        delete e.pieces.find((p) => p.id === "globe")!.features!.planet!.ocean;
+      }
+    );
+  });
+  await expect
+    .poll(ocean, {
+      message: "clearing ocean kept the author's value",
+      timeout: 30_000,
+    })
+    .toBe(preset);
+  expect(preset).not.toBe(0.123);
+});

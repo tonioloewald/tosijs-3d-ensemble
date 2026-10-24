@@ -899,18 +899,28 @@ export class EnsembleEditor extends withAttributes({
         const registration = featureRegistration(name);
         const handle = built.pieces.get(piece.id)?.handles.get(name);
         if (!registration?.update || handle === undefined) return false;
+        // Narrowed, exactly as `buildEnsemble` narrows a bind: the live
+        // update path reaches the same elements from the same document,
+        // and an allow-list applied on only one of two roads is not one.
+        // With the schema's defaults under it, as `buildEnsemble` binds —
+        // so a key removed from the document resets to its default.
+        const effective = effectiveConfig(
+          registration,
+          now as Record<string, unknown>
+        );
+        /*
+          A REMOVED KEY WITH NOTHING TO RESET TO rebinds (board #3356). A
+          field a preset writes (a planet's `ocean` under its `world`) has
+          no default on purpose, so an update left the element holding the
+          author's last value; only a fresh bind applies the preset again.
+        */
         if (
-          !registration.update(
-            handle as never,
-            // Narrowed, exactly as `buildEnsemble` narrows a bind: the live
-            // update path reaches the same elements from the same document,
-            // and an allow-list applied on only one of two roads is not one.
-            // With the schema's defaults under it, as `buildEnsemble` binds —
-            // so a key removed from the document resets to its default.
-            effectiveConfig(registration, now as Record<string, unknown>),
-            piece
+          Object.keys(then as object).some(
+            (key) => !(key in (now as object)) && !(key in effective)
           )
-        ) {
+        )
+          return false;
+        if (!registration.update(handle as never, effective, piece)) {
           return false;
         }
       }

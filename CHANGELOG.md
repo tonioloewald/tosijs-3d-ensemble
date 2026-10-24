@@ -26,6 +26,10 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **Clearing a field a preset wrote puts the preset's value back** (board
+  #3356): removing a planet's `ocean` (written by its `world`) left the
+  author's last value on the planet; a removed key with nothing to reset to
+  now rebinds the feature.
 - **An edit made while a save is in flight stays unsaved** (board #3392):
   the document is serialized once, before the write. Open and History
   failures dispatch `error` (as Save does) instead of unhandled rejections.

@@ -5,13 +5,23 @@ All notable changes to this project are documented here, in
 
 ## [Unreleased]
 
+### ⚠️ Breaking
+
+- **A feature's allow-list fails closed** (board #3357, security). A feature
+  whose schema declares neither `x-accepts` nor `properties` used to receive
+  every key in a document's config, `innerHTML` included; it now receives
+  none, and `validate` reports each dropped key (`unknown-feature-key`).
+  Every built-in and preset feature declares its keys, so nothing here
+  changes; a consumer feature that relied on pass-through declares its
+  properties, or says `"x-accepts": "*"`.
+
 ### Changed
 
 - **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar
   (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
   dangling wikilink now fails the doc build (tosijs-ui#234, ours).
 - **Peer `tosijs` is `^1.10.9`.**
-- **Peer `tosijs-3d` is `^0.11.2`** (0.11 removed nothing).
+- **Peer `tosijs-3d` is `^0.11.4`** (0.11 removed nothing).
 - **tosijs-ui ^1.16.31** (dev): per-device edit passes for the tunnel
   (board #3450), so this workspace stays editable after the next edit link.
 

@@ -68,7 +68,10 @@ const garden: Ensemble = {
 describe("the format has no domain", () => {
   it("validates an ensemble with no combat vocabulary anywhere", () => {
     registerFeature({ name: "pruneable", schema: {} });
-    registerFeature({ name: "irrigation", schema: {} });
+    registerFeature({
+      name: "irrigation",
+      schema: { properties: { litresPerHour: { type: "number" } } },
+    });
     // A mesh set, because this test is about the format having no DOMAIN, not
     // about mesh names — without one `validate` rightly warns it could not
     // check them, which would bury the point.

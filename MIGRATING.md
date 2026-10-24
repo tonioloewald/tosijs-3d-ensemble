@@ -322,7 +322,11 @@ places:
 
 ## Upgrading from 0.8 to 0.9
 
-- **Peer `tosijs-3d` is `^0.11.2`.** tosijs-3d 0.11 removed nothing; its
+- **Peer `tosijs-3d` is `^0.11.4`.** tosijs-3d 0.11 removed nothing; its
   behaviour changes are in its own Migration.md (system panels from code,
   the glass gamepad, headset stick clicks). Nothing in a document or in
   ensemble's API changes.
+- **A consumer feature that declares no properties now receives an empty
+  config.** Declare the keys it reads in `schema.properties` (or list them in
+  `x-accepts`); `"x-accepts": "*"` keeps the old pass-through, deliberately.
+  `validate` names every key it drops.

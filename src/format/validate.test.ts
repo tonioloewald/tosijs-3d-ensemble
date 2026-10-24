@@ -186,7 +186,10 @@ describe("validate", () => {
       A test that borrows a real name and then deletes it is indistinguishable
       from a test that breaks the registry.
     */
-    registerFeature({ name: "body-stub", schema: { type: "object" } });
+    registerFeature({
+      name: "body-stub",
+      schema: { type: "object", properties: { seed: { type: "number" } } },
+    });
     const e = minimal({
       pieces: [
         {

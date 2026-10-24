@@ -77,11 +77,12 @@ describe("declaredConfig is an allow-list, not a denylist", () => {
     });
   });
 
-  it("passes everything through when a feature declares no properties", () => {
-    // There is nothing to check against, and an empty allow-list would
-    // silently disable such a feature — a worse failure than the one being
-    // prevented, and a silent one.
-    expect(declaredConfig(undefined, { anything: 1 })).toEqual({ anything: 1 });
+  it("passes nothing through when a feature declares nothing (#3357)", () => {
+    // This used to pass everything, on the grounds that an empty allow-list
+    // would disable such a feature SILENTLY. It is not silent: `validate`
+    // reports every dropped key (`unknown-feature-key`). A feature that
+    // really wants everything says so with `"x-accepts": "*"`.
+    expect(declaredConfig(undefined, { anything: 1 })).toEqual({});
   });
 });
 
@@ -171,5 +172,48 @@ describe("the allow-list keeps what a DOCUMENT may legitimately carry", () => {
       expect(dropped?.message).toContain("innerHTML");
       expect(dropped?.path).toBe("/pieces/0/features/terrain/innerHTML");
     }
+  });
+});
+
+/*
+  THE ALLOW-LIST FAILS CLOSED (board #3357, from the 0.6.0 review). A feature
+  whose schema declared neither `x-accepts` nor `properties` had no allow-list
+  at all, so every key, `innerHTML` included, reached its bind. Now it accepts
+  nothing it did not declare, and pass-through is something a schema SAYS:
+  `"x-accepts": "*"`.
+*/
+describe("a feature's allow-list fails closed (#3357)", () => {
+  it("every built-in and preset feature has an allow-list", async () => {
+    const { registerSceneFeatures } = await import("./features-scene.js");
+    const { registerCombatPreset } = await import("../presets/combat.js");
+    const { registerWorldPreset } = await import("../presets/world.js");
+    const { acceptedKeys, registeredFeatures } = await import(
+      "../format/registry.js"
+    );
+    registerSceneFeatures();
+    const undo = registerCombatPreset();
+    registerWorldPreset();
+    try {
+      const open = registeredFeatures()
+        .filter((f) => acceptedKeys(f) === null)
+        .map((f) => f.name);
+      expect(open).toEqual([]);
+    } finally {
+      undo();
+    }
+  });
+
+  it("a schema with nothing declared accepts nothing, and says so", async () => {
+    const { declaredConfig } = await import("../format/registry.js");
+    const bare = { schema: { type: "object" } };
+    expect(
+      declaredConfig(bare, { innerHTML: "<img src=x onerror=alert(1)>", ok: 1 })
+    ).toEqual({});
+  });
+
+  it("pass-through is opt-in: x-accepts '*' keeps every key", async () => {
+    const { declaredConfig } = await import("../format/registry.js");
+    const open = { schema: { type: "object", "x-accepts": "*" } };
+    expect(declaredConfig(open, { anything: 1 })).toEqual({ anything: 1 });
   });
 });

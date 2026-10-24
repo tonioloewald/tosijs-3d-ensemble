@@ -1,0 +1,21 @@
+{
+  "version": "0.8.1",
+  "sizes": {
+    "game (scene + loader)": {
+      "raw": 45258,
+      "gz": 15783
+    },
+    "format kernel (validate)": {
+      "raw": 10823,
+      "gz": 4027
+    },
+    "everything (with the editor)": {
+      "raw": 124321,
+      "gz": 41648
+    },
+    "dist/**/*.js (unminified)": {
+      "raw": 660832,
+      "gz": 228585
+    }
+  }
+}

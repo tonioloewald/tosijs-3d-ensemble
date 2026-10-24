@@ -131,6 +131,8 @@ describe("tree-shaking", () => {
     14.55 kB with nested ensembles (flattening, transform maths, the loader:
     all of it is what a game that loads a level of rigs runs). Ceiling raised
     14 → 16 kB for that, 2026-10-20.
+    From 0.8.1 on, each release's sizes and delta are `bin/sizes.ts`'s, printed
+    by the build against `dist-sizes.json`; this stays the alarm.
   */
   it("a game's bundle stays about the size a game's bundle should be", async () => {
     const code = await bundle("./src/__fixtures__/game-import.ts");

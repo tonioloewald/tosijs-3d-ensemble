@@ -468,6 +468,7 @@ bun run tests       # both
 bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
 bun run release:attest  # at release: run the browser lanes, write release-attestation.json
+bun run sizes       # at release, before attesting: re-record dist-sizes.json (the build prints the delta)
 ```
 
 ⚠️ **The browser lanes (`test:scene`, `test:reparent`) do not run in CI, on

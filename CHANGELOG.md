@@ -26,6 +26,9 @@ All notable changes to this project are documented here, in
 
 ### Fixed
 
+- **An edit made while a save is in flight stays unsaved** (board #3392):
+  the document is serialized once, before the write. Open and History
+  failures dispatch `error` (as Save does) instead of unhandled rejections.
 - **One schema walk finds the urls inside structured data** (#3439): the
   rebasing copy had drifted from the checking one and would have rebased a
   keyword (`none`) as if it were a url.

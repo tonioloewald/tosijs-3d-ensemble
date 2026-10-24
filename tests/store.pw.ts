@@ -375,3 +375,81 @@ test("a document loaded by url saves back to its store entry", async ({
     "store/rig-under-test.json",
   ]);
 });
+
+/*
+  STORE EDGE CASES (board #3392, from the 0.7.0 review):
+  - an edit made WHILE a save is in flight is not marked saved (the document
+    was serialized after the write resolved, so the new edit counted as
+    written);
+  - a failed Open or History read dispatches `error`, as Save does, instead
+    of an unhandled rejection.
+*/
+test("an edit during a save stays unsaved, and a failed Open reports error", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      !!(
+        document.querySelector("tosi-ensemble-editor") as Element | null
+      )?.shadowRoot?.querySelector("tosi-b3d"),
+    { timeout: 60_000 }
+  );
+  await page.waitForTimeout(3000);
+  const unhandled: string[] = [];
+  page.on("pageerror", (e) => unhandled.push(String(e)));
+  const r = await page.evaluate(async () => {
+    type Ed = Element & {
+      store: unknown;
+      dirty: boolean;
+      openFromStore(id: string): Promise<void>;
+      saveToStore(id?: string): Promise<void>;
+      edit(d: string, m: (e: { name: string }) => void): void;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    let release: () => void = () => {};
+    ed.store = {
+      list: async () => [{ id: "harbour.json" }, { id: "broken.json" }],
+      read: async (id: string) => {
+        if (id === "broken.json") throw new Error("read failed");
+        return { name: "harbour", pieces: [] };
+      },
+      write: (id: string) =>
+        new Promise((resolve) => {
+          release = () => resolve({ id });
+        }),
+    };
+    await ed.openFromStore("harbour.json");
+    ed.edit("first", (e) => {
+      e.name = "harbour 1";
+    });
+    const saving = ed.saveToStore();
+    // An edit lands while the write is still in flight.
+    ed.edit("during", (e) => {
+      e.name = "harbour 2";
+    });
+    release();
+    await saving;
+    const dirtyAfterSave = ed.dirty;
+
+    const errors: string[] = [];
+    ed.addEventListener("error", (e) =>
+      errors.push(String((e as CustomEvent).detail?.error))
+    );
+    let rejected = false;
+    await ed.openFromStore("broken.json").catch(() => {
+      rejected = true;
+    });
+    return { dirtyAfterSave, errors, rejected };
+  });
+  expect(
+    r.dirtyAfterSave,
+    "an edit made during the save was marked saved"
+  ).toBe(true);
+  expect(r.errors, "a failed Open dispatched no error").toEqual([
+    "Error: read failed",
+  ]);
+  expect(r.rejected).toBe(true);
+  expect(unhandled).toEqual([]);
+});

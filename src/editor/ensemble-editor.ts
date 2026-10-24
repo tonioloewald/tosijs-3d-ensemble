@@ -1133,12 +1133,26 @@ export class EnsembleEditor extends withAttributes({
     if (this.isConnected && after !== before) this._renderChrome();
   }
 
+  /**
+   * A store call that fails dispatches `error` (as Save does) and rejects
+   * (board #3392): Open and History failed as unhandled rejections, with
+   * nothing a host could listen for.
+   */
+  private async _reported<T>(pending: Promise<T>): Promise<T> {
+    try {
+      return await pending;
+    } catch (error) {
+      this.dispatchEvent(new CustomEvent("error", { detail: { error } }));
+      throw error;
+    }
+  }
+
   /** Open a document from the store by its id. */
   async openFromStore(id: string): Promise<void> {
     if (!this._store_) return;
     // Claims the generation BEFORE the read: a later open or load wins.
     const generation = ++this._loadGeneration;
-    const doc = await this._store_.read(id);
+    const doc = await this._reported(this._store_.read(id));
     if (generation !== this._loadGeneration) return;
     this.ensemble = doc;
     this._storeId = id;
@@ -1156,10 +1170,17 @@ export class EnsembleEditor extends withAttributes({
     const store = this._store_;
     const target = id ?? this._storeId;
     if (!store || !target) return;
+    /*
+      WHAT IS WRITTEN IS WHAT IS SAVED (board #3392): serialized ONCE,
+      before the write. It was serialized after the write resolved, so an
+      edit made while the write was in flight was marked saved and never
+      written.
+    */
+    const json = JSON.stringify(this._ensemble);
     try {
-      const result = await store.write(target, structuredClone(this._ensemble));
+      const result = await store.write(target, JSON.parse(json) as Ensemble);
       this._storeId = (result && result.id) || target;
-      this._savedJson = JSON.stringify(this._ensemble);
+      this._savedJson = json;
       // Inside a nested ensemble: this is now its saved state (M2).
       if (this._contexts.length && this._loaded)
         this._nestedSaved.set(this._loaded.url, this._savedJson);
@@ -1183,7 +1204,7 @@ export class EnsembleEditor extends withAttributes({
     if (!store?.readRevision || !this._storeId) return;
     const id = this._storeId;
     const generation = ++this._loadGeneration;
-    const doc = await store.readRevision(id, revision);
+    const doc = await this._reported(store.readRevision(id, revision));
     if (generation !== this._loadGeneration) return;
     this.ensemble = doc;
     this._storeId = id;
@@ -1202,7 +1223,9 @@ export class EnsembleEditor extends withAttributes({
           value: e.id,
           label: e.name ?? e.id,
         })),
-        handleChange: (id: string) => void this.openFromStore(id),
+        // Reported by the `error` event; caught here, as Save is.
+        handleChange: (id: string) =>
+          void this.openFromStore(id).catch(() => {}),
       }),
     ];
     if (this._storeId)
@@ -1244,7 +1267,8 @@ export class EnsembleEditor extends withAttributes({
               h.message ?? h.revision.slice(0, 7)
             }`.trim(),
           })),
-          handleChange: (revision: string) => void this.openRevision(revision),
+          handleChange: (revision: string) =>
+            void this.openRevision(revision).catch(() => {}),
         })
       );
     return rows;

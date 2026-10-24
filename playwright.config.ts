@@ -75,7 +75,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `PORT=${PORT} bun bin/site.ts`,
+    // Built into .test-site/, not the committed docs/ (#3442).
+    command: `SITE_OUT=.test-site PORT=${PORT} bun bin/site.ts`,
     url: `https://localhost:${PORT}/`,
     ignoreHTTPSErrors: true,
     reuseExistingServer: !process.env.CI,

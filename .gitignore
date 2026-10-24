@@ -61,6 +61,7 @@ llms.txt
 # and the ensembles point at cdn.tosijs.net.
 static/*.glb
 test-results/
+.test-site/
 playwright-report/
 
 # Written into the repo root by tosijs-ui's dev server, so `bun start` and

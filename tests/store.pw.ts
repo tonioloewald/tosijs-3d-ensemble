@@ -12,8 +12,9 @@ import { locate } from "./panel-locate.js";
   (`static/` is a watched path).
 */
 const SCRATCH = "static/ensembles/zz-store-test.json";
-// The dev server mirrors static/ into docs/: clean both, pass or fail.
-const MIRROR = "docs/ensembles/zz-store-test.json";
+// The dev server mirrors static/ into its output (.test-site/ for this
+// lane, #3442): clean both, pass or fail.
+const MIRROR = ".test-site/ensembles/zz-store-test.json";
 test.afterEach(() => {
   rmSync(SCRATCH, { force: true });
   rmSync(MIRROR, { force: true });

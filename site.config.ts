@@ -5,8 +5,18 @@ import { defineSiteConfig } from "tosijs-ui/site";
 
 const PROJECT = "tosijs-3d-ensemble";
 
+/*
+  THE SCENE LANE'S SERVER BUILDS ELSEWHERE (#3442). The Playwright webServer
+  is this dev server, and it rebuilt the committed `docs/` on every browser
+  run: a run overlapping an edit, or a release-doctor pass, left `docs/`
+  modified or half deleted, and twice failed the artifact-freshness check.
+  `playwright.config.ts` sets SITE_OUT to an ignored directory.
+*/
+export const SITE_OUT = process.env.SITE_OUT || "docs";
+
 export default defineSiteConfig({
   name: PROJECT,
+  outputDir: SITE_OUT,
   description:
     "The tosijs-3d ensemble format, its instantiator, and a graphical editor for authoring ensembles.",
 

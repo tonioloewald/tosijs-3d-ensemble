@@ -749,6 +749,25 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
 }
 
 /**
+ * `foldSections`, disposing the rows it folds away.
+ *
+ * A row is bound when it is BUILT, and a folded one never reaches the panel,
+ * so the panel's `dispose()` never releases it: every repaint leaked each
+ * folded section's subscriptions, one more per fold (#3262, found by its
+ * test). Whoever folds rows they built goes through here.
+ */
+export function foldDisposing<T>(
+  rows: T[],
+  options: Parameters<typeof foldSections>[1]
+): T[] {
+  const shown = foldSections(rows as never[], options) as unknown as T[];
+  const kept = new Set(shown);
+  for (const row of rows)
+    if (!kept.has(row)) (row as { dispose?: () => void }).dispose?.();
+  return shown;
+}
+
+/**
  * A standalone panel for one schema.
  *
  * Sections fold: a panel is laid out once, so a header's tap REBUILDS it from
@@ -778,7 +797,7 @@ export function schemaPanel(options: SchemaPanelOptions): DisposablePanel {
         gap: 6,
       },
       ...(heading() as never[]),
-      ...(foldSections(schemaWidgets(options) as never[], {
+      ...(foldDisposing(schemaWidgets(options) as never[], {
         repaint: () => {
           disposeRows();
           const old = panel;

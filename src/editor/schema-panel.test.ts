@@ -453,6 +453,62 @@ describe("a disposed panel releases what its widgets subscribed", () => {
     panel.dispose();
     expect(state.live).toBe(0);
   });
+
+  /*
+    A FOLD REBUILDS, and must not leak (#3262). No test called a fold, so
+    dropping the repaint's dispose stayed green; and what it found was worse:
+    rows a fold LEAVES OUT are built and bound but never in a panel, so no
+    dispose reached them, and every fold leaked a folded section's worth.
+    The header is tapped through the panel's own pointer (viewBox units).
+  */
+  it("folding a section open and shut leaves what it started with", () => {
+    const { state, box } = counted();
+    const sections = {
+      ...(schema as object),
+      "x-sections": [
+        { title: "Air", keys: ["a"] },
+        { title: "Water", keys: ["b"] },
+      ],
+    } as never;
+    const panel = schemaPanel({
+      schema: sections,
+      box,
+      values: { a: 3, b: true, c: 2 },
+      handleChange: () => {},
+    });
+    document.body.append(panel);
+    const current = () =>
+      document.body.lastElementChild as unknown as typeof panel;
+    const header = (title: string) =>
+      Array.from(current().querySelectorAll('[data-w3d="section"]')).find((g) =>
+        g.textContent?.endsWith(title)
+      )!;
+    const tap = () => {
+      // The header's row offset, inside the panel's 10-unit padding.
+      const y = Number(
+        /translate\(0, ([\d.]+)\)/.exec(
+          header("Water").getAttribute("transform")!
+        )![1]
+      );
+      const p = current();
+      p.handlePointer("down", 50, y + 14);
+      p.handlePointer("up", 50, y + 14);
+    };
+    const start = state.live;
+    tap(); // open
+    expect(header("Water").textContent).toContain("▾");
+    const open = state.live;
+    expect(open).toBeGreaterThan(start);
+    tap(); // shut
+    expect(header("Water").textContent).toContain("▸");
+    expect(state.live).toBe(start);
+    tap();
+    tap();
+    expect(state.live).toBe(start);
+    current().dispose();
+    current().remove();
+    expect(state.live).toBe(0);
+  });
 });
 
 /*

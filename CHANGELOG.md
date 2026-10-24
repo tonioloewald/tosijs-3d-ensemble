@@ -39,6 +39,11 @@ All notable changes to this project are documented here, in
 - **A nested piece's selection box waits for its slowest child** (#3440): it
   was cached as soon as anything measured, so a library still loading was
   left outside the box until the next build.
+- **Folding a section no longer leaks its rows' subscriptions** (#3262): a
+  row is bound when it is built, and the rows a fold leaves out never reached
+  a panel, so nothing released them; every repaint of the editor's property
+  panel and piece list, and every fold of a standalone `schemaPanel`, added a
+  folded section's worth. `foldDisposing` disposes what a fold drops.
 
 ### Changed
 

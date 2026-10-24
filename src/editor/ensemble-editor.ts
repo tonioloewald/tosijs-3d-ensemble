@@ -77,7 +77,6 @@ import {
   picker3d,
   select3d,
   euler3d,
-  foldSections,
   iconGrid3d,
   slider3d,
   toggle3d,
@@ -130,6 +129,7 @@ import {
 } from "../runtime/recommendations.js";
 import {
   boundIfSet,
+  foldDisposing,
   schemaWidgets,
   type BoxLike,
   type DisposablePanel,
@@ -5000,7 +5000,7 @@ export class EnsembleEditor extends withAttributes({
       rows.push(this._pieceTable(objects.map((p) => pieceRow(p))));
     }
     out.push(
-      ...(foldSections(rows as never[], {
+      ...(foldDisposing(rows as never[], {
         key: "tosi-ensemble-editor:pieces",
         repaint: () => this._renderChrome(),
       }) as unknown[])
@@ -5634,7 +5634,7 @@ export class EnsembleEditor extends withAttributes({
           header's tap repaints the chrome, which builds this again. The open
           set is remembered per page under one key for the whole panel.
         */
-        ...(foldSections(fields as never[], {
+        ...(foldDisposing(fields as never[], {
           key: "tosi-ensemble-editor:properties",
           repaint: () => this._renderChrome(),
         }) as never[])

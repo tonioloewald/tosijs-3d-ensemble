@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=a5e23ed1e142" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=b0bc05dfe791" data-tosi-doc-system />
   <title>The feature registry — tosijs-3d-ensemble</title>
   <meta name="description" content="A feature is a registration, not a case in a switch. That is what makes the format open: a consumer&#39;s feature is indistinguishable from a shipped one in the" />
   <link rel="alternate" type="text/markdown" href="index.md" title="The feature registry — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=c2dc058db993" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=8d97b796c19f" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="registry.ts">
 <h1 id="the-feature-registry">The feature registry</h1>
 <p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
@@ -69,6 +69,13 @@ went unchecked until 0.4.0&#39;s review.</p>
 <code>recipe</code>) is declared in <code>x-data: { key: schema }</code>, and the urls inside it
 are found by walking that schema (<code>deepFetchedProblems</code>): mark them the same
 way, <code>format: &#39;uri-reference&#39;</code>, wherever they sit.</p>
+<h2 id="what-your-feature-accepts-is-what-it-declares">What your feature ACCEPTS is what it declares</h2>
+<p>A document&#39;s config reaches your <code>bind</code> narrowed to the keys your schema
+declares: <code>x-accepts</code> when present (a full property list, as the scene
+features take from upstream), otherwise <code>properties</code>. A schema that declares
+neither accepts nothing; <code>validate</code> reports each key it drops. To take every
+key, say so: <code>&#39;x-accepts&#39;: &#39;*&#39;</code>. (It used to pass everything by default,
+<code>innerHTML</code> included.)</p>
 <h2 id="a-field-that-holds-a-piece-id-must-say-so">A field that holds a PIECE ID must say so</h2>
 <p>Mark it <code>&#39;x-piece-ref&#39;: true</code> (or <code>&#39;x-widget&#39;: &#39;ref&#39;</code>, which also gives it
 the panel&#39;s piece picker):</p>
@@ -212,6 +219,6 @@ it. A link handler owns the link, gets both ends, and disposes once.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-wvryq8r2.js"></script>
+  <script type="module" src="../hydrate-8jc8f9rg.js"></script>
 </body>
 </html>

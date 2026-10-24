@@ -49,6 +49,15 @@ Structured data a feature accepts but the panel has no form for (an effect's
 are found by walking that schema (`deepFetchedProblems`): mark them the same
 way, `format: 'uri-reference'`, wherever they sit.
 
+## What your feature ACCEPTS is what it declares
+
+A document's config reaches your `bind` narrowed to the keys your schema
+declares: `x-accepts` when present (a full property list, as the scene
+features take from upstream), otherwise `properties`. A schema that declares
+neither accepts nothing; `validate` reports each key it drops. To take every
+key, say so: `'x-accepts': '*'`. (It used to pass everything by default,
+`innerHTML` included.)
+
 ## A field that holds a PIECE ID must say so
 
 Mark it `'x-piece-ref': true` (or `'x-widget': 'ref'`, which also gives it

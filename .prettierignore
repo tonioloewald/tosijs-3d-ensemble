@@ -26,3 +26,6 @@ reviews/
 # Copied UNCHANGED from tosijs-coding-practices/templates — the rollout's adoption
 # check is byte-identity with the template, so the formatter must not touch it.
 .github/workflows/publish.yml
+
+# Local tool config (Claude Code), git-ignored on the machine, never ours.
+.claude/

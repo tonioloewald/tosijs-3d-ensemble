@@ -1,5 +1,0 @@
-import{Qf,ci}from"./site-g4m6yns1.js";import{Di,Ye}from"./site-4xj1x7pw.js";class Qa extends ci{constructor(t){super(t);this.key=this.registerDataInput("key",Di),this.keyCode=this.registerDataOutput("keyCode",Di),this.keyValue=this.registerDataOutput("keyValue",Di),this.shiftKey=this.registerDataOutput("shiftKey",Ye),this.ctrlKey=this.registerDataOutput("ctrlKey",Ye),this.altKey=this.registerDataOutput("altKey",Ye),this.metaKey=this.registerDataOutput("metaKey",Ye),this.commandOrCtrl=this.registerDataOutput("commandOrCtrl",Ye)}_executeEvent(t,a){let e=a.event,s=this.key.getValue(t);if(s&&s!==e.code)return!0;return this.keyCode.setValue(e.code,t),this.keyValue.setValue(e.key,t),this.shiftKey.setValue(e.shiftKey,t),this.ctrlKey.setValue(e.ctrlKey,t),this.altKey.setValue(e.altKey,t),this.metaKey.setValue(e.metaKey,t),this.commandOrCtrl.setValue(Qf?e.metaKey:e.ctrlKey,t),this._execute(t),!this.config?.stopPropagation}_preparePendingTasks(t){}_cancelPendingTasks(t){}}
-export{Qa};
-
-//# debugId=28F300CA331E1D0064756E2164756E21
-//# sourceMappingURL=site-bktpb70x.js.map

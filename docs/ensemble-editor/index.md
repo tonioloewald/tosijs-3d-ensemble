@@ -27,13 +27,49 @@ document.body.append(
 )
 ```
 
-## The chrome is tosijs-3d's SVG UI, not DOM widgets
+## The chrome is tosijs-3d's system panels
 
-One implementation renders as a DOM overlay **and** as an in-scene texture, so
-the same editor runs in a browser and in a headset. Editing a 3D arrangement is
-a spatial task performed at arm's length: judging whether a fortress reads,
-whether a turret covers the approach, whether a gap is flyable are exactly the
-questions a flat viewport answers badly.
+Every panel (the pieces, a piece's properties, the tools, the Ensemble
+file panel) is a tosijs-3d **system panel**: a button on the scene's system
+bar opens it, and its title bar moves it and closes it (×). They are drawn
+IN the scene, flat on a screen as in a headset, by one SVG UI implementation,
+so the same editor runs in a browser and in a headset. Editing a 3D
+arrangement is a spatial task performed at arm's length: judging whether a
+fortress reads, whether a turret covers the approach, whether a gap is
+flyable are exactly the questions a flat viewport answers badly.
+
+Panels stay open together and keep where you dragged them across edits.
+`hide-chrome` (`hideChrome: true`) takes them and their bar buttons away,
+for a host that shows the scene without the tool.
+
+## Opening and saving
+
+The component owns no persistence; its host does, one of two ways:
+
+- **A store** (`editor.store`, see [the store page](/store/)): the Ensemble
+  panel offers Open, Save, Save as and History, and `editor.dirty` says
+  whether the document differs from what was last opened or saved. A
+  failure dispatches `error`.
+- **No store**: the editor keeps a local draft, and the panel's New,
+  Download and Open file… (there either way) are the whole of it. A host
+  that wants the document calls `editor.save()`, which hands it to
+  `handleSave(ensemble)`.
+
+`src` loads a document by url; `loaded` (`{ src, storeId }`) fires when it
+lands and `error` (`{ error, src }`) when it fails, leaving the current
+document alone.
+
+## Host actions
+
+A host's own buttons go in the Ensemble panel: "Play" for a game that wants
+to run the level being edited. Each gets a COPY of the current document,
+saved or not:
+
+```js:static
+editor.hostActions = [
+  { label: "Play", handleAction: (level) => openGame(level) },
+]
+```
 
 ## The backdrop is not part of the ensemble
 

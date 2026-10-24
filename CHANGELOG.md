@@ -53,9 +53,9 @@ All notable changes to this project are documented here, in
 
 - **Size, against 0.8.1** (`bun bin/sizes.ts`, now printed by every build
   against the committed `dist-sizes.json`; #3220, #3358): game entry
-  15.47 kB gz (+0.05), format kernel 4.34 kB (+0.41, +10.5%: piece-ref
+  15.55 kB gz (+0.13), format kernel 4.34 kB (+0.41, +10.5%: piece-ref
   validation and the single url walker), everything with the editor
-  40.86 kB (+0.19).
+  40.97 kB (+0.29). Re-measure when cutting the tag.
 - **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar
   (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
   dangling wikilink now fails the doc build (tosijs-ui#234, ours).

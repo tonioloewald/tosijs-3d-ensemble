@@ -7,7 +7,7 @@ one and its Ensemble panel gains **Open** (the store's documents), **Save**
 store keeps versions. Without one, the editor keeps a local draft and offers
 a download, as before.
 
-```ts
+```ts:static
 interface EnsembleStore {
   list(): Promise<Array<{ id: string; name?: string; updated?: string }>>;
   read(id: string): Promise<Ensemble>;
@@ -21,8 +21,22 @@ interface EnsembleStore {
 `idFor` maps a page url to the store's id, so a document opened by
 `<tosi-ensemble-editor src="…">` (or a nested ensemble opened with **Open
 inside**) saves back to its entry instead of needing Save as. The editor
-fires `loaded` (`{ src, storeId }`) when a load lands, and `error` when one
-fails.
+fires `loaded` (`{ src, storeId }`) when a load lands.
+
+## When something fails
+
+Every store call the editor makes is reported, never swallowed: a failed
+Open, History read, revision or Save dispatches `error` on the editor with
+`{ error }` (a failed `src` load adds `{ src }`), and the method's promise
+rejects with the same error. A failed Save leaves the document **dirty**,
+because it is: `editor.dirty` is true until a write succeeds, and the
+Ensemble panel's title carries a `•` while it is. An edit made while a Save
+is in flight is not marked saved: what is written is the document as it was
+when Save was pressed.
+
+From script: `openFromStore(id)`, `saveToStore(id?)` (no id: back to the
+document's own entry; an id: Save as) and `openRevision(revision)`, each
+resolving once the editor shows the result.
 
 An `id` is the store's own address: a path on a dev server, a document id in a
 service. Two backends were in view when this was designed (board #3363, from
@@ -36,7 +50,7 @@ tosijs-ui's dev server can let a page save the project's data files
 `tosijs-ui/doc-system/data-client` module talks to it. `dataClientStore`
 adapts that module; pass it in, so this package does not depend on tosijs-ui:
 
-```ts
+```ts:static
 import * as dataClient from "tosijs-ui/doc-system/data-client";
 import { dataClientStore } from "tosijs-3d-ensemble";
 
@@ -48,7 +62,7 @@ document from another host is never saved over a local file). tosijs-ui's
 site serves `static/` at the root, so `static/ensembles` is at `/ensembles/`;
 pass `servedAt` when your folder is served somewhere else:
 
-```ts
+```ts:static
 dataClientStore(dataClient, { dir: "static/assemblies", servedAt: "/assemblies" });
 ```
 

@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=408bd108bcdf" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=6b53a7f1f406" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="ensemble-editor.ts">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -51,12 +51,41 @@ document<span class="token punctuation">.</span>body<span class="token punctuati
   <span class="token punctuation">}</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span>
 </code></pre>
-<h2 id="the-chrome-is-tosijs-3ds-svg-ui-not-dom-widgets">The chrome is tosijs-3d&#39;s SVG UI, not DOM widgets</h2>
-<p>One implementation renders as a DOM overlay <strong>and</strong> as an in-scene texture, so
-the same editor runs in a browser and in a headset. Editing a 3D arrangement is
-a spatial task performed at arm&#39;s length: judging whether a fortress reads,
-whether a turret covers the approach, whether a gap is flyable are exactly the
-questions a flat viewport answers badly.</p>
+<h2 id="the-chrome-is-tosijs-3ds-system-panels">The chrome is tosijs-3d&#39;s system panels</h2>
+<p>Every panel (the pieces, a piece&#39;s properties, the tools, the Ensemble
+file panel) is a tosijs-3d <strong>system panel</strong>: a button on the scene&#39;s system
+bar opens it, and its title bar moves it and closes it (×). They are drawn
+IN the scene, flat on a screen as in a headset, by one SVG UI implementation,
+so the same editor runs in a browser and in a headset. Editing a 3D
+arrangement is a spatial task performed at arm&#39;s length: judging whether a
+fortress reads, whether a turret covers the approach, whether a gap is
+flyable are exactly the questions a flat viewport answers badly.</p>
+<p>Panels stay open together and keep where you dragged them across edits.
+<code>hide-chrome</code> (<code>hideChrome: true</code>) takes them and their bar buttons away,
+for a host that shows the scene without the tool.</p>
+<h2 id="opening-and-saving">Opening and saving</h2>
+<p>The component owns no persistence; its host does, one of two ways:</p>
+<ul>
+<li><strong>A store</strong> (<code>editor.store</code>, see <a href="/store/">the store page</a>): the Ensemble
+panel offers Open, Save, Save as and History, and <code>editor.dirty</code> says
+whether the document differs from what was last opened or saved. A
+failure dispatches <code>error</code>.</li>
+<li><strong>No store</strong>: the editor keeps a local draft, and the panel&#39;s New,
+Download and Open file… (there either way) are the whole of it. A host
+that wants the document calls <code>editor.save()</code>, which hands it to
+<code>handleSave(ensemble)</code>.</li>
+</ul>
+<p><code>src</code> loads a document by url; <code>loaded</code> (<code>{ src, storeId }</code>) fires when it
+lands and <code>error</code> (<code>{ error, src }</code>) when it fails, leaving the current
+document alone.</p>
+<h2 id="host-actions">Host actions</h2>
+<p>A host&#39;s own buttons go in the Ensemble panel: &quot;Play&quot; for a game that wants
+to run the level being edited. Each gets a COPY of the current document,
+saved or not:</p>
+<pre data-example-mode="static"><code class="language-js" data-highlighted>editor<span class="token punctuation">.</span>hostActions <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Play"</span><span class="token punctuation">,</span> <span class="token function-variable function">handleAction</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">level</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token function">openGame</span><span class="token punctuation">(</span>level<span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+</code></pre>
 <h2 id="the-backdrop-is-not-part-of-the-ensemble">The backdrop is not part of the ensemble</h2>
 <p><code>backdrop</code> mounts a sample world — ground or sea, sky, and the ambient
 conditions — for the ensemble to be judged <strong>against</strong>. It is authoring

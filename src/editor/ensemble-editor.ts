@@ -162,6 +162,7 @@ import type {
 } from "../format/types.js";
 import { narrowScale, scaleVector } from "../format/scale.js";
 import { writeTransform } from "./transform-write.js";
+import { NestBounds } from "./nest-bounds.js";
 import type { Transform } from "./transform-write.js";
 import {
   fileNameFor,
@@ -2706,7 +2707,7 @@ export class EnsembleEditor extends withAttributes({
     }).ensemble;
     const prefix = `${piece.id}/`;
     const children = flat.pieces.filter((p) => p.id.startsWith(prefix));
-    this._nestBoundsCache = null; // the children move: measure them again
+    this._nestBoundsCache.clear(); // the children move: measure them again
     if (children.some((c) => hasFeatures(c) || c.role)) return false;
     const bodies = children.map((c) => built.pieces.get(c.id));
     if (bodies.some((b) => !b || (!b.element && !b.node))) return false;
@@ -2733,18 +2734,8 @@ export class EnsembleEditor extends withAttributes({
     return true;
   }
 
-  /**
-   * A nested piece's box, measured over its children ONCE per build (or per
-   * in-place move) and carried by its anchor after that (#3423: this walked
-   * every child's hierarchy every frame). Not cached while it measures
-   * nothing, so children still loading are picked up when they arrive.
-   */
-  private _nestBoundsCache: {
-    built: unknown;
-    id: string;
-    bounds: { min: XYZ; max: XYZ };
-    at: XYZ;
-  } | null = null;
+  /** A nested piece's box: see `nest-bounds.ts` (#3423, #3440). */
+  private _nestBoundsCache = new NestBounds();
 
   private _nestBounds(
     built: { piece: Piece },
@@ -2752,68 +2743,11 @@ export class EnsembleEditor extends withAttributes({
   ): { min: XYZ; max: XYZ } | undefined {
     const now = root?.getAbsolutePosition?.();
     if (!now) return undefined;
-    let cache = this._nestBoundsCache;
-    if (!cache || cache.built !== built || cache.id !== built.piece.id) {
-      const bounds = this._unionBounds(this._nestBodies(built.piece.id));
-      if (!bounds) return undefined;
-      cache = this._nestBoundsCache = {
-        built,
-        id: built.piece.id,
-        bounds,
-        at: { x: now.x, y: now.y, z: now.z },
-      };
-    }
-    const d = {
-      x: now.x - cache.at.x,
-      y: now.y - cache.at.y,
-      z: now.z - cache.at.z,
-    };
-    const { min, max } = cache.bounds;
-    return {
-      min: { x: min.x + d.x, y: min.y + d.y, z: min.z + d.z },
-      max: { x: max.x + d.x, y: max.y + d.y, z: max.z + d.z },
-    };
-  }
-
-  /** World bounds enclosing several bodies, or undefined when none has any. */
-  private _unionBounds(bodies: unknown[]): { min: XYZ; max: XYZ } | undefined {
-    let out: { min: XYZ; max: XYZ } | undefined;
-    for (const body of bodies) {
-      const b = body as {
-        computeWorldMatrix?: (f: boolean) => void;
-        getHierarchyBoundingVectors?: () => { min: XYZ; max: XYZ };
-      };
-      b.computeWorldMatrix?.(true);
-      const v = b.getHierarchyBoundingVectors?.();
-      if (!v || !Number.isFinite(v.min.x) || !Number.isFinite(v.max.x))
-        continue;
-      out = out
-        ? {
-            min: {
-              x: Math.min(out.min.x, v.min.x),
-              y: Math.min(out.min.y, v.min.y),
-              z: Math.min(out.min.z, v.min.z),
-            },
-            max: {
-              x: Math.max(out.max.x, v.max.x),
-              y: Math.max(out.max.y, v.max.y),
-              z: Math.max(out.max.z, v.max.z),
-            },
-          }
-        : { min: { ...v.min }, max: { ...v.max } };
-    }
-    return out;
-  }
-
-  /** The built pieces inside a nested piece (for its selection box). */
-  private _nestBodies(id: string): unknown[] {
-    const bodies: unknown[] = [];
-    for (const [key, built] of this._built?.pieces ?? [])
-      if (key.startsWith(`${id}/`))
-        bodies.push(
-          (built.element as { mesh?: unknown } | null)?.mesh ?? built.node
-        );
-    return bodies.filter(Boolean);
+    const id = built.piece.id;
+    const children = [];
+    for (const [key, child] of this._built?.pieces ?? [])
+      if (key.startsWith(`${id}/`)) children.push(child);
+    return this._nestBoundsCache.measure(built, id, children, now);
   }
 
   /**

@@ -36,6 +36,9 @@ All notable changes to this project are documented here, in
 - **One schema walk finds the urls inside structured data** (#3439): the
   rebasing copy had drifted from the checking one and would have rebased a
   keyword (`none`) as if it were a url.
+- **A nested piece's selection box waits for its slowest child** (#3440): it
+  was cached as soon as anything measured, so a library still loading was
+  left outside the box until the next build.
 
 ### Changed
 

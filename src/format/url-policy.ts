@@ -156,13 +156,20 @@ type Node = Record<string, unknown>;
  * is the exception that needs telling apart: a particle `texture` is a URI
  * or inline SVG markup (`x-inline`), split by `pattern`, and markup is drawn
  * as an image and fetches nothing. A string matching no form is refused.
+ *
+ * ONE walk, two uses (#3439): `deepFetchedProblems` reports, `rewriteFetched`
+ * rebases. They were two copies of this, and the copies had drifted: the
+ * rewrite ignored `x-keywords`, so a keyword would have been rebased as if it
+ * were a url.
  */
-export function deepFetchedProblems(
+type Leaf = { keywords: ReadonlySet<string> } | "unmatched";
+
+function walkFetched(
   schema: unknown,
   value: unknown,
+  visit: (value: unknown, path: string, leaf: Leaf) => unknown,
   root: unknown = schema
-): DeepUrlProblem[] {
-  const out: DeepUrlProblem[] = [];
+): unknown {
   const defs = ((root as Node)?.$defs ?? {}) as Record<string, unknown>;
   const resolve = (s: unknown, seen = 0): Node | null => {
     if (!s || typeof s !== "object" || seen > 16) return null;
@@ -192,23 +199,21 @@ export function deepFetchedProblems(
     v: unknown,
     path: string,
     depth: number
-  ): void => {
+  ): unknown => {
     const s = resolve(raw);
-    if (!s || depth > 32 || v === undefined || v === null) return;
-    if (s.format === "uri-reference") {
-      const problem = fetchedValueProblem(
-        v,
-        new Set((s["x-keywords"] as string[]) ?? [])
-      );
-      if (problem) out.push({ ...problem, path });
-    }
+    if (!s || depth > 32 || v === undefined || v === null) return v;
+    let out: unknown = v;
+    if (s.format === "uri-reference")
+      out = visit(out, path, {
+        keywords: new Set((s["x-keywords"] as string[]) ?? []),
+      });
     const union = [
       ...((s.anyOf as unknown[]) ?? []),
       ...((s.oneOf as unknown[]) ?? []),
     ]
       .map((b) => resolve(b))
       .filter((b): b is Node => !!b);
-    if (typeof v === "string" && union.length) {
+    if (typeof out === "string" && union.length) {
       const forms = union.filter(
         (b) =>
           b.pattern !== undefined ||
@@ -217,107 +222,18 @@ export function deepFetchedProblems(
           b["x-inline"] !== undefined
       );
       if (forms.length) {
-        const chosen = forms.find((b) => matches(b, v));
-        if (!chosen)
-          out.push({
-            path,
-            code: "unsupported-feature-url",
-            message: `"${v.slice(
-              0,
-              40
-            )}" is none of the forms this field takes`,
-          });
-        else if (!chosen["x-inline"]) walk(chosen, v, path, depth + 1);
-        return;
+        const text = out;
+        const chosen = forms.find((b) => matches(b, text));
+        if (!chosen) return visit(out, path, "unmatched");
+        return chosen["x-inline"] ? out : walk(chosen, out, path, depth + 1);
       }
     }
     for (const b of [...union, ...((s.allOf as unknown[]) ?? [])])
-      walk(b, v, path, depth + 1);
-    if (Array.isArray(v) && s.items)
-      v.forEach((item, i) => walk(s.items, item, `${path}/${i}`, depth + 1));
-    else if (v && typeof v === "object" && !Array.isArray(v) && s.properties) {
-      const props = s.properties as Record<string, unknown>;
-      for (const [k, child] of Object.entries(v as Node))
-        if (props[k]) walk(props[k], child, `${path}/${k}`, depth + 1);
-    }
-  };
-  walk(schema, value, "", 0);
-  // A union walks one value down several branches; say each problem once.
-  const seen = new Set<string>();
-  return out.filter(
-    (p) => !seen.has(p.path + p.code) && !!seen.add(p.path + p.code)
-  );
-}
-
-const omitRef = (s: Node): Node => {
-  const { $ref: _ref, ...rest } = s;
-  return rest;
-};
-
-/**
- * `value` with every FETCHED string in it passed through `fn`, found by the
- * same schema walk as `deepFetchedProblems` (and the same rule for telling a
- * uri from inline markup). Copy on write: `value` is not changed. A nested
- * child's recipe uses this to rebase its relative urls onto the child's own.
- */
-export function rewriteFetched(
-  schema: unknown,
-  value: unknown,
-  fn: (url: string) => string,
-  root: unknown = schema
-): unknown {
-  const defs = ((root as Node)?.$defs ?? {}) as Record<string, unknown>;
-  const resolve = (s: unknown, seen = 0): Node | null => {
-    if (!s || typeof s !== "object" || seen > 16) return null;
-    const ref = (s as Node).$ref;
-    if (typeof ref === "string" && ref.startsWith("#/$defs/")) {
-      const target = defs[ref.slice("#/$defs/".length)];
-      return target
-        ? resolve({ ...(target as Node), ...omitRef(s as Node) }, seen + 1)
-        : (s as Node);
-    }
-    return s as Node;
-  };
-  const matches = (branch: Node, text: string): boolean => {
-    const own =
-      typeof branch.pattern === "string"
-        ? new RegExp(branch.pattern).test(text)
-        : true;
-    const not = branch.not as Node | undefined;
-    const negated =
-      not && typeof not.pattern === "string"
-        ? !new RegExp(not.pattern).test(text)
-        : true;
-    return own && negated;
-  };
-  const walk = (raw: unknown, v: unknown, depth: number): unknown => {
-    const s = resolve(raw);
-    if (!s || depth > 32 || v === undefined || v === null) return v;
-    const union = [
-      ...((s.anyOf as unknown[]) ?? []),
-      ...((s.oneOf as unknown[]) ?? []),
-    ]
-      .map((b) => resolve(b))
-      .filter((b): b is Node => !!b);
-    if (typeof v === "string") {
-      if (s.format === "uri-reference") return fn(v);
-      const forms = union.filter(
-        (b) =>
-          b.pattern !== undefined ||
-          b.not !== undefined ||
-          b.format !== undefined ||
-          b["x-inline"] !== undefined
-      );
-      const chosen = forms.find((b) => matches(b, v));
-      if (chosen && !chosen["x-inline"] && chosen.format === "uri-reference")
-        return fn(v);
-      return v;
-    }
-    let out: unknown = v;
-    for (const b of [...union, ...((s.allOf as unknown[]) ?? [])])
-      out = walk(b, out, depth + 1);
+      out = walk(b, out, path, depth + 1);
     if (Array.isArray(out) && s.items) {
-      const items = out.map((item) => walk(s.items, item, depth + 1));
+      const items = out.map((item, i) =>
+        walk(s.items, item, `${path}/${i}`, depth + 1)
+      );
       if (items.some((item, i) => item !== (out as unknown[])[i])) out = items;
     } else if (
       out &&
@@ -329,12 +245,72 @@ export function rewriteFetched(
       let copy: Node | null = null;
       for (const [k, child] of Object.entries(out as Node)) {
         if (!props[k]) continue;
-        const next = walk(props[k], child, depth + 1);
+        const next = walk(props[k], child, `${path}/${k}`, depth + 1);
         if (next !== child) (copy ??= { ...(out as Node) })[k] = next;
       }
       if (copy) out = copy;
     }
     return out;
   };
-  return walk(schema, value, 0);
+  return walk(schema, value, "", 0);
 }
+
+/** Every fetched string in `value` the url rule refuses, with its path. */
+export function deepFetchedProblems(
+  schema: unknown,
+  value: unknown,
+  root: unknown = schema
+): DeepUrlProblem[] {
+  const out: DeepUrlProblem[] = [];
+  walkFetched(
+    schema,
+    value,
+    (v, path, leaf) => {
+      const problem =
+        leaf === "unmatched"
+          ? {
+              code: "unsupported-feature-url",
+              message: `"${String(v).slice(
+                0,
+                40
+              )}" is none of the forms this field takes`,
+            }
+          : fetchedValueProblem(v, leaf.keywords);
+      if (problem) out.push({ ...problem, path });
+      return v;
+    },
+    root
+  );
+  // A union walks one value down several branches; say each problem once.
+  const seen = new Set<string>();
+  return out.filter(
+    (p) => !seen.has(p.path + p.code) && !!seen.add(p.path + p.code)
+  );
+}
+
+/**
+ * `value` with every FETCHED string in it (keywords excepted) passed through
+ * `fn`. Copy on write: `value` is not changed. A nested child's recipe uses
+ * this to rebase its relative urls onto the child's own.
+ */
+export function rewriteFetched(
+  schema: unknown,
+  value: unknown,
+  fn: (url: string) => string,
+  root: unknown = schema
+): unknown {
+  return walkFetched(
+    schema,
+    value,
+    (v, _path, leaf) =>
+      typeof v === "string" && leaf !== "unmatched" && !leaf.keywords.has(v)
+        ? fn(v)
+        : v,
+    root
+  );
+}
+
+const omitRef = (s: Node): Node => {
+  const { $ref: _ref, ...rest } = s;
+  return rest;
+};

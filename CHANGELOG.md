@@ -15,6 +15,21 @@ All notable changes to this project are documented here, in
   changes; a consumer feature that relied on pass-through declares its
   properties, or says `"x-accepts": "*"`.
 
+### Added
+
+- **`validate` checks every field that names a piece** (board #3360): a
+  planet's `terrain`, a terrain's `planet`, a landform's `terrain`, a
+  protector's `source`, and any consumer field marked `x-piece-ref`, reported
+  `unknown-piece-ref` when the piece is not there (a path into a nested
+  ensemble is left to the build). A legacy `terrain.surfaceType: "plane"` is
+  reported `legacy-surface-type`, pointing at `migrate()`.
+
+### Fixed
+
+- **One schema walk finds the urls inside structured data** (#3439): the
+  rebasing copy had drifted from the checking one and would have rebased a
+  keyword (`none`) as if it were a url.
+
 ### Changed
 
 - **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar

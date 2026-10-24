@@ -383,3 +383,83 @@ describe("urls inside an effect recipe", () => {
     expect(declaredConfig(reg, { recipe: good }).recipe).toEqual(good);
   });
 });
+
+/*
+  A FIELD THAT NAMES A PIECE IS CHECKED (board #3360). A planet's `terrain`
+  naming a piece that is not there was only console.warn'd at build. Every
+  `pieceRefKeys` field is now checked against the document's ids, including a
+  consumer's; a path INTO a nested ensemble is left to the build, which sees
+  the flattened document.
+*/
+describe("piece references are checked", () => {
+  const doc = (extra: Ensemble["pieces"]): Ensemble => ({
+    name: "refs",
+    pieces: [
+      {
+        id: "land",
+        at: [0, 0, 0],
+        features: { terrain: { surfaceType: "sphere" } },
+      },
+      { id: "rig", ensemble: "rig.json", at: [0, 0, 0] },
+      ...extra,
+    ],
+  });
+  const refCodes = (d: Ensemble) =>
+    validate(d)
+      .filter(
+        (p) =>
+          p.code === "unknown-piece-ref" || p.code === "legacy-surface-type"
+      )
+      .map((p) => `${p.code} ${p.path}`);
+
+  it("a planet naming a missing terrain is reported where it is", () => {
+    expect(
+      refCodes(
+        doc([
+          {
+            id: "globe",
+            at: [0, 0, 0],
+            features: { planet: { terrain: "nowhere" } },
+          },
+        ])
+      )
+    ).toEqual(["unknown-piece-ref /pieces/2/features/planet/terrain"]);
+  });
+
+  it("a real piece, an empty link and a path into a nested ensemble are fine", () => {
+    expect(
+      refCodes(
+        doc([
+          {
+            id: "globe",
+            at: [0, 0, 0],
+            features: { planet: { terrain: "land" } },
+          },
+          { id: "v", at: [0, 0, 0], features: { volcano: { terrain: "" } } },
+          {
+            id: "v2",
+            at: [0, 0, 0],
+            features: { volcano: { terrain: "rig/ground" } },
+          },
+        ])
+      )
+    ).toEqual([]);
+  });
+
+  it("a legacy surfaceType 'plane' points at migrate()", () => {
+    const problems = validate({
+      name: "old",
+      pieces: [
+        {
+          id: "t",
+          at: [0, 0, 0],
+          features: { terrain: { surfaceType: "plane" } },
+        },
+      ],
+    }).filter((p) => p.code === "legacy-surface-type");
+    expect(problems.map((p) => p.path)).toEqual([
+      "/pieces/0/features/terrain/surfaceType",
+    ]);
+    expect(problems[0]!.message).toContain("migrate");
+  });
+});

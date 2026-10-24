@@ -503,3 +503,20 @@ describe("urls INSIDE a nested child's structured data are its own (#3428)", () 
     expect(layers[2]!.url).toBe("/assemblies/sounds/hiss.ogg");
   });
 });
+
+describe("one walker for fetched strings (#3439)", () => {
+  it("a keyword inside x-data is not rebased as if it were a url", async () => {
+    const { rewriteFetched } = await import("./url-policy.js");
+    const schema = {
+      type: "object",
+      properties: {
+        image: { type: "string", format: "uri-reference", "x-keywords": ["none"] },
+      },
+    };
+    const out = rewriteFetched(schema, { image: "none" }, (u) => `/child/${u}`);
+    expect(out).toEqual({ image: "none" });
+    expect(rewriteFetched(schema, { image: "a.png" }, (u) => `/child/${u}`)).toEqual({
+      image: "/child/a.png",
+    });
+  });
+});

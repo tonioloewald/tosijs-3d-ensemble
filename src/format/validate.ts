@@ -36,6 +36,7 @@ import {
   dataProblems,
   featureRegistration,
   fetchedKeys,
+  pieceRefKeys,
 } from "./registry.js";
 import { fetchedValueProblem, urlProblem } from "./url-policy.js";
 import { nestedUrl } from "./nest.js";
@@ -495,6 +496,43 @@ export function validate(
   });
 
   checkPlaces(ensemble.points, ensemble.zones, "", add);
+  /*
+    A FIELD THAT NAMES A PIECE NAMES ONE THAT IS HERE (board #3360). A
+    planet's `terrain` pointing nowhere was only a console warning at build;
+    every `pieceRefKeys` field, a consumer's included, is checked like a
+    link end. A PATH under a nesting piece (`rig/ground`) names a piece
+    inside a child this document does not hold, so it is left to the build,
+    which validates the flattened document. A warning: the build carries on
+    and the link is ignored.
+  */
+  const nesting = new Set(
+    ensemble.pieces.filter((p) => p.ensemble).map((p) => p.id)
+  );
+  ensemble.pieces.forEach((p, i) => {
+    for (const [name, cfg] of Object.entries(p.features ?? {})) {
+      if (!cfg || typeof cfg !== "object") continue;
+      const config = cfg as Record<string, unknown>;
+      for (const key of pieceRefKeys(name)) {
+        const ref = config[key];
+        if (typeof ref !== "string" || !ref || ids.has(ref)) continue;
+        if (ref.includes("/") && nesting.has(ref.slice(0, ref.indexOf("/"))))
+          continue;
+        add(
+          "warning",
+          "unknown-piece-ref",
+          `${name}.${key} names piece "${ref}", which is not in this ensemble; the link is ignored`,
+          `/pieces/${i}/features/${name}/${key}`
+        );
+      }
+      if (name === "terrain" && config.surfaceType === "plane")
+        add(
+          "warning",
+          "legacy-surface-type",
+          `terrain.surfaceType "plane" is not a surface type the terrain has (it samples as a cylinder); migrate() rewrites it`,
+          `/pieces/${i}/features/terrain/surfaceType`
+        );
+    }
+  });
   (ensemble.links ?? []).forEach((l, i) => {
     if (!ids.has(l.from)) {
       add(

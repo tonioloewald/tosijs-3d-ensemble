@@ -208,7 +208,7 @@ import {
   serialise,
   writeSaved,
 } from "./storage.js";
-import type { SceneElement } from "../format/registry.js";
+import type { FeatureSchema, SceneElement } from "../format/registry.js";
 import type { B3dPanel, MenuAction, Panel3d, Table, TableRow } from "tosijs-3d";
 import { BAR_HEIGHT } from "tosijs-3d/system-bar";
 
@@ -2030,6 +2030,7 @@ export class EnsembleEditor extends withAttributes({
       this._syncHandlePosition();
       this._syncMarker();
       this._syncBeacons();
+      this._followEffectTool();
       this._hub.update();
       requestAnimationFrame(tick);
     };
@@ -2911,6 +2912,8 @@ export class EnsembleEditor extends withAttributes({
     node: TransformNode;
     /** What the DOCUMENT last said the effect is (the tool echoes a normalised copy). */
     synced: string;
+    /** The document's `activity` last handed to the player. */
+    activity?: number;
   } | null = null;
 
   /** The effect piece being edited, or null. */
@@ -3022,6 +3025,63 @@ export class EnsembleEditor extends withAttributes({
       tool.synced = now;
       tool.handle.api.recipe = structuredClone(wanted);
     }
+    /*
+      The activity dial reaches the tool's player (#3437), when the DOCUMENT's
+      value changes, so the tool's own dial is not overridden on every sync.
+      As the element reads it: 0 to 1, or -1 for the recipe's own.
+    */
+    const activity = effectiveConfig(
+      featureRegistration("effect"),
+      cfg
+    ).activity;
+    const player = tool.handle.api.player as { activity: number } | null;
+    if (player && typeof activity === "number" && activity !== tool.activity) {
+      tool.activity = activity;
+      player.activity =
+        activity >= 0
+          ? Math.min(1, activity)
+          : (tool.handle.api.recipe as { activity?: number }).activity ?? 1;
+    }
+    this._followEffectTool();
+  }
+
+  /*
+    THE TOOL STAYS WITH ITS PIECE (#3437, 0.8.1 review). Its node was placed
+    once, at open, so a piece moved with the tool open left the effect
+    playing where it used to be. Per frame, from the piece's live origin, as
+    the selection marker does: a drag moves the body before any edit lands.
+  */
+  private _followEffectTool(): void {
+    const tool = this._effectTool;
+    const built = tool && this._built?.pieces.get(tool.id);
+    if (!tool || !built) return;
+    const [x, y, z] = this._liveOrigin(built);
+    const p = tool.node.position;
+    if (p.x !== x || p.y !== y || p.z !== z) p.set(x, y, z);
+  }
+
+  /**
+   * The schema a piece's feature panel is drawn from. While the effect tool
+   * is open on it, the effect's own `scale`, `ground` and `autoplay` would
+   * reach only the set-aside element, so they show as values, read-only;
+   * `activity` is forwarded to the tool's player, and `preset` reloads it
+   * (#3437).
+   */
+  private _panelSchema(
+    feature: string,
+    id: string,
+    schema: FeatureSchema | undefined
+  ): FeatureSchema | undefined {
+    if (feature !== "effect" || this.editingEffect !== id || !schema)
+      return schema;
+    const properties = { ...(schema.properties ?? {}) } as Record<
+      string,
+      Record<string, unknown>
+    >;
+    for (const key of ["scale", "ground", "autoplay"])
+      if (properties[key])
+        properties[key] = { ...properties[key], readOnly: true };
+    return { ...schema, properties } as FeatureSchema;
   }
 
   private _setAsideEditedEffect(): void {
@@ -5472,7 +5532,7 @@ export class EnsembleEditor extends withAttributes({
       */
       const panelFields: unknown[] = [];
       const widgets = schemaWidgets({
-        schema: registration.schema,
+        schema: this._panelSchema(name, selected.id, registration.schema),
         values,
         // Section captions carry the feature's name, so two features'
         // "Air" sections are folded and remembered separately.

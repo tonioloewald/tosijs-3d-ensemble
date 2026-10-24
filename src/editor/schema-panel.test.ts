@@ -112,6 +112,31 @@ describe("a schema dispatches to the right widget", () => {
     expect(program).toContain("hitTest");
   });
 
+  it("readOnly: true is its value as a label, with no control (#3437)", () => {
+    const bound = new Set<string>();
+    const widgets = schemaWidgets({
+      schema: {
+        properties: {
+          scale: { type: "number", minimum: 0, maximum: 4, readOnly: true },
+        },
+      },
+      values: { scale: 2 },
+      box: (key: string) => ({ path: key, value: 2, observe: () => () => {} }),
+      boundKeys: bound,
+      handleChange: () => {},
+    } as never);
+    expect(widgets.length).toBe(1);
+    expect(Object.keys(widgets[0] as object)).toEqual(["el", "layout"]);
+    expect((widgets[0] as { el: Element }).el.textContent).toContain("2");
+    expect([...bound]).toEqual([]);
+    // The companion: without readOnly the same field is a bound slider.
+    const live = widgetsFor(
+      { scale: { type: "number", minimum: 0, maximum: 4 } },
+      { scale: 2 }
+    );
+    expect(live.flat()).toContain("handle");
+  });
+
   it("a string is an EDITABLE field, not a read-only label", () => {
     /*
       It was a muted label until we adopted tosijs-3d's scene schemas and

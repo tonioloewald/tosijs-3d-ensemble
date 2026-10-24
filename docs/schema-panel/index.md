@@ -50,6 +50,8 @@ at rest. `tests/schema-readout.pw.ts` hovers a real one.
 
 Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
+A property marked `readOnly: true` (JSON Schema's own keyword) renders the
+same way, deliberately.
 
 ## Sections
 

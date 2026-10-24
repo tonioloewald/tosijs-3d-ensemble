@@ -51,6 +51,8 @@ at rest. `tests/schema-readout.pw.ts` hovers a real one.
 
 Anything unrecognised renders as a **disabled label showing the value**, not
 nothing: a field an author cannot see is a field they will assume is unset.
+A property marked `readOnly: true` (JSON Schema's own keyword) renders the
+same way, deliberately.
 
 ## Sections
 
@@ -88,6 +90,8 @@ import type { FeatureSchema } from "../format/registry.js";
 export interface PropertySpec {
   type?: string;
   title?: string;
+  /** JSON Schema's own: shown as its value, with no control and no binding. */
+  readOnly?: boolean;
   description?: string;
   enum?: Array<string | number>;
   /**
@@ -489,6 +493,23 @@ export function schemaWidgets(options: SchemaPanelOptions): unknown[] {
       values[key] ??
       spec.default ??
       (Number.isFinite(derivedValue) ? derivedValue : undefined);
+    /*
+      READ-ONLY: what it is, not a control that cannot do anything (a
+      control that does nothing invites trust in a reading). The editor marks
+      an effect's own fields so while the effect tool is open (#3437).
+    */
+    if (spec.readOnly) {
+      widgets.push(
+        label3d({
+          text: `${label}: ${
+            value === undefined || value === null ? "—" : String(value)
+          }${picker ? "" : rawUnit}`,
+          muted: true,
+          compact: true,
+        })
+      );
+      continue;
+    }
     /*
       ⚠️ BIND ONLY WHAT THE DOCUMENT ACTUALLY HAS.
 

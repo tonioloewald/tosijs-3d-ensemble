@@ -48,6 +48,11 @@ All notable changes to this project are documented here, in
   about** (#3394): a misspelled `"light"` hid it from the editor's piece
   list without a word. It now goes under "environment", and
   `registerFeature` says so once.
+- **With the effect tool open, the piece's own fields do what they say**
+  (#3437): the tool follows the piece when it moves, `activity` reaches
+  the tool's player, and `scale`, `ground` and `autoplay`, which would
+  reach only the set-aside element, show as read-only values. A schema
+  property's `readOnly: true` renders that way in any panel.
 
 ### Changed
 

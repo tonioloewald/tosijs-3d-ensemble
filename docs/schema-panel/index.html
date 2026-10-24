@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=5ff1d73de233" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=fe4846ecf239" data-tosi-doc-system />
   <title>Schema-driven panels — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor must not know what destroyable means — only how to render an editor for it from a description. Same for a tool&#39;s options." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Schema-driven panels — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=6b53a7f1f406" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=3ca13527655e" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="schema-panel.ts">
 <h1 id="schema-driven-panels">Schema-driven panels</h1>
 <p>The editor must not know what <code>destroyable</code> <em>means</em> — only how to render an
@@ -85,7 +85,9 @@ smaller as the hills get bigger.</p>
 (<code>slider3d</code>&#39;s default <code>showValue: &#39;peek&#39;</code>), so it is invisible to a text scrape
 at rest. <code>tests/schema-readout.pw.ts</code> hovers a real one.</p>
 <p>Anything unrecognised renders as a <strong>disabled label showing the value</strong>, not
-nothing: a field an author cannot see is a field they will assume is unset.</p>
+nothing: a field an author cannot see is a field they will assume is unset.
+A property marked <code>readOnly: true</code> (JSON Schema&#39;s own keyword) renders the
+same way, deliberately.</p>
 <h2 id="sections">Sections</h2>
 <p>A schema may group its properties: <code>x-sections: [{ title, icon?, keys }]</code>,
 tosijs-3d&#39;s own spelling (0.8.9, tosijs-3d#98, ours) — so its sky, water and
@@ -178,6 +180,6 @@ you open is remembered. The sky is the reason: 30 fields in one column before.</
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-cyseejr9.js"></script>
+  <script type="module" src="../hydrate-zm2t09yt.js"></script>
 </body>
 </html>

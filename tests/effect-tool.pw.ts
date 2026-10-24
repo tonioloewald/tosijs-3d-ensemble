@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { EFFECT_PRESETS } from "tosijs-3d/effect-presets";
 import { collectPageErrors, realErrors } from "./page-errors.js";
-import { reveal } from "./panel-locate.js";
+import { allPanelTexts, reveal } from "./panel-locate.js";
 
 /*
   EDITING AN EFFECT IN PLACE (tosijs-3d#122, ours). On an effect piece,
@@ -257,4 +257,112 @@ test("a new document with the effect tool open closes it and rebuilds once", asy
     return { opened, rebuilds, editing: ed.editingEffect };
   });
   expect(r).toEqual({ opened: true, rebuilds: 1, editing: null });
+});
+
+/*
+  THE TOOL FOLLOWS ITS PIECE, AND ITS FIELDS DO WHAT THEY SAY (#3437, 0.8.1
+  review). With the tool open, a moved piece left the effect playing where
+  it was, and `activity`, `scale` and `ground` edits reached only the
+  set-aside element: controls that did nothing. Now the tool's node follows,
+  `activity` reaches its player, and the rest show as values.
+*/
+test("with the effect tool open, the piece's move and activity reach it; scale is read-only", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  const errors = collectPageErrors(page);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  type Tool = {
+    node: { position: { x: number; y: number; z: number } };
+    handle: { api: { player: { activity: number } | null } };
+  };
+  const opened = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      editEffect(id: string): boolean;
+    };
+    (ed as unknown as { ensemble: unknown }).ensemble = {
+      name: "vent-test",
+      pieces: [
+        {
+          id: "vent",
+          at: [0, 0, 0],
+          features: { effect: { preset: "geyser", scale: 2 } },
+        },
+      ],
+    };
+    ed.select("vent");
+    return ed.editEffect("vent");
+  });
+  expect(opened).toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            !!(
+              document.querySelector("tosi-ensemble-editor") as unknown as {
+                _effectTool: Tool;
+              }
+            )._effectTool.handle.api.player
+        ),
+      { timeout: 60_000 }
+    )
+    .toBe(true);
+
+  const after = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      update(id: string, patch: Record<string, unknown>): void;
+      updateFeature(id: string, f: string, k: string, v: unknown): void;
+    };
+    ed.update("vent", { at: [4, 0, -3] });
+    ed.updateFeature("vent", "effect", "activity", 0.25);
+    return ed.editingEffect;
+  });
+  expect(after).toBe("vent");
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (
+              document.querySelector("tosi-ensemble-editor") as unknown as {
+                _effectTool: Tool;
+              }
+            )._effectTool.handle.api.player!.activity
+        ),
+      { message: "activity never reached the tool", timeout: 10_000 }
+    )
+    .toBe(0.25);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const p = (
+            document.querySelector("tosi-ensemble-editor") as unknown as {
+              _effectTool: Tool;
+            }
+          )._effectTool.node.position;
+          return [p.x, p.z].map((v) => Math.round(v * 100) / 100);
+        }),
+      { message: "the tool stayed where the piece was", timeout: 10_000 }
+    )
+    .toEqual([4, -3]);
+  // Scale reads as its value, not a slider that would move nothing.
+  const texts = await allPanelTexts(page);
+  expect(
+    texts.some((t) => /^scale\b.*: 2/i.test(t)),
+    texts.join(" | ")
+  ).toBe(true);
+  expect(realErrors(errors)).toEqual([]);
 });

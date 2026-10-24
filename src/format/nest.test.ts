@@ -510,12 +510,18 @@ describe("one walker for fetched strings (#3439)", () => {
     const schema = {
       type: "object",
       properties: {
-        image: { type: "string", format: "uri-reference", "x-keywords": ["none"] },
+        image: {
+          type: "string",
+          format: "uri-reference",
+          "x-keywords": ["none"],
+        },
       },
     };
     const out = rewriteFetched(schema, { image: "none" }, (u) => `/child/${u}`);
     expect(out).toEqual({ image: "none" });
-    expect(rewriteFetched(schema, { image: "a.png" }, (u) => `/child/${u}`)).toEqual({
+    expect(
+      rewriteFetched(schema, { image: "a.png" }, (u) => `/child/${u}`)
+    ).toEqual({
       image: "/child/a.png",
     });
   });

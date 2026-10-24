@@ -590,7 +590,7 @@ export class EnsembleEditor extends withAttributes({
     this._contexts = [];
     this._nested = new Map();
     this._nestedSaved = new Map();
-    this.closeEffect();
+    this.closeEffect({ rebuild: false });
     this._nestedTried = "";
     this._selected = value.pieces[0]?.id ?? null;
     // A NEW arrangement earns a new view. An edit to the current one does not —
@@ -2856,7 +2856,7 @@ export class EnsembleEditor extends withAttributes({
    * Save writing its own file. `popOut()` comes back.
    */
   drillIn(id: string): boolean {
-    this.closeEffect();
+    this.closeEffect({ rebuild: false });
     const piece = this._ensemble.pieces.find((p) => p.id === id);
     if (!piece?.ensemble) return false;
     const url = nestedUrl(piece.ensemble, this._loaded?.url);
@@ -2903,7 +2903,7 @@ export class EnsembleEditor extends withAttributes({
    * not) is what the parent now builds, so you can check it where it is used.
    */
   popOut(): boolean {
-    this.closeEffect();
+    this.closeEffect({ rebuild: false });
     const outer = this._contexts.pop();
     if (!outer) return false;
     this._nested.set(outer.url, structuredClone(this._ensemble));
@@ -2990,14 +2990,18 @@ export class EnsembleEditor extends withAttributes({
     return true;
   }
 
-  /** Close the effect tool, if open; the piece's own effect plays again. */
-  closeEffect(): void {
+  /**
+   * Close the effect tool, if open; the piece's own effect plays again.
+   * `rebuild: false` from a caller that is about to rebuild anyway (a new
+   * document, a drill, a rebuild already running): it rebuilt twice (#3438).
+   */
+  closeEffect({ rebuild = true }: { rebuild?: boolean } = {}): void {
     const tool = this._effectTool;
     if (!tool) return;
     this._effectTool = null;
     tool.handle.unmount();
     tool.node.dispose();
-    if (this.isConnected) this.rebuild();
+    if (rebuild && this.isConnected) this.rebuild();
   }
 
   private _commitEffect(id: string, recipe: EffectRecipe): void {
@@ -3023,7 +3027,7 @@ export class EnsembleEditor extends withAttributes({
       | { recipe?: unknown; preset?: string }
       | undefined;
     if (!cfg) {
-      this.closeEffect();
+      this.closeEffect({ rebuild: false }); // called from inside a rebuild
       return;
     }
     this._setAsideEditedEffect();

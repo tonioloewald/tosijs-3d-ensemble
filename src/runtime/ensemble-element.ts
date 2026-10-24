@@ -169,6 +169,9 @@ export class TosiEnsemble extends withAttributes({
   /** Hold a document and build it (libraries first). Used by load too. */
   private _setData(value: EnsembleData | null): void {
     this._data = value;
+    // Never reuse a flattening across assignments: the same object may have
+    // been changed in place (0.8.1 review, #3441).
+    this._flattened = null;
     this._mountAndBuild();
   }
   private _data: EnsembleData | null = null;

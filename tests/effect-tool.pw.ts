@@ -206,3 +206,55 @@ test("Edit effect mounts the tool in place, commits into the document, and close
   ).toBe("sparks");
   expect(realErrors(errors)).toEqual([]);
 });
+
+/*
+  OPENING ANOTHER DOCUMENT WITH THE TOOL OPEN REBUILDS ONCE (#3438, 0.8.1
+  review): closing the tool rebuilt, and then the new document rebuilt again.
+*/
+test("a new document with the effect tool open closes it and rebuilds once", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1400, height: 1100 });
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  const r = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      editEffect(id: string): boolean;
+      rebuild(o?: unknown): void;
+    };
+    (ed as unknown as { ensemble: unknown }).ensemble = {
+      name: "vent-test",
+      pieces: [
+        {
+          id: "vent",
+          at: [0, 0, 0],
+          features: { effect: { preset: "geyser" } },
+        },
+      ],
+    };
+    const opened = ed.editEffect("vent");
+    let rebuilds = 0;
+    const real = ed.rebuild.bind(ed);
+    ed.rebuild = (o?: unknown) => {
+      rebuilds++;
+      real(o);
+    };
+    (ed as unknown as { ensemble: unknown }).ensemble = {
+      name: "other",
+      pieces: [],
+    };
+    ed.rebuild = real;
+    return { opened, rebuilds, editing: ed.editingEffect };
+  });
+  expect(r).toEqual({ opened: true, rebuilds: 1, editing: null });
+});

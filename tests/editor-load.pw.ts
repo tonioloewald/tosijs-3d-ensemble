@@ -68,3 +68,61 @@ test.describe("a load is not overtaken by the page's own src", () => {
     );
   });
 });
+
+/*
+  A BAD LOAD IS REPORTED AND LEAVES THE DOCUMENT ALONE (board #3263, 0.5.2
+  review). fetchEnsembleData is unit-tested; this is the editor's wiring: a
+  missing url and a JSON body that is not an ensemble each dispatch `error`
+  (with the src), reject, and leave the open document exactly as it was.
+*/
+test("a bad load dispatches error, rejects, and leaves the document alone", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const unhandled: string[] = [];
+  page.on("pageerror", (e) => unhandled.push(String(e)));
+  await page.route("**/bad-load/not-an-ensemble.json", (route) =>
+    route.fulfill({ contentType: "application/json", body: '{"error":"nope"}' })
+  );
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as Element & {
+          ensemble?: { name?: string };
+        }
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  const r = await page.evaluate(async () => {
+    type Ed = Element & {
+      ensemble: { name: string };
+      load(url: string): Promise<void>;
+    };
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    const before = JSON.stringify(ed.ensemble);
+    const events: string[] = [];
+    ed.addEventListener("error", (e) => {
+      const d = (e as CustomEvent).detail as { src?: string };
+      events.push(d.src ?? "?");
+    });
+    const outcomes: string[] = [];
+    for (const url of [
+      "/bad-load/missing.json",
+      "/bad-load/not-an-ensemble.json",
+    ])
+      await ed.load(url).then(
+        () => outcomes.push("resolved"),
+        () => outcomes.push("rejected")
+      );
+    return { events, outcomes, same: JSON.stringify(ed.ensemble) === before };
+  });
+  expect(r.events).toEqual([
+    "/bad-load/missing.json",
+    "/bad-load/not-an-ensemble.json",
+  ]);
+  expect(r.outcomes).toEqual(["rejected", "rejected"]);
+  expect(r.same, "a bad load changed the open document").toBe(true);
+  expect(unhandled).toEqual([]);
+});

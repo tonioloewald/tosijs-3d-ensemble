@@ -80,6 +80,16 @@ answers which fields are.
 `'x-stops': [{ value: 0.5, label: 'semi-active' }, …]` on a number draws a
 tick and a name at each, and the handle catches on them.
 
+## A default is applied, unless it says not to be
+
+A property's `default` is what `bind` (and every live update) receives when
+the document leaves it unset, so a panel never shows a number nothing
+produced, and removing a key puts its default back. A field something ELSE
+fills in when unset (a planet's `world` preset writes its own `ocean`) marks
+its default `'x-apply-default': false`: the panel shows it, and the bind
+never writes it over the preset. Clearing such a field rebinds the feature,
+so the preset's value comes back.
+
 ## `bind` and `link` are two phases, and that is not a style preference
 
 A `protector` that resolves its power source during `bind` works only if the

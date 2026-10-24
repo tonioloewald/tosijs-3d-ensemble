@@ -19,6 +19,13 @@ neither would get the other. Building it once is also what makes a consumer's
 feature a first-class citizen: it renders because it has a schema, not because
 someone added a case for it.
 
+## Disposing a panel
+
+A bound row subscribes to its box, so a panel holds subscriptions until it
+is let go: call `panel.dispose()` when you drop it. Folding a section is
+handled inside (the panel rebuilds, releasing the rows it drops), and the
+`dispose` of the panel you hold releases whichever panel is current.
+
 ## Widget mapping
 
 | schema | widget |

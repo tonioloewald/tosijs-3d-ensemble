@@ -293,6 +293,11 @@ All notable changes to this project are documented here, in
   (`planetSchema()`, terrain `lat`/`lon`) and the planet ↔ terrain links from
   0.10.9, and 0.10.8 fixes the two leaks we were working around. A consumer on
   tosijs-3d 0.9 must move to 0.10.9.
+- **Deep exports removed** (reachable through `./*`; listed under Removed
+  below, and breaking for anyone who imported them): `applyEuler` from
+  `runtime/node-transform`, the `boxTracker` leak workaround, and
+  `schemaPanel`'s old return type, now `DisposablePanel`. (Added to this
+  entry after the release, from its review.)
 
 ### Added
 

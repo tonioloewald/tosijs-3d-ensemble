@@ -639,8 +639,8 @@ let warnedLegacyBiomeTemperature = false;
 /**
  * Put a planet's globe where its piece is. `<tosi-b3d-planet>` has no
  * `x`/`y`/`z`: it draws under a `rootNode` it builds when the scene is ready,
- * so this waits for that node (on a timer, with a budget, as `whenMeshed`
- * does) and moves it.
+ * so this waits for that node (on a timer, with a 12-second budget) and
+ * moves it.
  */
 function placePlanetRoot(element: SceneElement, ctx: FeatureContext): void {
   const [x, y, z] = ctx.at;

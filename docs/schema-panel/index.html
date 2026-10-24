@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1278e17c816a" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=408bd108bcdf" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="schema-panel.ts">
 <h1 id="schema-driven-panels">Schema-driven panels</h1>
 <p>The editor must not know what <code>destroyable</code> <em>means</em> — only how to render an
@@ -43,6 +43,11 @@ grow a nicer number field, the property panel would grow a better label, and
 neither would get the other. Building it once is also what makes a consumer&#39;s
 feature a first-class citizen: it renders because it has a schema, not because
 someone added a case for it.</p>
+<h2 id="disposing-a-panel">Disposing a panel</h2>
+<p>A bound row subscribes to its box, so a panel holds subscriptions until it
+is let go: call <code>panel.dispose()</code> when you drop it. Folding a section is
+handled inside (the panel rebuilds, releasing the rows it drops), and the
+<code>dispose</code> of the panel you hold releases whichever panel is current.</p>
 <h2 id="widget-mapping">Widget mapping</h2>
 <table>
 <thead>

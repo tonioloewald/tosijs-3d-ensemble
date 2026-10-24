@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=1278e17c816a" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=408bd108bcdf" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="registry.ts">
 <h1 id="the-feature-registry">The feature registry</h1>
 <p>A feature is a <strong>registration</strong>, not a case in a switch. That is what makes the
@@ -91,6 +91,14 @@ answers which fields are.</p>
 <h2 id="a-slider-can-name-its-stops">A slider can name its stops</h2>
 <p><code>&#39;x-stops&#39;: [{ value: 0.5, label: &#39;semi-active&#39; }, …]</code> on a number draws a
 tick and a name at each, and the handle catches on them.</p>
+<h2 id="a-default-is-applied-unless-it-says-not-to-be">A default is applied, unless it says not to be</h2>
+<p>A property&#39;s <code>default</code> is what <code>bind</code> (and every live update) receives when
+the document leaves it unset, so a panel never shows a number nothing
+produced, and removing a key puts its default back. A field something ELSE
+fills in when unset (a planet&#39;s <code>world</code> preset writes its own <code>ocean</code>) marks
+its default <code>&#39;x-apply-default&#39;: false</code>: the panel shows it, and the bind
+never writes it over the preset. Clearing such a field rebinds the feature,
+so the preset&#39;s value comes back.</p>
 <h2 id="bind-and-link-are-two-phases-and-that-is-not-a-style-preference"><code>bind</code> and <code>link</code> are two phases, and that is not a style preference</h2>
 <p>A <code>protector</code> that resolves its power source during <code>bind</code> works only if the
 reactor happened to bind first — so the same ensemble behaves differently

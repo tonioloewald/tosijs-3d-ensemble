@@ -240,13 +240,16 @@ So `piece.scale` and `piece.rot` were documented format fields that moved
 nothing. The editor shipped controls against both, and a test asserted
 `element.size === 3` and passed the whole time.
 
-The fix writes the library instance's root `TransformNode` — `element.mesh` —
-which the element does not rewrite the way it rewrites position:
-`src/runtime/node-transform.ts`. Filed as tosijs-3d#47 (scale) and #48
-(rotation). **The instance does not exist when the element is appended**
-(destroyable instantiates inside `lib.ready.then(...)`), so `place-mesh.ts`'s
-`whenMeshed` retries on a render observer with a frame budget; applying once,
-immediately, is the same silent nothing one layer down.
+The first fix wrote the library instance's root `TransformNode` and polled
+for it to exist (`whenMeshed`), because the instance is created inside
+`lib.ready.then(...)`, after the element is appended. Both are gone: filed
+as tosijs-3d#47 (scale) and #48 (rotation), and fixed upstream. The element
+forwards `rx`/`ry`/`rz` (0.8.1) and applies `scale` and per-axis `stretch`
+(0.10.12, #105) when its instance arrives, so a rotation is the element's
+attributes and a scale goes through `scaleElement`
+(`src/runtime/node-transform.ts`). The lesson outlives the code: applying
+a transform once, immediately, to something that does not exist yet is the
+same silent nothing one layer down.
 
 This is the project's own "verify the OUTPUT, not the mechanism" rule catching
 its own code three times over: the attribute was set, the element accepted it,

@@ -469,6 +469,8 @@ bun test src/format # one directory; `bun test -t "two phases"` for one test
 bun run typecheck   # root tsconfig, noEmit
 bun run release:attest  # at release: run the browser lanes, write release-attestation.json
 bun run sizes       # at release, before attesting: re-record dist-sizes.json (the build prints the delta)
+bun run deploy      # by hand: a Firebase PREVIEW (tosijs-ensemble.web.app), possibly stale.
+                    # The real site, ensemble.tosijs.net, is GitHub Pages from docs/ on every push.
 ```
 
 ⚠️ **The browser lanes (`test:scene`, `test:reparent`) do not run in CI, on

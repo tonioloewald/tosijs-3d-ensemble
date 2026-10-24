@@ -767,7 +767,7 @@ export class EnsembleEditor extends withAttributes({
 
     this._snapshot = structuredClone(this._ensemble);
     this._snapshotJson = json;
-    this._syncDirty();
+    this._syncDirty(json);
 
     /*
       NEVER the chrome. A bound widget is already showing its own value, and
@@ -1106,17 +1106,23 @@ export class EnsembleEditor extends withAttributes({
     chrome render: most edits deliberately skip one (it would steal the
     focus mid-typing), so a mark drawn in the panel's content went stale.
   */
-  private _syncDirty(): void {
+  private _syncDirty(json?: string): void {
     const el = this._systemPanels.get("file");
-    const title = this._fileTitle();
+    // `json`: the document as a write already serialized it, so a scrub
+    // does not stringify it twice a frame (#3394).
+    const title = this._isDirty(json) ? "Ensemble •" : "Ensemble";
     if (el && el.title !== title) el.title = title;
   }
 
   /** Has the document changed since it was opened from or saved to the store? */
   get dirty(): boolean {
+    return this._isDirty();
+  }
+
+  private _isDirty(json?: string): boolean {
     return (
       this._savedJson !== null &&
-      JSON.stringify(this._ensemble) !== this._savedJson
+      (json ?? JSON.stringify(this._ensemble)) !== this._savedJson
     );
   }
 
@@ -4929,7 +4935,7 @@ export class EnsembleEditor extends withAttributes({
       ["lights", "lights"],
     ] as const) {
       const here = primitives.filter(
-        (f) => (f.group ?? "environment") === category
+        (f) => (f.group === "lights" ? "lights" : "environment") === category
       );
       if (!here.length) continue;
       rows.push(label3d({ text: title, collapsible: true, open: true }));

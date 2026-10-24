@@ -343,6 +343,18 @@ const features = new Map<string, FeatureRegistration<never>>();
 export function registerFeature<Handle>(
   reg: FeatureRegistration<Handle>
 ): void {
+  /*
+    A misspelled group (`"light"`) matched no category of the piece list, so
+    the feature was hidden from the editor with nothing said (#3394). It is
+    listed under "environment", and the registration is told once.
+  */
+  const group = (reg as { group?: unknown }).group;
+  if (group !== undefined && group !== "environment" && group !== "lights")
+    console.warn(
+      `registerFeature("${reg.name}"): group ${JSON.stringify(
+        group
+      )} is not "environment" or "lights"; listing it under "environment"`
+    );
   features.set(reg.name, reg as FeatureRegistration<never>);
 }
 

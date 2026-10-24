@@ -44,6 +44,10 @@ All notable changes to this project are documented here, in
   a panel, so nothing released them; every repaint of the editor's property
   panel and piece list, and every fold of a standalone `schemaPanel`, added a
   folded section's worth. `foldDisposing` disposes what a fold drops.
+- **A feature registered with an unknown `group` is listed, and warned
+  about** (#3394): a misspelled `"light"` hid it from the editor's piece
+  list without a word. It now goes under "environment", and
+  `registerFeature` says so once.
 
 ### Changed
 

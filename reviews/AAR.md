@@ -3,6 +3,25 @@
 Newest first. Facts, not analysis — the whys are asked in the quarterly
 pattern review (practices/releasing.md step 10).
 
+## 0.9.0 — 2026-10-25
+
+- Went well: cut for Manta (#3486, its dependency check failing on 0.8.1's
+  ^0.10 peer). release-doctor clean on its first run; the scene lane now
+  builds into .test-site/ (#3442), so it no longer rewrites docs/. Attest
+  47 + 1, dry run, stage, and approval all inside about 40 minutes.
+- Didn't: the review found that #3437's own fix (the document's effect
+  activity reaching the tool) broke again on a preset change. Fixed before
+  the tag, with a failing-first step.
+- Surprised: the user skill's pre-release-review.workflow.js was missing
+  from ~/.claude/skills/; the Workflow tool also refused the practices
+  copy by path until it was copied into the session scratchpad.
+- Friction: the docs lens could not regenerate docs because a correctness
+  lens's Playwright server held the build lock; lenses that run browser
+  tests in parallel share one port.
+- Cycle: pre-minor full review -> GO_WITH_FOLLOWUPS (0 blockers, 0 majors,
+  3 verified minors: 1 fixed, 1 docs fixed, 1 filed) -> follow-ups #3495 ->
+  sizes -> attest -> dry run -> publish -> verified.
+
 ## 0.8.1 — 2026-10-20
 
 - Went well: tosijs-3d turned #122 (embeddable tools) and #124 (a 0.10.19

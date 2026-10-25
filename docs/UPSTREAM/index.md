@@ -89,6 +89,7 @@ older than its card; when they disagree, the card wins.
 | 65 | **0.10.19 regression: an SVG effect picture's `onload` throws on a texture released before it loaded** (`clearRect` of null): `tests/effect.pw.ts` "a clean recipe plays" failed 3/3; fixed in 0.10.20 (6/6 after) | [#124](https://github.com/tonioloewald/tosijs-3d/issues/124) |
 | 66 | **tosijs-ui: a `[[wikilink]]` to a missing page builds silently**, and titles are slugified rather than resolved (9 dead links here, fixed); fixed in 1.16.29 (titles resolve, the build names a dangling one) | [tosijs-ui#234](https://github.com/tonioloewald/tosijs-ui/issues/234) |
 | 67 | **`foldSections` drops a folded section's rows without disposing them**: rows are built (and bound) before folding, so every repaint leaked the folded rows' subscriptions. Worked around by `foldDisposing` (#3262) | [#127](https://github.com/tonioloewald/tosijs-3d/issues/127) |
+| 68 | **`timeScale` does not slow Babylon animation groups**: nothing sets `scene.animationTimeScale`, so in slow motion a rig kept its full tempo (measured 62.9 frames/s at 1, 74.4 at 0.25). Worked around in the Time panel (#3355): `AnimationTransport` multiplies each group's `speedRatio` by `timeScale`. Drop the multiply when it ships, or the two compound | [#128](https://github.com/tonioloewald/tosijs-3d/issues/128) |
 
 ### Stopgaps we own, and what retires them
 

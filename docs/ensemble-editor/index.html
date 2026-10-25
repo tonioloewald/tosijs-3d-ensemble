@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=5c337252ad32" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=4c33359879d6" data-tosi-doc-system />
   <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=f64490f2c775" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=8c974baa0ed8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="ensemble-editor.ts">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -63,6 +63,23 @@ flyable are exactly the questions a flat viewport answers badly.</p>
 <p>Panels stay open together and keep where you dragged them across edits.
 <code>hide-chrome</code> (<code>hideChrome: true</code>) takes them and their bar buttons away,
 for a host that shows the scene without the tool.</p>
+<h2 id="time">Time</h2>
+<p>The <strong>Time</strong> panel runs the world slower or faster and plays the pieces&#39;
+animations, for watching a scenario in slow motion and judging the moving
+parts a rig exists to show. Library animation groups arrive stopped; the
+editor starts them. Nothing here is written to the document. It starts
+closed: its clock button on the system bar opens it.</p>
+<ul>
+<li><strong>Sim speed</strong> is the scene&#39;s <code>timeScale</code> (1 real time, 0 stopped), the
+same value its own Slow motion button sets.</li>
+<li><strong>Animate</strong>, <strong>Speed</strong> and <strong>Scrub</strong> drive every animation group the pieces
+carry, except a destroyed piece&#39;s (<code>__wreckStopped</code>). Scrubbing pauses
+them that far through each clip. A clip&#39;s speed is Speed times the sim
+speed (see <a href="/transport/">the transport</a>).</li>
+</ul>
+<p>From script: <code>setTimeScale(n)</code>, <code>playAnimations(on?)</code>,
+<code>setAnimationSpeed(n)</code>, <code>scrubAnimations(t)</code>, and <code>editor.time</code> for what the
+panel shows.</p>
 <h2 id="opening-and-saving">Opening and saving</h2>
 <p>The component owns no persistence; its host does, one of two ways:</p>
 <ul>
@@ -112,6 +129,7 @@ these grips is an open comparison (board #2794).</p>
       <li><a class="doc-link" href="../store/">Where the editor opens and saves</a></li>
     </ul>
     </details></li>
+    <li><a class="doc-link" href="../transport/">Animation transport</a></li>
     <li><details open><summary><a class="doc-link" href="../editing/">Editing</a></summary>
     <ul>
       <li><a class="doc-link current" href="../ensemble-editor/" aria-current="page">&lt;tosi-ensemble-editor&gt;</a></li>
@@ -185,6 +203,6 @@ these grips is an open comparison (board #2794).</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-56zmh9rp.js"></script>
+  <script type="module" src="../hydrate-fdg7kd8w.js"></script>
 </body>
 </html>

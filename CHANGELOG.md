@@ -5,6 +5,23 @@ All notable changes to this project are documented here, in
 
 ## [Unreleased]
 
+### Added
+
+- **The editor's Time panel** (board #3355, for Manta's prefab bench): sim
+  speed (`<tosi-b3d>`'s `timeScale`) and an animation transport, play /
+  pause / speed / scrub, for every animation group the pieces carry. Library
+  groups arrive stopped, so a rig no longer sits frozen in the editor.
+  Slow motion slows the clips too (tosijs-3d#128). A view setting: nothing
+  is written to the document. From script: `setTimeScale`,
+  `playAnimations`, `setAnimationSpeed`, `scrubAnimations`, `editor.time`.
+  It starts closed; its clock button on the system bar opens it.
+
+### Fixed
+
+- **Panels restack when one is opened or closed**: a closed panel left a
+  gap, and one opened by its bar button could cover the panel below it
+  until the next edit redrew the chrome.
+
 ## [0.9.0] — 2026-10-25
 
 ### ⚠️ Breaking

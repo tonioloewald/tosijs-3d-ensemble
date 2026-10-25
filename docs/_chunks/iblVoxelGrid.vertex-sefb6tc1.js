@@ -1,4 +1,0 @@
-import{iA}from"../hydrate-56zmh9rp.js";import"./site-pc2bn1e7.js";import"./site-jvr3yejw.js";export{iA as iblVoxelGridVertexShader};
-
-//# debugId=D00290024DF57ABF64756E2164756E21
-//# sourceMappingURL=iblVoxelGrid.vertex-sefb6tc1.js.map

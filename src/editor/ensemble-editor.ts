@@ -43,6 +43,25 @@ Panels stay open together and keep where you dragged them across edits.
 `hide-chrome` (`hideChrome: true`) takes them and their bar buttons away,
 for a host that shows the scene without the tool.
 
+## Time
+
+The **Time** panel runs the world slower or faster and plays the pieces'
+animations, for watching a scenario in slow motion and judging the moving
+parts a rig exists to show. Library animation groups arrive stopped; the
+editor starts them. Nothing here is written to the document. It starts
+closed: its clock button on the system bar opens it.
+
+- **Sim speed** is the scene's `timeScale` (1 real time, 0 stopped), the
+  same value its own Slow motion button sets.
+- **Animate**, **Speed** and **Scrub** drive every animation group the pieces
+  carry, except a destroyed piece's (`__wreckStopped`). Scrubbing pauses
+  them that far through each clip. A clip's speed is Speed times the sim
+  speed (see [the transport](/transport/)).
+
+From script: `setTimeScale(n)`, `playAnimations(on?)`,
+`setAnimationSpeed(n)`, `scrubAnimations(t)`, and `editor.time` for what the
+panel shows.
+
 ## Opening and saving
 
 The component owns no persistence; its host does, one of two ways:
@@ -154,6 +173,7 @@ import type { EnsembleStore, StoreEntry, StoreRevision } from "./store.js";
 import { registerTransformTool, transformsOf } from "./tools/transform.js";
 import { createHandles } from "./handles-view.js";
 import { createHistory } from "./history.js";
+import { AnimationTransport, groupsOf } from "./transport.js";
 import { createSelectionView } from "./selection-view.js";
 import type { SelectionView } from "./selection-view.js";
 import type { HandlesView } from "./handles-view.js";
@@ -355,6 +375,37 @@ const AO_METHOD_SPEC = () =>
     }
   ).properties.ssaoMethod!;
 
+/** `<tosi-b3d>`'s own `timeScale` spec: the Time panel's sim speed (#3355). */
+const TIME_SCALE_SPEC = () =>
+  (
+    sceneSchemas.b3d() as {
+      properties: Record<string, Record<string, unknown>>;
+    }
+  ).properties.timeScale!;
+
+/*
+  The transport's own fields. These are OURS, unlike a scene field's: they
+  describe the editor's playback, not anything an element accepts.
+*/
+const TRANSPORT_SPECS = {
+  speed: {
+    type: "number",
+    title: "Speed",
+    minimum: 0,
+    maximum: 4,
+    default: 1,
+    "x-unit": "×",
+  },
+  scrub: {
+    type: "number",
+    title: "Scrub",
+    minimum: 0,
+    maximum: 1,
+    default: 0,
+    description: "Pause every clip this far through it.",
+  },
+} as const;
+
 /** `<tosi-b3d>`'s own specs for the recommendations we store (tosijs-3d 0.8.13). */
 const AO_RECOMMENDATION_SPECS = () => {
   const props = (
@@ -492,6 +543,7 @@ export const PANEL_ICONS = {
   library: "backpack",
   options: "settings",
   properties: "checkSquare",
+  time: "clock",
 } as const;
 
 /** Which system panel a chrome panel is: its key, button and title. */
@@ -499,6 +551,8 @@ interface PanelSlot {
   key: string;
   icon: string;
   title: string;
+  /** Start closed: its bar button opens it (the Time panel). */
+  closed?: boolean;
 }
 
 /** Row-id prefix for a feature the document does not have (never a piece id). */
@@ -2010,6 +2064,10 @@ export class EnsembleEditor extends withAttributes({
     this._unobserve = this._store.tosi.observe((path) =>
       this._onDocumentWrite(String(path))
     );
+    this._unobserveTime?.();
+    this._unobserveTime = this._time.tosi.observe((path) =>
+      this._onTimeWrite(String(path))
+    );
 
     /*
       THE INPUT LOOP IS NOT THE RENDER LOOP.
@@ -2031,6 +2089,7 @@ export class EnsembleEditor extends withAttributes({
       this._syncMarker();
       this._syncBeacons();
       this._followEffectTool();
+      this._syncTime();
       this._hub.update();
       requestAnimationFrame(tick);
     };
@@ -2088,6 +2147,8 @@ export class EnsembleEditor extends withAttributes({
     // with two of them rebuilding the scene on every write.
     this._unobserve?.();
     this._unobserve = null;
+    this._unobserveTime?.();
+    this._unobserveTime = null;
     this._pointer?.dispose();
     this._pointer = null;
     this._detachShortcuts?.();
@@ -4080,6 +4141,7 @@ export class EnsembleEditor extends withAttributes({
 
     this._renderPalette();
     this._renderToolOptions();
+    this._renderTimePanel();
     /*
       THE SCENE GRAPH AND THE LIBRARY ARE THE SAME SLOT.
 
@@ -4665,6 +4727,190 @@ export class EnsembleEditor extends withAttributes({
               }) as never[]),
             ]
           : [])
+      )
+    );
+  }
+
+  /*
+    TIME (#3355): how fast the world runs, and the animation transport, for
+    watching a scenario slowly and judging the moving parts a rig exists to
+    show. Both are VIEW settings: nothing here is written to the document.
+
+    The widgets are bound to a small tosijs store of their own, and one
+    observer applies what they write, so a scrub can turn Play off without
+    re-rendering the panel under the slider being dragged.
+  */
+  private _timeKey = `${this._storeKey}-time`;
+
+  private _times = tosi({
+    [this._timeKey]: { timeScale: 1, playing: true, speed: 1, scrub: 0 },
+  }) as unknown as Record<string, TosiStore>;
+
+  private get _time(): TosiStore {
+    return this._times[this._timeKey]!;
+  }
+
+  private _unobserveTime: (() => void) | null = null;
+
+  private _transport = new AnimationTransport();
+
+  /** The scene's `timeScale` as the last frame saw it. */
+  private _sceneTimeScale = 1;
+
+  /** How many animation groups the chrome was last drawn for. */
+  private _animationCount = 0;
+
+  /** The built pieces' animation groups (each instance carries its own). */
+  private _animationGroups() {
+    const bodies: unknown[] = [];
+    for (const piece of this._built?.pieces.values() ?? []) {
+      bodies.push(
+        (piece.element as { mesh?: unknown } | undefined)?.mesh ?? piece.node
+      );
+    }
+    return groupsOf(bodies);
+  }
+
+  /** Sim speed: `<tosi-b3d>`'s `timeScale` (1 real time, 0 stopped). A view setting. */
+  setTimeScale(scale: number): void {
+    this._timeBox("timeScale").value = Math.max(0, scale);
+  }
+
+  /** Play or pause the pieces' animations. A view setting. */
+  playAnimations(on = true): void {
+    this._timeBox("playing").value = on;
+  }
+
+  /** Animation playback speed, before the sim speed. A view setting. */
+  setAnimationSpeed(speed: number): void {
+    this._timeBox("speed").value = Math.max(0, speed);
+  }
+
+  /** Pause every animation `t` (0 to 1) of the way through its clip. */
+  scrubAnimations(t: number): void {
+    this._timeBox("scrub").value = Math.min(1, Math.max(0, t));
+  }
+
+  /** What the Time panel shows: sim speed and the transport. */
+  get time(): {
+    timeScale: number;
+    playing: boolean;
+    speed: number;
+    scrub: number;
+    animations: number;
+  } {
+    const t = this._time.tosi.value as unknown as {
+      timeScale: number;
+      playing: boolean;
+      speed: number;
+      scrub: number;
+    };
+    return { ...t, animations: this._animationGroups().length };
+  }
+
+  private _timeBox(key: string): { value: unknown } {
+    return (this._time as unknown as Record<string, { value: unknown }>)[key]!;
+  }
+
+  /** Apply a write to the Time panel's state. */
+  private _onTimeWrite(path: string): void {
+    const t = this._time.tosi.value as unknown as {
+      timeScale: number;
+      playing: boolean;
+      speed: number;
+      scrub: number;
+    };
+    const key = path.slice(path.lastIndexOf(".") + 1);
+    const scene = this._scene as unknown as { timeScale?: number } | null;
+    if (key === "timeScale" && scene && scene.timeScale !== t.timeScale) {
+      scene.timeScale = t.timeScale;
+    } else if (key === "speed") {
+      this._transport.speed = t.speed;
+    } else if (key === "scrub") {
+      this._transport.scrub(t.scrub);
+      this._timeBox("playing").value = false;
+    } else if (key === "playing" && t.playing !== this._transport.playing) {
+      this._transport.setPlaying(t.playing);
+    }
+  }
+
+  /**
+   * Per frame: keep the animation groups in line with the transport, and
+   * the panel with the scene (its own Slow motion button moves `timeScale`
+   * too). A change in how many groups there are redraws the chrome, so the
+   * transport is offered exactly when there is something to play.
+   */
+  private _syncTime(): void {
+    const scene = this._scene as unknown as { timeScale?: number } | null;
+    if (!scene) return;
+    const timeScale = Number(scene.timeScale ?? 1);
+    /*
+      Copied to the panel only when the SCENE's value moved. Comparing with
+      the panel's instead undid every slider move: the write is applied by an
+      observer on the next batch, and this ran first and wrote the old value
+      back.
+    */
+    if (timeScale !== this._sceneTimeScale) {
+      this._sceneTimeScale = timeScale;
+      this._timeBox("timeScale").value = timeScale;
+    }
+    const groups = this._animationGroups();
+    this._transport.sync(groups, timeScale);
+    if (groups.length !== this._animationCount) {
+      this._animationCount = groups.length;
+      this._renderChrome();
+    }
+  }
+
+  private _renderTimePanel(): void {
+    const box = (key: string) =>
+      (this._time as unknown as Record<string, BoxLike>)[key];
+    const count = this._animationCount;
+    this._addPanel(
+      "right",
+      { key: "time", icon: PANEL_ICONS.time, title: "Time", closed: true },
+      panel3d(
+        { width: PANEL_WIDTH, padding: 8, gap: 4 },
+        ...(schemaWidgets({
+          // Titled here: upstream's spec has none, and "timeScale" is a
+          // property name, not a label.
+          schema: {
+            properties: {
+              timeScale: { ...TIME_SCALE_SPEC(), title: "Sim speed" },
+            },
+          },
+          values: { timeScale: box("timeScale")!.value },
+          box,
+          fields: this._pendingFields,
+          handleChange: () => {}, // bound: the observer applies it
+        }) as never[]),
+        ...(count
+          ? [
+              label3d({
+                text: `Animations (${count})`,
+                muted: true,
+                compact: true,
+              }),
+              // Not "Play": a host action is often called that (#3355).
+              toggle3d({ label: "Animate", value: box("playing") as never }),
+              ...(schemaWidgets({
+                schema: { properties: TRANSPORT_SPECS as never },
+                values: {
+                  speed: box("speed")!.value,
+                  scrub: box("scrub")!.value,
+                },
+                box,
+                fields: this._pendingFields,
+                handleChange: () => {}, // bound: the observer applies it
+              }) as never[]),
+            ]
+          : [
+              label3d({
+                text: "No animations in this scene",
+                muted: true,
+                compact: true,
+              }),
+            ])
       )
     );
   }
@@ -5825,8 +6071,14 @@ export class EnsembleEditor extends withAttributes({
         icon: slot.icon,
         title: slot.title,
         exclusive: "off",
-        open: true,
+        open: !slot.closed,
       }) as B3dPanel;
+      /*
+        Opened or closed (by its button, or by a host's code): stack again,
+        so a closed panel leaves no gap and an opened one does not cover the
+        panel below it.
+      */
+      el.addEventListener("paneltoggle", () => this._renderChrome());
       this._systemPanels.set(slot.key, el);
       (this._scene as unknown as HTMLElement).append(el);
     }
@@ -5852,7 +6104,8 @@ export class EnsembleEditor extends withAttributes({
       Number(panel.getAttribute("height") ?? 0) ||
       panel.viewBox?.baseVal?.height ||
       0;
-    this._stackTop[side] += height + 10 + TITLE_BAR;
+    // A closed panel takes no room (its button is on the bar).
+    if (!el || el.isOpen) this._stackTop[side] += height + 10 + TITLE_BAR;
     this._panels.push(panel);
   }
 

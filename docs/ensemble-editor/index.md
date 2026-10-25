@@ -42,6 +42,25 @@ Panels stay open together and keep where you dragged them across edits.
 `hide-chrome` (`hideChrome: true`) takes them and their bar buttons away,
 for a host that shows the scene without the tool.
 
+## Time
+
+The **Time** panel runs the world slower or faster and plays the pieces'
+animations, for watching a scenario in slow motion and judging the moving
+parts a rig exists to show. Library animation groups arrive stopped; the
+editor starts them. Nothing here is written to the document. It starts
+closed: its clock button on the system bar opens it.
+
+- **Sim speed** is the scene's `timeScale` (1 real time, 0 stopped), the
+  same value its own Slow motion button sets.
+- **Animate**, **Speed** and **Scrub** drive every animation group the pieces
+  carry, except a destroyed piece's (`__wreckStopped`). Scrubbing pauses
+  them that far through each clip. A clip's speed is Speed times the sim
+  speed (see [the transport](/transport/)).
+
+From script: `setTimeScale(n)`, `playAnimations(on?)`,
+`setAnimationSpeed(n)`, `scrubAnimations(t)`, and `editor.time` for what the
+panel shows.
+
 ## Opening and saving
 
 The component owns no persistence; its host does, one of two ways:

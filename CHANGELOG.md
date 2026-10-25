@@ -5,6 +5,8 @@ All notable changes to this project are documented here, in
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-25
+
 ### ⚠️ Breaking
 
 - **A feature's allow-list fails closed** (board #3357, security). A feature
@@ -60,7 +62,7 @@ All notable changes to this project are documented here, in
   against the committed `dist-sizes.json`; #3220, #3358): game entry
   15.55 kB gz (+0.13), format kernel 4.34 kB (+0.41, +10.5%: piece-ref
   validation and the single url walker), everything with the editor
-  40.97 kB (+0.29). Re-measure when cutting the tag.
+  41.25 kB (+0.58), `dist/**/*.js` 226.47 kB (+3.25).
 - **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar
   (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
   dangling wikilink now fails the doc build (tosijs-ui#234, ours).

@@ -8,7 +8,7 @@ pattern review (practices/releasing.md step 10).
 - Went well: cut for Manta (#3486, its dependency check failing on 0.8.1's
   ^0.10 peer). release-doctor clean on its first run; the scene lane now
   builds into .test-site/ (#3442), so it no longer rewrites docs/. Attest
-  47 + 1, dry run, stage, and approval all inside about 40 minutes.
+  47 + 1; approval reached npm before the verify job timed out.
 - Didn't: the review found that #3437's own fix (the document's effect
   activity reaching the tool) broke again on a preset change. Fixed before
   the tag, with a failing-first step.

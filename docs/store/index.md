@@ -28,9 +28,13 @@ fires `loaded` (`{ src, storeId }`) when a load lands.
 Every store call the editor makes is reported, never swallowed: a failed
 Open, History read, revision or Save dispatches `error` on the editor with
 `{ error }` (a failed `src` load adds `{ src }`), and the method's promise
-rejects with the same error. A failed Save leaves the document **dirty**,
-because it is: `editor.dirty` is true until a write succeeds, and the
-Ensemble panel's title carries a `•` while it is. An edit made while a Save
+rejects with the same error. A failed Save leaves a document the editor
+opened or saved **dirty**, because it is: `editor.dirty` is true until a
+write succeeds, and the Ensemble panel's title carries a `•` while it is.
+`dirty` compares with the last copy loaded or written, so a document that
+has neither (after New or Open file…, or a `src` the store cannot name)
+reads clean however much it is edited; a host guarding unload checks that
+case itself. An edit made while a Save
 is in flight is not marked saved: what is written is the document as it was
 when Save was pressed.
 

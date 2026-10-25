@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=fe4846ecf239" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=5c337252ad32" data-tosi-doc-system />
   <title>Where the editor opens and saves — tosijs-3d-ensemble</title>
   <meta name="description" content="The component owns no persistence (SPEC): it hands documents to a host. A store is the host&#39;s answer to &quot;where do ensembles live&quot;." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Where the editor opens and saves — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=3ca13527655e" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=f64490f2c775" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="store.ts">
 <h1 id="where-the-editor-opens-and-saves">Where the editor opens and saves</h1>
 <p>The component owns no persistence (SPEC): it hands documents to a host. A
@@ -52,9 +52,13 @@ fires <code>loaded</code> (<code>{ src, storeId }</code>) when a load lands.</p>
 <p>Every store call the editor makes is reported, never swallowed: a failed
 Open, History read, revision or Save dispatches <code>error</code> on the editor with
 <code>{ error }</code> (a failed <code>src</code> load adds <code>{ src }</code>), and the method&#39;s promise
-rejects with the same error. A failed Save leaves the document <strong>dirty</strong>,
-because it is: <code>editor.dirty</code> is true until a write succeeds, and the
-Ensemble panel&#39;s title carries a <code>•</code> while it is. An edit made while a Save
+rejects with the same error. A failed Save leaves a document the editor
+opened or saved <strong>dirty</strong>, because it is: <code>editor.dirty</code> is true until a
+write succeeds, and the Ensemble panel&#39;s title carries a <code>•</code> while it is.
+<code>dirty</code> compares with the last copy loaded or written, so a document that
+has neither (after New or Open file…, or a <code>src</code> the store cannot name)
+reads clean however much it is edited; a host guarding unload checks that
+case itself. An edit made while a Save
 is in flight is not marked saved: what is written is the document as it was
 when Save was pressed.</p>
 <p>From script: <code>openFromStore(id)</code>, <code>saveToStore(id?)</code> (no id: back to the
@@ -167,6 +171,6 @@ so <code>list()</code> rejects there and a host can leave the store off.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-zm2t09yt.js"></script>
+  <script type="module" src="../hydrate-56zmh9rp.js"></script>
 </body>
 </html>

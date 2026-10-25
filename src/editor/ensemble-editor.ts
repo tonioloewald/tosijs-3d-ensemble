@@ -3024,6 +3024,7 @@ export class EnsembleEditor extends withAttributes({
     if (wanted && now !== tool.synced) {
       tool.synced = now;
       tool.handle.api.recipe = structuredClone(wanted);
+      tool.activity = undefined; // a new recipe resets the player's (0.9.0 review)
     }
     /*
       The activity dial reaches the tool's player (#3437), when the DOCUMENT's

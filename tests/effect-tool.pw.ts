@@ -344,6 +344,33 @@ test("with the effect tool open, the piece's move and activity reach it; scale i
       { message: "activity never reached the tool", timeout: 10_000 }
     )
     .toBe(0.25);
+  // A new preset hands the tool a new recipe, whose player starts at the
+  // recipe's own activity; the document's still wins (0.9.0 review).
+  const before = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed & {
+      updateFeature(id: string, f: string, k: string, v: unknown): void;
+      _effectTool: { synced?: string };
+    };
+    const synced = ed._effectTool.synced;
+    ed.updateFeature("vent", "effect", "preset", "volcano");
+    return synced;
+  });
+  await expect
+    .poll(
+      () =>
+        page.evaluate((before) => {
+          const t = (
+            document.querySelector("tosi-ensemble-editor") as unknown as {
+              _effectTool: Tool & { synced?: string };
+            }
+          )._effectTool;
+          return t.synced === before
+            ? "not swapped"
+            : t.handle.api.player!.activity;
+        }, before),
+      { message: "a preset change reset the tool's activity", timeout: 10_000 }
+    )
+    .toBe(0.25);
   await expect
     .poll(
       () =>

@@ -11,8 +11,8 @@ All notable changes to this project are documented here, in
 
 - **A feature's allow-list fails closed** (board #3357, security). A feature
   whose schema declares neither `x-accepts` nor `properties` used to receive
-  every key in a document's config, `innerHTML` included; it now receives
-  none, and `validate` reports each dropped key (`unknown-feature-key`).
+  every key in a document's config, `innerHTML` included (every release
+  through 0.8.1; before 0.3.0 no feature had an allow-list); it now receives none, and `validate` reports each dropped key (`unknown-feature-key`).
   Every built-in and preset feature declares its keys, so nothing here
   changes; a consumer feature that relied on pass-through declares its
   properties, or says `"x-accepts": "*"`.
@@ -46,6 +46,9 @@ All notable changes to this project are documented here, in
   a panel, so nothing released them; every repaint of the editor's property
   panel and piece list, and every fold of a standalone `schemaPanel`, added a
   folded section's worth. `foldDisposing` disposes what a fold drops.
+- **`<tosi-ensemble>` flattens each assigned document afresh** (#3441): a
+  nested document assigned again after being changed in place built the
+  flattening cached from before the change.
 - **A feature registered with an unknown `group` is listed, and warned
   about** (#3394): a misspelled `"light"` hid it from the editor's piece
   list without a word. It now goes under "environment", and
@@ -63,13 +66,12 @@ All notable changes to this project are documented here, in
   15.55 kB gz (+0.13), format kernel 4.34 kB (+0.41, +10.5%: piece-ref
   validation and the single url walker), everything with the editor
   41.25 kB (+0.58), `dist/**/*.js` 226.47 kB (+3.25).
-- **tosijs-ui ^1.16.30** (dev): its test widget moved into the header bar
-  (tosijs-ui#233, ours), so the browser tests no longer hide it, and a
-  dangling wikilink now fails the doc build (tosijs-ui#234, ours).
+- **tosijs-ui ^1.16.31** (dev): its test widget is in the header bar
+  (tosijs-ui#233, ours, fixed in 1.16.29), so the browser tests no longer
+  hide it, and a dangling wikilink fails the doc build (tosijs-ui#234,
+  ours).
 - **Peer `tosijs` is `^1.10.9`.**
 - **Peer `tosijs-3d` is `^0.11.4`** (0.11 removed nothing).
-- **tosijs-ui ^1.16.31** (dev): per-device edit passes for the tunnel
-  (board #3450), so this workspace stays editable after the next edit link.
 
 ## [0.8.1] — 2026-10-20
 

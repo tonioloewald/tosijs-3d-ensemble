@@ -396,10 +396,10 @@ export function registerFeature<Handle>(
  * what a feature accepts: it drives validation and the property panel, so a
  * key outside it is one no author could have set through the editor either.
  *
- * A registration with no declared properties is passed through unchanged —
- * there is nothing to check against, and inventing an empty allow-list would
- * silently disable such a feature. Those are the ones to look at if this ever
- * needs tightening further.
+ * A registration that declares neither `x-accepts` nor `properties` accepts
+ * NOTHING (board #3357, 0.9.0): it gets an empty config, and `validate`
+ * reports each key it dropped (`unknown-feature-key`). Pass-through is
+ * something a schema has to say, with `"x-accepts": "*"`.
  */
 export function acceptedKeys(
   registration: { schema?: FeatureSchema } | undefined

@@ -32,10 +32,10 @@ Open, History read, revision or Save dispatches `error` on the editor with
 rejects with the same error. A failed Save leaves a document the editor
 opened or saved **dirty**, because it is: `editor.dirty` is true until a
 write succeeds, and the Ensemble panel's title carries a `•` while it is.
-`dirty` compares with the last copy loaded or written, so a document that
-has neither (after New or Open file…, or a `src` the store cannot name)
-reads clean however much it is edited; a host guarding unload checks that
-case itself. An edit made while a Save
+`dirty` compares with the last copy loaded, handed over or written, so a
+document the store has never seen (after New or Open file…, or a `src` the
+store cannot name) is clean until it is edited and dirty after, which is
+what a host guarding unload needs. An edit made while a Save
 is in flight is not marked saved: what is written is the document as it was
 when Save was pressed.
 

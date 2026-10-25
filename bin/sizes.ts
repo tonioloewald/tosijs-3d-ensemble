@@ -86,7 +86,36 @@ const version = JSON.parse(
   readFileSync(path.join(root, "package.json"), "utf8")
 ).version as string;
 
+/** The newest modification time under `dir` among files `keep` accepts. */
+function newest(dir: string, keep: (name: string) => boolean): number {
+  let out = 0;
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const file = path.join(dir, name);
+    const stat = statSync(file);
+    if (stat.isDirectory()) out = Math.max(out, newest(file, keep));
+    else if (keep(name)) out = Math.max(out, stat.mtimeMs);
+  }
+  return out;
+}
+
 if (process.argv.includes("--write")) {
+  /*
+    A STALE dist/ IS NOT A BASELINE (#3495, from the 0.9.0 review): the
+    shipped total is read off whatever dist/ is on disk, so a --write after
+    editing src/ without a build recorded the last build's size as this
+    version's. Refuse it; `bun run build` first.
+  */
+  const source = newest(path.join(root, "src"), (n) => /\.ts$/.test(n));
+  const built = newest(path.join(root, "dist"), (n) => n.endsWith(".js"));
+  if (dist && built < source) {
+    console.error(
+      `dist/ is older than src/ (built ${new Date(
+        built
+      ).toISOString()}); run \`bun run build\` before recording sizes`
+    );
+    process.exit(1);
+  }
   writeFileSync(
     baselineFile,
     JSON.stringify({ version, sizes }, null, 2) + "\n"

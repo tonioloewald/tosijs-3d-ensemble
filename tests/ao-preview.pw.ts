@@ -125,8 +125,15 @@ test("the AO preview is the viewer's switch and the document's look", async ({
 
   // The VIEWER switches it on, and sees the author's look.
   await tapToggle(page);
+  // Polled, not read once after the tap's fixed wait: under a full lane's
+  // load that read landed before the preview applied (#3495's lane run).
+  await expect
+    .poll(async () => {
+      const s = await state(page);
+      return [s.ssao, s.strength, s.radius];
+    })
+    .toEqual(["on", 1.7, 3.5]);
   const on = await state(page);
-  expect([on.ssao, on.strength, on.radius]).toEqual(["on", 1.7, 3.5]);
   expect(on.running, "AO is not running while previewing").toBe(true);
   // …and the document gained nothing but what the author wrote.
   expect(on.docKeys).not.toContain("ssao");

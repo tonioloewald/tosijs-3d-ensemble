@@ -203,10 +203,14 @@ function walkFetched(
     const s = resolve(raw);
     if (!s || depth > 32 || v === undefined || v === null) return v;
     let out: unknown = v;
-    if (s.format === "uri-reference")
+    if (s.format === "uri-reference") {
       out = visit(out, path, {
         keywords: new Set((s["x-keywords"] as string[]) ?? []),
       });
+      // Visited: a union branch saying uri as well must not visit it again,
+      // or a rebase runs twice (`/child//child/a.png`, #3495).
+      if (typeof out === "string") return out;
+    }
     const union = [
       ...((s.anyOf as unknown[]) ?? []),
       ...((s.oneOf as unknown[]) ?? []),

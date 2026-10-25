@@ -68,7 +68,8 @@ The component owns no persistence; its host does, one of two ways:
 
 - **A store** (`editor.store`, see [the store page](/store/)): the Ensemble
   panel offers Open, Save, Save as and History, and `editor.dirty` says
-  whether the document differs from what was last opened or saved. A
+  whether the document differs from what was last opened or saved (or,
+  for one the store has never seen, from how it arrived). A
   failure dispatches `error`.
 - **No store**: the editor keeps a local draft, and the panel's New,
   Download and Open file… (there either way) are the whole of it. A host
@@ -199,6 +200,7 @@ import {
 import {
   effectiveConfig,
   featureRegistration,
+  listedGroup,
   insertPosition,
   pieceRefKeys,
   registeredFeatures,
@@ -671,8 +673,16 @@ export class EnsembleEditor extends withAttributes({
       `openRevision` set them again straight after this.
     */
     this._storeId = null;
-    this._savedJson = null;
     this._loaded = loaded;
+    /*
+      THE DOCUMENT AS HANDED OVER IS THE BASELINE for `dirty`, stored or
+      not (#3495, from the 0.9.0 review): it was null until a store named
+      the document, so after New, Open file… or a `src` the store cannot
+      name, any amount of editing read clean and a host guarding unload let
+      it go. Unsaved edits are dirty whether or not there is a store entry
+      to compare with.
+    */
+    this._savedJson = loaded?.json ?? JSON.stringify(value);
     /*
       A NEW DOCUMENT IS NOT INSIDE ANYTHING (0.8.0 review M3): opening one
       while drilled in left the stack, and Back then put it in as the child.
@@ -1180,7 +1190,10 @@ export class EnsembleEditor extends withAttributes({
     this._savedJson = this._loaded.json;
     this._syncDirty();
   }
-  /** The document as last opened or saved, to tell whether it changed. */
+  /**
+   * The document as last opened, handed over or saved, to tell whether it
+   * changed. Null only before the first document.
+   */
   private _savedJson: string | null = null;
   private _storeEntries: StoreEntry[] = [];
   private _storeHistory: StoreRevision[] = [];
@@ -2848,9 +2861,12 @@ export class EnsembleEditor extends withAttributes({
     const now = root?.getAbsolutePosition?.();
     if (!now) return undefined;
     const id = built.piece.id;
-    const children = [];
-    for (const [key, child] of this._built?.pieces ?? [])
-      if (key.startsWith(`${id}/`)) children.push(child);
+    const children = () => {
+      const out = [];
+      for (const [key, child] of this._built?.pieces ?? [])
+        if (key.startsWith(`${id}/`)) out.push(child);
+      return out;
+    };
     return this._nestBoundsCache.measure(built, id, children, now);
   }
 
@@ -2923,11 +2939,11 @@ export class EnsembleEditor extends withAttributes({
     this._loadGeneration++;
     this._ensemble = structuredClone(child);
     this._storeId = null;
-    this._savedJson = null;
     this._loaded = {
       url,
       json: this._nestedSaved.get(url) ?? JSON.stringify(child),
     };
+    this._savedJson = this._loaded.json; // the baseline (#3495)
     this._selected = this._ensemble.pieces[0]?.id ?? null;
     this._needsFraming = true;
     this._linkLoaded();
@@ -3865,8 +3881,9 @@ export class EnsembleEditor extends withAttributes({
     // A new document, made by an edit rather than the setter: it is not the
     // store document that was open (0.7.0 review M2).
     this._storeId = null;
-    this._savedJson = null;
     this._loaded = null;
+    // Clean until edited: a fresh document has nothing to lose (#3495).
+    this._savedJson = JSON.stringify(this._ensemble);
     this._syncSelection();
     this._syncDirty();
   }
@@ -5277,9 +5294,7 @@ export class EnsembleEditor extends withAttributes({
       ["environment", "environment"],
       ["lights", "lights"],
     ] as const) {
-      const here = primitives.filter(
-        (f) => (f.group === "lights" ? "lights" : "environment") === category
-      );
+      const here = primitives.filter((f) => listedGroup(f) === category);
       if (!here.length) continue;
       rows.push(label3d({ text: title, collapsible: true, open: true }));
       // One per scene: a fixed row each, there whether included or not.

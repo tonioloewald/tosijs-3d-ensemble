@@ -8,6 +8,13 @@
   child instantiates inside `lib.ready.then(...)`, so straight after a build
   its element has no mesh; a box cached then encloses only the children that
   were quick, and stayed that small until the next build.
+
+  A child that NEVER meshes (a missing library node, a rejected
+  `lib.ready`) would keep that retry running every frame for as long as the
+  nest is selected, which is the walk #3423 removed (#3495). So the retry
+  backs off: the provisional box is reused, following the anchor, for 1, 2,
+  4 … up to 64 frames between measurements. A late library still lands
+  within about a second.
 */
 
 export interface XYZ {
@@ -66,9 +73,23 @@ export function unionBounds(bodies: unknown[]): Box | undefined {
   return out;
 }
 
+/** Most frames a provisional box is reused before measuring again. */
+const MAX_BACKOFF = 64;
+
+interface Cached {
+  key: unknown;
+  id: string;
+  /** Undefined while no child has a body to measure. */
+  bounds: Box | undefined;
+  at: XYZ;
+  /** Set while a child is pending: frames left before measuring again. */
+  wait?: number;
+  /** The wait after that one. */
+  backoff?: number;
+}
+
 export class NestBounds {
-  private cache: { key: unknown; id: string; bounds: Box; at: XYZ } | null =
-    null;
+  private cache: Cached | null = null;
 
   /** Forget the box: the children moved. */
   clear(): void {
@@ -78,22 +99,34 @@ export class NestBounds {
   /**
    * The box around `children`, shifted by however far the anchor has moved
    * (`now`) since it was measured. `key` is the build: a new one measures
-   * again.
+   * again. `children` is called only when a measurement is due, so a
+   * cache hit costs no walk over the build.
    */
   measure(
     key: unknown,
     id: string,
-    children: NestChild[],
+    children: () => NestChild[],
     now: XYZ
   ): Box | undefined {
-    let cache = this.cache;
-    if (!cache || cache.key !== key || cache.id !== id) {
-      const bounds = unionBounds(children.map(bodyOf));
-      if (!bounds) return undefined;
-      if (children.some(pending)) return bounds; // measure again next frame
+    const prior = this.cache;
+    const same = !!prior && prior.key === key && prior.id === id;
+    if (same && prior.wait) prior.wait--;
+    else if (!same || prior.wait === 0) {
+      const list = children();
+      const bounds = unionBounds(list.map(bodyOf));
       const at = { x: now.x, y: now.y, z: now.z };
-      cache = this.cache = { key, id, bounds, at };
+      // Still loading, or nothing to measure yet: try again, backing off
+      // (see the header).
+      const backoff =
+        !list.some(pending) && bounds
+          ? undefined
+          : same
+          ? Math.min((prior.backoff ?? 1) * 2, MAX_BACKOFF)
+          : 1;
+      this.cache = { key, id, bounds, at, wait: backoff, backoff };
     }
+    const cache = this.cache!;
+    if (!cache.bounds) return undefined;
     const d = {
       x: now.x - cache.at.x,
       y: now.y - cache.at.y,

@@ -16,3 +16,26 @@ describe("<tosi-ensemble> in a fresh process", () => {
     expect(run.exitCode).toBe(0);
   });
 });
+
+/*
+  NEVER REUSE A FLATTENING ACROSS ASSIGNMENTS (#3441, tested by #3495). The
+  build reuses the last flattening when it came `from` the same object, so a
+  document changed IN PLACE and assigned again was built from the old
+  flattening: the edit never showed.
+*/
+describe("<tosi-ensemble> assignment", () => {
+  it("drops the last flattening, even when the same object is assigned again", async () => {
+    const { TosiEnsemble } = await import("./ensemble-element.js");
+    const el = new TosiEnsemble() as unknown as {
+      ensemble: unknown;
+      _flattened: unknown;
+    };
+    const data = { name: "same", pieces: [] };
+    el.ensemble = data;
+    // As the async mount leaves it once it has flattened `data`.
+    el._flattened = { ensemble: data, from: data };
+    data.name = "changed in place";
+    el.ensemble = data;
+    expect(el._flattened).toBeNull();
+  });
+});

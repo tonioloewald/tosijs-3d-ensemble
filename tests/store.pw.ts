@@ -454,3 +454,58 @@ test("an edit during a save stays unsaved, and a failed Open reports error", asy
   expect(r.rejected).toBe(true);
   expect(unhandled).toEqual([]);
 });
+
+/*
+  A DOCUMENT THE STORE HAS NEVER SEEN is dirty once edited (#3495, from the
+  0.9.0 review). New, Open file… and a `src` the store cannot name all read
+  clean however much they were edited, so a host guarding unload let the
+  work go.
+*/
+test("a never-stored document is clean until edited, then dirty", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectPageErrors(page);
+  await page.goto("/editor/", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () =>
+      (
+        document.querySelector("tosi-ensemble-editor") as
+          | (Element & { ensemble?: { name?: string } })
+          | null
+      )?.ensemble?.name === "pirate-cove",
+    null,
+    { timeout: 60_000 }
+  );
+  type Ed = Element & {
+    dirty: boolean;
+    ensemble: { name: string; pieces: unknown[] };
+    newEnsemble(): void;
+    edit(d: string, m: (e: { name: string }) => void): void;
+  };
+  const steps = await page.evaluate(() => {
+    const ed = document.querySelector("tosi-ensemble-editor") as Ed;
+    const rename = (name: string) =>
+      ed.edit("rename", (e) => {
+        e.name = name;
+      });
+    const out: Record<string, boolean> = {};
+    // Handed over by the setter, as Open file… does.
+    ed.ensemble = { name: "handed", pieces: [] } as never;
+    out.handed = ed.dirty;
+    rename("handed-edited");
+    out.handedEdited = ed.dirty;
+    ed.newEnsemble();
+    out.fresh = ed.dirty;
+    rename("fresh-edited");
+    out.freshEdited = ed.dirty;
+    return out;
+  });
+  expect(steps).toEqual({
+    handed: false,
+    handedEdited: true,
+    fresh: false,
+    freshEdited: true,
+  });
+  expect(realErrors(errors)).toEqual([]);
+});

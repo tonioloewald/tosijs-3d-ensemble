@@ -16,11 +16,31 @@ All notable changes to this project are documented here, in
   `playAnimations`, `setAnimationSpeed`, `scrubAnimations`, `editor.time`.
   It starts closed; its clock button on the system bar opens it.
 
+### Changed
+
+- **`editor.dirty` is true for an edited document the store has never
+  seen** (board #3495): after New, Open file… or a `src` the store cannot
+  name, it read `false` however much was edited, so a host guarding unload
+  let the work go. Such a document is clean until edited, as one from the
+  store is.
+- **`registerFeature` warns about a schema that accepts no keys** (neither
+  `properties` nor `x-accepts`, or an `x-accepts` list containing `"*"`).
+  Since 0.9.0 such a feature receives an empty config, and until now the
+  only sign was a `validate` warning per document.
+
 ### Fixed
 
 - **Panels restack when one is opened or closed**: a closed panel left a
   gap, and one opened by its bar button could cover the panel below it
   until the next edit redrew the chrome.
+- **A nested piece's selection box no longer re-measures every frame** when
+  one of its children never loads (a missing library node): it retries,
+  backing off to every 64 frames (board #3495).
+- **A nested child's url is rebased once** when its schema says
+  `uri-reference` both on a field and in that field's `anyOf`/`oneOf`
+  (`/child//child/a.png`).
+- **`bun run sizes` refuses a dist/ older than src/**, instead of recording
+  the last build's size as the new baseline.
 
 ## [0.9.0] — 2026-10-25
 

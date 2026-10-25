@@ -67,7 +67,8 @@ The component owns no persistence; its host does, one of two ways:
 
 - **A store** (`editor.store`, see [the store page](/store/)): the Ensemble
   panel offers Open, Save, Save as and History, and `editor.dirty` says
-  whether the document differs from what was last opened or saved. A
+  whether the document differs from what was last opened or saved (or,
+  for one the store has never seen, from how it arrived). A
   failure dispatches `error`.
 - **No store**: the editor keeps a local draft, and the panel's New,
   Download and Open file… (there either way) are the whole of it. A host

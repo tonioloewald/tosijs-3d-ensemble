@@ -525,4 +525,24 @@ describe("one walker for fetched strings (#3439)", () => {
       image: "/child/a.png",
     });
   });
+
+  it("rebases a url once when its node and a union branch both say uri (#3495)", async () => {
+    const { rewriteFetched, deepFetchedProblems } = await import(
+      "./url-policy.js"
+    );
+    const uri = { type: "string", format: "uri-reference" };
+    for (const union of ["anyOf", "oneOf"]) {
+      const schema = {
+        type: "object",
+        properties: { image: { ...uri, [union]: [uri] } },
+      };
+      expect(
+        rewriteFetched(schema, { image: "a.png" }, (u) => `/child/${u}`)
+      ).toEqual({ image: "/child/a.png" });
+      // The report walks the same way: one problem, not two.
+      expect(
+        deepFetchedProblems(schema, { image: "javascript:alert(1)" })
+      ).toHaveLength(1);
+    }
+  });
 });

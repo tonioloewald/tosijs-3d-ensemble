@@ -365,7 +365,40 @@ export function registerFeature<Handle>(
         group
       )} is not "environment" or "lights"; listing it under "environment"`
     );
+  if (acceptsProblem(reg.schema))
+    console.warn(
+      `registerFeature("${reg.name}"): accepts no keys; see x-accepts`
+    );
   features.set(reg.name, reg as FeatureRegistration<never>);
+}
+
+/**
+ * The piece-list category a feature is LISTED under: its `group` when that
+ * is one the editor has, else "environment", so a misspelled group is shown
+ * rather than hidden (#3394).
+ */
+export function listedGroup(reg: {
+  group?: unknown;
+}): "environment" | "lights" {
+  return reg.group === "lights" ? "lights" : "environment";
+}
+
+/**
+ * Whether a schema fails to say what it accepts. Since
+ * #3357 a schema with neither `properties` nor `x-accepts` accepts NOTHING,
+ * so a consumer's feature written before that silently got empty configs;
+ * and `['*']` reads like pass-through and is an allow-list of one odd key
+ * (#3495, from the 0.9.0 review).
+ */
+function acceptsProblem(schema: FeatureSchema | undefined): boolean {
+  const accepts = schema?.["x-accepts"];
+  // As `acceptedKeys` reads it: anything but "*" or a key list falls back
+  // to `properties`.
+  return accepts === "*"
+    ? false
+    : Array.isArray(accepts) && accepts.length
+    ? accepts.includes("*")
+    : !schema?.properties;
 }
 
 /** Look up one feature registration. */

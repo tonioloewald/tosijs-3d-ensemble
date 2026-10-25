@@ -14,7 +14,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=4c33359879d6" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=077d4cab0735" data-tosi-doc-system />
   <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble (markdown)" />
@@ -26,7 +26,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=8c974baa0ed8" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=61d77cbe16dc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="ensemble-editor.ts">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -85,7 +85,8 @@ panel shows.</p>
 <ul>
 <li><strong>A store</strong> (<code>editor.store</code>, see <a href="/store/">the store page</a>): the Ensemble
 panel offers Open, Save, Save as and History, and <code>editor.dirty</code> says
-whether the document differs from what was last opened or saved. A
+whether the document differs from what was last opened or saved (or,
+for one the store has never seen, from how it arrived). A
 failure dispatches <code>error</code>.</li>
 <li><strong>No store</strong>: the editor keeps a local draft, and the panel&#39;s New,
 Download and Open file… (there either way) are the whole of it. A host
@@ -203,6 +204,6 @@ these grips is an open comparison (board #2794).</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-fdg7kd8w.js"></script>
+  <script type="module" src="../hydrate-nt4fmeyh.js"></script>
 </body>
 </html>

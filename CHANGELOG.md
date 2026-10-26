@@ -29,7 +29,7 @@ All notable changes to this project are documented here, in
   only sign was a `validate` warning per document. That warning
   (`unknown-feature-key`) now says what to do: fix the typo, or declare the
   key in the feature's schema.
-- **A game's bundle is 15.68 kB gz** (+0.13 kB on 0.9.0, the two warnings
+- **A game's bundle is 15.68 kB gz** (+0.14 kB on 0.9.0, the two warnings
   above and the url fix), and the ceiling in `src/tree-shaking.test.ts` is
   raised 16 → 16.8 kB for it, deliberately. The test now also fails when the
   ceiling has more than 8% slack, asking for it to come down.

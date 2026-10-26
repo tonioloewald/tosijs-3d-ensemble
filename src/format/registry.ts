@@ -367,7 +367,7 @@ export function registerFeature<Handle>(
     );
   if (acceptsProblem(reg.schema))
     console.warn(
-      `registerFeature("${reg.name}"): accepts no keys; see x-accepts`
+      `registerFeature("${reg.name}"): its schema accepts no keys, so every config key is dropped; declare "properties", or "x-accepts" as a key list or "*" for all`
     );
   features.set(reg.name, reg as FeatureRegistration<never>);
 }

@@ -117,9 +117,14 @@ describe("tree-shaking", () => {
     GZIPPED, because that is what crosses the wire, and it is far less noisy
     than raw bytes under a minifier's whims.
 
-    The ceiling is deliberately loose. This is a smoke alarm, not a budget: a
-    test that fails on a 2% drift gets its number bumped without being read,
-    and then it is furniture.
+    The ceiling MOVES ON PURPOSE, both ways (owner, 2026-10-26: "happy to
+    raise limits but not by accident"; practices/releasing.md "Limits move
+    on purpose"). Over it: find out why, then cut or raise, and a raise
+    says why here, in the commit and in the CHANGELOG. Never squeeze to fit:
+    91ec3669 shortened two warnings until the bundle fitted, which kept this
+    green and dodged the decision. And it RATCHETS: a ceiling far above the
+    measurement enforces nothing, so the test also fails when the headroom
+    passes 8%, asking for the ceiling to come down.
 
     It PRINTS the number, because a smoke alarm that is silent until it goes
     off let 0.4.0 grow the game entry 8.2 → 9.3 kB gz (+13%) and the format
@@ -130,7 +135,10 @@ describe("tree-shaking", () => {
     11.25 kB at 0.7.0, 12.55 kB with effects, landforms and recipe url checks,
     14.55 kB with nested ensembles (flattening, transform maths, the loader:
     all of it is what a game that loads a level of rigs runs). Ceiling raised
-    14 → 16 kB for that, 2026-10-20.
+    14 → 16 kB for that, 2026-10-20. 15.68 kB after 0.9.0 (#3495: the
+    registration warning for a schema that accepts no keys, the remedy in
+    the unknown-feature-key warning, a single url rebase); ceiling raised
+    16 → 16.8 kB for that, 2026-10-26, about 4.5% headroom.
     From 0.8.1 on, each release's sizes and delta are `bin/sizes.ts`'s, printed
     by the build against `dist-sizes.json`; this stays the alarm.
   */
@@ -145,7 +153,18 @@ describe("tree-shaking", () => {
     */
     console.log(`game entry: ${(gzipped / 1024).toFixed(2)} kB gz`);
     expect(gzipped).toBeGreaterThan(4_000);
-    expect(gzipped).toBeLessThan(16_000);
+    const ceiling = 16_800;
+    expect(
+      gzipped,
+      "over the ceiling: cut, or raise it ON PURPOSE (see above)"
+    ).toBeLessThan(ceiling);
+    // The ratchet: slack this large enforces nothing.
+    expect(
+      gzipped,
+      `${ceiling - gzipped} bytes under the ceiling: lower it to about ${
+        Math.ceil((gzipped * 1.04) / 100) * 100
+      }`
+    ).toBeGreaterThan(ceiling * 0.92);
   });
 
   it("a runtime placer DOES import the engine (the check can fail)", async () => {

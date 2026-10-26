@@ -472,7 +472,7 @@ export function validate(
           add(
             "warning",
             "unknown-feature-key",
-            `"${key}" is not a property of feature "${name}" — it will be ignored, not passed to the scene`,
+            `"${key}" is not a property of feature "${name}" — it will be ignored, not passed to the scene. A typo, or a key the feature's schema must declare (in "properties", or "x-accepts")`,
             `${at}/features/${name}/${key}`
           );
         }

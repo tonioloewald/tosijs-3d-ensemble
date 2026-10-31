@@ -18,6 +18,9 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
+- **tosijs-ui ^1.16.41** (board #3503): the dev tunnel's edit key was
+  rotated 2026-10-25, and editing through dev.tosijs.net needs 1.16.31 or
+  later. Dev-only; the shipped package does not depend on it at run time.
 - **`editor.dirty` is true for an edited document the store has never
   seen** (board #3495): after New, Open file… or a `src` the store cannot
   name, it read `false` however much was edited, so a host guarding unload

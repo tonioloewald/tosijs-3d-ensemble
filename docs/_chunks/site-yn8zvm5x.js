@@ -1,5 +1,0 @@
-import{sr}from"./site-7z4hmt54.js";import{Ye}from"./site-169k801a.js";import{o}from"./site-g2k0zkaa.js";class Bm extends sr{constructor(e){super(e);this.condition=this.registerDataInput("condition",Ye),this.onTrue=this._registerSignalOutput("onTrue"),this.onFalse=this._registerSignalOutput("onFalse")}_execute(e){if(this.condition.getValue(e))this.onTrue._activateSignal(e);else this.onFalse._activateSignal(e)}getClassName(){return"FlowGraphBranchBlock"}}var t=!1;function Vm(){if(t)return;t=!0,o("FlowGraphBranchBlock",Bm)}Vm();
-export{Bm,Vm};
-
-//# debugId=9B74B7FB0CC2A7D464756E2164756E21
-//# sourceMappingURL=site-yn8zvm5x.js.map

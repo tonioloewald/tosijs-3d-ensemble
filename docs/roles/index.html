@@ -4,6 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>
+    document.documentElement.classList.add('tosi-js')
+    document.addEventListener('click', function (e) {
+      if (customElements.get('tosi-doc-system')) return
+      var b = e.target.closest && e.target.closest('.doc-nav .nav-toggle')
+      if (!b) return
+      var open = b.closest('.nav-branch').classList.toggle('-open')
+      b.setAttribute('aria-expanded', String(open))
+    })
     try {
       var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
       var t = p.theme || 'system'
@@ -14,7 +22,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=e3cfd6848544" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=af402bdd1553" data-tosi-doc-system />
   <title>Roles — tosijs-3d-ensemble</title>
   <meta name="description" content="A role is a preset, not a category: it expands to a set of features that an explicit features block overrides key by key." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Roles — tosijs-3d-ensemble (markdown)" />
@@ -54,25 +62,23 @@ featuresOf({ id: &#39;r1&#39;, at: [0, 0, 0], role: &#39;reactor&#39;, features:
   <nav class="doc-nav" aria-label="Documentation">
   <ul>
     <li><a class="doc-link" href="../">tosijs-3d-ensemble</a></li>
-    <li><details><summary><a class="doc-link" href="../editor/">Editor</a></summary>
-    <ul>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-editor" aria-label="Editor"></button><a class="doc-link" href="../editor/">Editor</a></div>
+    <ul id="tosi-nav-editor">
       <li><a class="doc-link" href="../storage/">Saving and loading ensembles</a></li>
       <li><a class="doc-link" href="../store/">Where the editor opens and saves</a></li>
-    </ul>
-    </details></li>
+    </ul></li>
     <li><a class="doc-link" href="../transport/">Animation transport</a></li>
-    <li><details><summary><a class="doc-link" href="../editing/">Editing</a></summary>
-    <ul>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-editing" aria-label="Editing"></button><a class="doc-link" href="../editing/">Editing</a></div>
+    <ul id="tosi-nav-editing">
       <li><a class="doc-link" href="../ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
       <li><a class="doc-link" href="../tool-registry/">Tools and commands</a></li>
       <li><a class="doc-link" href="../built-in/">The built-in tools</a></li>
       <li><a class="doc-link" href="../transform/">The select-and-transform tool</a></li>
       <li><a class="doc-link" href="../history/">Undo</a></li>
-    </ul>
-    </details></li>
+    </ul></li>
     <li><a class="doc-link" href="../features/">Features</a></li>
-    <li><details open><summary><a class="doc-link" href="../format/">Format</a></summary>
-    <ul>
+    <li class="nav-branch -open"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="true" aria-controls="tosi-nav-format" aria-label="Format"></button><a class="doc-link" href="../format/">Format</a></div>
+    <ul id="tosi-nav-format">
       <li><a class="doc-link" href="../types/">The ensemble format</a></li>
       <li><a class="doc-link" href="../validate/">Validation</a></li>
       <li><a class="doc-link" href="../registry/">The feature registry</a></li>
@@ -82,10 +88,9 @@ featuresOf({ id: &#39;r1&#39;, at: [0, 0, 0], role: &#39;reactor&#39;, features:
       <li><a class="doc-link" href="../round/">Rounding what lands in the document</a></li>
       <li><a class="doc-link" href="../migrate/">Migrating a legacy prefab</a></li>
       <li><a class="doc-link" href="../nest/">Nested ensembles</a></li>
-    </ul>
-    </details></li>
-    <li><details><summary><a class="doc-link" href="../internals/">Internals</a></summary>
-    <ul>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-internals" aria-label="Internals"></button><a class="doc-link" href="../internals/">Internals</a></div>
+    <ul id="tosi-nav-internals">
       <li><a class="doc-link" href="../pointer/">Editor pointers</a></li>
       <li><a class="doc-link" href="../flat-pointer/">The flat pointer</a></li>
       <li><a class="doc-link" href="../xr-pointer/">The XR pointer</a></li>
@@ -99,24 +104,21 @@ featuresOf({ id: &#39;r1&#39;, at: [0, 0, 0], role: &#39;reactor&#39;, features:
       <li><a class="doc-link" href="../place-mesh/">Placing a piece's body</a></li>
       <li><a class="doc-link" href="../libraries/">Mounting libraries</a></li>
       <li><a class="doc-link" href="../world-logic/">World behaviour rules</a></li>
-    </ul>
-    </details></li>
+    </ul></li>
     <li><a class="doc-link" href="../MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
-    <li><details><summary><a class="doc-link" href="../presets/">Presets</a></summary>
-    <ul>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-presets" aria-label="Presets"></button><a class="doc-link" href="../presets/">Presets</a></div>
+    <ul id="tosi-nav-presets">
       <li><a class="doc-link" href="../world/">The world preset</a></li>
       <li><a class="doc-link" href="../combat/">The combat preset</a></li>
-    </ul>
-    </details></li>
-    <li><details><summary><a class="doc-link" href="../project/">Project</a></summary>
-    <ul>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-project" aria-label="Project"></button><a class="doc-link" href="../project/">Project</a></div>
+    <ul id="tosi-nav-project">
       <li><a class="doc-link" href="../SPEC/">Ensemble Editor — specification</a></li>
       <li><a class="doc-link" href="../PLAN/">tosijs-3d-ensemble — project plan</a></li>
       <li><a class="doc-link" href="../UPSTREAM/">Upstream — what we're waiting on</a></li>
-    </ul>
-    </details></li>
-    <li><details><summary><a class="doc-link" href="../runtime/">Runtime</a></summary>
-    <ul>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-runtime" aria-label="Runtime"></button><a class="doc-link" href="../runtime/">Runtime</a></div>
+    <ul id="tosi-nav-runtime">
       <li><a class="doc-link" href="../build/">Building an ensemble</a></li>
       <li><a class="doc-link" href="../ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
       <li><a class="doc-link" href="../features-scene/">Scene features</a></li>
@@ -124,8 +126,7 @@ featuresOf({ id: &#39;r1&#39;, at: [0, 0, 0], role: &#39;reactor&#39;, features:
       <li><a class="doc-link" href="../scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
       <li><a class="doc-link" href="../node-transform/">Writing a transform to a node</a></li>
       <li><a class="doc-link" href="../recommendations/">Scene recommendations</a></li>
-    </ul>
-    </details></li>
+    </ul></li>
   </ul>
   </nav>
   <ul class="doc-navbar">
@@ -134,6 +135,6 @@ featuresOf({ id: &#39;r1&#39;, at: [0, 0, 0], role: &#39;reactor&#39;, features:
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-v2f88eh0.js"></script>
+  <script type="module" src="../hydrate-9cfacqcx.js"></script>
 </body>
 </html>

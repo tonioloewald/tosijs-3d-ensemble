@@ -20,6 +20,10 @@ export default defineSiteConfig({
   description:
     "The tosijs-3d ensemble format, its instantiator, and a graphical editor for authoring ensembles.",
 
+  // The header's mark is ensemble's own favicon, not tosijs-ui's logo (the
+  // fallback when projectLinks.tosijs is set and no logo is given).
+  logo: "/favicon.svg",
+
   projectLinks: {
     tosijs: "https://tosijs.net",
     github: `https://github.com/tonioloewald/${PROJECT}`,

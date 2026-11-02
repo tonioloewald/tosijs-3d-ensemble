@@ -22,7 +22,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=af402bdd1553" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=407b4fab0db5" data-tosi-doc-system />
   <title>Animation transport — tosijs-3d-ensemble</title>
   <meta name="description" content="The editor&#39;s play / pause / speed / scrub for the animation groups its pieces carry (board #3355). A view setting: it never touches the document." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Animation transport — tosijs-3d-ensemble (markdown)" />
@@ -34,7 +34,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=61d77cbe16dc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=5fab1f79261d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="transport.ts">
 <h1 id="animation-transport">Animation transport</h1>
 <p>The editor&#39;s play / pause / speed / scrub for the animation groups its
@@ -46,13 +46,12 @@ the moving parts it exists to judge (Manta&#39;s pump and radar), so the
 transport starts them, and pause and scrub are how you check a pose.</p>
 <p>A group flagged <code>__wreckStopped</code> (a destroyed piece&#39;s clip) is left alone: a
 dead rig stays dead.</p>
-<p><strong>Sim speed scales the transport.</strong> <code>&lt;tosi-b3d&gt;</code>&#39;s <code>timeScale</code> slows
-everything stepping by the scene&#39;s sim delta, but Babylon&#39;s animation groups
-run on their own clock, so slow motion left a rig at full speed
-(tosijs-3d#128). Each group&#39;s <code>speedRatio</code> is the transport&#39;s speed times the
-scene&#39;s <code>timeScale</code>, read on every sync, so the scene&#39;s own Slow motion
-button slows a rig too. Pause needs nothing: a paused scene disables
-animations.</p>
+<p><strong>Sim speed is the scene&#39;s, not ours.</strong> Since tosijs-3d 0.11.5 (#128)
+<code>&lt;tosi-b3d&gt;</code>&#39;s <code>timeScale</code> slows Babylon&#39;s animation groups itself
+(<code>scene.animationTimeScale</code>), so a group&#39;s <code>speedRatio</code> is the transport&#39;s
+speed alone. Up to 0.11.4 this multiplied in <code>timeScale</code> by hand; kept with
+0.11.5 that would slow a rig twice. Pause needs nothing: a paused scene
+disables animations.</p>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -131,6 +130,6 @@ animations.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-9cfacqcx.js"></script>
+  <script type="module" src="../hydrate-kz831vp4.js"></script>
 </body>
 </html>

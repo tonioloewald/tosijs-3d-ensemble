@@ -1,0 +1,5 @@
+import{Ne}from"./site-4mctpt5x.js";import{je}from"./site-pddhyj91.js";var l="cachedOperationValue",u="cachedExecutionId";class Ri extends Ne{constructor(e,a){super(a);this._outputRichType=e,this.value=this.registerDataOutput("value",e),this.isValid=this.registerDataOutput("isValid",je)}_getInvalidOutputValue(e){let a=this._outputRichType.defaultValue,i=a?.clone;return typeof i==="function"?i.call(a):a}_updateOutputs(e){let a=e._getExecutionVariable(this,u,-1),i=e._getExecutionVariable(this,l,null);if(i!==void 0&&i!==null&&a===e.executionId)this.isValid.setValue(!0,e),this.value.setValue(i,e);else try{let t=this._doOperation(e);if(t===void 0||t===null){this._setInvalid(e);return}e._setExecutionVariable(this,l,t),e._setExecutionVariable(this,u,e.executionId),this.value.setValue(t,e),this.isValid.setValue(!0,e)}catch(t){this._setInvalid(e)}}_setInvalid(e){this.isValid.setValue(!1,e),this.value.setValue(this._getInvalidOutputValue(e),e)}}
+export{Ri};
+
+//# debugId=B85401335FC8364C64756E2164756E21
+//# sourceMappingURL=site-pt4ffkpb.js.map

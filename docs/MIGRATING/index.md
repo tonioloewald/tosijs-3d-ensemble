@@ -330,3 +330,16 @@ places:
   config.** Declare the keys it reads in `schema.properties` (or list them in
   `x-accepts`); `"x-accepts": "*"` keeps the old pass-through, deliberately.
   `validate` names every key it drops.
+
+## Upgrading from 0.9 to 0.10
+
+- **Peer `tosijs-3d` is `^0.12.0`.** Its breaking change reaches every
+  library piece: models loaded through a `<tosi-b3d-library>` are **no longer
+  drawn mirrored** (0.11 drew each as its mirror image: text backwards, left
+  and right swapped). Positions, rotations and scales in a document are
+  unchanged, so a symmetric piece looks the same; an asymmetric one now looks
+  as its model was authored. If you turned or placed a piece by eye to suit
+  the mirrored picture, check it. Skinned models were never mirrored.
+- **Property-panel sections open one at a time** (tosijs-3d 0.11.5's
+  `foldSections` default): opening one shuts the others. The piece list
+  keeps several open. Nothing in a document changes.

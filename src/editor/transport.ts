@@ -13,13 +13,12 @@ transport starts them, and pause and scrub are how you check a pose.
 A group flagged `__wreckStopped` (a destroyed piece's clip) is left alone: a
 dead rig stays dead.
 
-**Sim speed scales the transport.** `<tosi-b3d>`'s `timeScale` slows
-everything stepping by the scene's sim delta, but Babylon's animation groups
-run on their own clock, so slow motion left a rig at full speed
-(tosijs-3d#128). Each group's `speedRatio` is the transport's speed times the
-scene's `timeScale`, read on every sync, so the scene's own Slow motion
-button slows a rig too. Pause needs nothing: a paused scene disables
-animations.
+**Sim speed is the scene's, not ours.** Since tosijs-3d 0.11.5 (#128)
+`<tosi-b3d>`'s `timeScale` slows Babylon's animation groups itself
+(`scene.animationTimeScale`), so a group's `speedRatio` is the transport's
+speed alone. Up to 0.11.4 this multiplied in `timeScale` by hand; kept with
+0.11.5 that would slow a rig twice. Pause needs nothing: a paused scene
+disables animations.
 */
 
 /** The part of a Babylon `AnimationGroup` the transport drives. */
@@ -37,7 +36,7 @@ export interface TransportGroup {
 export class AnimationTransport {
   /** Whether groups play. Scrubbing pauses them. */
   playing = true;
-  /** Playback speed, before the scene's `timeScale`. */
+  /** Playback speed; the scene's `timeScale` applies on top, upstream. */
   speed = 1;
   /** Where a scrub left the groups, 0 to 1 through each; null when playing. */
   position: number | null = null;
@@ -60,11 +59,10 @@ export class AnimationTransport {
   /**
    * Bring `groups` into line. Cheap enough for every frame: a group already
    * in the wanted state is only read, and a scrubbed group is sought once
-   * (a group that loads later is put at the same place). `timeScale` is
-   * the scene's.
+   * (a group that loads later is put at the same place).
    */
-  sync(groups: Iterable<TransportGroup>, timeScale = 1): void {
-    const ratio = this.speed * Math.max(0, timeScale);
+  sync(groups: Iterable<TransportGroup>): void {
+    const ratio = this.speed;
     for (const g of groups) {
       if (g.__wreckStopped) continue;
       if (this.playing) {

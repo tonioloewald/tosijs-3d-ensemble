@@ -22,7 +22,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=af402bdd1553" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=407b4fab0db5" data-tosi-doc-system />
   <title>tosijs-3d-ensemble — project plan</title>
   <meta name="description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
   <link rel="alternate" type="text/markdown" href="index.md" title="tosijs-3d-ensemble — project plan (markdown)" />
@@ -34,7 +34,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=61d77cbe16dc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=5fab1f79261d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="PLAN.md">
 <h1 id="tosijs-3d-ensemble--project-plan">tosijs-3d-ensemble — project plan</h1>
 <!--{"pin":"bottom","parent":"Project","order":2}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
@@ -366,6 +366,16 @@ its vocabulary from <strong>library annotations</strong> rather than code (tosij
 gap is an editor affordance plus a consumer-supplied list of kinds. The most
 expensive is provinces, which needs a third build phase: a piece sitting &quot;on the
 ground&quot; cannot resolve its height until the terrain carve has run.</p>
+<h3 id="characters-come-from-dramatis--waiting-on-its-0x-board-3659">Characters come from Dramatis — waiting on its 0.x (board #3659)</h3>
+<p>The owner is breaking tosijs-3d&#39;s character builder out as <strong>Dramatis</strong>
+(<code>../dramatis3d</code>), which outputs plain GLB/VRM. The direction for this
+package: depend on Dramatis for characters, offer GLB export of an
+ensemble, and in time an embeddable loader for other runtimes (three.js
+first). Nothing starts until Dramatis publishes 0.x (#3645). What a
+<code>figure</code> piece needs from it is on #3659: a character as a file a piece
+can name (<code>src</code>), a JSON Schema for its options so the property panel is
+generated rather than written, and an element (or loader) that loads it,
+applies the rig and plays a named clip, the shape tosijs-3d#123 asked for.</p>
 <h3 id="explicitly-out-of-scope-for-v1">Explicitly out of scope for v1</h3>
 <p>Named so they are decisions rather than omissions: undo/redo, <strong>multi-select</strong>
 (still out — the manipulator lands on a single selection first), alignment
@@ -465,6 +475,6 @@ an outcome</strong>.</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-9cfacqcx.js"></script>
+  <script type="module" src="../hydrate-kz831vp4.js"></script>
 </body>
 </html>

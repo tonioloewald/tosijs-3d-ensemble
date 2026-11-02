@@ -47,14 +47,15 @@ describe("animation transport", () => {
     expect(dead.calls).toEqual([]);
   });
 
-  test("speed is the transport's times the scene's timeScale", () => {
+  test("speed is the transport's alone; timeScale is applied upstream (#128)", () => {
     const a = group();
     const t = new AnimationTransport();
     t.speed = 2;
-    t.sync([a], 0.25);
-    expect(a.speedRatio).toBe(0.5);
-    t.sync([a], 1);
+    t.sync([a]);
     expect(a.speedRatio).toBe(2);
+    t.speed = 0.5;
+    t.sync([a]);
+    expect(a.speedRatio).toBe(0.5);
   });
 
   test("pause stops playing groups; play starts them again", () => {

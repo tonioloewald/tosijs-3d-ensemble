@@ -12,10 +12,9 @@ transport starts them, and pause and scrub are how you check a pose.
 A group flagged `__wreckStopped` (a destroyed piece's clip) is left alone: a
 dead rig stays dead.
 
-**Sim speed scales the transport.** `<tosi-b3d>`'s `timeScale` slows
-everything stepping by the scene's sim delta, but Babylon's animation groups
-run on their own clock, so slow motion left a rig at full speed
-(tosijs-3d#128). Each group's `speedRatio` is the transport's speed times the
-scene's `timeScale`, read on every sync, so the scene's own Slow motion
-button slows a rig too. Pause needs nothing: a paused scene disables
-animations.
+**Sim speed is the scene's, not ours.** Since tosijs-3d 0.11.5 (#128)
+`<tosi-b3d>`'s `timeScale` slows Babylon's animation groups itself
+(`scene.animationTimeScale`), so a group's `speedRatio` is the transport's
+speed alone. Up to 0.11.4 this multiplied in `timeScale` by hand; kept with
+0.11.5 that would slow a rig twice. Pause needs nothing: a paused scene
+disables animations.

@@ -4872,7 +4872,7 @@ export class EnsembleEditor extends withAttributes({
       this._timeBox("timeScale").value = timeScale;
     }
     const groups = this._animationGroups();
-    this._transport.sync(groups, timeScale);
+    this._transport.sync(groups);
     if (groups.length !== this._animationCount) {
       this._animationCount = groups.length;
       this._renderChrome();
@@ -5366,6 +5366,10 @@ export class EnsembleEditor extends withAttributes({
     out.push(
       ...(foldDisposing(rows as never[], {
         key: "tosi-ensemble-editor:pieces",
+        // Several open at once: tosijs-3d 0.11.5 made one-at-a-time the
+        // default, which hid every other category's pieces from a list
+        // whose job is to show the whole document.
+        mode: "folds",
         repaint: () => this._renderChrome(),
       }) as unknown[])
     );

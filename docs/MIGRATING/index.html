@@ -22,7 +22,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=af402bdd1553" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=407b4fab0db5" data-tosi-doc-system />
   <title>Migrating manta-recon onto tosijs-3d-ensemble</title>
   <meta name="description" content="Manta-recon is where this format came from — src/prefab.ts and src/prefab-runtime.ts are its ancestors, extracted for the reasons in SPEC.md." />
   <link rel="alternate" type="text/markdown" href="index.md" title="Migrating manta-recon onto tosijs-3d-ensemble (markdown)" />
@@ -34,7 +34,7 @@
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=61d77cbe16dc" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=5fab1f79261d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="MIGRATING.md">
 <h1 id="migrating-manta-recon-onto-tosijs-3d-ensemble">Migrating manta-recon onto <code>tosijs-3d-ensemble</code></h1>
 <p><code>manta-recon</code> is where this format came from — <code>src/prefab.ts</code> and
@@ -401,6 +401,19 @@ config.</strong> Declare the keys it reads in <code>schema.properties</code> (or
 <code>x-accepts</code>); <code>&quot;x-accepts&quot;: &quot;*&quot;</code> keeps the old pass-through, deliberately.
 <code>validate</code> names every key it drops.</li>
 </ul>
+<h2 id="upgrading-from-09-to-010">Upgrading from 0.9 to 0.10</h2>
+<ul>
+<li><strong>Peer <code>tosijs-3d</code> is <code>^0.12.0</code>.</strong> Its breaking change reaches every
+library piece: models loaded through a <code>&lt;tosi-b3d-library&gt;</code> are <strong>no longer
+drawn mirrored</strong> (0.11 drew each as its mirror image: text backwards, left
+and right swapped). Positions, rotations and scales in a document are
+unchanged, so a symmetric piece looks the same; an asymmetric one now looks
+as its model was authored. If you turned or placed a piece by eye to suit
+the mirrored picture, check it. Skinned models were never mirrored.</li>
+<li><strong>Property-panel sections open one at a time</strong> (tosijs-3d 0.11.5&#39;s
+<code>foldSections</code> default): opening one shuts the others. The piece list
+keeps several open. Nothing in a document changes.</li>
+</ul>
 
   </article>
   <nav class="doc-nav" aria-label="Documentation">
@@ -479,6 +492,6 @@ config.</strong> Declare the keys it reads in <code>schema.properties</code> (or
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-9cfacqcx.js"></script>
+  <script type="module" src="../hydrate-kz831vp4.js"></script>
 </body>
 </html>

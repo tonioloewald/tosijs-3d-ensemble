@@ -520,16 +520,21 @@ describe("a disposed panel releases what its widgets subscribed", () => {
       p.handlePointer("up", 50, y + 14);
     };
     const start = state.live;
+    const air = header("Air").textContent!.includes("▾");
     tap(); // open
     expect(header("Water").textContent).toContain("▾");
+    // tosijs-3d 0.11.5: one section open at a time, so Water shuts Air.
+    expect(header("Air").textContent).toContain("▸");
     const open = state.live;
-    expect(open).toBeGreaterThan(start);
+    if (!air) expect(open).toBeGreaterThan(start);
     tap(); // shut
     expect(header("Water").textContent).toContain("▸");
-    expect(state.live).toBe(start);
+    const shut = state.live;
+    expect(shut).toBeLessThan(open);
     tap();
+    expect(state.live).toBe(open);
     tap();
-    expect(state.live).toBe(start);
+    expect(state.live).toBe(shut);
     current().dispose();
     current().remove();
     expect(state.live).toBe(0);

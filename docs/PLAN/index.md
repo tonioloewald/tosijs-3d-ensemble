@@ -315,6 +315,18 @@ gap is an editor affordance plus a consumer-supplied list of kinds. The most
 expensive is provinces, which needs a third build phase: a piece sitting "on the
 ground" cannot resolve its height until the terrain carve has run.
 
+### Characters come from Dramatis — waiting on its 0.x (board #3659)
+
+The owner is breaking tosijs-3d's character builder out as **Dramatis**
+(`../dramatis3d`), which outputs plain GLB/VRM. The direction for this
+package: depend on Dramatis for characters, offer GLB export of an
+ensemble, and in time an embeddable loader for other runtimes (three.js
+first). Nothing starts until Dramatis publishes 0.x (#3645). What a
+`figure` piece needs from it is on #3659: a character as a file a piece
+can name (`src`), a JSON Schema for its options so the property panel is
+generated rather than written, and an element (or loader) that loads it,
+applies the rig and plays a named clip, the shape tosijs-3d#123 asked for.
+
 ### Explicitly out of scope for v1
 
 Named so they are decisions rather than omissions: undo/redo, **multi-select**

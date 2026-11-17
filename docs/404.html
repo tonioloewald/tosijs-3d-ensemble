@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <base href="/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    document.documentElement.classList.add('tosi-js')
+    document.addEventListener('click', function (e) {
+      if (customElements.get('tosi-doc-system')) return
+      var b = e.target.closest && e.target.closest('.doc-nav .nav-toggle')
+      if (!b) return
+      var open = b.closest('.nav-branch').classList.toggle('-open')
+      b.setAttribute('aria-expanded', String(open))
+    })
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="doc-system.css?v=af455600ed0f" data-tosi-doc-system />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aleo:ital,wght@0,100..900;1,100..900&amp;family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&amp;display=swap" />
+  <title>Page not found — tosijs-3d-ensemble</title>
+  <meta name="robots" content="noindex" />
+  <meta name="description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
+  <link rel="alternate" type="text/markdown" href="index.md" title="tosijs-3d-ensemble (markdown)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="tosijs-3d-ensemble" />
+  <meta property="og:description" content="The tosijs-3d ensemble format, and a graphical editor for authoring it." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="docs.json?v=8b9645f67d43" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;logo&quot;:&quot;/favicon.svg&quot;,&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="README.md">
+<p class="doc-not-found" role="status">404: there's nothing at <code id="not-found-path">this address</code>.<span id="not-found-closest"></span> Here's the home page instead.</p>
+<h1 id="tosijs-3d-ensemble">tosijs-3d-ensemble</h1>
+<!--{"pin":"top","order":1}--><p><strong>The tosijs-3d ensemble format, and a graphical editor for authoring it.</strong></p>
+<p>An <em>ensemble</em> is a reusable, JSON-described arrangement with declared
+capabilities and relationships. No code, no engine types: plain data a game
+loads, a tool authors, and a generator can emit.</p>
+<p><strong>It is not a combat format, and that is the whole win.</strong> An ensemble can be a
+floating fortress of shields and turrets — or tosijs-3d&#39;s own standard scene:
+sun, shadow rig, sky, ground plane, fog. Load that stack as data and a scene
+reads as <em>&quot;the standard setup, plus the thing I am actually showing you&quot;</em>,
+instead of burying the two interesting lines in boilerplate.</p>
+<pre><code class="language-html">&lt;tosi-b3d&gt;
+  &lt;tosi-ensemble src=&quot;/ensembles/standard-scene.json&quot;&gt;&lt;/tosi-ensemble&gt;
+  &lt;tosi-b3d-box size=&quot;1.5&quot; y=&quot;0.75&quot; color=&quot;#2f9e8f&quot;&gt;&lt;/tosi-b3d-box&gt;
+&lt;/tosi-b3d&gt;
+</code></pre>
+<p>Hit points, turrets and shields are an <strong>opt-in preset</strong>, because most things in
+most scenes can never be shot — and terrain that quietly accumulates damage and
+disappears at 100 000 is a worse outcome than terrain that was never a
+combatant:</p>
+<pre><code class="language-js">// sun, sky, ground, terrain, water…
+import { registerSceneFeatures, registeredFeatures } from &quot;tosijs-3d-ensemble&quot;;
+// …and the fortification vocabulary, only if you want it
+import { registerCombatPreset } from &quot;tosijs-3d-ensemble/presets/combat&quot;;
+
+registerSceneFeatures();
+registerCombatPreset();
+
+/*
+  Both calls are idempotent, and this page has already made them — which is
+  why the list below shows the combat vocabulary too. A game that never
+  imports the second line simply does not have `destroyable`, `turret` or
+  `protector` in this list, and `validate` does not know what a shield is.
+*/
+preview.append(
+  Object.assign(document.createElement(&quot;p&quot;), {
+    textContent: registeredFeatures()
+      .map((f) =&gt; f.name)
+      .join(&quot;, &quot;),
+  })
+);
+</code></pre>
+<p><strong>Status:</strong> the format, validation, the registry and the instantiator are
+built and tested, nested ensembles included; the editor is in use on the doc
+site, <a href="https://ensemble.tosijs.net">ensemble.tosijs.net</a> (try it at
+<a href="https://ensemble.tosijs.net/editor/">/editor/</a>). Its browser behaviour is
+tested in real Chromium at every release.</p>
+<p>On the site (these pages are not in the npm package):</p>
+<ul>
+<li><strong><a href="https://ensemble.tosijs.net/PLAN/">Plan</a></strong>: what to build, in what order,
+and what &quot;done&quot; means.</li>
+<li><strong><a href="https://ensemble.tosijs.net/SPEC/">Spec</a></strong>: the specification, including
+the design questions it answers.</li>
+<li><strong><a href="https://ensemble.tosijs.net/nest/">Nested ensembles</a></strong>: a piece that is a
+whole ensemble.</li>
+<li><strong><a href="https://ensemble.tosijs.net/UPSTREAM/">Upstream</a></strong>: what this project asked
+of tosijs-3d, and what it got.</li>
+<li>In the repository: <code>CLAUDE.md</code> / <code>AGENTS.md</code>, agent guidance (read the
+ecosystem practices first).</li>
+</ul>
+<h2 id="one-package-tree-shakeable">One package, tree-shakeable</h2>
+<p>The format, the instantiator and the editor ship as <strong>one package</strong>. A game
+imports the first two; the editor is never reached and tree-shakes away.</p>
+<pre><code class="language-js">// a game
+import { buildEnsemble, validate, placeMesh } from &quot;tosijs-3d-ensemble&quot;;
+
+// an author
+import { ensembleEditor } from &quot;tosijs-3d-ensemble&quot;;
+
+// All four are real exports, which is not something this block could always
+// claim: it named `registerBuiltInFeatures` — a function this package has
+// never had — for as long as the example was unrunnable, and nothing noticed
+// because nothing ran it.
+preview.append(
+  Object.assign(document.createElement(&quot;p&quot;), {
+    textContent: [
+      [&quot;buildEnsemble&quot;, buildEnsemble],
+      [&quot;validate&quot;, validate],
+      [&quot;placeMesh&quot;, placeMesh],
+      [&quot;ensembleEditor&quot;, ensembleEditor],
+    ]
+      .map(([name, value]) =&gt; `${name}: ${typeof value}`)
+      .join(&quot; · &quot;),
+  })
+);
+</code></pre>
+<p>One package, because that is what makes the editor and the game call the <em>same</em>
+instantiator — &quot;what you author is what you get&quot; holds by construction rather
+than by discipline. A shipped game still carries no editor, but that is
+guaranteed by <strong>a test that bundles the game&#39;s imports and fails if any editor
+module survives</strong> (<code>src/tree-shaking.test.ts</code>), not by npm packaging. A stray
+import from the format layer into the editor is exactly how this rots, and
+nothing else would notice.</p>
+<p>The editor&#39;s UI is built on <strong>tosijs-3d&#39;s SVG UI</strong>, not DOM widgets, so it runs
+in a headset as well as a browser: editing a 3D arrangement is a spatial task.
+See <code>SPEC.md</code> open question 5 for the argument and its costs.</p>
+<h2 id="running-it">Running it</h2>
+<pre><code class="language-bash" data-highlighted>bun <span class="token function">install</span>
+bun start        <span class="token comment"># doc site + the editor at /editor/, on :8032</span>
+bun <span class="token builtin class-name">test</span>
+bun run build
+</code></pre>
+<h2 id="prior-art">Prior art</h2>
+<p>A working prototype lives in <code>../manta-recon</code>, where this grew inside a game
+before being extracted. <code>PLAN.md</code> §&quot;Prior art&quot; lists what to lift.</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link current" href="./" aria-current="page">tosijs-3d-ensemble</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-editor" aria-label="Editor"></button><a class="doc-link" href="editor/">Editor</a></div>
+    <ul id="tosi-nav-editor">
+      <li><a class="doc-link" href="storage/">Saving and loading ensembles</a></li>
+      <li><a class="doc-link" href="store/">Where the editor opens and saves</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="transport/">Animation transport</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-editing" aria-label="Editing"></button><a class="doc-link" href="editing/">Editing</a></div>
+    <ul id="tosi-nav-editing">
+      <li><a class="doc-link" href="ensemble-editor/">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="history/">Undo</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="features/">Features</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-format" aria-label="Format"></button><a class="doc-link" href="format/">Format</a></div>
+    <ul id="tosi-nav-format">
+      <li><a class="doc-link" href="types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="validate/">Validation</a></li>
+      <li><a class="doc-link" href="registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="roles/">Roles</a></li>
+      <li><a class="doc-link" href="index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="migrate/">Migrating a legacy prefab</a></li>
+      <li><a class="doc-link" href="nest/">Nested ensembles</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-internals" aria-label="Internals"></button><a class="doc-link" href="internals/">Internals</a></div>
+    <ul id="tosi-nav-internals">
+      <li><a class="doc-link" href="pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="world-logic/">World behaviour rules</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-presets" aria-label="Presets"></button><a class="doc-link" href="presets/">Presets</a></div>
+    <ul id="tosi-nav-presets">
+      <li><a class="doc-link" href="world/">The world preset</a></li>
+      <li><a class="doc-link" href="combat/">The combat preset</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-project" aria-label="Project"></button><a class="doc-link" href="project/">Project</a></div>
+    <ul id="tosi-nav-project">
+      <li><a class="doc-link" href="SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-runtime" aria-label="Runtime"></button><a class="doc-link" href="runtime/">Runtime</a></div>
+    <ul id="tosi-nav-runtime">
+      <li><a class="doc-link" href="build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="features-landform/">Landforms</a></li>
+      <li><a class="doc-link" href="scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="node-transform/">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="recommendations/">Scene recommendations</a></li>
+    </ul></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="hydrate-1ej7e9f6.js"></script>
+<script>
+    ;(() => {
+      const slugs = ["ensemble-editor","build","pointer","types","world","ensemble-element","editor","combat","flat-pointer","tool-registry","validate","features-scene","built-in","registry","xr-pointer","features-landform","handles","roles","transform","handles-view","history","index","scale","scene-floorplan","selection","selection-view","beacon-view","schema-panel","node-transform","round","storage","transform-write","migrate","nest","place-mesh","store","libraries","world-logic","recommendations","transport","editing","features","format","internals","MIGRATING","presets","project","runtime","SPEC","PLAN","UPSTREAM"]
+      const base = "/"
+      const asked = decodeURIComponent(location.pathname)
+      document.getElementById('not-found-path').textContent = asked
+      const want = asked.slice(base.length - 1).replace(/^\/+|\/+$/g, '').toLowerCase()
+      if (!want) return
+      const distance = (a, b) => {
+        const row = Array.from({ length: b.length + 1 }, (_, i) => i)
+        for (let i = 1; i <= a.length; i++) {
+          let prev = row[0]++
+          for (let j = 1; j <= b.length; j++) {
+            const next = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1))
+            prev = row[j]
+            row[j] = next
+          }
+        }
+        return row[b.length]
+      }
+      let best = '', score = Infinity
+      for (const slug of slugs) {
+        const prefix = Math.min(want.length, slug.length) >= 3 && (slug.startsWith(want) || want.startsWith(slug))
+        const d = prefix ? 0.5 : distance(want, slug)
+        if (d < score) [best, score] = [slug, d]
+      }
+      if (score > Math.max(2, want.length / 3)) return
+      const link = document.createElement('a')
+      link.href = base + best + '/'
+      link.textContent = base + best + '/'
+      document.getElementById('not-found-closest').append(' Did you mean ', link, '?')
+    })()
+  </script>
+</body>
+</html>

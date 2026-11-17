@@ -78,6 +78,11 @@ describe("only a value the document HAS gets bound", () => {
   widget's own surface — a curve has `points`/`evaluate`, an input field has
   `commit`/`isValid` — because that is what a caller would actually reach for.
 */
+// `semantics` is on every widget since tosijs-3d 0.12.3 (a screen reader's
+// view of it), so it says nothing about WHICH widget this is.
+const keysOf = (w: unknown) =>
+  Object.keys(w as object).filter((k) => k !== "semantics");
+
 const widgetsFor = (
   properties: Record<string, unknown>,
   values: Record<string, unknown> = {}
@@ -86,7 +91,7 @@ const widgetsFor = (
     schema: { properties },
     values,
     handleChange: () => {},
-  } as never).map((w) => Object.keys(w as object));
+  } as never).map(keysOf);
 
 describe("a schema dispatches to the right widget", () => {
   it("x-widget: 'curve' builds a curve, not a label", () => {
@@ -126,7 +131,7 @@ describe("a schema dispatches to the right widget", () => {
       handleChange: () => {},
     } as never);
     expect(widgets.length).toBe(1);
-    expect(Object.keys(widgets[0] as object)).toEqual(["el", "layout"]);
+    expect(keysOf(widgets[0])).toEqual(["el", "layout"]);
     expect((widgets[0] as { el: Element }).el.textContent).toContain("2");
     expect([...bound]).toEqual([]);
     // The companion: without readOnly the same field is a bound slider.

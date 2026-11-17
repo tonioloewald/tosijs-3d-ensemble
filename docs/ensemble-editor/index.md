@@ -50,8 +50,9 @@ parts a rig exists to show. Library animation groups arrive stopped; the
 editor starts them. Nothing here is written to the document. It starts
 closed: its clock button on the system bar opens it.
 
-- **Sim speed** is the scene's `timeScale` (1 real time, 0 stopped), the
-  same value its own Slow motion button sets.
+- **Sim speed** is the scene's `timeScale` (1 real time, 0 stopped). It is
+  the editor's only slow-motion control: tosijs-3d 0.13.0 removed the
+  settings panel's Slow motion button.
 - **Animate**, **Speed** and **Scrub** drive every animation group the pieces
   carry, except a destroyed piece's (`__wreckStopped`). Scrubbing pauses
   them that far through each clip. A clip's speed is Speed times the sim

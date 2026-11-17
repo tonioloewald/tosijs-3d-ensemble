@@ -7,7 +7,9 @@ All notable changes to this project are documented here, in
 
 ### ⚠️ Breaking
 
-- **Peer `tosijs-3d` is `^0.12.0`**, whose models are no longer drawn
+- **Peer `tosijs-3d` is `^0.13.1`.** Since 0.12.5 Babylon's packages are
+  its optional peers: install `@babylonjs/core`, `gui`, `loaders` and
+  `materials` yourself (`<tosi-b3d>` imports all four). Since 0.12.0 its models are no longer drawn
   mirrored: every library piece now looks as its model was authored, not as
   its mirror image. A document's numbers are unchanged; an asymmetric piece
   placed by eye against the mirrored picture may need turning. See
@@ -30,6 +32,11 @@ All notable changes to this project are documented here, in
 
 ### Changed
 
+- **Dependencies** (weekly maintenance #3715): tosijs-schema ^1.14.0, tosijs
+  ^1.10.11; dev: Babylon 9.37, tosijs-ui 1.17.8, Playwright 1.65.1. The
+  publish workflow is the shared template's again (its actions on their
+  Node 24 releases, setup-node's cache off where the npm credential lives),
+  and CI's checkout moved off Node 20.
 - **tosijs-ui ^1.16.41** (board #3503): the dev tunnel's edit key was
   rotated 2026-10-25, and editing through dev.tosijs.net needs 1.16.31 or
   later. Dev-only; the shipped package does not depend on it at run time.

@@ -22,19 +22,20 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../doc-system.css?v=407b4fab0db5" data-tosi-doc-system />
+  <link rel="stylesheet" href="../doc-system.css?v=af455600ed0f" data-tosi-doc-system />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aleo:ital,wght@0,100..900;1,100..900&amp;family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&amp;display=swap" />
   <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
-  <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
+  <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such…" />
   <link rel="alternate" type="text/markdown" href="index.md" title="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble (markdown)" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="tosijs-3d-ensemble" />
   <meta property="og:title" content="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble" />
-  <meta property="og:description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such page…" />
+  <meta property="og:description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such…" />
   <meta name="twitter:card" content="summary" />
   <link rel="icon" href="../favicon.svg" />
 </head>
 <body>
-  <tosi-doc-system docs="../docs.json?v=5fab1f79261d" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;logo&quot;:&quot;/favicon.svg&quot;,&quot;ebooks&quot;:[]}">
+  <tosi-doc-system docs="../docs.json?v=8b9645f67d43" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;logo&quot;:&quot;/favicon.svg&quot;,&quot;ebooks&quot;:[]}">
   <article class="doc-content" data-doc="ensemble-editor.ts">
 <h1><tosi-ensemble-editor></h1>
 <p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
@@ -78,8 +79,9 @@ parts a rig exists to show. Library animation groups arrive stopped; the
 editor starts them. Nothing here is written to the document. It starts
 closed: its clock button on the system bar opens it.</p>
 <ul>
-<li><strong>Sim speed</strong> is the scene&#39;s <code>timeScale</code> (1 real time, 0 stopped), the
-same value its own Slow motion button sets.</li>
+<li><strong>Sim speed</strong> is the scene&#39;s <code>timeScale</code> (1 real time, 0 stopped). It is
+the editor&#39;s only slow-motion control: tosijs-3d 0.13.0 removed the
+settings panel&#39;s Slow motion button.</li>
 <li><strong>Animate</strong>, <strong>Speed</strong> and <strong>Scrub</strong> drive every animation group the pieces
 carry, except a destroyed piece&#39;s (<code>__wreckStopped</code>). Scrubbing pauses
 them that far through each clip. A clip&#39;s speed is Speed times the sim
@@ -205,6 +207,6 @@ these grips is an open comparison (board #2794).</p>
     <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
   </ul>
   </tosi-doc-system>
-  <script type="module" src="../hydrate-kz831vp4.js"></script>
+  <script type="module" src="../hydrate-1ej7e9f6.js"></script>
 </body>
 </html>

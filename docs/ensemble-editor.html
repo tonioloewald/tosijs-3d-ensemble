@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    document.documentElement.classList.add('tosi-js')
+    document.addEventListener('click', function (e) {
+      if (customElements.get('tosi-doc-system')) return
+      var b = e.target.closest && e.target.closest('.doc-nav .nav-toggle')
+      if (!b) return
+      var open = b.closest('.nav-branch').classList.toggle('-open')
+      b.setAttribute('aria-expanded', String(open))
+    })
+    try {
+      var p = JSON.parse(localStorage.getItem('tosi-doc-system-prefs') || '{}')
+      var t = p.theme || 'system'
+      if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('darkmode')
+      if (p.highContrast) document.documentElement.classList.add('high-contrast')
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="doc-system.css?v=af455600ed0f" data-tosi-doc-system />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aleo:ital,wght@0,100..900;1,100..900&amp;family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&amp;display=swap" />
+  <title>&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble</title>
+  <meta name="description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such…" />
+  <link rel="alternate" type="text/markdown" href="index.md" title="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble (markdown)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tosijs-3d-ensemble" />
+  <meta property="og:title" content="&lt;tosi-ensemble-editor&gt; — tosijs-3d-ensemble" />
+  <meta property="og:description" content="The editor is a component, not an application. Drop it on a page, give it a library and an ensemble, and it edits — the doc site&#39;s /editor/ is one such…" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.svg" />
+</head>
+<body>
+  <tosi-doc-system docs="docs.json?v=8b9645f67d43" config="{&quot;projectName&quot;:&quot;tosijs-3d-ensemble&quot;,&quot;projectLinks&quot;:{&quot;tosijs&quot;:&quot;https://tosijs.net&quot;,&quot;github&quot;:&quot;https://github.com/tonioloewald/tosijs-3d-ensemble&quot;},&quot;logo&quot;:&quot;/favicon.svg&quot;,&quot;ebooks&quot;:[]}">
+  <article class="doc-content" data-doc="ensemble-editor.ts">
+<h1><tosi-ensemble-editor></h1>
+<p>The editor is a <strong>component</strong>, not an application. Drop it on a page, give it a
+library and an ensemble, and it edits — the doc site&#39;s <code>/editor/</code> is one
+such page and has no privileged access to anything.</p>
+<pre><code class="language-html">&lt;tosi-ensemble-editor
+  library-url=&quot;https://cdn.tosijs.net/enemies.glb&quot;
+  library=&quot;enemies&quot;
+  src=&quot;/ensembles/ocean-rig.json&quot;
+  backdrop=&quot;aquatic&quot;
+&gt;&lt;/tosi-ensemble-editor&gt;
+</code></pre>
+<pre><code class="language-typescript" data-highlighted><span class="token keyword">import</span> <span class="token punctuation">{</span> ensembleEditor<span class="token punctuation">,</span> registerSceneFeatures <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'tosijs-3d-ensemble'</span>
+
+<span class="token function">registerSceneFeatures</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+document<span class="token punctuation">.</span>body<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span>
+  <span class="token function">ensembleEditor</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    library<span class="token operator">:</span> <span class="token string">'enemies'</span><span class="token punctuation">,</span>
+    libraryUrl<span class="token operator">:</span> <span class="token string">'/enemies.glb'</span><span class="token punctuation">,</span>
+    backdrop<span class="token operator">:</span> <span class="token string">'aquatic'</span><span class="token punctuation">,</span>
+    <span class="token function-variable function">handleSave</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token operator">=></span> localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token string">'draft'</span><span class="token punctuation">,</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+</code></pre>
+<h2 id="the-chrome-is-tosijs-3ds-system-panels">The chrome is tosijs-3d&#39;s system panels</h2>
+<p>Every panel (the pieces, a piece&#39;s properties, the tools, the Ensemble
+file panel) is a tosijs-3d <strong>system panel</strong>: a button on the scene&#39;s system
+bar opens it, and its title bar moves it and closes it (×). They are drawn
+IN the scene, flat on a screen as in a headset, by one SVG UI implementation,
+so the same editor runs in a browser and in a headset. Editing a 3D
+arrangement is a spatial task performed at arm&#39;s length: judging whether a
+fortress reads, whether a turret covers the approach, whether a gap is
+flyable are exactly the questions a flat viewport answers badly.</p>
+<p>Panels stay open together and keep where you dragged them across edits.
+<code>hide-chrome</code> (<code>hideChrome: true</code>) takes them and their bar buttons away,
+for a host that shows the scene without the tool.</p>
+<h2 id="time">Time</h2>
+<p>The <strong>Time</strong> panel runs the world slower or faster and plays the pieces&#39;
+animations, for watching a scenario in slow motion and judging the moving
+parts a rig exists to show. Library animation groups arrive stopped; the
+editor starts them. Nothing here is written to the document. It starts
+closed: its clock button on the system bar opens it.</p>
+<ul>
+<li><strong>Sim speed</strong> is the scene&#39;s <code>timeScale</code> (1 real time, 0 stopped). It is
+the editor&#39;s only slow-motion control: tosijs-3d 0.13.0 removed the
+settings panel&#39;s Slow motion button.</li>
+<li><strong>Animate</strong>, <strong>Speed</strong> and <strong>Scrub</strong> drive every animation group the pieces
+carry, except a destroyed piece&#39;s (<code>__wreckStopped</code>). Scrubbing pauses
+them that far through each clip. A clip&#39;s speed is Speed times the sim
+speed (see <a href="/transport/">the transport</a>).</li>
+</ul>
+<p>From script: <code>setTimeScale(n)</code>, <code>playAnimations(on?)</code>,
+<code>setAnimationSpeed(n)</code>, <code>scrubAnimations(t)</code>, and <code>editor.time</code> for what the
+panel shows.</p>
+<h2 id="opening-and-saving">Opening and saving</h2>
+<p>The component owns no persistence; its host does, one of two ways:</p>
+<ul>
+<li><strong>A store</strong> (<code>editor.store</code>, see <a href="/store/">the store page</a>): the Ensemble
+panel offers Open, Save, Save as and History, and <code>editor.dirty</code> says
+whether the document differs from what was last opened or saved (or,
+for one the store has never seen, from how it arrived). A
+failure dispatches <code>error</code>.</li>
+<li><strong>No store</strong>: the editor keeps a local draft, and the panel&#39;s New,
+Download and Open file… (there either way) are the whole of it. A host
+that wants the document calls <code>editor.save()</code>, which hands it to
+<code>handleSave(ensemble)</code>.</li>
+</ul>
+<p><code>src</code> loads a document by url; <code>loaded</code> (<code>{ src, storeId }</code>) fires when it
+lands and <code>error</code> (<code>{ error, src }</code>) when it fails, leaving the current
+document alone.</p>
+<h2 id="host-actions">Host actions</h2>
+<p>A host&#39;s own buttons go in the Ensemble panel: &quot;Play&quot; for a game that wants
+to run the level being edited. Each gets a COPY of the current document,
+saved or not:</p>
+<pre data-example-mode="static"><code class="language-js" data-highlighted>editor<span class="token punctuation">.</span>hostActions <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> <span class="token literal-property property">label</span><span class="token operator">:</span> <span class="token string">"Play"</span><span class="token punctuation">,</span> <span class="token function-variable function">handleAction</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">level</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token function">openGame</span><span class="token punctuation">(</span>level<span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<h2 id="the-backdrop-is-not-part-of-the-ensemble">The backdrop is not part of the ensemble</h2>
+<p><code>backdrop</code> mounts a sample world — ground or sea, sky, and the ambient
+conditions — for the ensemble to be judged <strong>against</strong>. It is authoring
+context: it is never saved, and dragging the ensemble over it is the point.
+An ensemble that carries its OWN landform does so as a piece with a <code>terrain</code>
+feature, which is a different thing and does get saved.</p>
+<p>Both planes are pinned to the origin. A bench looks at one thing from many
+angles, so the world holds still and the camera moves.</p>
+<h2 id="moving-pieces">Moving pieces</h2>
+<p>The <strong>select</strong> tool carries the editor&#39;s own transform grips: move, turn and
+scale, chosen as cells in its options panel, with grid and angle snapping
+(<code>tools/transform.ts</code>). A drag writes back to the document as one undo step.
+The numbers in the property panel edit the same fields.</p>
+<p>tosijs-3d has since shipped <code>&lt;tosi-b3d-manipulator&gt;</code>; whether it should replace
+these grips is an open comparison (board #2794).</p>
+
+  </article>
+  <nav class="doc-nav" aria-label="Documentation">
+  <ul>
+    <li><a class="doc-link" href="./">tosijs-3d-ensemble</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-editor" aria-label="Editor"></button><a class="doc-link" href="editor/">Editor</a></div>
+    <ul id="tosi-nav-editor">
+      <li><a class="doc-link" href="storage/">Saving and loading ensembles</a></li>
+      <li><a class="doc-link" href="store/">Where the editor opens and saves</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="transport/">Animation transport</a></li>
+    <li class="nav-branch -open"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="true" aria-controls="tosi-nav-editing" aria-label="Editing"></button><a class="doc-link" href="editing/">Editing</a></div>
+    <ul id="tosi-nav-editing">
+      <li><a class="doc-link current" href="ensemble-editor/" aria-current="page">&lt;tosi-ensemble-editor&gt;</a></li>
+      <li><a class="doc-link" href="tool-registry/">Tools and commands</a></li>
+      <li><a class="doc-link" href="built-in/">The built-in tools</a></li>
+      <li><a class="doc-link" href="transform/">The select-and-transform tool</a></li>
+      <li><a class="doc-link" href="history/">Undo</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="features/">Features</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-format" aria-label="Format"></button><a class="doc-link" href="format/">Format</a></div>
+    <ul id="tosi-nav-format">
+      <li><a class="doc-link" href="types/">The ensemble format</a></li>
+      <li><a class="doc-link" href="validate/">Validation</a></li>
+      <li><a class="doc-link" href="registry/">The feature registry</a></li>
+      <li><a class="doc-link" href="roles/">Roles</a></li>
+      <li><a class="doc-link" href="index/">What a consumer imports</a></li>
+      <li><a class="doc-link" href="scale/">Scale, uniform or per axis</a></li>
+      <li><a class="doc-link" href="round/">Rounding what lands in the document</a></li>
+      <li><a class="doc-link" href="migrate/">Migrating a legacy prefab</a></li>
+      <li><a class="doc-link" href="nest/">Nested ensembles</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-internals" aria-label="Internals"></button><a class="doc-link" href="internals/">Internals</a></div>
+    <ul id="tosi-nav-internals">
+      <li><a class="doc-link" href="pointer/">Editor pointers</a></li>
+      <li><a class="doc-link" href="flat-pointer/">The flat pointer</a></li>
+      <li><a class="doc-link" href="xr-pointer/">The XR pointer</a></li>
+      <li><a class="doc-link" href="handles/">Manipulator geometry</a></li>
+      <li><a class="doc-link" href="handles-view/">Manipulator handles</a></li>
+      <li><a class="doc-link" href="selection/">Selecting a piece</a></li>
+      <li><a class="doc-link" href="selection-view/">The selection marker</a></li>
+      <li><a class="doc-link" href="beacon-view/">Beacons — a collision cube for anything abstract that has a position</a></li>
+      <li><a class="doc-link" href="schema-panel/">Schema-driven panels</a></li>
+      <li><a class="doc-link" href="transform-write/">Writing a transform</a></li>
+      <li><a class="doc-link" href="place-mesh/">Placing a piece's body</a></li>
+      <li><a class="doc-link" href="libraries/">Mounting libraries</a></li>
+      <li><a class="doc-link" href="world-logic/">World behaviour rules</a></li>
+    </ul></li>
+    <li><a class="doc-link" href="MIGRATING/">Migrating manta-recon onto tosijs-3d-ensemble</a></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-presets" aria-label="Presets"></button><a class="doc-link" href="presets/">Presets</a></div>
+    <ul id="tosi-nav-presets">
+      <li><a class="doc-link" href="world/">The world preset</a></li>
+      <li><a class="doc-link" href="combat/">The combat preset</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-project" aria-label="Project"></button><a class="doc-link" href="project/">Project</a></div>
+    <ul id="tosi-nav-project">
+      <li><a class="doc-link" href="SPEC/">Ensemble Editor — specification</a></li>
+      <li><a class="doc-link" href="PLAN/">tosijs-3d-ensemble — project plan</a></li>
+      <li><a class="doc-link" href="UPSTREAM/">Upstream — what we're waiting on</a></li>
+    </ul></li>
+    <li class="nav-branch"><div class="nav-branch-head"><button type="button" class="nav-toggle" aria-expanded="false" aria-controls="tosi-nav-runtime" aria-label="Runtime"></button><a class="doc-link" href="runtime/">Runtime</a></div>
+    <ul id="tosi-nav-runtime">
+      <li><a class="doc-link" href="build/">Building an ensemble</a></li>
+      <li><a class="doc-link" href="ensemble-element/">&lt;tosi-ensemble&gt;</a></li>
+      <li><a class="doc-link" href="features-scene/">Scene features</a></li>
+      <li><a class="doc-link" href="features-landform/">Landforms</a></li>
+      <li><a class="doc-link" href="scene-floorplan/">Scene floorplan — visual regression without pixels</a></li>
+      <li><a class="doc-link" href="node-transform/">Writing a transform to a node</a></li>
+      <li><a class="doc-link" href="recommendations/">Scene recommendations</a></li>
+    </ul></li>
+  </ul>
+  </nav>
+  <ul class="doc-navbar">
+    <li><a href="/editor/" data-icon="edit">editor</a></li>
+    <li><a href="https://3d.tosijs.net" data-icon="tosiXr">tosijs-3d</a></li>
+    <li><a href="https://github.com/tonioloewald/tosijs-3d-ensemble" data-icon="github">github</a></li>
+  </ul>
+  </tosi-doc-system>
+  <script type="module" src="hydrate-1ej7e9f6.js"></script>
+</body>
+</html>

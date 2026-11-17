@@ -1,0 +1,17 @@
+import{i}from"./site-1yf4ncc8.js";var e="sceneUboDeclaration",o=`struct Scene {viewProjection : mat4x4<f32>,
+#ifdef MULTIVIEW
+viewProjectionR : mat4x4<f32>,
+#endif 
+view : mat4x4<f32>,
+projection : mat4x4<f32>,
+vEyePosition : vec4<f32>,
+inverseProjection : mat4x4<f32>,
+previousViewProjection : mat4x4<f32>,
+taaJitter : vec2<f32>,};
+#define SCENE_UBO
+var<uniform> scene : Scene;
+`;if(!i.IncludesShadersStoreWGSL[e])i.IncludesShadersStoreWGSL[e]=o;var yt={name:e,shader:o};
+export{yt};
+
+//# debugId=E341799B6D62E4E864756E2164756E21
+//# sourceMappingURL=site-y4hk7t51.js.map

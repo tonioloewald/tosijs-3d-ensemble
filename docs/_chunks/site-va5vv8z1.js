@@ -1,0 +1,5 @@
+import{g}from"./site-ny31phz1.js";class L{}L.POINTERDOWN=1;L.POINTERUP=2;L.POINTERMOVE=4;L.POINTERWHEEL=8;L.POINTERPICK=16;L.POINTERTAP=32;L.POINTERDOUBLETAP=64;class tv{constructor(s,t){this.type=s,this.event=t}}class Bd extends tv{constructor(s,t,i,e){super(s,t);this.ray=null,this.originalPickingInfo=null,this.skipOnPointerObservable=!1,this.localPosition=new g(i,e)}}class Us extends tv{get pickInfo(){if(!this._pickInfo)this._generatePickInfo();return this._pickInfo}constructor(s,t,i,e=null){super(s,t);this._pickInfo=i,this._inputManager=e}_generatePickInfo(){if(this._inputManager)this._pickInfo=this._inputManager._pickMove(this.event),this._inputManager._setRayOnPointerInfo(this._pickInfo,this.event),this._inputManager=null}}class Rr{}Rr.KEYDOWN=1;Rr.KEYUP=2;class ih{constructor(s,t){this.type=s,this.event=t}}class xu extends ih{get skipOnPointerObservable(){return this.skipOnKeyboardObservable}set skipOnPointerObservable(s){this.skipOnKeyboardObservable=s}constructor(s,t){super(s,t);this.type=s,this.event=t,this.skipOnKeyboardObservable=!1}}
+export{L,tv,Bd,Us,Rr,ih,xu};
+
+//# debugId=120B4491E30B1A3C64756E2164756E21
+//# sourceMappingURL=site-va5vv8z1.js.map

@@ -333,7 +333,14 @@ places:
 
 ## Upgrading from 0.9 to 0.10
 
-- **Peer `tosijs-3d` is `^0.12.0`.** Its breaking change reaches every
+- **Peer `tosijs-3d` is `^0.13.1`**, and since its 0.12.5 Babylon's
+  packages are its OPTIONAL peers, so npm no longer installs them for you.
+  `<tosi-b3d>` itself imports `gui`, `loaders` and `materials`, so any scene
+  needs all four; install them with tosijs-3d:
+  `npm i @babylonjs/core @babylonjs/gui @babylonjs/loaders @babylonjs/materials`.
+  tosijs-3d 0.13.0 also removed the settings panel's Slow motion button; the
+  editor's Time panel sets `timeScale` itself.
+- **Models are no longer drawn mirrored** (tosijs-3d 0.12.0). It reaches every
   library piece: models loaded through a `<tosi-b3d-library>` are **no longer
   drawn mirrored** (0.11 drew each as its mirror image: text backwards, left
   and right swapped). Positions, rotations and scales in a document are

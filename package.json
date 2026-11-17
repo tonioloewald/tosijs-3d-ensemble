@@ -49,27 +49,27 @@
     "sizes": "bun bin/sizes.ts --write"
   },
   "dependencies": {
-    "tosijs-schema": "^1.9.0"
+    "tosijs-schema": "^1.14.0"
   },
   "peerDependencies": {
-    "tosijs": "^1.10.9",
-    "tosijs-3d": "^0.12.0",
+    "tosijs": "^1.10.11",
+    "tosijs-3d": "^0.13.1",
     "@babylonjs/core": "^9.0.0"
   },
   "devDependencies": {
-    "@babylonjs/core": "^9.16.2",
-    "@babylonjs/gui": "^9.16.2",
-    "@babylonjs/loaders": "^9.16.2",
-    "@babylonjs/materials": "^9.16.2",
+    "@babylonjs/core": "^9.37.0",
+    "@babylonjs/gui": "^9.37.0",
+    "@babylonjs/loaders": "^9.37.0",
+    "@babylonjs/materials": "^9.37.0",
     "@happy-dom/global-registrator": "^21.0.4",
-    "@playwright/test": "1.62.0",
+    "@playwright/test": "1.65.1",
     "@types/bun": "latest",
     "chokidar": "^5.0.0",
     "happy-dom": "^21.0.4",
     "prettier": "^2.8.8",
-    "tosijs": "1.10.9",
-    "tosijs-3d": "0.12.0",
-    "tosijs-ui": "^1.16.41",
+    "tosijs": "1.10.11",
+    "tosijs-3d": "0.13.1",
+    "tosijs-ui": "^1.17.8",
     "typescript": "^5.9.3"
   },
   "releaseDoctor": {

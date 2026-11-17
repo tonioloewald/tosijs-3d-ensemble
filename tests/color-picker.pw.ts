@@ -10,10 +10,14 @@ import { reveal } from "./panel-locate.js";
   DOCUMENT says so.
 
   The preset is found by its measured offset from the row, because a preset
-  swatch has no text to locate it by: in the popup, the fifth swatch of the
-  first preset row (a red) sat 137 px left of the panel's right edge and
-  206 px below the row. If tosijs-3d moves its presets this reports "the pick
-  wrote nothing", not a false pass.
+  swatch has no text to locate it by, and the popup is its own surface in
+  the scene, which no test helper maps to the screen (`locate` searches the
+  panels' SVGs only; a hex string it finds there is the ROW's readout). With
+  tosijs-3d 0.13.1 the popup opens over its row, and the sixth swatch of the
+  first preset row (a red) sits 132 px left of the panel's right edge and
+  14 px below the row's top; up to 0.12.0 it opened below, at 137 and 206.
+  If tosijs-3d moves its presets this reports "the pick wrote nothing", not
+  a false pass.
 */
 test("a colour field opens tosijs-3d's picker, and a pick is written", async ({
   page,
@@ -62,7 +66,7 @@ test("a colour field opens tosijs-3d's picker, and a pick is written", async ({
   await page.mouse.click(row!.panelRight - 40, row!.y + row!.h / 2);
   await page.waitForTimeout(1200);
   // A preset (see the note above).
-  await page.mouse.click(row!.panelRight - 137, row!.y + 206);
+  await page.mouse.click(row!.panelRight - 132, row!.y + 14);
   await page.waitForTimeout(1200);
   const after = await colour();
   console.log(JSON.stringify({ before, after }));

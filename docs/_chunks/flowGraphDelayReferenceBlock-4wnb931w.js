@@ -1,0 +1,4 @@
+import{be,qo}from"./site-3s1j98fr.js";import{A}from"./site-2m9hnh4q.js";import{ge}from"./site-2t7svfbg.js";import"./site-ny31phz1.js";class a extends be{constructor(e){super(e);this.config=e,this.input=this.registerDataInput("input",A),this.value=this.registerDataOutput("value",A,e.decode?new ge(-1):"")}_updateOutputs(e){let t=this.input.getValue(e);if(this.config.decode){let s=-1;if(t instanceof ge)s=t.value;else if(typeof t==="string"&&t.startsWith(qo)){let r=t.substring(qo.length);if(/^(0|[1-9]\d*)$/.test(r)){let i=Number(r);if(Number.isSafeInteger(i)&&i<=2147483647)s=i}}this.value.setValue(new ge(s),e)}else{let s=t instanceof ge?t.value:-1;this.value.setValue(s<0?"":qo+s,e)}}getClassName(){return"FlowGraphDelayReferenceBlock"}}export{a as FlowGraphDelayReferenceBlock};
+
+//# debugId=BFB4459959F376AD64756E2164756E21
+//# sourceMappingURL=flowGraphDelayReferenceBlock-4wnb931w.js.map

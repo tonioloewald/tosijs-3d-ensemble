@@ -1,5 +1,0 @@
-import{be}from"./site-3s1j98fr.js";import{He}from"./site-2m9hnh4q.js";var l="cachedOperationValue",u="cachedExecutionId";class Ui extends be{constructor(e,a){super(a);this._outputRichType=e,this.value=this.registerDataOutput("value",e),this.isValid=this.registerDataOutput("isValid",He)}_getInvalidOutputValue(e){let a=this._outputRichType.defaultValue,i=a?.clone;return typeof i==="function"?i.call(a):a}_updateOutputs(e){let a=e._getExecutionVariable(this,u,-1),i=e._getExecutionVariable(this,l,null);if(i!==void 0&&i!==null&&a===e.executionId)this.isValid.setValue(!0,e),this.value.setValue(i,e);else try{let t=this._doOperation(e);if(t===void 0||t===null){this._setInvalid(e);return}e._setExecutionVariable(this,l,t),e._setExecutionVariable(this,u,e.executionId),this.value.setValue(t,e),this.isValid.setValue(!0,e)}catch(t){this._setInvalid(e)}}_setInvalid(e){this.isValid.setValue(!1,e),this.value.setValue(this._getInvalidOutputValue(e),e)}}
-export{Ui};
-
-//# debugId=E33B60FCA5F44A3164756E2164756E21
-//# sourceMappingURL=site-8td6vznh.js.map

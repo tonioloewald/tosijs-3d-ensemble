@@ -1,5 +1,0 @@
-import{Fp,ni}from"./site-3s1j98fr.js";import{oi,He}from"./site-2m9hnh4q.js";class Ql extends ni{constructor(t){super(t);this.key=this.registerDataInput("key",oi),this.keyCode=this.registerDataOutput("keyCode",oi),this.keyValue=this.registerDataOutput("keyValue",oi),this.shiftKey=this.registerDataOutput("shiftKey",He),this.ctrlKey=this.registerDataOutput("ctrlKey",He),this.altKey=this.registerDataOutput("altKey",He),this.metaKey=this.registerDataOutput("metaKey",He),this.commandOrCtrl=this.registerDataOutput("commandOrCtrl",He)}_executeEvent(t,a){let e=a.event,s=this.key.getValue(t);if(s&&s!==e.code)return!0;return this.keyCode.setValue(e.code,t),this.keyValue.setValue(e.key,t),this.shiftKey.setValue(e.shiftKey,t),this.ctrlKey.setValue(e.ctrlKey,t),this.altKey.setValue(e.altKey,t),this.metaKey.setValue(e.metaKey,t),this.commandOrCtrl.setValue(Fp?e.metaKey:e.ctrlKey,t),this._execute(t),!this.config?.stopPropagation}_preparePendingTasks(t){}_cancelPendingTasks(t){}}
-export{Ql};
-
-//# debugId=A6CA48B5F1E6D43564756E2164756E21
-//# sourceMappingURL=site-ae3f1v5y.js.map

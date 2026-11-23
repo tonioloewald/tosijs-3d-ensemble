@@ -1,0 +1,5 @@
+import{Ye}from"./site-bs4qmp9a.js";import{B}from"./site-f6qdnbcs.js";import{o}from"./site-3cxcjhqf.js";class zg extends Ye{constructor(t){super(t);this.count=this.registerDataOutput("count",B),this.reset=this._registerSignalInput("reset")}_execute(t,i){if(i===this.reset){t._setExecutionVariable(this,"count",0),this.count.setValue(0,t);return}let e=t._getExecutionVariable(this,"count",0)+1;t._setExecutionVariable(this,"count",e),this.count.setValue(e,t),this.out._activateSignal(t)}getClassName(){return"FlowGraphCallCounterBlock"}}var r=!1;function Gg(){if(r)return;r=!0,o("FlowGraphCallCounterBlock",zg)}
+export{zg,Gg};
+
+//# debugId=FC196207CEB5531464756E2164756E21
+//# sourceMappingURL=site-dccghy44.js.map

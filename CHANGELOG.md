@@ -29,6 +29,15 @@ All notable changes to this project are documented here, in
   is written to the document. From script: `setTimeScale`,
   `playAnimations`, `setAnimationSpeed`, `scrubAnimations`, `editor.time`.
   It starts closed; its clock button on the system bar opens it.
+- **A feature can say what it stands in for: `provides`** (board #4210,
+  for pod-3d). The editor's fallback backdrop drops its light, sky, sea or
+  grid ground when an enabled piece provides one, where it used to look for
+  features NAMED `ground`, `terrain`, `sun` and so on. A game's own floor
+  registers `provides: ["ground"]` and the grid no longer covers it, with no
+  need for `backdrop="none"` (which dropped the sky and light as well).
+  Omitted, a feature provides the part it is named for; `sun` declares
+  `["light"]` and `terrain` `["ground"]`, so no built-in behaves differently.
+  `featureProvides(name)` reads it.
 
 ### Changed
 

@@ -345,6 +345,40 @@ export interface FeatureRegistration<Handle = unknown> {
    * cannot load, and find out at ship time.
    */
   editorOnly?: boolean;
+  /**
+   * Which parts of an editor's fallback BACKDROP this feature stands in for:
+   * a piece with it, enabled, makes the backdrop drop its own of each.
+   *
+   * Omitted, a feature provides the part it is NAMED for, if any — so the
+   * built-in `ground`, `skybox`, `water` and `light` need nothing, while `sun`
+   * declares `["light"]` and `terrain` `["ground"]`. A consumer's floor says
+   * `provides: ["ground"]`, and the grid stops lying coincident with it
+   * (board #4210: pod-3d's tiled floor was covered by the grid, and the only
+   * way out was `backdrop="none"`, which threw away the sky and light too).
+   *
+   * `"water"` does not REMOVE the ground: it pushes it below the sea, by the
+   * editor's `seabed`, measured from the providing piece's height.
+   */
+  provides?: readonly BackdropPart[];
+}
+
+/** The parts of an editor's fallback backdrop a feature can stand in for. */
+export type BackdropPart = "light" | "skybox" | "water" | "ground";
+const BACKDROP_PARTS: readonly string[] = [
+  "light",
+  "skybox",
+  "water",
+  "ground",
+];
+
+/**
+ * The backdrop parts a feature of this name provides: its registration's
+ * `provides`, else the part it is named for, else none.
+ */
+export function featureProvides(name: string): readonly BackdropPart[] {
+  const declared = features.get(name)?.provides;
+  if (declared) return declared;
+  return BACKDROP_PARTS.includes(name) ? [name as BackdropPart] : [];
 }
 
 const features = new Map<string, FeatureRegistration<never>>();
@@ -364,6 +398,15 @@ export function registerFeature<Handle>(
       `registerFeature("${reg.name}"): group ${JSON.stringify(
         group
       )} is not "environment" or "lights"; listing it under "environment"`
+    );
+  const unknownParts = (reg.provides ?? []).filter(
+    (part) => !BACKDROP_PARTS.includes(part)
+  );
+  if (unknownParts.length)
+    console.warn(
+      `registerFeature("${reg.name}"): provides ${JSON.stringify(
+        unknownParts
+      )}, which no backdrop has; the parts are ${BACKDROP_PARTS.join(", ")}`
     );
   if (acceptsProblem(reg.schema))
     console.warn(

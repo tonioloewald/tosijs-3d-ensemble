@@ -1033,6 +1033,7 @@ function registerSceneFeaturesNow(): void {
   registerFeature({
     name: "sun",
     icon: "☀️",
+    provides: ["light"],
     primitive: true,
     single: true,
     insertAt: [-0.5, 1, 0.4],
@@ -1452,6 +1453,7 @@ function registerSceneFeaturesNow(): void {
   registerFeature({
     name: "terrain",
     icon: "⛰️",
+    provides: ["ground"],
     primitive: true,
     insertAt: "height",
     // A new terrain's sea level is the insert height (see `insertConfig`).

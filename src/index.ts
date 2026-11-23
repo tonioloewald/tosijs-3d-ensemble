@@ -61,6 +61,7 @@ export {
   featureRegistration,
   registeredFeatures,
   unregisterFeature,
+  featureProvides,
 } from "./format/registry.js";
 /*
   Links are a registry too, keyed by PAYLOAD KEY the way features are keyed by
@@ -81,6 +82,7 @@ export type {
   LinkRegistration,
 } from "./format/registry.js";
 export type {
+  BackdropPart,
   FeatureContext,
   FeatureRegistration,
   FeatureSchema,

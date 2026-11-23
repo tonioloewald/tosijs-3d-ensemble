@@ -200,6 +200,7 @@ import {
 } from "./beacon-view.js";
 import {
   effectiveConfig,
+  featureProvides,
   featureRegistration,
   listedGroup,
   insertPosition,
@@ -2606,23 +2607,30 @@ export class EnsembleEditor extends withAttributes({
         .filter((piece) => piece.enabled !== false)
         .flatMap((piece) => Object.keys(piece.features ?? {}))
     );
+    /*
+      WHAT THE ENSEMBLE PROVIDES, NOT WHAT ITS FEATURES ARE CALLED. This read
+      `used.has("ground") || used.has("terrain")`, so a game's own floor
+      (pod-3d's tiled one) was not a floor, and the grid lay on top of it
+      (#4210). A feature says what it stands in for with `provides`.
+      `used` stays for the one question that IS about a name: whether the
+      real `skybox` feature will adopt the backdrop's sky element.
+    */
+    const provided = new Set([...used].flatMap(featureProvides));
     const aquatic = this.backdrop === "aquatic";
     const on = this.backdrop !== "none";
 
-    this._backdropPart(
-      "light",
-      on && !used.has("light") && !used.has("sun"),
-      () => b3dLight({ y: 1, intensity: 0.9 })
+    this._backdropPart("light", on && !provided.has("light"), () =>
+      b3dLight({ y: 1, intensity: 0.9 })
     );
     this._backdropPart(
       "skybox",
-      on && !used.has("skybox"),
+      on && !provided.has("skybox"),
       // Still, like the format default: an authoring backdrop that drifts into
       // night while you work is a light meter that will not hold still.
       () => b3dSkybox({ timeOfDay: 11, realtimeScale: 0 }),
       used.has("skybox")
     );
-    this._backdropPart("water", on && aquatic && !used.has("water"), () =>
+    this._backdropPart("water", on && aquatic && !provided.has("water"), () =>
       b3dWater({ waterSize: 4000 })
     );
     /*
@@ -2637,11 +2645,11 @@ export class EnsembleEditor extends withAttributes({
       still suppress it outright — those ARE floors, and a second one under a
       terrain is invisible at best and z-fighting at worst.
     */
-    const wet = used.has("water") || (on && aquatic);
+    const wet = provided.has("water") || (on && aquatic);
     const floor = wet ? this._waterLevel() - Math.max(this.seabed, 0.01) : 0;
     this._backdropPart(
       "ground",
-      on && !used.has("ground") && !used.has("terrain"),
+      on && !provided.has("ground"),
       () =>
         b3dGround({
           width: 4000,
@@ -2669,7 +2677,11 @@ export class EnsembleEditor extends withAttributes({
    */
   private _waterLevel(): number {
     const piece = this._ensemble.pieces.find(
-      (p) => p.enabled !== false && p.features?.water
+      (p) =>
+        p.enabled !== false &&
+        Object.keys(p.features ?? {}).some((name) =>
+          featureProvides(name).includes("water")
+        )
     );
     return piece?.at?.[1] ?? 0;
   }

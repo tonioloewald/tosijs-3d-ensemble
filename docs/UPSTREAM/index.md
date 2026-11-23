@@ -90,6 +90,7 @@ older than its card; when they disagree, the card wins.
 | 66 | **tosijs-ui: a `[[wikilink]]` to a missing page builds silently**, and titles are slugified rather than resolved (9 dead links here, fixed); fixed in 1.16.29 (titles resolve, the build names a dangling one) | [tosijs-ui#234](https://github.com/tonioloewald/tosijs-ui/issues/234) |
 | 67 | **`foldSections` drops a folded section's rows without disposing them**: rows are built (and bound) before folding, so every repaint leaked the folded rows' subscriptions. Worked around by `foldDisposing` (#3262) | [#127](https://github.com/tonioloewald/tosijs-3d/issues/127) |
 | 68 | **`timeScale` does not slow Babylon animation groups**: nothing sets `scene.animationTimeScale`, so in slow motion a rig kept its full tempo (measured 62.9 frames/s at 1, 74.4 at 0.25). **Shipped in 0.11.5**; the workaround (`AnimationTransport` multiplying `speedRatio` by `timeScale`) was dropped on adopting 0.12.0, before it could compound | [#128](https://github.com/tonioloewald/tosijs-3d/issues/128) |
+| 69 | **`b3d-trail` follows only the element it is nested in**, and a plain library piece is a node with no element, so a `trail` feature (board #2796) would do nothing on most pieces. Asked for a `node` property; not adopted until then rather than re-implementing the element around `attachTrail` | [#129](https://github.com/tonioloewald/tosijs-3d/issues/129) |
 
 ### Stopgaps we own, and what retires them
 

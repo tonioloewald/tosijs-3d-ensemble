@@ -38,6 +38,18 @@ All notable changes to this project are documented here, in
   Omitted, a feature provides the part it is named for; `sun` declares
   `["light"]` and `terrain` `["ground"]`, so no built-in behaves differently.
   `featureProvides(name)` reads it.
+- **New tosijs-3d fields on features we have** (board #2798). Ranges and
+  sections are tosijs-3d's, as for every scene field:
+  - `skybox`: `sunSize` and `sunBrightness` (the sun as seen from this
+    world), `nebulaSize`, and `lightPollution` (a town's washed-out sky);
+  - `light`: `groundColor`, and `nightIntensity`, the fill a day/night sky
+    eases to after dark;
+  - `moon`: a gas giant in the sky, with `gas`, `bands`, `bandColors`,
+    `turbulence`, `storm`, `axisTilt`, `spin` and `seed`;
+  - `terrain`: seasons, `biomeSeason` and `biomeSeasonality` (0, none, by
+    default);
+  - `cloudDeck`: `thickness`, `haze`, `transmission`, `shadowStrength`;
+  - `sound`: `distanceModel` and `playbackRate`.
 
 ### Changed
 

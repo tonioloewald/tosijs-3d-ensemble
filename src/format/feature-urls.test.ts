@@ -279,6 +279,7 @@ const FREE_TEXT: Record<string, string> = {
   "cover.terrain": "a piece id in this document (the terrain it shapes)",
   "planet.atmosphereColor": "a CSS colour that may carry alpha, 'rgba(…)'",
   "planet.bandColors": "a gas giant's band colours, a list of CSS colours",
+  "moon.bandColors": "a gas giant moon's band colours, a list of CSS colours",
 };
 
 type Spec = {

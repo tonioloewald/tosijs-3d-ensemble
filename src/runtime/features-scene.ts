@@ -904,9 +904,18 @@ function registerSceneFeaturesNow(): void {
       // to cast.
       "x-accepts": acceptsOf("light"),
       "x-fetched": fetchedOf("light"),
-      properties: pick("light", ["intensity", "diffuse", "specular"], {
-        intensity: { default: 0.9 },
-      }),
+      /*
+        `groundColor` is a hemispheric light's colour from below, and
+        `nightIntensity` (tosijs-3d 0.12) the fill it eases to as a day/night
+        sky's daylight goes, so night stops reading as an overcast noon.
+      */
+      properties: pick(
+        "light",
+        ["intensity", "diffuse", "specular", "groundColor", "nightIntensity"],
+        {
+          intensity: { default: 0.9 },
+        }
+      ),
     },
     bind: (_piece, cfg, ctx) =>
       add(ctx, b3dLight({ ...cfg, x: ctx.at[0], y: ctx.at[1], z: ctx.at[2] })),
@@ -1147,6 +1156,13 @@ function registerSceneFeaturesNow(): void {
           "mieCoefficient",
           "mieDirectionalG",
           "sunColor",
+          /*
+            THE SUN AS SEEN FROM THIS WORLD (tosijs-3d 0.8.15): the disc's
+            size and its brightness, so Mars has a small sun and Venus a big
+            one. Our #2798.
+          */
+          "sunSize",
+          "sunBrightness",
           "duskColor",
           "moonColor",
           "moonIntensity",
@@ -1177,6 +1193,12 @@ function registerSceneFeaturesNow(): void {
           "starfieldTwinkle",
           "nebulae",
           "nebulaBrightness",
+          "nebulaSize",
+          /*
+            A DARK SKY OR A TOWN'S (tosijs-3d 0.12): the base glow that washes
+            out the faint stars, before any registered source adds its own.
+          */
+          "lightPollution",
           // Leaving the atmosphere: a height BAND over which the sky fades to
           // `spaceColor`. Off while `spaceFull <= spaceStart`.
           "spaceStart",
@@ -1359,6 +1381,8 @@ function registerSceneFeaturesNow(): void {
           "refDistance",
           "maxDistance",
           "rolloffFactor",
+          "distanceModel",
+          "playbackRate",
         ],
         {
           url: { title: "Audio file" },
@@ -1529,6 +1553,10 @@ function registerSceneFeaturesNow(): void {
           "biomeTemperature",
           "biomeMoisture",
           "biomeVolcanicScale",
+          // Seasons (tosijs-3d 0.10): `biomeSeasonality` 0 is none, so a
+          // terrain looks the same until an author asks for a year.
+          "biomeSeason",
+          "biomeSeasonality",
           "tileSize",
           "lodLevels",
           "reach",
@@ -1575,6 +1603,8 @@ function registerSceneFeaturesNow(): void {
           biomeTemperature: { "x-requires": { biome: true } },
           biomeMoisture: { "x-requires": { biome: true } },
           biomeVolcanicScale: { "x-requires": { biome: true } },
+          biomeSeason: { "x-requires": { biome: true } },
+          biomeSeasonality: { "x-requires": { biome: true } },
           grossAmplitude: { default: 250 },
           detailAmplitude: { default: 45 },
           horizScale: { default: 8 },
@@ -1793,6 +1823,11 @@ function registerSceneFeaturesNow(): void {
         [
           "altitude",
           "coverage",
+          // How the deck LOOKS from below and from inside: board #2798.
+          "thickness",
+          "haze",
+          "transmission",
+          "shadowStrength",
           "thickenDepth",
           "cirrus",
           "wind",
@@ -2166,6 +2201,19 @@ function registerSceneFeaturesNow(): void {
         "size",
         "color",
         "brightness",
+        /*
+          A GAS GIANT IN THE SKY (tosijs-3d 0.10): `gas` draws the moon as a
+          banded giant from a preset, and the rest tune it. -1 on
+          `turbulence` and `storm` means the preset's own value.
+        */
+        "gas",
+        "bands",
+        "bandColors",
+        "turbulence",
+        "storm",
+        "axisTilt",
+        "spin",
+        "seed",
       ]),
     },
     bind: (_piece, cfg, ctx) => {
